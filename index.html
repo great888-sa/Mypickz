@@ -866,7 +866,7 @@ async function pasteToPlaceUrl(itemId, index){
 function openMapsForCurrentCity(){
   const cityName = allCities().find(c => c.id === currentCityId)?.name || '';
   const url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(cityName);
-  window.open(url, '_blank');
+  window.location.href = url;
 }
 
 function addPlace(id){
