@@ -239,7 +239,7 @@
       <span class="action-icon brass"><i class="fa-solid fa-qrcode"></i></span>
       <span class="action-label">QR</span>
     </button>
-    <span id="ownerControls" style="display:none;">
+    <span id="ownerControls">
       <button class="action-btn" onclick="requestEditAccess()">
         <span class="action-icon ink" id="editIcon"><i class="fa-solid fa-pen"></i></span>
         <span class="action-label" id="editBtnLabel">تعديل</span>
@@ -306,6 +306,7 @@ function loadScriptOnce(src){
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
+    s.crossOrigin = 'anonymous';
     s.onload = () => resolve(src);
     s.onerror = () => reject(new Error('فشل تحميل: ' + src));
     document.head.appendChild(s);
