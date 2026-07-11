@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyPickz</title>
+
+<!-- تثبيت كتطبيق (PWA) -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MyPickz">
+<meta name="theme-color" content="#1c2b3a">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Firebase SDK is loaded dynamically below (with retry + clear error reporting) -->
+
+<style>
+  :root{
+    --paper:#efe7d6; --paper-dark:#e4d9c1; --ink:#1c2b3a; --ink-soft:#4a5a68;
+    --brass:#a5751f; --brass-light:#c99a3f; --line:#c9bda1; --card:#faf6ec;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><g fill='none' stroke='%23a5751f' stroke-width='0.6' opacity='0.05'><path d='M-20 40 Q 40 10, 100 40 T 220 40'/><path d='M-20 90 Q 40 60, 100 90 T 220 90'/><path d='M-20 140 Q 40 110, 100 140 T 220 140'/></g></svg>"),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/></svg>"),
+      radial-gradient(circle at 15% 8%, rgba(165,117,31,0.08), transparent 42%),
+      radial-gradient(circle at 85% 30%, rgba(28,43,58,0.05), transparent 38%),
+      radial-gradient(circle at 50% 95%, rgba(165,117,31,0.05), transparent 45%),
+      var(--paper);
+    background-attachment: fixed, fixed, fixed, fixed, fixed, fixed;
+    font-family:'Tajawal', sans-serif; color:var(--ink); min-height:100vh; padding:0 0 60px;
+  }
+  .cover{ max-width:760px; margin:0 auto; padding:40px 20px 20px; text-align:center; }
+  .eyebrow{ font-family:'Cairo',sans-serif; font-size:12px; letter-spacing:4px; color:var(--brass); font-weight:700; text-transform:uppercase; }
+  h1{ font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0 4px; }
+  .sub{ color:var(--ink-soft); font-size:14px; max-width:460px; margin:0 auto; line-height:1.7; }
+
+  .tab-label{
+    max-width:900px; margin:18px auto 6px; padding:0 20px;
+    font-family:'Cairo',sans-serif; font-size:11px; font-weight:700;
+    color:var(--ink-soft); letter-spacing:2px; text-transform:uppercase;
+  }
+  .city-tabs{
+    max-width:900px; margin:22px auto 0; padding:0 16px;
+    display:flex; gap:8px; overflow-x:auto; padding-bottom:6px;
+  }
+  .city-tab{
+    flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px;
+    padding:9px 18px; border-radius:999px; border:1.5px solid var(--line);
+    background:var(--card); color:var(--ink-soft); cursor:pointer; white-space:nowrap;
+  }
+  .city-tab.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+  .toolbar{ max-width:760px; margin:20px auto 6px; padding:0 20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+  .action-bar{
+    max-width:340px; margin:24px auto 6px;
+    background:var(--card); border:1px solid var(--line); border-radius:20px;
+    display:flex; padding:10px 4px;
+    box-shadow:0 2px 10px rgba(28,43,58,0.05);
+  }
+  .action-btn{
+    flex:1; background:none; border:none; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:6px 2px; border-radius:14px; transition:background .15s ease;
+  }
+  .action-btn:active{ background:rgba(165,117,31,0.08); }
+  .action-icon{
+    width:38px; height:38px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px;
+  }
+  .action-icon.ink{ background:var(--ink); color:var(--paper); }
+  .action-icon.brass{ background:var(--brass); color:#fff; }
+  .action-label{
+    font-family:'Cairo',sans-serif; font-size:10.5px; font-weight:700; color:var(--ink-soft);
+  }
+  .btn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; border:none; border-radius:999px;
+        padding:10px 18px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .btn-ink{ background:var(--ink); color:var(--paper); }
+  .btn-brass{ background:var(--brass); color:#fff; }
+  .btn-ghost{ background:transparent; color:var(--ink); border:1.5px solid var(--line); }
+
+  .quick-nav{
+    position:sticky; top:0; z-index:20;
+    max-width:760px; margin:0 auto 18px; padding:10px 20px;
+    background:rgba(239,231,214,0.92); backdrop-filter:blur(6px);
+    display:flex; gap:8px; overflow-x:auto; border-bottom:1px solid var(--line);
+  }
+  .quick-nav-btn{
+    flex:none; background:var(--card); border:1px solid var(--line); border-radius:999px;
+    padding:7px 14px; font-size:13px; font-family:'Cairo',sans-serif; font-weight:700;
+    color:var(--ink); cursor:pointer; white-space:nowrap;
+  }
+  .quick-nav-btn:active{ background:rgba(165,117,31,0.12); }
+
+  .show-more-btn{
+    display:block; margin:10px auto 0; background:transparent; border:none;
+    color:var(--brass); font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px;
+    cursor:pointer; padding:6px 12px;
+  }
+
+  .section{ max-width:760px; margin:30px auto 0; padding:0 20px; }
+  .section-head{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .section-head h2{ font-family:'Cairo',sans-serif; font-size:19px; font-weight:700; margin:0; }
+  .section-head .count{ font-family:'Cairo',sans-serif; font-size:11px; color:var(--brass); font-weight:700; }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px; }
+  .ticket{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:13px 15px;
+           display:flex; align-items:center; gap:11px; text-decoration:none; color:var(--ink); }
+  .ticket:hover{ border-color:var(--brass); }
+  .ticket.disabled{ opacity:.55; }
+  .ticket .emoji{ font-size:21px; flex:none; width:26px; text-align:center; }
+  .ticket .name{ font-weight:600; font-size:14px; flex:1; line-height:1.4; }
+  .ticket .go{ font-size:11px; color:var(--brass); font-weight:700; }
+  .ticket .missing{ font-size:11px; color:var(--ink-soft); }
+
+  .toggle-row{ display:flex; align-items:center; gap:8px; margin-top:8px; font-size:11.5px; color:var(--ink-soft); }
+  .switch-btn{ width:36px; height:21px; border-radius:999px; border:none; padding:0; background:#cfc4a8; position:relative; cursor:pointer; flex:none; }
+  .switch-btn .knob{ position:absolute; top:3px; right:3px; width:15px; height:15px; border-radius:50%; background:#fff; transition:transform .2s; }
+  .switch-btn.on{ background:var(--brass); }
+  .switch-btn.on .knob{ transform:translateX(-15px); }
+  .remove-btn{ background:none; border:none; cursor:pointer; margin-inline-start:auto; opacity:.7; }
+
+  .name-edit{ width:100%; border:none; border-bottom:1px dashed var(--line); background:transparent;
+              font-weight:600; font-size:14px; font-family:'Tajawal',sans-serif; padding:2px 0 4px; }
+  .name-edit:focus{ outline:none; border-color:var(--brass); }
+  .edit-row{ margin-top:8px; }
+
+  .places-edit-list{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+  .place-row{
+    display:flex; gap:6px; align-items:center;
+    background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px;
+  }
+  .place-name-input{
+    width:40%; border:none; background:transparent; font-size:12px;
+    font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid var(--line);
+  }
+  .place-name-input:focus{ outline:none; }
+  .place-url-input{
+    flex:1; border:none; background:transparent; font-size:12px;
+    font-family:'Tajawal',sans-serif; direction:ltr; text-align:left; padding:4px 6px;
+  }
+  .place-url-input:focus{ outline:none; }
+  .add-place-btn{
+    margin-top:8px; width:100%; background:transparent; border:1.5px dashed var(--line);
+    color:var(--brass); border-radius:8px; padding:8px; font-family:'Cairo',sans-serif;
+    font-weight:700; font-size:12px; cursor:pointer;
+  }
+  .multi-edit .toggle-row{ flex-wrap:wrap; }
+
+  .multi-ticket{ flex-direction:column; align-items:stretch; gap:8px; }
+  .multi-head{ display:flex; align-items:center; gap:11px; }
+  .place-list{ display:flex; flex-direction:column; gap:4px; padding-inline-start:37px; }
+  .place-link{
+    font-size:12.5px; color:var(--brass); font-weight:600; text-decoration:none;
+    border-bottom:1px dashed var(--line); padding:3px 0;
+  }
+  .place-link:last-child{ border-bottom:none; }
+  .edit-row input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px;
+                    font-size:12px; direction:ltr; text-align:left; background:#fff; }
+
+  .status-card{
+    max-width:760px; margin:0 auto 24px; padding:0 20px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    justify-content:center;
+  }
+  .status-toggle{
+    display:flex; align-items:center; gap:8px;
+    background:var(--card); border:1px solid var(--line); border-radius:999px;
+    padding:9px 16px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .status-toggle.published{ border-color:var(--brass); color:var(--brass); background:rgba(165,117,31,0.08); }
+  .status-dot{ width:8px; height:8px; border-radius:50%; background:var(--ink-soft); flex:none; }
+  .status-toggle.published .status-dot{ background:var(--brass); }
+  .status-divider{ width:1px; height:16px; background:var(--line); }
+  .status-stat{
+    font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; color:var(--ink-soft);
+  }
+  .add-ticket{
+    background:transparent; border:1.5px dashed var(--brass); color:var(--brass);
+    font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
+
+  .footer-note{ max-width:760px; margin:40px auto 0; padding:16px 20px; text-align:center;
+                color:var(--ink-soft); font-size:11.5px; line-height:1.8; border-top:1px solid var(--line); }
+
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(28,43,58,0.55); display:none;
+                    align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .modal-backdrop.show{ display:flex; }
+  .modal{ background:var(--card); border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; }
+  .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 12px; }
+  .modal-input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px; }
+  #qrcode{ display:flex; justify-content:center; margin:12px 0; }
+  .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper);
+          padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:60; }
+  .toast.show{ opacity:1; }
+  #editModeBanner{ max-width:760px; margin:14px auto 0; padding:11px 18px; background:rgba(165,117,31,0.12);
+                    border:1px dashed var(--brass); border-radius:10px; font-size:12px; display:none; text-align:center; }
+  #editModeBanner.show{ display:block; }
+  #loadingState{ text-align:center; padding:60px 20px; color:var(--ink-soft); font-family:'Cairo',sans-serif; }
+</style>
+</head>
+<body>
+
+  <div class="cover">
+    <div class="eyebrow">دليل مُنسّق</div>
+    <h1>🗺️ MyPickz</h1>
+    <p class="sub">أفضل المطاعم والمقاهي بمدنك المفضلة، منظمة حسب النوع.</p>
+  </div>
+
+  <div class="tab-label">الدولة</div>
+  <div class="city-tabs" id="countryTabs"></div>
+  <div class="tab-label">المدينة</div>
+  <div class="city-tabs" id="cityTabs"></div>
+
+  <div class="action-bar">
+    <button class="action-btn" onclick="copyLink()">
+      <span class="action-icon ink">🔗</span>
+      <span class="action-label">نسخ الرابط</span>
+    </button>
+    <button class="action-btn" onclick="showQR()">
+      <span class="action-icon brass">▦</span>
+      <span class="action-label">QR</span>
+    </button>
+    <button class="action-btn" onclick="requestEditAccess()">
+      <span class="action-icon ink" id="editIcon">✎</span>
+      <span class="action-label" id="editBtnLabel">تعديل</span>
+    </button>
+    <button class="action-btn" onclick="managePassword()">
+      <span class="action-icon brass">🔒</span>
+      <span class="action-label">الحماية</span>
+    </button>
+  </div>
+
+  <div id="editModeBanner">وضع التعديل مفعّل — عدّل هذي المدينة فقط. اضغط "حفظ" بالأسفل بعد كل تغيير.</div>
+  <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:#fbeceb; border:1px dashed #b5545a; border-radius:10px; font-size:12px; color:#7a2b30; direction:ltr; word-break:break-word; text-align:center;"></div>
+
+  <div id="loadingState">جاري التحميل…</div>
+  <div id="sections" style="display:none"></div>
+
+  <div class="footer-note">
+    الروابط تُدار من إعدادات المشاركة بخرائط Google (View only يُنصح به). وضع التعديل محمي بكلمة مرور بسيطة — حماية أساسية، مو تشفير قوي.
+  </div>
+
+  <div class="modal-backdrop" id="inputBackdrop">
+    <div class="modal">
+      <h3 id="inputModalTitle">عنوان</h3>
+      <input type="text" id="inputModalField" class="modal-input" onkeydown="if(event.key==='Enter') confirmInputModal();">
+      <div id="inputModalError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn btn-brass" style="flex:1" onclick="confirmInputModal()">تأكيد</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="closeInputModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="qrBackdrop">
+    <div class="modal">
+      <h3>امسح الرمز لفتح الدليل</h3>
+      <div id="qrcode"></div>
+      <button class="btn btn-ghost" onclick="closeQR()">إغلاق</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   0) عرض أي خطأ مباشرة على الصفحة (للتشخيص)
+   ========================================================= */
+window.onerror = function(msg, url, line, col, error){
+  const dbg = document.getElementById('debugBanner');
+  if (dbg) {
+    dbg.style.display = 'block';
+    dbg.style.direction = 'ltr';
+    dbg.textContent = '⚠️ Script error: ' + msg + ' (line ' + line + ')';
+  }
+  const el = document.getElementById('loadingState');
+  if (el) el.style.display = 'none';
+  return false;
+};
+
+/* =========================================================
+   1) تحميل Firebase SDK ديناميكيًا مع إعادة محاولة تلقائية
+   ========================================================= */
+function loadScriptOnce(src){
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve(src);
+    s.onerror = () => reject(new Error('فشل تحميل: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+async function loadScriptWithRetry(src, attempts){
+  for (let i = 1; i <= attempts; i++){
+    try{ await loadScriptOnce(src + (src.includes('?') ? '&' : '?') + 'retry=' + i); return; }
+    catch(e){ if (i === attempts) throw e; await new Promise(r => setTimeout(r, 800)); }
+  }
+}
+
+async function loadFirebaseSDK(){
+  const base = "https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/";
+  await loadScriptWithRetry(base + "firebase-app-compat.min.js", 3);
+  await loadScriptWithRetry(base + "firebase-firestore-compat.min.js", 3);
+}
+
+/* =========================================================
+   2) FIREBASE CONFIG — ⚠️ استبدل هذا الكائن بالكامل بالكود
+   اللي يعطيك إياه Firebase Console بعد إنشاء المشروع:
+   Project settings → General → Your apps → Web app → Config
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAZMUTMidMIJCeif5rYBi4MkKa-E4ASAHY",
+  authDomain: "mypickz-6f809.firebaseapp.com",
+  projectId: "mypickz-6f809",
+  storageBucket: "mypickz-6f809.firebasestorage.app",
+  messagingSenderId: "134744574180",
+  appId: "1:134744574180:web:bd6370482b3548913e04f1"
+};
+
+let db = null;
+
+async function initFirebase(){
+  try{
+    await loadFirebaseSDK();
+    if (typeof firebase === 'undefined') {
+      throw new Error('السكربتات تحمّلت لكن الكائن firebase غير موجود (احتمال تعارض مع إضافة بالمتصفح).');
+    }
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }catch(e){
+    const dbg = document.getElementById('debugBanner');
+    dbg.style.display = 'block';
+    dbg.style.direction = 'ltr';
+    dbg.textContent = '⚠️ Firebase load/init failed: ' + e.message;
+  }
+}
+
+/* =========================================================
+   2) بيانات المدن والتصنيفات
+   ========================================================= */
+const CITIES = [
+  { id:"paris",     name:"باريس",    country:"فرنسا" },
+  { id:"marbella",  name:"ماربيا",   country:"إسبانيا" },
+  { id:"london",    name:"لندن",     country:"بريطانيا" },
+  { id:"barcelona", name:"برشلونة",  country:"إسبانيا" },
+  { id:"geneva",    name:"جنيف",     country:"سويسرا" },
+  { id:"madrid",    name:"مدريد",    country:"إسبانيا" },
+  { id:"mallorca",  name:"مايوركا",  country:"إسبانيا" },
+];
+
+let customCities = []; // مدن أضفتها لاحقًا: [{id, name, country}]
+let customCountries = []; // دول أضفتها بدون مدن بعد: ["اسم1", "اسم2"]
+function allCities(){ return CITIES.concat(customCities); }
+
+function countryOf(cityId){
+  const c = allCities().find(c => c.id === cityId);
+  return c ? c.country : "";
+}
+
+async function loadCustomCities(){
+  try{
+    const doc = await db.collection('settings').doc('cities-list').get();
+    customCities = (doc.exists && Array.isArray(doc.data().cities)) ? doc.data().cities : [];
+  }catch(e){ customCities = []; }
+}
+
+async function loadCustomCountries(){
+  try{
+    const doc = await db.collection('settings').doc('countries-list').get();
+    customCountries = (doc.exists && Array.isArray(doc.data().countries)) ? doc.data().countries : [];
+  }catch(e){ customCountries = []; }
+}
+
+async function saveCustomCountries(){
+  try{
+    await db.collection('settings').doc('countries-list').set({ countries: customCountries }, { merge:true });
+  }catch(e){ showToast('تعذر حفظ الدولة'); }
+}
+
+async function addCountry(){
+  const name = await openInputModal("دولة جديدة", "مثال: السعودية، قطر، أمريكا...", "");
+  if (!name || !name.trim()) return;
+  const clean = name.trim();
+  if (!customCountries.includes(clean)) {
+    customCountries.push(clean);
+    await saveCustomCountries();
+  }
+  currentCountry = clean;
+  showToast('تمت إضافة الدولة ✓ — ضيف لها مدينة الآن');
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+}
+
+async function addCity(){
+  const name = await openInputModal("مدينة جديدة", "مثال: ميلانو، دبي...", "");
+  if (!name || !name.trim()) return;
+  const country = await openInputModal("الدولة", "مثال: إيطاليا، الإمارات...", currentCountry || "");
+  if (country === null || !country.trim()) { showToast('لازم تحدد الدولة'); return; }
+  const id = "city_" + Date.now();
+  customCities.push({ id, name: name.trim(), country: country.trim() });
+  try{
+    await db.collection('settings').doc('cities-list').set({ cities: customCities }, { merge:true });
+    showToast('تمت إضافة المدينة ✓');
+  }catch(e){
+    showToast('تعذر الحفظ — حاول مرة ثانية');
+    return;
+  }
+  await loadCity(id); // ينقلك مباشرة للمدينة الجديدة عشان تبدأ التعبئة
+}
+
+async function removeCity(cityId){
+  customCities = customCities.filter(c => c.id !== cityId);
+  try{
+    await db.collection('settings').doc('cities-list').set({ cities: customCities }, { merge:true });
+    showToast('تم حذف المدينة');
+  }catch(e){ showToast('تعذر الحذف'); }
+  loadCity(pickInitialCity());
+}
+
+const DATA = [
+  { title:"🍴 مطاعم ومقاهي", items:[
+    {id:"burger", icon:"🍔", name:"برجر"},
+    {id:"coffee_bakery", icon:"☕️", name:"قهوة وبيكري"},
+    {id:"bakery", icon:"🥐", name:"بيكري"},
+    {id:"shawarma", icon:"🌯", name:"شاورما"},
+    {id:"steak", icon:"🥩", name:"ستيك"},
+    {id:"fine_lebanese", icon:"🍽️", name:"فاخر - لبناني"},
+    {id:"fine_italian", icon:"🍝", name:"فاخر - إيطالي"},
+    {id:"fine_japanese", icon:"🍣", name:"فاخر - ياباني"},
+    {id:"pizza", icon:"🍕", name:"بيتزا"},
+    {id:"taco", icon:"🌮", name:"تاكو / مكسيكي"},
+    {id:"seafood", icon:"🦐", name:"مأكولات بحرية"},
+    {id:"icecream", icon:"🍦", name:"آيسكريم"},
+    {id:"brunch", icon:"🥞", name:"فطور وبرانش"},
+  ]},
+  { title:"🎡 ترفيه وتجارب عائلية", items:[
+    {id:"amusement", icon:"🎡", name:"مدن ترفيهية"},
+    {id:"aquarium", icon:"🐠", name:"أكواريوم"},
+  ]},
+  { title:"🏛️ معالم تاريخية وثقافية", items:[
+    {id:"landmarks", icon:"🏛️", name:"معالم أثرية"},
+    {id:"palaces", icon:"👑", name:"قصور ملكية"},
+  ]},
+  { title:"🌳 حدائق ومنتزهات", items:[
+    {id:"parks", icon:"🌳", name:"حدائق عامة"},
+    {id:"zoo", icon:"🦁", name:"حديقة حيوان"},
+    {id:"safari", icon:"🐪", name:"سفاري"},
+  ]},
+  { title:"🏔️ معالم طبيعية", items:[
+    {id:"mountains", icon:"🏔️", name:"قمم جبلية"},
+    {id:"waterfalls", icon:"💦", name:"شلالات"},
+    {id:"lakes", icon:"🏞️", name:"بحيرات"},
+  ]},
+  { title:"⛲ ساحات وميادين", items:[
+    {id:"squares", icon:"⛲", name:"ساحات وميادين"},
+  ]},
+  { title:"🏖️ شواطئ بحرية", items:[
+    {id:"corniche", icon:"🚶‍♂️", name:"ممشى كورنيش"},
+    {id:"beaches", icon:"🏝️", name:"شواطئ سباحة"},
+    {id:"beachclub", icon:"🍹", name:"بيتش كلوب"},
+  ]},
+  { title:"🛣️ شوارع وجادات مميزة", items:[
+    {id:"streets", icon:"🚶‍♂️", name:"شوارع وجادات مميزة (للتمشية، التسوق، مقاهي، مطاعم)"},
+  ]},
+  { title:"🛍️ تسوق", items:[
+    {id:"department", icon:"🛍️", name:"متاجر / دبارتمنت ستور"},
+    {id:"local_markets", icon:"🧺", name:"أسواق شعبية / محلية"},
+    {id:"boutiques", icon:"👜", name:"بوتيكات"},
+  ]},
+  { title:"🏨 فنادق وشقق سكنية", items:[
+    {id:"hotels", icon:"🏨", name:"فنادق وشقق سكنية"},
+  ]},
+  { title:"✈️ مطارات ومحطات قطار", items:[
+    {id:"airports", icon:"✈️", name:"مطارات ومحطات قطار"},
+  ]},
+  { title:"🅿️ مواقف سيارات", items:[
+    {id:"parking", icon:"🅿️", name:"مواقف سيارات"},
+  ]},
+];
+
+/* =========================================================
+   3) الحالة العامة
+   ========================================================= */
+let currentCityId = CITIES[0].id;
+let currentCountry = CITIES[0].country;
+let links = {};          // { itemId: {url, active, name} }
+let customItems = [];    // [{id, section, icon, name}]
+let editMode = false;
+let editPassword = "";
+let cityStatus = {};     // { cityId: true/false } — true = منشورة وظاهرة للزوار
+let sectionStatus = {};  // { sectionTitle: true/false } — true (أو غير موجود) = القسم الرئيسي ظاهر
+
+/* =========================================================
+   4) تحميل/حفظ من Firestore
+   بنية الوثيقة: cities/{cityId} = { links: {...}, customItems: [...] }
+   الإعدادات المشتركة (كلمة المرور): settings/app = { password: "" }
+   ========================================================= */
+async function trackVisit(){
+  try{
+    await db.collection('analytics').doc('visits').set(
+      { count: firebase.firestore.FieldValue.increment(1) },
+      { merge: true }
+    );
+  }catch(e){ /* صامت — ما نزعج الزائر لو فشل */ }
+}
+
+let visitCount = null;
+async function loadVisitCount(){
+  try{
+    const doc = await db.collection('analytics').doc('visits').get();
+    visitCount = doc.exists ? (doc.data().count || 0) : 0;
+  }catch(e){ visitCount = null; }
+}
+
+async function loadAllCityStatus(){
+  try{
+    const snap = await db.collection('cities').get();
+    const map = {};
+    snap.forEach(doc => { map[doc.id] = doc.data().published === true; });
+    cityStatus = map;
+  }catch(e){
+    cityStatus = {};
+  }
+}
+
+function pickInitialCity(){
+  if (cityStatus[currentCityId]) return currentCityId;
+  const firstPublished = allCities().find(c => cityStatus[c.id]);
+  return firstPublished ? firstPublished.id : CITIES[0].id;
+}
+
+async function loadCity(cityId){
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('sections').style.display = 'none';
+  currentCityId = cityId;
+  currentCountry = countryOf(cityId) || currentCountry;
+  try{
+    const doc = await db.collection('cities').doc(cityId).get();
+    const data = doc.exists ? doc.data() : {};
+    links = data.links || {};
+    customItems = data.customItems || [];
+    cityStatus[cityId] = data.published === true;
+    sectionStatus = data.sectionStatus || {};
+  }catch(e){
+    links = {}; customItems = []; sectionStatus = {};
+    const dbg = document.getElementById('debugBanner');
+    if (dbg.style.display !== 'block') {
+      dbg.style.display = 'block';
+      dbg.style.direction = 'ltr';
+      dbg.textContent = 'Firestore error: ' + (e && e.message ? e.message : e) + ' (code: ' + (e && e.code ? e.code : 'n/a') + ')';
+    }
+    showToast('خطأ بالاتصال — التفاصيل بالمربع الأحمر بالأعلى');
+  }
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('sections').style.display = 'block';
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+}
+
+function selectCountry(country){
+  currentCountry = country;
+  const list = allCities().filter(c => c.country === country);
+  const visible = editMode ? list : list.filter(c => cityStatus[c.id]);
+  const target = visible.find(c => c.id === currentCityId) || visible[0];
+  if (target) { loadCity(target.id); }
+  else { renderCountryTabs(); renderCityTabs(); render(); }
+}
+
+function togglePublish(){
+  cityStatus[currentCityId] = !cityStatus[currentCityId];
+  saveCity();
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+}
+
+function toggleSectionStatus(title){
+  sectionStatus[title] = sectionStatus[title] === false ? true : false;
+  saveCity();
+  render();
+}
+
+async function saveCity(){
+  try{
+    await db.collection('cities').doc(currentCityId).set(
+      { links, customItems, published: cityStatus[currentCityId] === true, sectionStatus },
+      { merge:true }
+    );
+    showToast('تم الحفظ ✓');
+  }catch(e){
+    showToast('تعذر الحفظ — تحقق من قواعد أمان Firestore');
+  }
+}
+
+async function loadPassword(){
+  try{
+    const doc = await db.collection('settings').doc('app').get();
+    editPassword = doc.exists ? (doc.data().password || "") : "";
+  }catch(e){ editPassword = ""; }
+}
+
+async function savePassword(){
+  try{
+    await db.collection('settings').doc('app').set({ password: editPassword }, { merge:true });
+  }catch(e){ showToast('تعذر حفظ كلمة المرور'); }
+}
+
+/* =========================================================
+   5) واجهة المستخدم
+   ========================================================= */
+function renderCountryTabs(){
+  const wrap = document.getElementById('countryTabs');
+  const list = allCities().filter(c => c.country); // نتجاهل أي مدينة بدون دولة محددة
+  const fromCities = [...new Set(
+    (editMode ? list : list.filter(c => cityStatus[c.id])).map(c => c.country)
+  )];
+  const countries = editMode
+    ? [...new Set(fromCities.concat(customCountries))]
+    : fromCities;
+
+  wrap.innerHTML = countries.map(country => `
+    <button class="city-tab ${country === currentCountry ? 'active' : ''}" onclick="selectCountry('${country.replace(/'/g,"\\'")}')">
+      ${country}
+    </button>`).join('')
+    + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCountry()">➕ دولة جديدة</button>` : '');
+}
+
+function renderCityTabs(){
+  const wrap = document.getElementById('cityTabs');
+  const list = allCities().filter(c => c.country === currentCountry);
+  const visibleCities = editMode ? list : list.filter(c => cityStatus[c.id]);
+  wrap.innerHTML = visibleCities.map(c => `
+    <span style="display:inline-flex; align-items:center; gap:4px;">
+      <button class="city-tab ${c.id === currentCityId ? 'active' : ''}" onclick="loadCity('${c.id}')">
+        ${c.name}${editMode && !cityStatus[c.id] ? ' 🔧' : ''}
+      </button>
+      ${editMode && c.id.startsWith('city_') ? `<button class="remove-btn" style="font-size:16px;" onclick="removeCity('${c.id}')" title="حذف المدينة">🗑️</button>` : ''}
+    </span>`).join('')
+    + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCity()">➕ مدينة جديدة</button>` : '');
+}
+
+function getEntry(id){ return links[id] || { url:"", active:true, name:"" }; }
+function displayName(item){ const e = getEntry(item.id); return e.name && e.name.length ? e.name : item.name; }
+
+// يرجع مصفوفة المواقع لتصنيف معيّن، ويتحول تلقائيًا من الصيغة القديمة (رابط واحد بدون اسم) لو لقاها
+function getPlaces(id){
+  const e = getEntry(id);
+  if (Array.isArray(e.places) && e.places.length) return e.places;
+  if (e.url) return [{ name:"", url: e.url }];
+  return [];
+}
+
+function ensurePlaces(id){
+  const e = getEntry(id);
+  if (!Array.isArray(e.places)) {
+    e.places = e.url ? [{ name:"", url: e.url }] : [];
+  }
+  links[id] = e;
+  return e;
+}
+
+function addPlace(id){
+  const e = ensurePlaces(id);
+  e.places.push({ name:"", url:"" });
+  render();
+}
+function removePlace(id, index){
+  const e = ensurePlaces(id);
+  e.places.splice(index, 1);
+  render();
+}
+function updatePlaceName(id, index, val){
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].name = val;
+}
+function updatePlaceUrl(id, index, val){
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].url = val.trim();
+}
+
+function updateName(id, val){ const e = getEntry(id); e.name = val.trim(); links[id] = e; }
+function toggleActive(id, checked){ const e = getEntry(id); e.active = checked; links[id] = e; render(); }
+
+async function addCustomItem(sectionTitle){
+  const name = await openInputModal("تصنيف جديد", "مثال: قرية، مدينة، جزيرة...", "");
+  if (!name || !name.trim()) return;
+  const id = "custom_" + Date.now();
+  customItems.push({ id, section: sectionTitle, icon:"🏷️", name:name.trim() });
+  await saveCity();
+  render();
+}
+function removeCustomItem(id){
+  customItems = customItems.filter(c => c.id !== id);
+  delete links[id];
+  saveCity();
+  render();
+}
+
+function toggleEdit(){
+  editMode = !editMode;
+  document.getElementById('editBtnLabel').textContent = editMode ? 'إنهاء' : 'تعديل';
+  document.getElementById('editIcon').textContent = editMode ? '✕' : '✎';
+  document.getElementById('editModeBanner').classList.toggle('show', editMode);
+  if (!editMode && !cityStatus[currentCityId]) {
+    loadCity(pickInitialCity());
+    return;
+  }
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+}
+
+async function requestEditAccess(){
+  if (editMode){ toggleEdit(); return; }
+  if (editPassword){
+    const entered = await openInputModal("كلمة المرور", "أدخل كلمة المرور للتعديل", "");
+    if (entered === null) return;
+    if (entered !== editPassword){ showToast('كلمة مرور غير صحيحة'); return; }
+  }
+  await loadVisitCount();
+  toggleEdit();
+}
+
+async function managePassword(){
+  if (editPassword){
+    const current = await openInputModal("تأكيد الهوية", "أدخل كلمة المرور الحالية", "");
+    if (current === null) return;
+    if (current !== editPassword){ showToast('كلمة مرور غير صحيحة'); return; }
+  }
+  const next = await openInputModal(editPassword ? "كلمة مرور جديدة" : "ضع كلمة مرور", "اتركها فارغة لإلغاء الحماية", "");
+  if (next === null) return;
+  editPassword = next.trim();
+  await savePassword();
+  showToast(editPassword ? 'تم تفعيل كلمة المرور ✓' : 'تم إلغاء كلمة المرور');
+}
+
+let expandedSections = {}; // { sectionTitle: true } — القسم مفتوح بالكامل
+const COLLAPSE_LIMIT = 6;
+
+function render(){
+  const wrap = document.getElementById('sections');
+  wrap.innerHTML = '';
+
+  if (editMode) {
+    const published = cityStatus[currentCityId] === true;
+    const statusBar = document.createElement('div');
+    statusBar.className = 'status-card';
+    statusBar.innerHTML = `
+      <button class="status-toggle ${published ? 'published' : ''}" onclick="togglePublish()">
+        <span class="status-dot"></span>
+        <span>${published ? 'منشورة — ظاهرة للزوار' : 'تحت التطوير — مخفية عن الزوار'}</span>
+      </button>
+      <div class="status-divider"></div>
+      <div class="status-stat">👁️ ${visitCount === null ? '...' : visitCount} زيارة إجمالية</div>`;
+    wrap.appendChild(statusBar);
+  }
+
+  // شريط تنقل سريع بين الأقسام — يظهر بس لو فيه أكثر من قسم فيه محتوى
+  const visibleSections = DATA.filter(section => {
+    if (!editMode && sectionStatus[section.title] === false) return false;
+    const sectionCustom = customItems.filter(c => c.section === section.title);
+    const allItems = section.items.concat(sectionCustom);
+    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id).active !== false);
+    return visibleItems.length > 0;
+  });
+  if (visibleSections.length > 1) {
+    const nav = document.createElement('div');
+    nav.className = 'quick-nav';
+    nav.innerHTML = visibleSections.map((section) => `
+      <button class="quick-nav-btn" onclick="document.getElementById('sec-${DATA.indexOf(section)}').scrollIntoView({behavior:'smooth', block:'start'})" title="${section.title}">
+        ${section.title.split(' ')[0]}
+      </button>`).join('');
+    wrap.appendChild(nav);
+  }
+
+  DATA.forEach((section, sIndex) => {
+    if (!editMode && sectionStatus[section.title] === false) return;
+    const sectionCustom = customItems.filter(c => c.section === section.title);
+    const allItems = section.items.concat(sectionCustom);
+    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id).active !== false);
+    if (!editMode && visibleItems.length === 0) return;
+
+    const sectionOn = sectionStatus[section.title] !== false;
+    const isExpanded = editMode || expandedSections[section.title] || visibleItems.length <= COLLAPSE_LIMIT;
+    const itemsToShow = isExpanded ? visibleItems : visibleItems.slice(0, COLLAPSE_LIMIT);
+
+    const sec = document.createElement('div');
+    sec.className = 'section';
+    sec.id = 'sec-' + sIndex;
+    sec.innerHTML = `
+      <div class="section-head">
+        <h2>${section.title}</h2><span class="count">${visibleItems.length}</span>
+        ${editMode ? `
+          <button type="button" class="switch-btn ${sectionOn ? 'on' : ''}" style="margin-inline-start:auto;" onclick="toggleSectionStatus('${section.title.replace(/'/g,"\\'")}')"><span class="knob"></span></button>
+          <span style="font-size:11px; color:var(--ink-soft); font-family:'Cairo',sans-serif;">${sectionOn ? 'ظاهر للزوار' : 'مخفي عن الزوار'}</span>` : ''}
+      </div>
+      <div class="grid">
+        ${itemsToShow.map(item => {
+          const entry = getEntry(item.id);
+          const places = getPlaces(item.id);
+          const active = entry.active !== false;
+          const isCustom = item.id.startsWith('custom_');
+
+          if (editMode) {
+            const placeRows = places.map((p, i) => `
+              <div class="place-row">
+                <input type="text" class="place-name-input" placeholder="اسم المكان (مثال: Five Guys)"
+                  value="${(p.name||'').replace(/"/g,'&quot;')}"
+                  oninput="updatePlaceName('${item.id}', ${i}, this.value)">
+                <input type="text" class="place-url-input" placeholder="رابط الموقع"
+                  value="${(p.url||'').replace(/"/g,'&quot;')}"
+                  oninput="updatePlaceUrl('${item.id}', ${i}, this.value)">
+                <button type="button" class="remove-btn" onclick="removePlace('${item.id}', ${i}); return false;" title="حذف">🗑️</button>
+              </div>`).join('');
+
+            return `
+              <div class="ticket disabled multi-edit" style="${active ? '' : 'opacity:.45'}">
+                <div class="emoji">${item.icon}</div>
+                <div style="flex:1">
+                  <input type="text" class="name-edit" value="${displayName(item).replace(/"/g,'&quot;')}" oninput="updateName('${item.id}', this.value)">
+                  <div class="toggle-row">
+                    <button type="button" class="switch-btn ${active ? 'on' : ''}" onclick="toggleActive('${item.id}', ${active ? 'false' : 'true'})"><span class="knob"></span></button>
+                    <span>${active ? 'مفعّل' : 'موقوف'}</span>
+                    ${isCustom ? `<button type="button" class="remove-btn" onclick="removeCustomItem('${item.id}')">🗑️ حذف التصنيف</button>` : ''}
+                  </div>
+                  <div class="places-edit-list">
+                    ${placeRows}
+                  </div>
+                  <button type="button" class="add-place-btn" onclick="addPlace('${item.id}')">➕ إضافة موقع</button>
+                </div>
+              </div>`;
+          }
+
+          const validPlaces = places.filter(p => p.url);
+          if (validPlaces.length === 1) {
+            const p = validPlaces[0];
+            return `<a class="ticket" href="${p.url}" target="_blank" rel="noopener">
+                      <div class="emoji">${item.icon}</div>
+                      <div class="name">${p.name && p.name.trim() ? p.name : displayName(item)}</div>
+                      <div class="go">افتح ←</div>
+                    </a>`;
+          }
+          if (validPlaces.length > 1) {
+            return `<div class="ticket multi-ticket">
+                      <div class="multi-head"><div class="emoji">${item.icon}</div><div class="name">${displayName(item)}</div></div>
+                      <div class="place-list">
+                        ${validPlaces.map(p => `<a class="place-link" href="${p.url}" target="_blank" rel="noopener">${p.name && p.name.trim() ? p.name : 'موقع'} ←</a>`).join('')}
+                      </div>
+                    </div>`;
+          }
+          return `<div class="ticket disabled"><div class="emoji">${item.icon}</div><div class="name">${displayName(item)}</div><div class="missing">قريبًا</div></div>`;
+        }).join('')}
+        ${editMode ? `<button type="button" class="ticket add-ticket" onclick="addCustomItem('${section.title}')"><div class="emoji">➕</div><div class="name">إضافة تصنيف جديد</div></button>` : ''}
+      </div>
+      ${!editMode && visibleItems.length > COLLAPSE_LIMIT ? `
+        <button type="button" class="show-more-btn" onclick="toggleSection('${section.title.replace(/'/g,"\\'")}')">
+          ${isExpanded ? 'عرض أقل ▴' : `عرض الكل (${visibleItems.length}) ▾`}
+        </button>` : ''}`;
+    wrap.appendChild(sec);
+  });
+
+  if (editMode){
+    const saveWrap = document.createElement('div');
+    saveWrap.className = 'toolbar';
+    saveWrap.innerHTML = `<button class="btn btn-brass" onclick="saveCity()">💾 حفظ (${allCities().find(c=>c.id===currentCityId)?.name || ''})</button>`;
+    wrap.appendChild(saveWrap);
+  }
+}
+
+/* =========================================================
+   6) نافذة الإدخال العامة، QR، نسخ الرابط
+   ========================================================= */
+function toggleSection(title){
+  expandedSections[title] = !expandedSections[title];
+  render();
+}
+
+let modalResolve = null;
+function openInputModal(title, placeholder, initialValue){
+  return new Promise((resolve) => {
+    modalResolve = resolve;
+    document.getElementById('inputModalTitle').textContent = title;
+    const f = document.getElementById('inputModalField');
+    f.placeholder = placeholder || ''; f.value = initialValue || '';
+    document.getElementById('inputModalError').textContent = '';
+    document.getElementById('inputBackdrop').classList.add('show');
+    setTimeout(()=> f.focus(), 50);
+  });
+}
+function confirmInputModal(){
+  const val = document.getElementById('inputModalField').value;
+  document.getElementById('inputBackdrop').classList.remove('show');
+  if (modalResolve){ modalResolve(val); modalResolve = null; }
+}
+function closeInputModal(){
+  document.getElementById('inputBackdrop').classList.remove('show');
+  if (modalResolve){ modalResolve(null); modalResolve = null; }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2200);
+}
+function copyLink(){
+  navigator.clipboard.writeText(window.location.href).then(()=> showToast('تم نسخ الرابط ✓'))
+    .catch(()=> showToast('انسخ الرابط يدويًا من شريط العنوان'));
+}
+function showQR(){
+  const box = document.getElementById('qrcode'); box.innerHTML = '';
+  try{ new QRCode(box, { text: window.location.href, width:180, height:180, colorDark:'#1c2b3a', colorLight:'#faf6ec' }); }
+  catch(e){ box.innerHTML = '<div style="font-size:12px;color:#4a5a68">تعذر توليد الرمز</div>'; }
+  document.getElementById('qrBackdrop').classList.add('show');
+}
+function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show'); }
+
+/* =========================================================
+   7) بدء التشغيل
+   ========================================================= */
+(async function init(){
+  await initFirebase();
+  await loadPassword();
+  await loadCustomCities();
+  await loadCustomCountries();
+  await loadAllCityStatus();
+  trackVisit(); // لا ننتظرها، ما نأخر تحميل الصفحة
+  await loadCity(pickInitialCity());
+})();
+</script>
+</body>
+</html>
