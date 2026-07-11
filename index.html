@@ -849,6 +849,26 @@ function ensurePlaces(id){
   return e;
 }
 
+// لصق رابط من حافظة الجهاز مباشرة بخانة رابط موقع معيّن
+async function pasteToPlaceUrl(itemId, index){
+  try{
+    const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()){ showToast('الحافظة فاضية'); return; }
+    updatePlaceUrl(itemId, index, text.trim());
+    render();
+    showToast('تم اللصق ✓');
+  }catch(e){
+    showToast('تعذر الوصول للحافظة — الصق يدويًا بالخانة');
+  }
+}
+
+// يفتح خرائط Google بحث مباشر على اسم المدينة الحالية بتبويب جديد
+function openMapsForCurrentCity(){
+  const cityName = allCities().find(c => c.id === currentCityId)?.name || '';
+  const url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(cityName);
+  window.open(url, '_blank');
+}
+
 function addPlace(id){
   const e = ensurePlaces(id);
   e.places.push({ name:"", url:"", area:"" });
@@ -1014,6 +1034,7 @@ function render(){
                 <input type="text" class="place-url-input" placeholder="رابط الموقع"
                   value="${(p.url||'').replace(/"/g,'&quot;')}"
                   oninput="updatePlaceUrl('${item.id}', ${i}, this.value)">
+                <button type="button" class="remove-btn" onclick="pasteToPlaceUrl('${item.id}', ${i}); return false;" title="لصق الرابط من الحافظة"><i class="fa-solid fa-paste"></i></button>
                 <button type="button" class="remove-btn" onclick="removePlace('${item.id}', ${i}); return false;" title="حذف"><i class="fa-solid fa-trash"></i></button>
               </div>`).join('');
 
@@ -1034,7 +1055,10 @@ function render(){
                   <div class="places-edit-list">
                     ${placeRows}
                   </div>
-                  <button type="button" class="add-place-btn" onclick="addPlace('${item.id}')"><i class="fa-solid fa-plus"></i> إضافة موقع</button>
+                  <div style="display:flex; gap:6px;">
+                    <button type="button" class="add-place-btn" style="flex:1" onclick="addPlace('${item.id}')"><i class="fa-solid fa-plus"></i> إضافة موقع</button>
+                    <button type="button" class="add-place-btn" style="flex:1" onclick="openMapsForCurrentCity()"><i class="fa-solid fa-map-location-dot"></i> فتح خرائط ${allCities().find(c=>c.id===currentCityId)?.name || ''}</button>
+                  </div>
                 </div>
               </div>`;
           }
