@@ -288,14 +288,7 @@
    0) عرض أي خطأ مباشرة على الصفحة (للتشخيص)
    ========================================================= */
 window.onerror = function(msg, url, line, col, error){
-  const dbg = document.getElementById('debugBanner');
-  if (dbg) {
-    dbg.style.display = 'block';
-    dbg.style.direction = 'ltr';
-    dbg.textContent = '⚠️ Script error: ' + msg + ' (line ' + line + ')';
-  }
-  const el = document.getElementById('loadingState');
-  if (el) el.style.display = 'none';
+  console.warn('Background script warning (non-critical):', msg);
   return false;
 };
 
