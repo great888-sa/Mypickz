@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MyPickz</title>
+<title id="pageTitle">MyPickz</title>
 
 <!-- تثبيت كتطبيق (PWA) -->
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" href="icon-180.png" id="touchIcon">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MyPickz">
+<meta name="apple-mobile-web-app-title" content="MyPickz" id="webAppTitle">
 <meta name="theme-color" content="#1c2b3a">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -222,9 +222,7 @@
 <body>
 
   <div class="cover">
-    <div class="eyebrow">دليل مُنسّق</div>
     <h1>🗺️ MyPickz</h1>
-    <p class="sub">أفضل المطاعم والمقاهي بمدنك المفضلة، منظمة حسب النوع.</p>
   </div>
 
   <div class="tab-label">الدولة</div>
@@ -241,14 +239,16 @@
       <span class="action-icon brass"><i class="fa-solid fa-qrcode"></i></span>
       <span class="action-label">QR</span>
     </button>
-    <button class="action-btn" onclick="requestEditAccess()">
-      <span class="action-icon ink" id="editIcon"><i class="fa-solid fa-pen"></i></span>
-      <span class="action-label" id="editBtnLabel">تعديل</span>
-    </button>
-    <button class="action-btn" onclick="managePassword()">
-      <span class="action-icon brass"><i class="fa-solid fa-lock"></i></span>
-      <span class="action-label">الحماية</span>
-    </button>
+    <span id="ownerControls" style="display:none;">
+      <button class="action-btn" onclick="requestEditAccess()">
+        <span class="action-icon ink" id="editIcon"><i class="fa-solid fa-pen"></i></span>
+        <span class="action-label" id="editBtnLabel">تعديل</span>
+      </button>
+      <button class="action-btn" onclick="managePassword()">
+        <span class="action-icon brass"><i class="fa-solid fa-lock"></i></span>
+        <span class="action-label">الحماية</span>
+      </button>
+    </span>
   </div>
 
   <div id="editModeBanner">وضع التعديل مفعّل — عدّل هذي المدينة فقط. اضغط "حفظ" بالأسفل بعد كل تغيير.</div>
@@ -257,7 +257,7 @@
   <div id="loadingState">جاري التحميل…</div>
   <div id="sections" style="display:none"></div>
 
-  <div class="footer-note">
+  <div class="footer-note" id="footerNote" style="display:none;">
     الروابط تُدار من إعدادات المشاركة بخرائط Google (View only يُنصح به). وضع التعديل محمي بكلمة مرور بسيطة — حماية أساسية، مو تشفير قوي.
   </div>
 
@@ -441,63 +441,63 @@ async function removeCity(cityId){
 }
 
 const DATA = [
-  { title:"مطاعم ومقاهي", icon:"utensils", items:[
-    {id:"burger", icon:"burger", name:"برجر"},
-    {id:"coffee_bakery", icon:"mug-saucer", name:"قهوة وبيكري"},
-    {id:"bakery", icon:"bread-slice", name:"بيكري"},
-    {id:"shawarma", icon:"hotdog", name:"شاورما"},
-    {id:"steak", icon:"fire", name:"ستيك"},
-    {id:"fine_lebanese", icon:"utensils", name:"فاخر - لبناني"},
-    {id:"fine_italian", icon:"wine-glass", name:"فاخر - إيطالي"},
-    {id:"fine_japanese", icon:"fish", name:"فاخر - ياباني"},
-    {id:"pizza", icon:"pizza-slice", name:"بيتزا"},
-    {id:"taco", icon:"pepper-hot", name:"تاكو / مكسيكي"},
-    {id:"seafood", icon:"shrimp", name:"مأكولات بحرية"},
-    {id:"icecream", icon:"ice-cream", name:"آيسكريم"},
-    {id:"brunch", icon:"egg", name:"فطور وبرانش"},
+  { title:"Restaurants & Cafes", icon:"🍴", items:[
+    {id:"burger", icon:"🍔", name:"Burger"},
+    {id:"coffee_bakery", icon:"☕", name:"Coffee & Bakery"},
+    {id:"bakery", icon:"🥐", name:"Bakery"},
+    {id:"shawarma", icon:"🌯", name:"Shawarma"},
+    {id:"steak", icon:"🥩", name:"Steak"},
+    {id:"fine_lebanese", icon:"🍽️", name:"Fine Dining - Lebanese"},
+    {id:"fine_italian", icon:"🍝", name:"Fine Dining - Italian"},
+    {id:"fine_japanese", icon:"🍣", name:"Fine Dining - Japanese"},
+    {id:"pizza", icon:"🍕", name:"Pizza"},
+    {id:"taco", icon:"🌮", name:"Taco / Mexican"},
+    {id:"seafood", icon:"🦐", name:"Seafood"},
+    {id:"icecream", icon:"🍦", name:"Ice Cream"},
+    {id:"brunch", icon:"🥞", name:"Brunch"},
   ]},
-  { title:"ترفيه وتجارب عائلية", icon:"gamepad", items:[
-    {id:"amusement", icon:"gamepad", name:"مدن ترفيهية"},
-    {id:"aquarium", icon:"fish-fins", name:"أكواريوم"},
+  { title:"Entertainment & Family", icon:"🎡", items:[
+    {id:"amusement", icon:"🎡", name:"Amusement Park"},
+    {id:"aquarium", icon:"🐠", name:"Aquarium"},
   ]},
-  { title:"معالم تاريخية وثقافية", icon:"landmark", items:[
-    {id:"landmarks", icon:"landmark", name:"معالم أثرية"},
-    {id:"palaces", icon:"crown", name:"قصور ملكية"},
+  { title:"Historical & Cultural Landmarks", icon:"🏛️", items:[
+    {id:"landmarks", icon:"🏛️", name:"Historical Landmarks"},
+    {id:"palaces", icon:"👑", name:"Royal Palaces"},
   ]},
-  { title:"حدائق ومنتزهات", icon:"tree", items:[
-    {id:"parks", icon:"tree", name:"حدائق عامة"},
-    {id:"zoo", icon:"paw", name:"حديقة حيوان"},
-    {id:"safari", icon:"binoculars", name:"سفاري"},
+  { title:"Parks & Gardens", icon:"🌳", items:[
+    {id:"parks", icon:"🌳", name:"Public Parks"},
+    {id:"zoo", icon:"🦁", name:"Zoo"},
+    {id:"safari", icon:"🐪", name:"Safari"},
   ]},
-  { title:"معالم طبيعية", icon:"mountain", items:[
-    {id:"mountains", icon:"mountain", name:"قمم جبلية"},
-    {id:"waterfalls", icon:"water", name:"شلالات"},
-    {id:"lakes", icon:"droplet", name:"بحيرات"},
+  { title:"Natural Landmarks", icon:"🏔️", items:[
+    {id:"mountains", icon:"🏔️", name:"Mountains"},
+    {id:"waterfalls", icon:"💦", name:"Waterfalls"},
+    {id:"lakes", icon:"🏞️", name:"Lakes"},
   ]},
-  { title:"ساحات وميادين", icon:"map-pin", items:[
-    {id:"squares", icon:"map-pin", name:"ساحات وميادين"},
+  { title:"Squares & Plazas", icon:"⛲", items:[
+    {id:"squares", icon:"⛲", name:"Squares & Plazas"},
   ]},
-  { title:"شواطئ بحرية", icon:"umbrella-beach", items:[
-    {id:"corniche", icon:"person-walking", name:"ممشى كورنيش"},
-    {id:"beaches", icon:"umbrella-beach", name:"شواطئ سباحة"},
-    {id:"beachclub", icon:"martini-glass", name:"بيتش كلوب"},
+  { title:"Beaches", icon:"🏖️", items:[
+    {id:"corniche", icon:"🚶‍♂️", name:"Corniche Walk"},
+    {id:"beaches", icon:"🏝️", name:"Swimming Beaches"},
+    {id:"beachclub", icon:"🍹", name:"Beach Club"},
   ]},
-  { title:"شوارع وجادات مميزة", icon:"road", items:[
-    {id:"streets", icon:"road", name:"شوارع وجادات مميزة (للتمشية، التسوق، مقاهي، مطاعم)"},
+  { title:"Streets & Avenues", icon:"🛣️", items:[
+    {id:"streets", icon:"🛣️", name:"Streets & Avenues (Walking, Shopping, Cafes, Restaurants)"},
   ]},
-  { title:"تسوق", icon:"bag-shopping", items:[
-    {id:"department", icon:"bag-shopping", name:"متاجر / دبارتمنت ستور"},
-    {id:"local_markets", icon:"store", name:"أسواق شعبية / محلية"},
-    {id:"boutiques", icon:"gem", name:"بوتيكات"},
+  { title:"Shopping", icon:"🛍️", items:[
+    {id:"department", icon:"🛍️", name:"Department Stores"},
+    {id:"local_markets", icon:"🧺", name:"Local Markets"},
+    {id:"boutiques", icon:"👜", name:"Boutiques"},
   ]},
-  { title:"فنادق وشقق سكنية", icon:"bed", items:[
-    {id:"hotels", icon:"bed", name:"فنادق وشقق سكنية"},
+  { title:"Hotels & Apartments", icon:"🏨", items:[
+    {id:"hotels", icon:"🏨", name:"Hotels & Apartments"},
   ]},
-  { title:"مطارات ومحطات قطار", icon:"plane", items:[
-    {id:"airports", icon:"plane", name:"مطارات ومحطات قطار"},
+  { title:"Airports & Train Stations", icon:"✈️", items:[
+    {id:"airports", icon:"✈️", name:"Airports & Train Stations"},
   ]},
-  { title:"مواقف سيارات", icon:"square-parking", items:[
-    {id:"parking", icon:"square-parking", name:"مواقف سيارات"},
+  { title:"Parking", icon:"🅿️", items:[
+    {id:"parking", icon:"🅿️", name:"Parking"},
   ]},
 ];
 
@@ -623,6 +623,16 @@ async function loadPassword(){
   }catch(e){ editPassword = ""; }
 }
 
+function checkOwnerAccess(){
+  const key = new URLSearchParams(window.location.search).get('key');
+  if (key && editPassword && key === editPassword) {
+    document.getElementById('ownerControls').style.display = 'contents';
+    document.getElementById('pageTitle').textContent = 'MyPickz — Admin';
+    document.getElementById('webAppTitle').setAttribute('content', 'MyPickz Admin');
+    document.getElementById('touchIcon').setAttribute('href', 'icon-180-admin.png');
+  }
+}
+
 async function savePassword(){
   try{
     await db.collection('settings').doc('app').set({ password: editPassword }, { merge:true });
@@ -706,10 +716,11 @@ function updateName(id, val){ const e = getEntry(id); e.name = val.trim(); links
 function toggleActive(id, checked){ const e = getEntry(id); e.active = checked; links[id] = e; render(); }
 
 async function addCustomItem(sectionTitle){
-  const name = await openInputModal("تصنيف جديد", "مثال: قرية، مدينة، جزيرة...", "");
+  const name = await openInputModal("تصنيف جديد", "مثال: Village, City...", "");
   if (!name || !name.trim()) return;
+  const icon = await openInputModal("أيقونة التصنيف (إيموجي)", "الصق إيموجي مناسب، مثال: 🏘️", "🏷️");
   const id = "custom_" + Date.now();
-  customItems.push({ id, section: sectionTitle, icon:"tag", name:name.trim() });
+  customItems.push({ id, section: sectionTitle, icon: (icon && icon.trim()) ? icon.trim() : "🏷️", name:name.trim() });
   await saveCity();
   render();
 }
@@ -725,6 +736,7 @@ function toggleEdit(){
   document.getElementById('editBtnLabel').textContent = editMode ? 'إنهاء' : 'تعديل';
   document.getElementById('editIcon').innerHTML = editMode ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-pen"></i>';
   document.getElementById('editModeBanner').classList.toggle('show', editMode);
+  document.getElementById('footerNote').style.display = editMode ? 'block' : 'none';
   if (!editMode && !cityStatus[currentCityId]) {
     loadCity(pickInitialCity());
     return;
@@ -792,7 +804,7 @@ function render(){
     nav.className = 'quick-nav';
     nav.innerHTML = visibleSections.map((section) => `
       <button class="quick-nav-btn" onclick="document.getElementById('sec-${DATA.indexOf(section)}').scrollIntoView({behavior:'smooth', block:'start'})" title="${section.title}">
-        <i class="fa-solid fa-${section.icon}"></i>
+        ${section.icon}
       </button>`).join('');
     wrap.appendChild(nav);
   }
@@ -813,7 +825,7 @@ function render(){
     sec.id = 'sec-' + sIndex;
     sec.innerHTML = `
       <div class="section-head">
-        <i class="fa-solid fa-${section.icon} section-icon"></i>
+        <span class="section-icon">${section.icon}</span>
         <h2>${section.title}</h2><span class="count">${visibleItems.length}</span>
         ${editMode ? `
           <button type="button" class="switch-btn ${sectionOn ? 'on' : ''}" style="margin-inline-start:auto;" onclick="toggleSectionStatus('${section.title.replace(/'/g,"\\'")}')"><span class="knob"></span></button>
@@ -840,7 +852,7 @@ function render(){
 
             return `
               <div class="ticket disabled multi-edit" style="${active ? '' : 'opacity:.45'}">
-                <div class="icon-badge"><i class="fa-solid fa-${item.icon}"></i></div>
+                <div class="icon-badge">${item.icon}</div>
                 <div style="flex:1">
                   <input type="text" class="name-edit" value="${displayName(item).replace(/"/g,'&quot;')}" oninput="updateName('${item.id}', this.value)">
                   <div class="toggle-row">
@@ -860,20 +872,20 @@ function render(){
           if (validPlaces.length === 1) {
             const p = validPlaces[0];
             return `<a class="ticket" href="${p.url}" target="_blank" rel="noopener">
-                      <div class="icon-badge"><i class="fa-solid fa-${item.icon}"></i></div>
+                      <div class="icon-badge">${item.icon}</div>
                       <div class="name">${p.name && p.name.trim() ? p.name : displayName(item)}</div>
                       <div class="go">افتح ←</div>
                     </a>`;
           }
           if (validPlaces.length > 1) {
             return `<div class="ticket multi-ticket">
-                      <div class="multi-head"><div class="icon-badge"><i class="fa-solid fa-${item.icon}"></i></div><div class="name">${displayName(item)}</div></div>
+                      <div class="multi-head"><div class="icon-badge">${item.icon}</div><div class="name">${displayName(item)}</div></div>
                       <div class="place-list">
                         ${validPlaces.map(p => `<a class="place-link" href="${p.url}" target="_blank" rel="noopener">${p.name && p.name.trim() ? p.name : 'موقع'} ←</a>`).join('')}
                       </div>
                     </div>`;
           }
-          return `<div class="ticket disabled"><div class="icon-badge"><i class="fa-solid fa-${item.icon}"></i></div><div class="name">${displayName(item)}</div><div class="missing">قريبًا</div></div>`;
+          return `<div class="ticket disabled"><div class="icon-badge">${item.icon}</div><div class="name">${displayName(item)}</div><div class="missing">قريبًا</div></div>`;
         }).join('')}
         ${editMode ? `<button type="button" class="ticket add-ticket" onclick="addCustomItem('${section.title}')"><div class="icon-badge"><i class="fa-solid fa-plus"></i></div><div class="name">إضافة تصنيف جديد</div></button>` : ''}
       </div>
@@ -945,6 +957,7 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
 (async function init(){
   await initFirebase();
   await loadPassword();
+  checkOwnerAccess();
   await loadCustomCities();
   await loadCustomCountries();
   await loadAllCityStatus();
