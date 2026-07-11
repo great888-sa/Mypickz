@@ -617,14 +617,27 @@ async function loadPassword(){
   }catch(e){ editPassword = ""; }
 }
 
+function revealOwnerUI(){
+  document.getElementById('ownerControls').style.display = 'contents';
+  document.getElementById('pageTitle').textContent = 'MyPickz — Admin';
+  document.getElementById('webAppTitle').setAttribute('content', 'MyPickz Admin');
+  document.getElementById('touchIcon').setAttribute('href', 'icon-180-admin.png');
+}
+
 function checkOwnerAccess(){
   const key = new URLSearchParams(window.location.search).get('key');
   if (key && editPassword && key === editPassword) {
-    document.getElementById('ownerControls').style.display = 'contents';
-    document.getElementById('pageTitle').textContent = 'MyPickz — Admin';
-    document.getElementById('webAppTitle').setAttribute('content', 'MyPickz Admin');
-    document.getElementById('touchIcon').setAttribute('href', 'icon-180-admin.png');
+    try{ localStorage.setItem('mypickz_owner', editPassword); }catch(e){}
+    revealOwnerUI();
+    return;
   }
+  // احتياطي: لو iOS تجاهل الرابط بعد ؟ وقت فتح الأيقونة المحفوظة، نتحقق من الجهاز نفسه
+  try{
+    const remembered = localStorage.getItem('mypickz_owner');
+    if (remembered && editPassword && remembered === editPassword) {
+      revealOwnerUI();
+    }
+  }catch(e){}
 }
 
 async function savePassword(){
