@@ -590,10 +590,17 @@ async function loadVisitCount(){
 
 async function loadAllCityStatus(){
   try{
-    const snap = await db.collection('cities').get();
-    const map = {};
-    snap.forEach(doc => { map[doc.id] = doc.data().published === true; });
-    cityStatus = map;
+    const doc = await db.collection('settings').doc('publish-status').get();
+    if (doc.exists && doc.data().status) {
+      cityStatus = doc.data().status;
+    } else {
+      // ترقية تلقائية مرة وحدة بس: الملخص السريع مو موجود بعد، نبنيه من بيانات المدن الفعلية
+      const snap = await db.collection('cities').get();
+      const map = {};
+      snap.forEach(d => { map[d.id] = d.data().published === true; });
+      cityStatus = map;
+      db.collection('settings').doc('publish-status').set({ status: map }, { merge:true }).catch(()=>{});
+    }
   }catch(e){
     cityStatus = {};
   }
@@ -645,9 +652,16 @@ function selectCountry(country){
 function togglePublish(){
   cityStatus[currentCityId] = !cityStatus[currentCityId];
   saveCity();
+  saveCityStatusSummary();
   renderCountryTabs();
   renderCityTabs();
   render();
+}
+
+async function saveCityStatusSummary(){
+  try{
+    await db.collection('settings').doc('publish-status').set({ status: cityStatus }, { merge:true });
+  }catch(e){ /* صامت — الحفظ الأساسي بـ saveCity() نجح على أي حال */ }
 }
 
 function toggleSectionStatus(title){
@@ -1129,12 +1143,15 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
    ========================================================= */
 (async function init(){
   await initFirebase();
-  await loadPassword();
+  // الطلبات دي مستقلة عن بعض — نشغلها بالتوازي بدل التتابع، يقلل وقت التحميل بشكل ملموس
+  await Promise.all([
+    loadPassword(),
+    loadCustomCities(),
+    loadCustomCountries(),
+    loadCategoryTemplate(),
+    loadAllCityStatus()
+  ]);
   checkOwnerAccess();
-  await loadCustomCities();
-  await loadCustomCountries();
-  await loadCategoryTemplate();
-  await loadAllCityStatus();
   trackVisit(); // لا ننتظرها، ما نأخر تحميل الصفحة
   await loadCity(pickInitialCity());
 })();
