@@ -147,16 +147,21 @@
 
   .places-edit-list{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
   .place-row{
-    display:flex; gap:6px; align-items:center;
+    display:flex; gap:6px; align-items:center; flex-wrap:wrap;
     background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px;
   }
+  .place-area-input{
+    width:25%; min-width:80px; border:none; background:transparent; font-size:11.5px;
+    font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid var(--line); color:var(--brass);
+  }
+  .place-area-input:focus{ outline:none; }
   .place-name-input{
-    width:40%; border:none; background:transparent; font-size:12px;
+    width:28%; min-width:90px; border:none; background:transparent; font-size:12px;
     font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid var(--line);
   }
   .place-name-input:focus{ outline:none; }
   .place-url-input{
-    flex:1; border:none; background:transparent; font-size:12px;
+    flex:1; min-width:100px; border:none; background:transparent; font-size:12px;
     font-family:'Tajawal',sans-serif; direction:ltr; text-align:left; padding:4px 6px;
   }
   .place-url-input:focus{ outline:none; }
@@ -166,6 +171,28 @@
     font-weight:700; font-size:12px; cursor:pointer;
   }
   .multi-edit .toggle-row{ flex-wrap:wrap; }
+
+  .reorder-col{ display:flex; flex-direction:column; gap:2px; flex:none; }
+  .reorder-btn{
+    width:22px; height:20px; border:1px solid var(--line); background:#fff; border-radius:5px;
+    font-size:10px; color:var(--ink-soft); cursor:pointer; line-height:1;
+  }
+  .reorder-btn:disabled{ opacity:.25; cursor:default; }
+
+  .icon-edit{
+    width:38px; height:38px; border-radius:50%; flex:none; text-align:center;
+    background:var(--ink); color:#fff; border:none; font-size:17px;
+  }
+
+  .area-tag{
+    display:inline-block; font-size:10px; color:var(--brass); font-weight:700;
+    background:rgba(165,117,31,0.1); border-radius:5px; padding:1px 6px; margin-inline-start:4px;
+  }
+  .area-divider{
+    font-family:'Cairo',sans-serif; font-size:10.5px; font-weight:700; color:var(--brass);
+    margin-top:8px; padding-top:6px; border-top:1px dashed var(--line);
+  }
+  .place-list .area-divider:first-child{ margin-top:0; border-top:none; padding-top:0; }
 
   .multi-ticket{ flex-direction:column; align-items:stretch; gap:8px; }
   .multi-head{ display:flex; align-items:center; gap:11px; }
@@ -393,6 +420,31 @@ async function saveCustomCountries(){
   }catch(e){ showToast('تعذر حفظ الدولة'); }
 }
 
+// ===== قالب التصنيفات المشترك (كل المدن تقرأ من نفس المستند) =====
+async function loadCategoryTemplate(){
+  try{
+    const doc = await db.collection('settings').doc('category-template').get();
+    const data = doc.exists ? doc.data() : {};
+    customItems = data.customItems || [];
+    sectionOverrides = data.sectionOverrides || {};
+    itemOrder = data.itemOrder || {};
+    itemOverrides = data.itemOverrides || {};
+  }catch(e){
+    customItems = []; sectionOverrides = {}; itemOrder = {}; itemOverrides = {};
+  }
+}
+async function saveCategoryTemplate(){
+  try{
+    await db.collection('settings').doc('category-template').set(
+      { customItems, sectionOverrides, itemOrder, itemOverrides },
+      { merge:true }
+    );
+    showToast('تم حفظ التصنيف لكل المدن ✓');
+  }catch(e){
+    showToast('تعذر حفظ التصنيف');
+  }
+}
+
 async function addCountry(){
   const name = await openInputModal("دولة جديدة", "مثال: السعودية، قطر، أمريكا...", "");
   if (!name || !name.trim()) return;
@@ -500,12 +552,17 @@ const DATA = [
    ========================================================= */
 let currentCityId = CITIES[0].id;
 let currentCountry = CITIES[0].country;
-let links = {};          // { itemId: {url, active, name} }
-let customItems = [];    // [{id, section, icon, name}]
+let links = {};          // (لكل مدينة) { itemId: {active, places:[{name,url,area}]} }
 let editMode = false;
 let editPassword = "";
-let cityStatus = {};     // { cityId: true/false } — true = منشورة وظاهرة للزوار
-let sectionStatus = {};  // { sectionTitle: true/false } — true (أو غير موجود) = القسم الرئيسي ظاهر
+let cityStatus = {};     // (لكل مدينة) { cityId: true/false } — true = منشورة وظاهرة للزوار
+let sectionStatus = {};  // (لكل مدينة) { sectionTitle: true/false } — true (أو غير موجود) = القسم الرئيسي ظاهر
+
+// ===== قالب التصنيفات — مشترك بين كل المدن (تعديله بأي مدينة ينعكس على الجميع) =====
+let customItems = [];      // [{id, section, icon, name}] — تصنيفات فرعية مضافة يدويًا
+let sectionOverrides = {}; // { sectionTitle: {name, icon} } — تخصيص اسم/أيقونة القسم الرئيسي
+let itemOrder = {};        // { sectionTitle: [itemId, itemId, ...] } — ترتيب التصنيفات الفرعية
+let itemOverrides = {};    // { itemId: {name, icon} } — تخصيص اسم/أيقونة تصنيف فرعي
 
 /* =========================================================
    4) تحميل/حفظ من Firestore
@@ -555,11 +612,10 @@ async function loadCity(cityId){
     const doc = await db.collection('cities').doc(cityId).get();
     const data = doc.exists ? doc.data() : {};
     links = data.links || {};
-    customItems = data.customItems || [];
     cityStatus[cityId] = data.published === true;
     sectionStatus = data.sectionStatus || {};
   }catch(e){
-    links = {}; customItems = []; sectionStatus = {};
+    links = {}; sectionStatus = {};
     const dbg = document.getElementById('debugBanner');
     if (dbg.style.display !== 'block') {
       dbg.style.display = 'block';
@@ -598,10 +654,15 @@ function toggleSectionStatus(title){
   render();
 }
 
+async function saveAll(){
+  await saveCategoryTemplate();
+  await saveCity();
+}
+
 async function saveCity(){
   try{
     await db.collection('cities').doc(currentCityId).set(
-      { links, customItems, published: cityStatus[currentCityId] === true, sectionStatus },
+      { links, published: cityStatus[currentCityId] === true, sectionStatus },
       { merge:true }
     );
     showToast('تم الحفظ ✓');
@@ -699,29 +760,82 @@ function renderCityTabs(){
     + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCity()">➕ مدينة جديدة</button>` : '');
 }
 
-function getEntry(id){ return links[id] || { url:"", active:true, name:"" }; }
-function displayName(item){ const e = getEntry(item.id); return e.name && e.name.length ? e.name : item.name; }
+function getEntry(id){ return links[id] || { active:true }; }
 
-// يرجع مصفوفة المواقع لتصنيف معيّن، ويتحول تلقائيًا من الصيغة القديمة (رابط واحد بدون اسم) لو لقاها
+// --- اسم/أيقونة التصنيف الفرعي (مشترك لكل المدن) ---
+function displayName(item){ const o = itemOverrides[item.id]; return (o && o.name) ? o.name : item.name; }
+function displayIcon(item){ const o = itemOverrides[item.id]; return (o && o.icon) ? o.icon : item.icon; }
+function updateName(id, val){
+  itemOverrides[id] = itemOverrides[id] || {};
+  itemOverrides[id].name = val.trim();
+}
+function updateIcon(id, val){
+  itemOverrides[id] = itemOverrides[id] || {};
+  itemOverrides[id].icon = val.trim();
+}
+
+// --- تخصيص اسم/أيقونة القسم الرئيسي (مشترك لكل المدن) ---
+function sectionDisplay(section){
+  const o = sectionOverrides[section.title];
+  return { name: (o && o.name) ? o.name : section.title, icon: (o && o.icon) ? o.icon : section.icon };
+}
+async function editSection(sectionTitle){
+  const section = DATA.find(s => s.title === sectionTitle);
+  if (!section) return;
+  const cur = sectionDisplay(section);
+  const newName = await openInputModal("اسم القسم الرئيسي (لكل المدن)", "مثال: Restaurants & Cafes", cur.name);
+  if (newName === null) return;
+  const newIcon = await openInputModal("أيقونة القسم (إيموجي)", "مثال: 🍴", cur.icon);
+  if (newIcon === null) return;
+  sectionOverrides[section.title] = {
+    name: newName.trim() || section.title,
+    icon: newIcon.trim() || section.icon
+  };
+  await saveCategoryTemplate();
+  render();
+}
+
+// --- ترتيب التصنيفات الفرعية داخل قسم (مشترك لكل المدن) ---
+function orderedItems(section, allItems){
+  const order = itemOrder[section.title];
+  if (!order || !order.length) return allItems;
+  const byId = {}; allItems.forEach(it => byId[it.id] = it);
+  const ordered = order.map(id => byId[id]).filter(Boolean);
+  allItems.forEach(it => { if (!order.includes(it.id)) ordered.push(it); });
+  return ordered;
+}
+function moveItem(sectionTitle, id, dir){
+  const section = DATA.find(s => s.title === sectionTitle);
+  if (!section) return;
+  const sectionCustom = customItems.filter(c => c.section === sectionTitle);
+  const allItems = orderedItems(section, section.items.concat(sectionCustom));
+  const list = allItems.map(it => it.id);
+  const i = list.indexOf(id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  itemOrder[sectionTitle] = list;
+  saveCategoryTemplate();
+  render();
+}
+
+// يرجع مصفوفة المواقع لتصنيف معيّن (بيانات هذي المدينة بس)
 function getPlaces(id){
   const e = getEntry(id);
   if (Array.isArray(e.places) && e.places.length) return e.places;
-  if (e.url) return [{ name:"", url: e.url }];
   return [];
 }
 
 function ensurePlaces(id){
   const e = getEntry(id);
-  if (!Array.isArray(e.places)) {
-    e.places = e.url ? [{ name:"", url: e.url }] : [];
-  }
+  if (!Array.isArray(e.places)) e.places = [];
   links[id] = e;
   return e;
 }
 
 function addPlace(id){
   const e = ensurePlaces(id);
-  e.places.push({ name:"", url:"" });
+  e.places.push({ name:"", url:"", area:"" });
   render();
 }
 function removePlace(id, index){
@@ -737,22 +851,27 @@ function updatePlaceUrl(id, index, val){
   const e = ensurePlaces(id);
   if (e.places[index]) e.places[index].url = val.trim();
 }
+function updatePlaceArea(id, index, val){
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].area = val;
+}
 
-function updateName(id, val){ const e = getEntry(id); e.name = val.trim(); links[id] = e; }
 function toggleActive(id, checked){ const e = getEntry(id); e.active = checked; links[id] = e; render(); }
 
+// --- إضافة/حذف تصنيف فرعي مخصص (مشترك لكل المدن) ---
 async function addCustomItem(sectionTitle){
-  const name = await openInputModal("تصنيف جديد", "مثال: Village, City...", "");
+  const name = await openInputModal("تصنيف جديد (يظهر كخيار بكل المدن)", "مثال: Village, City...", "");
   if (!name || !name.trim()) return;
   const icon = await openInputModal("أيقونة التصنيف (إيموجي)", "الصق إيموجي مناسب، مثال: 🏘️", "🏷️");
   const id = "custom_" + Date.now();
   customItems.push({ id, section: sectionTitle, icon: (icon && icon.trim()) ? icon.trim() : "🏷️", name:name.trim() });
-  await saveCity();
+  await saveCategoryTemplate();
   render();
 }
 function removeCustomItem(id){
   customItems = customItems.filter(c => c.id !== id);
   delete links[id];
+  saveCategoryTemplate();
   saveCity();
   render();
 }
@@ -829,8 +948,8 @@ function render(){
     const nav = document.createElement('div');
     nav.className = 'quick-nav';
     nav.innerHTML = visibleSections.map((section) => `
-      <button class="quick-nav-btn" onclick="document.getElementById('sec-${DATA.indexOf(section)}').scrollIntoView({behavior:'smooth', block:'start'})" title="${section.title}">
-        ${section.icon}
+      <button class="quick-nav-btn" onclick="document.getElementById('sec-${DATA.indexOf(section)}').scrollIntoView({behavior:'smooth', block:'start'})" title="${sectionDisplay(section).name}">
+        ${sectionDisplay(section).icon}
       </button>`).join('');
     wrap.appendChild(nav);
   }
@@ -838,10 +957,11 @@ function render(){
   DATA.forEach((section, sIndex) => {
     if (!editMode && sectionStatus[section.title] === false) return;
     const sectionCustom = customItems.filter(c => c.section === section.title);
-    const allItems = section.items.concat(sectionCustom);
+    const allItems = orderedItems(section, section.items.concat(sectionCustom));
     const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id).active !== false);
     if (!editMode && visibleItems.length === 0) return;
 
+    const sd = sectionDisplay(section);
     const sectionOn = sectionStatus[section.title] !== false;
     const isExpanded = editMode || expandedSections[section.title] || visibleItems.length <= COLLAPSE_LIMIT;
     const itemsToShow = isExpanded ? visibleItems : visibleItems.slice(0, COLLAPSE_LIMIT);
@@ -851,23 +971,28 @@ function render(){
     sec.id = 'sec-' + sIndex;
     sec.innerHTML = `
       <div class="section-head">
-        <span class="section-icon">${section.icon}</span>
-        <h2>${section.title}</h2><span class="count">${visibleItems.length}</span>
+        <span class="section-icon">${sd.icon}</span>
+        <h2>${sd.name}</h2><span class="count">${visibleItems.length}</span>
         ${editMode ? `
+          <button type="button" class="remove-btn" style="font-size:14px;" onclick="editSection('${section.title.replace(/'/g,"\\'")}')" title="تعديل اسم/أيقونة القسم"><i class="fa-solid fa-pen"></i></button>
           <button type="button" class="switch-btn ${sectionOn ? 'on' : ''}" style="margin-inline-start:auto;" onclick="toggleSectionStatus('${section.title.replace(/'/g,"\\'")}')"><span class="knob"></span></button>
           <span style="font-size:11px; color:var(--ink-soft); font-family:'Cairo',sans-serif;">${sectionOn ? 'ظاهر للزوار' : 'مخفي عن الزوار'}</span>` : ''}
       </div>
       <div class="grid">
-        ${itemsToShow.map(item => {
+        ${itemsToShow.map((item, iIndex) => {
           const entry = getEntry(item.id);
           const places = getPlaces(item.id);
           const active = entry.active !== false;
           const isCustom = item.id.startsWith('custom_');
+          const icon = displayIcon(item);
 
           if (editMode) {
             const placeRows = places.map((p, i) => `
               <div class="place-row">
-                <input type="text" class="place-name-input" placeholder="اسم المكان (مثال: Five Guys)"
+                <input type="text" class="place-area-input" placeholder="المنطقة (اختياري)"
+                  value="${(p.area||'').replace(/"/g,'&quot;')}"
+                  oninput="updatePlaceArea('${item.id}', ${i}, this.value)">
+                <input type="text" class="place-name-input" placeholder="اسم المكان"
                   value="${(p.name||'').replace(/"/g,'&quot;')}"
                   oninput="updatePlaceName('${item.id}', ${i}, this.value)">
                 <input type="text" class="place-url-input" placeholder="رابط الموقع"
@@ -878,7 +1003,11 @@ function render(){
 
             return `
               <div class="ticket disabled multi-edit" style="${active ? '' : 'opacity:.45'}">
-                <div class="icon-badge">${item.icon}</div>
+                <div class="reorder-col">
+                  <button type="button" class="reorder-btn" ${iIndex===0?'disabled':''} onclick="moveItem('${section.title.replace(/'/g,"\\'")}', '${item.id}', -1)">▲</button>
+                  <button type="button" class="reorder-btn" ${iIndex===itemsToShow.length-1?'disabled':''} onclick="moveItem('${section.title.replace(/'/g,"\\'")}', '${item.id}', 1)">▼</button>
+                </div>
+                <input type="text" class="icon-edit" value="${icon.replace(/"/g,'&quot;')}" oninput="updateIcon('${item.id}', this.value)" title="أيقونة (إيموجي)">
                 <div style="flex:1">
                   <input type="text" class="name-edit" value="${displayName(item).replace(/"/g,'&quot;')}" oninput="updateName('${item.id}', this.value)">
                   <div class="toggle-row">
@@ -894,24 +1023,40 @@ function render(){
               </div>`;
           }
 
-          const validPlaces = places.filter(p => p.url);
+          const validPlaces = places.filter(p => p.url).sort((a,b) => {
+            const areaA = (a.area||'').trim(), areaB = (b.area||'').trim();
+            if (areaA !== areaB) return areaA.localeCompare(areaB, 'ar');
+            return (a.name||'').localeCompare(b.name||'', 'ar');
+          });
+
           if (validPlaces.length === 1) {
             const p = validPlaces[0];
+            const label = p.name && p.name.trim() ? p.name : displayName(item);
             return `<a class="ticket" href="${p.url}" target="_blank" rel="noopener">
-                      <div class="icon-badge">${item.icon}</div>
-                      <div class="name">${p.name && p.name.trim() ? p.name : displayName(item)}</div>
+                      <div class="icon-badge">${icon}</div>
+                      <div class="name">${label}${p.area && p.area.trim() ? ` <span class="area-tag">${p.area}</span>` : ''}</div>
                       <div class="go">افتح ←</div>
                     </a>`;
           }
           if (validPlaces.length > 1) {
+            let lastArea = null;
+            const rows = validPlaces.map(p => {
+              const area = (p.area||'').trim();
+              let divider = '';
+              if (area && area !== lastArea) {
+                divider = `<div class="area-divider">${area}</div>`;
+                lastArea = area;
+              } else if (!area && lastArea !== '') {
+                lastArea = '';
+              }
+              return divider + `<a class="place-link" href="${p.url}" target="_blank" rel="noopener">${p.name && p.name.trim() ? p.name : 'موقع'} ←</a>`;
+            }).join('');
             return `<div class="ticket multi-ticket">
-                      <div class="multi-head"><div class="icon-badge">${item.icon}</div><div class="name">${displayName(item)}</div></div>
-                      <div class="place-list">
-                        ${validPlaces.map(p => `<a class="place-link" href="${p.url}" target="_blank" rel="noopener">${p.name && p.name.trim() ? p.name : 'موقع'} ←</a>`).join('')}
-                      </div>
+                      <div class="multi-head"><div class="icon-badge">${icon}</div><div class="name">${displayName(item)}</div></div>
+                      <div class="place-list">${rows}</div>
                     </div>`;
           }
-          return `<div class="ticket disabled"><div class="icon-badge">${item.icon}</div><div class="name">${displayName(item)}</div><div class="missing">قريبًا</div></div>`;
+          return `<div class="ticket disabled"><div class="icon-badge">${icon}</div><div class="name">${displayName(item)}</div><div class="missing">قريبًا</div></div>`;
         }).join('')}
         ${editMode ? `<button type="button" class="ticket add-ticket" onclick="addCustomItem('${section.title}')"><div class="icon-badge"><i class="fa-solid fa-plus"></i></div><div class="name">إضافة تصنيف جديد</div></button>` : ''}
       </div>
@@ -925,7 +1070,7 @@ function render(){
   if (editMode){
     const saveWrap = document.createElement('div');
     saveWrap.className = 'toolbar';
-    saveWrap.innerHTML = `<button class="btn btn-brass" onclick="saveCity()"><i class="fa-solid fa-floppy-disk"></i> حفظ (${allCities().find(c=>c.id===currentCityId)?.name || ''})</button>`;
+    saveWrap.innerHTML = `<button class="btn btn-brass" onclick="saveAll()"><i class="fa-solid fa-floppy-disk"></i> حفظ (${allCities().find(c=>c.id===currentCityId)?.name || ''})</button>`;
     wrap.appendChild(saveWrap);
   }
 }
@@ -986,6 +1131,7 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
   checkOwnerAccess();
   await loadCustomCities();
   await loadCustomCountries();
+  await loadCategoryTemplate();
   await loadAllCityStatus();
   trackVisit(); // لا ننتظرها، ما نأخر تحميل الصفحة
   await loadCity(pickInitialCity());
