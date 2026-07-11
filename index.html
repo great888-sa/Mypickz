@@ -222,7 +222,7 @@
 <body>
 
   <div class="cover">
-    <h1>🗺️ MyPickz</h1>
+    <h1 onclick="logoTap()" style="cursor:pointer;">🗺️ MyPickz</h1>
   </div>
 
   <div class="tab-label">الدولة</div>
@@ -622,6 +622,25 @@ function revealOwnerUI(){
   document.getElementById('pageTitle').textContent = 'MyPickz — Admin';
   document.getElementById('webAppTitle').setAttribute('content', 'MyPickz Admin');
   document.getElementById('touchIcon').setAttribute('href', 'icon-180-admin.png');
+}
+
+let logoTapCount = 0;
+let logoTapTimer = null;
+async function logoTap(){
+  logoTapCount++;
+  clearTimeout(logoTapTimer);
+  logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 2000); // لازم الضغطات متقاربة
+  if (logoTapCount < 5) return;
+  logoTapCount = 0;
+  const entered = await openInputModal("دخول المالك", "أدخل كلمة المرور", "");
+  if (entered === null) return;
+  if (editPassword && entered === editPassword) {
+    try{ localStorage.setItem('mypickz_owner', editPassword); }catch(e){}
+    revealOwnerUI();
+    showToast('تم تفعيل وضع المالك ✓');
+  } else {
+    showToast('كلمة مرور غير صحيحة');
+  }
 }
 
 function checkOwnerAccess(){
