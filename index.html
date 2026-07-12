@@ -62,13 +62,13 @@
   .toolbar{ max-width:760px; margin:20px auto 6px; padding:0 20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 
   .action-bar{
-    max-width:340px; margin:24px auto 6px;
+    max-width:420px; margin:24px auto 6px;
     background:var(--card); border:1px solid var(--line); border-radius:20px;
-    display:flex; padding:10px 4px;
+    display:flex; flex-wrap:wrap; justify-content:center; padding:10px 4px;
     box-shadow:0 2px 10px rgba(28,43,58,0.05);
   }
   .action-btn{
-    flex:1; background:none; border:none; cursor:pointer;
+    flex:0 0 auto; width:76px; background:none; border:none; cursor:pointer;
     display:flex; flex-direction:column; align-items:center; gap:6px;
     padding:6px 2px; border-radius:14px; transition:background .15s ease;
   }
@@ -226,6 +226,25 @@
   .multi-ticket{ flex-direction:column; align-items:stretch; gap:8px; }
   .multi-head{ display:flex; align-items:center; gap:11px; }
   .place-list{ display:flex; flex-direction:column; gap:4px; padding-inline-start:37px; }
+  .place-row-view{ display:flex; align-items:center; gap:6px; }
+  .place-row-view .place-link{ flex:1; }
+  .fav-btn{
+    background:none; border:none; cursor:pointer; font-size:14px; padding:2px 4px;
+    color:#cfc4a8; flex:none;
+  }
+  .fav-btn.on{ color:#b5545a; }
+
+  .stats-row{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 4px; border-bottom:1px solid var(--line);
+  }
+  .stats-rank{
+    width:22px; height:22px; border-radius:50%; background:var(--ink); color:#fff;
+    font-family:'Cairo',sans-serif; font-weight:700; font-size:11px;
+    display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .stats-name{ flex:1; font-size:13px; font-weight:600; color:var(--ink); text-decoration:none; }
+  .stats-count{ font-size:12px; font-weight:700; color:#b5545a; flex:none; }
   .place-link{
     font-size:12.5px; color:var(--brass); font-weight:600; text-decoration:none;
     border-bottom:1px dashed var(--line); padding:3px 0;
@@ -295,6 +314,10 @@
       <span class="action-icon brass"><i class="fa-solid fa-qrcode"></i></span>
       <span class="action-label">QR</span>
     </button>
+    <button class="action-btn" id="userActionBtn" onclick="handleUserButton()">
+      <span class="action-icon ink"><i class="fa-solid fa-user" id="userIcon"></i></span>
+      <span class="action-label" id="userLabel">حسابي</span>
+    </button>
     <span id="ownerControls" style="display:none;">
       <button class="action-btn" onclick="requestEditAccess()">
         <span class="action-icon ink" id="editIcon"><i class="fa-solid fa-pen"></i></span>
@@ -303,6 +326,10 @@
       <button class="action-btn" onclick="managePassword()">
         <span class="action-icon brass"><i class="fa-solid fa-lock"></i></span>
         <span class="action-label">الحماية</span>
+      </button>
+      <button class="action-btn" onclick="openFavoriteStats()">
+        <span class="action-icon brass"><i class="fa-solid fa-chart-simple"></i></span>
+        <span class="action-label">الأكثر تفضيلاً</span>
       </button>
     </span>
   </div>
@@ -326,6 +353,39 @@
         <button class="btn btn-brass" style="flex:1" onclick="confirmInputModal()">تأكيد</button>
         <button class="btn btn-ghost" style="flex:1" onclick="closeInputModal()">إلغاء</button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="authBackdrop">
+    <div class="modal">
+      <h3>👤 حسابي</h3>
+      <p style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">سجّل عشان تقدر تحفظ أماكنك المفضلة</p>
+      <input type="email" id="authEmail" class="modal-input" placeholder="الإيميل" style="direction:ltr; text-align:left;">
+      <input type="password" id="authPassword" class="modal-input" placeholder="كلمة المرور (6 أحرف على الأقل)" style="direction:ltr; text-align:left; margin-top:8px;">
+      <div id="authError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn btn-brass" style="flex:1" onclick="doSignIn()">دخول</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="doSignUp()">حساب جديد</button>
+      </div>
+      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeAuthModal()">إلغاء</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="favoritesBackdrop">
+    <div class="modal" style="max-width:380px;">
+      <h3>❤️ مفضلتي</h3>
+      <div id="favoritesList" style="max-height:300px; overflow-y:auto; text-align:right; margin:10px 0;"></div>
+      <button class="btn btn-ghost" style="width:100%;" onclick="doSignOut(); closeFavoritesModal();">تسجيل الخروج</button>
+      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeFavoritesModal()">إغلاق</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="statsBackdrop">
+    <div class="modal" style="max-width:400px;">
+      <h3>📊 الأكثر تفضيلاً (كل المدن)</h3>
+      <div id="statsUserCount" style="font-size:12px; color:var(--ink-soft); margin-bottom:8px;"></div>
+      <div id="statsList" style="max-height:360px; overflow-y:auto; text-align:right; margin:10px 0;"></div>
+      <button class="btn btn-ghost" style="width:100%;" onclick="closeStatsModal()">إغلاق</button>
     </div>
   </div>
 
@@ -373,6 +433,7 @@ async function loadFirebaseSDK(){
   const base = "https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/";
   await loadScriptWithRetry(base + "firebase-app-compat.min.js", 3);
   await loadScriptWithRetry(base + "firebase-firestore-compat.min.js", 3);
+  await loadScriptWithRetry(base + "firebase-auth-compat.min.js", 3);
 }
 
 /* =========================================================
@@ -390,6 +451,7 @@ const firebaseConfig = {
 };
 
 let db = null;
+let auth = null;
 
 async function initFirebase(){
   try{
@@ -399,6 +461,7 @@ async function initFirebase(){
     }
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    auth = firebase.auth();
   }catch(e){
     const dbg = document.getElementById('debugBanner');
     dbg.style.display = 'block';
@@ -988,6 +1051,178 @@ async function managePassword(){
   showToast(editPassword ? 'تم تفعيل كلمة المرور ✓' : 'تم إلغاء كلمة المرور');
 }
 
+// ===== حسابات المستخدمين والمفضلة (للزوار) =====
+let currentUser = null;
+let favoritePlaces = []; // [{url, name}]
+
+function isFavorite(url){ return favoritePlaces.some(f => f.url === url); }
+
+async function loadFavorites(){
+  if (!currentUser) { favoritePlaces = []; return; }
+  try{
+    const doc = await db.collection('favorites').doc(currentUser.uid).get();
+    favoritePlaces = (doc.exists && Array.isArray(doc.data().items)) ? doc.data().items : [];
+  }catch(e){ favoritePlaces = []; }
+}
+
+// معرّف آمن ومختصر لأي رابط (Firestore ما يقبل / بمعرّف المستند)
+function hashUrl(str){
+  let hash = 0;
+  for (let i = 0; i < str.length; i++){
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return 'p' + Math.abs(hash).toString(36);
+}
+
+async function toggleFavorite(url, name){
+  if (!currentUser){ openAuthModal(); return; }
+  const exists = isFavorite(url);
+  const docId = hashUrl(url);
+  if (exists){
+    favoritePlaces = favoritePlaces.filter(f => f.url !== url);
+  } else {
+    favoritePlaces.push({ url, name: name || 'موقع' });
+  }
+  render();
+  try{
+    await db.collection('favorites').doc(currentUser.uid).set({ items: favoritePlaces }, { merge:true });
+    await db.collection('placeFavoriteCounts').doc(docId).set({
+      name: name || 'موقع',
+      url: url,
+      count: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
+    }, { merge:true });
+  }catch(e){ showToast('تعذر حفظ المفضلة'); }
+}
+
+async function openFavoriteStats(){
+  const list = document.getElementById('statsList');
+  list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">جاري التحميل...</p>`;
+  document.getElementById('statsBackdrop').classList.add('show');
+  try{
+    const userDoc = await db.collection('stats').doc('users').get();
+    const userCount = (userDoc.exists && userDoc.data().count) ? userDoc.data().count : 0;
+    document.getElementById('statsUserCount').textContent = `👤 عدد الحسابات المسجّلة: ${userCount}`;
+  }catch(e){
+    document.getElementById('statsUserCount').textContent = '';
+  }
+  try{
+    const snap = await db.collection('placeFavoriteCounts').orderBy('count', 'desc').limit(30).get();
+    const rows = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (d.count > 0) rows.push(d);
+    });
+    if (!rows.length){
+      list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">لا يوجد أي تفضيلات مسجّلة بعد</p>`;
+    } else {
+      list.innerHTML = rows.map((d, i) => `
+        <div class="stats-row">
+          <span class="stats-rank">${i+1}</span>
+          <a href="${d.url}" target="_blank" rel="noopener" class="stats-name">${d.name}</a>
+          <span class="stats-count">❤️ ${d.count}</span>
+        </div>`).join('');
+    }
+  }catch(e){
+    list.innerHTML = `<p style="color:#b5545a; font-size:12px; text-align:center;">تعذر تحميل الإحصائيات</p>`;
+  }
+}
+function closeStatsModal(){
+  document.getElementById('statsBackdrop').classList.remove('show');
+}
+
+function openAuthModal(){
+  document.getElementById('authError').textContent = '';
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('authBackdrop').classList.add('show');
+}
+function closeAuthModal(){
+  document.getElementById('authBackdrop').classList.remove('show');
+}
+
+async function doSignUp(){
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+  if (!email || !pass || pass.length < 6){
+    errEl.textContent = 'أدخل إيميل صحيح وكلمة مرور 6 أحرف على الأقل';
+    return;
+  }
+  try{
+    await auth.createUserWithEmailAndPassword(email, pass);
+    closeAuthModal();
+    showToast('تم إنشاء الحساب ✓');
+    db.collection('stats').doc('users').set(
+      { count: firebase.firestore.FieldValue.increment(1) }, { merge:true }
+    ).catch(()=>{});
+  }catch(e){
+    errEl.textContent = authErrorMessage(e);
+  }
+}
+async function doSignIn(){
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+  if (!email || !pass){
+    errEl.textContent = 'أدخل الإيميل وكلمة المرور';
+    return;
+  }
+  try{
+    await auth.signInWithEmailAndPassword(email, pass);
+    closeAuthModal();
+    showToast('أهلًا بك ✓');
+  }catch(e){
+    errEl.textContent = authErrorMessage(e);
+  }
+}
+function authErrorMessage(e){
+  const code = e && e.code || '';
+  if (code.includes('email-already-in-use')) return 'هذا الإيميل مسجّل من قبل — جرب تسجيل الدخول';
+  if (code.includes('invalid-email')) return 'صيغة الإيميل غير صحيحة';
+  if (code.includes('wrong-password') || code.includes('user-not-found') || code.includes('invalid-credential')) return 'الإيميل أو كلمة المرور غير صحيحة';
+  if (code.includes('weak-password')) return 'كلمة المرور ضعيفة — 6 أحرف على الأقل';
+  return 'حدث خطأ، حاول مرة ثانية';
+}
+function doSignOut(){
+  auth.signOut();
+  showToast('تم تسجيل الخروج');
+}
+
+function openFavoritesModal(){
+  const list = document.getElementById('favoritesList');
+  if (!favoritePlaces.length){
+    list.innerHTML = `<p style="color:var(--ink-soft); font-size:13px; text-align:center;">لا يوجد مواقع بالمفضلة بعد</p>`;
+  } else {
+    list.innerHTML = favoritePlaces.map(f => `
+      <a class="place-link" style="display:block; margin-bottom:8px;" href="${f.url}" target="_blank" rel="noopener">${f.name} ←</a>
+    `).join('');
+  }
+  document.getElementById('favoritesBackdrop').classList.add('show');
+}
+function closeFavoritesModal(){
+  document.getElementById('favoritesBackdrop').classList.remove('show');
+}
+
+function handleUserButton(){
+  if (currentUser) openFavoritesModal();
+  else openAuthModal();
+}
+
+function updateUserUI(){
+  const icon = document.getElementById('userIcon');
+  const label = document.getElementById('userLabel');
+  if (!icon || !label) return;
+  if (currentUser){
+    icon.className = 'fa-solid fa-heart';
+    label.textContent = 'مفضلتي';
+  } else {
+    icon.className = 'fa-solid fa-user';
+    label.textContent = 'حسابي';
+  }
+}
+
 let expandedSections = {}; // { sectionTitle: true } — القسم مفتوح بالكامل
 let areaFilter = {};       // { sectionTitle: "اسم المنطقة" } — فلتر نشط على مستوى القسم الرئيسي
 
@@ -1154,7 +1389,14 @@ function render(){
               } else if (!area && lastArea !== '') {
                 lastArea = '';
               }
-              return divider + `<a class="place-link" href="${p.url}" target="_blank" rel="noopener">${p.name && p.name.trim() ? p.name : 'موقع'} ←</a>` +
+              const pName = (p.name && p.name.trim() ? p.name : 'موقع');
+              const fav = isFavorite(p.url);
+              const safeUrl = p.url.replace(/'/g,"\\'");
+              const safeName = pName.replace(/'/g,"\\'");
+              return divider + `<div class="place-row-view">
+                  <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
+                  <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}')" title="أضف للمفضلة"><i class="fa-solid fa-heart"></i></button>
+                </div>` +
                 (p.note && p.note.trim() && p.noteOn !== false ? `<div class="place-note">${p.note}</div>` : '');
             }).join('');
             return `<div class="ticket multi-ticket">
@@ -1243,6 +1485,14 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
     loadAllCityStatus()
   ]);
   checkOwnerAccess();
+  if (auth) {
+    auth.onAuthStateChanged(async (user) => {
+      currentUser = user;
+      updateUserUI();
+      await loadFavorites();
+      render();
+    });
+  }
   trackVisit(); // لا ننتظرها، ما نأخر تحميل الصفحة
   await loadCity(pickInitialCity());
 })();
