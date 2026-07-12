@@ -150,6 +150,23 @@
     display:flex; gap:6px; align-items:center; flex-wrap:wrap;
     background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px;
   }
+  .place-note-row{
+    display:flex; align-items:center; gap:8px; width:100%;
+    margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);
+  }
+  .place-note-input{
+    flex:1; border:none; background:transparent; font-size:11.5px;
+    font-family:'Tajawal',sans-serif; padding:4px 2px; color:var(--ink);
+  }
+  .place-note-input:focus{ outline:none; }
+  .place-note-input::placeholder{ color:#b8ada0; }
+  .switch-btn.small{ width:30px; height:18px; flex:none; }
+  .switch-btn.small .knob{ width:12px; height:12px; top:3px; right:3px; }
+  .switch-btn.small.on .knob{ transform:translateX(-12px); }
+  .place-note{
+    font-size:11.5px; color:var(--ink-soft); font-style:italic;
+    padding:2px 0 4px; line-height:1.5;
+  }
   .place-area-input{
     width:25%; min-width:80px; border:none; background:transparent; font-size:11.5px;
     font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid var(--line); color:var(--brass);
@@ -871,7 +888,7 @@ function openMapsForCurrentCity(){
 
 function addPlace(id){
   const e = ensurePlaces(id);
-  e.places.push({ name:"", url:"", area:"" });
+  e.places.push({ name:"", url:"", area:"", note:"", noteOn:true });
   render();
 }
 function removePlace(id, index){
@@ -890,6 +907,15 @@ function updatePlaceUrl(id, index, val){
 function updatePlaceArea(id, index, val){
   const e = ensurePlaces(id);
   if (e.places[index]) e.places[index].area = val;
+}
+function updatePlaceNote(id, index, val){
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].note = val;
+}
+function togglePlaceNote(id, index, checked){
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].noteOn = checked;
+  render();
 }
 
 function toggleActive(id, checked){ const e = getEntry(id); e.active = checked; links[id] = e; render(); }
@@ -1036,6 +1062,12 @@ function render(){
                   oninput="updatePlaceUrl('${item.id}', ${i}, this.value)">
                 <button type="button" class="remove-btn" onclick="pasteToPlaceUrl('${item.id}', ${i}); return false;" title="لصق الرابط من الحافظة"><i class="fa-solid fa-paste"></i></button>
                 <button type="button" class="remove-btn" onclick="removePlace('${item.id}', ${i}); return false;" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                <div class="place-note-row">
+                  <button type="button" class="switch-btn small ${p.noteOn !== false ? 'on' : ''}" onclick="togglePlaceNote('${item.id}', ${i}, ${p.noteOn !== false ? 'false' : 'true'})"><span class="knob"></span></button>
+                  <input type="text" class="place-note-input" placeholder="مثال: جرب البرجر الخاص، أو: أجواء رائعة بالمساء"
+                    value="${(p.note||'').replace(/"/g,'&quot;')}"
+                    oninput="updatePlaceNote('${item.id}', ${i}, this.value)">
+                </div>
               </div>`).join('');
 
             return `
@@ -1080,7 +1112,8 @@ function render(){
               } else if (!area && lastArea !== '') {
                 lastArea = '';
               }
-              return divider + `<a class="place-link" href="${p.url}" target="_blank" rel="noopener">${p.name && p.name.trim() ? p.name : 'موقع'} ←</a>`;
+              return divider + `<a class="place-link" href="${p.url}" target="_blank" rel="noopener">${p.name && p.name.trim() ? p.name : 'موقع'} ←</a>` +
+                (p.note && p.note.trim() && p.noteOn !== false ? `<div class="place-note">${p.note}</div>` : '');
             }).join('');
             return `<div class="ticket multi-ticket">
                       <div class="multi-head"><div class="icon-badge">${icon}</div><div class="name">${displayName(item)}</div></div>
