@@ -1069,16 +1069,7 @@ function render(){
             return (a.name||'').localeCompare(b.name||'', 'ar');
           });
 
-          if (validPlaces.length === 1) {
-            const p = validPlaces[0];
-            const label = p.name && p.name.trim() ? p.name : displayName(item);
-            return `<a class="ticket" href="${p.url}" target="_blank" rel="noopener">
-                      <div class="icon-badge">${icon}</div>
-                      <div class="name">${label}${p.area && p.area.trim() ? ` <span class="area-tag">${p.area}</span>` : ''}</div>
-                      <div class="go">افتح ←</div>
-                    </a>`;
-          }
-          if (validPlaces.length > 1) {
+          if (validPlaces.length >= 1) {
             let lastArea = null;
             const rows = validPlaces.map(p => {
               const area = (p.area||'').trim();
