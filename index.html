@@ -109,6 +109,16 @@
   }
 
   .section{ max-width:760px; margin:30px auto 0; padding:0 20px; }
+
+  .area-filter-row{
+    display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px;
+  }
+  .area-chip{
+    flex:none; background:var(--card); border:1px solid var(--line); border-radius:999px;
+    padding:6px 13px; font-size:11.5px; font-family:'Cairo',sans-serif; font-weight:700;
+    color:var(--ink-soft); cursor:pointer; white-space:nowrap;
+  }
+  .area-chip.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
   .section-head{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
   .section-head h2{ font-family:'Cairo',sans-serif; font-size:19px; font-weight:700; margin:0; }
   .section-head .count{ font-family:'Cairo',sans-serif; font-size:11px; color:var(--brass); font-weight:700; }
@@ -978,6 +988,23 @@ async function managePassword(){
 }
 
 let expandedSections = {}; // { sectionTitle: true } — القسم مفتوح بالكامل
+let areaFilter = {};       // { sectionTitle: "اسم المنطقة" } — فلتر نشط على مستوى القسم الرئيسي
+
+function sectionAreas(section, items){
+  const set = new Set();
+  items.forEach(item => {
+    getPlaces(item.id).forEach(p => {
+      const a = (p.area || '').trim();
+      if (a) set.add(a);
+    });
+  });
+  return [...set].sort((a,b) => a.localeCompare(b, 'ar'));
+}
+function setAreaFilter(sectionTitle, area){
+  if (area) areaFilter[sectionTitle] = area;
+  else delete areaFilter[sectionTitle];
+  render();
+}
 const COLLAPSE_LIMIT = 6;
 
 function render(){
@@ -1027,6 +1054,10 @@ function render(){
     const sectionOn = sectionStatus[section.title] !== false;
     const isExpanded = editMode || expandedSections[section.title] || visibleItems.length <= COLLAPSE_LIMIT;
     const itemsToShow = isExpanded ? visibleItems : visibleItems.slice(0, COLLAPSE_LIMIT);
+    const currentAreaFilter = (!editMode && areaFilter[section.title]) || '';
+    const displayCount = currentAreaFilter
+      ? itemsToShow.filter(item => getPlaces(item.id).some(p => (p.area||'').trim() === currentAreaFilter)).length
+      : visibleItems.length;
 
     const sec = document.createElement('div');
     sec.className = 'section';
@@ -1034,16 +1065,26 @@ function render(){
     sec.innerHTML = `
       <div class="section-head">
         <span class="section-icon">${sd.icon}</span>
-        <h2>${sd.name}</h2><span class="count">${visibleItems.length}</span>
+        <h2>${sd.name}</h2><span class="count">${displayCount}</span>
         ${editMode ? `
           <button type="button" class="remove-btn" style="font-size:14px;" onclick="editSection('${section.title.replace(/'/g,"\\'")}')" title="تعديل اسم/أيقونة القسم"><i class="fa-solid fa-pen"></i></button>
           <button type="button" class="switch-btn ${sectionOn ? 'on' : ''}" style="margin-inline-start:auto;" onclick="toggleSectionStatus('${section.title.replace(/'/g,"\\'")}')"><span class="knob"></span></button>
           <span style="font-size:11px; color:var(--ink-soft); font-family:'Cairo',sans-serif;">${sectionOn ? 'ظاهر للزوار' : 'مخفي عن الزوار'}</span>` : ''}
       </div>
+      ${(() => {
+        const areas = sectionAreas(section, itemsToShow);
+        if (!areas.length) return '';
+        const active = areaFilter[section.title] || '';
+        return `<div class="area-filter-row">
+          <button type="button" class="area-chip ${!active ? 'active' : ''}" onclick="setAreaFilter('${section.title.replace(/'/g,"\\'")}', '')">الكل</button>
+          ${areas.map(a => `<button type="button" class="area-chip ${active===a ? 'active' : ''}" onclick="setAreaFilter('${section.title.replace(/'/g,"\\'")}', '${a.replace(/'/g,"\\'")}')">📍 ${a}</button>`).join('')}
+        </div>`;
+      })()}
       <div class="grid">
         ${itemsToShow.map((item, iIndex) => {
           const entry = getEntry(item.id);
-          const places = getPlaces(item.id);
+          const filterArea = currentAreaFilter;
+          const places = filterArea ? getPlaces(item.id).filter(p => (p.area||'').trim() === filterArea) : getPlaces(item.id);
           const active = entry.active !== false;
           const isCustom = item.id.startsWith('custom_');
           const icon = displayIcon(item);
@@ -1120,6 +1161,7 @@ function render(){
                       <div class="place-list">${rows}</div>
                     </div>`;
           }
+          if (filterArea) return ''; // فلتر منطقة نشط وما فيه مواقع مطابقة — نخفي التصنيف بدل ما نوريه "قريبًا"
           return `<div class="ticket disabled"><div class="icon-badge">${icon}</div><div class="name">${displayName(item)}</div><div class="missing">قريبًا</div></div>`;
         }).join('')}
         ${editMode ? `<button type="button" class="ticket add-ticket" onclick="addCustomItem('${section.title}')"><div class="icon-badge"><i class="fa-solid fa-plus"></i></div><div class="name">إضافة تصنيف جديد</div></button>` : ''}
