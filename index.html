@@ -389,6 +389,7 @@
     <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
       <h3 style="text-align:center;">📝 My List — <span id="myListCityName"></span></h3>
       <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 10px;">Add your own places under any category below. Only Google Maps links are accepted.</p>
+      <div id="myListCountryChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px;"></div>
       <div id="myListCityChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px;"></div>
       <div style="display:flex; align-items:center; gap:8px; margin:0 0 14px; padding:8px 10px; background:var(--paper-dark); border-radius:10px;">
         <button type="button" class="switch-btn" id="myListPublicToggle" onclick="toggleMyListPublic()"><span class="knob"></span></button>
@@ -1360,10 +1361,11 @@ function updateUserUI(){
    ========================================================= */
 let userListData = { cities: {}, customCities: [] }; // { cities: {cityId: {...}}, customCities: [{id,name,country}] }
 let userListPublic = false;
-let myListCityId = null; // المدينة اللي المستخدم شغال عليها جوه "My List" — مستقلة عن تصفح الموقع العادي
+let myListCityId = null;   // المدينة اللي المستخدم شغال عليها جوه "My List"
+let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
 
 async function loadUserList(){
-  if (!currentUser){ userListData = { cities: {}, customCities: [] }; userListPublic = false; myListCityId = null; return; }
+  if (!currentUser){ userListData = { cities: {}, customCities: [] }; userListPublic = false; myListCityId = null; myListCountry = null; return; }
   try{
     const doc = await db.collection('userLists').doc(currentUser.uid).get();
     const data = doc.exists ? doc.data() : {};
@@ -1375,19 +1377,34 @@ async function loadUserList(){
   }catch(e){ userListData = { cities: {}, customCities: [] }; userListPublic = false; }
 }
 
+// مدن المالك المتاحة للقائمة الشخصية: المنشورة فقط (زي أي زائر بالظبط) — مش أي مدينة لسه Draft
+function myListPublishedOwnerCities(){
+  return allCities().filter(c => cityStatus[c.id] === true);
+}
 // كل المدن المتاحة للمستخدم داخل قائمته الشخصية: مدن المالك المنشورة + مدنه الخاصة هو بس
 function myListAllCities(){
-  return allCities().concat(userListData.customCities || []);
+  return myListPublishedOwnerCities().concat(userListData.customCities || []);
+}
+function myListAllCountries(){
+  return [...new Set(myListAllCities().map(c => c.country).filter(Boolean))];
+}
+
+function selectMyListCountry(country){
+  myListCountry = country;
+  const firstCity = myListAllCities().find(c => c.country === country);
+  myListCityId = firstCity ? firstCity.id : null;
+  renderMyListModal();
 }
 
 async function addMyListCity(){
   const name = await openInputModal("New city (private to your list)", "e.g. Milan, Dubai...", "");
   if (!name || !name.trim()) return;
-  const country = await openInputModal("Country", "e.g. Italy, UAE...", "");
+  const country = await openInputModal("Country", "e.g. Italy, UAE...", myListCountry || "");
   if (country === null || !country.trim()){ showToast('Country is required'); return; }
   const id = "mylist_" + Date.now();
   if (!Array.isArray(userListData.customCities)) userListData.customCities = [];
   userListData.customCities.push({ id, name: name.trim(), country: country.trim() });
+  myListCountry = country.trim();
   myListCityId = id;
   await saveUserList();
   renderMyListModal();
@@ -1477,6 +1494,10 @@ function toggleMyListPublic(){
 function openMyListModal(){
   if (!currentUser){ openAuthModal(); return; }
   if (!myListCityId) myListCityId = currentCityId;
+  if (!myListCountry){
+    const c = myListAllCities().find(c => c.id === myListCityId);
+    myListCountry = c ? c.country : (myListAllCountries()[0] || null);
+  }
   renderMyListModal();
   document.getElementById('myListBackdrop').classList.add('show');
 }
@@ -1486,6 +1507,8 @@ async function closeMyListModal(){
 }
 function selectMyListCity(cityId){
   myListCityId = cityId;
+  const c = myListAllCities().find(c => c.id === cityId);
+  if (c) myListCountry = c.country;
   renderMyListModal();
 }
 
@@ -1494,8 +1517,17 @@ function renderMyListModal(){
   document.getElementById('myListCityName').textContent = city ? city.name : '';
   document.getElementById('myListPublicToggle').classList.toggle('on', userListPublic);
 
-  // صف المدن: كل المدن المتاحة (مدن المالك المنشورة + مدن المستخدم الخاصة) + زر إضافة مدينة جديدة
-  const cityChips = myListAllCities().map(c => `
+  // صف الدول
+  const countries = myListAllCountries();
+  const countryChips = countries.map(country => `
+    <button type="button" class="city-tab ${country === myListCountry ? 'active' : ''}" style="font-size:11.5px; padding:7px 12px;" onclick="selectMyListCountry('${country.replace(/'/g,"\\'")}')">
+      ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
+    </button>`).join('');
+  document.getElementById('myListCountryChips').innerHTML = countryChips;
+
+  // صف المدن — بس مدن الدولة المختارة + زرار إضافة مدينة جديدة (تحت نفس الدولة)
+  const citiesInCountry = myListAllCities().filter(c => c.country === myListCountry);
+  const cityChips = citiesInCountry.map(c => `
     <button type="button" class="city-tab ${c.id === myListCityId ? 'active' : ''}" style="font-size:11.5px; padding:7px 12px;" onclick="selectMyListCity('${c.id}')">
       ${c.name}${c.id.startsWith('mylist_') ? ' 🔒' : ''}
     </button>`).join('')
