@@ -925,7 +925,7 @@ function renderCityTabs(){
     + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCity()">➕ New City</button>` : '');
 }
 
-function getEntry(id){ return links[id] || { active:true }; }
+function getEntry(id, defaultActive = true){ return links[id] || { active: defaultActive }; }
 
 // --- اسم/أيقونة التصنيف الفرعي (مشترك لكل المدن) ---
 function displayName(item){ const o = itemOverrides[item.id]; return (o && o.name) ? o.name : item.name; }
@@ -1354,7 +1354,7 @@ function render(){
     if (!editMode && sectionStatus[section.title] === false) return false;
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = section.items.concat(sectionCustom);
-    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id).active !== false);
+    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id, !section.ownerOnly).active !== false);
     return visibleItems.length > 0;
   });
   if (visibleSections.length > 1) {
@@ -1372,7 +1372,7 @@ function render(){
     if (!editMode && sectionStatus[section.title] === false) return;
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = orderedItems(section, section.items.concat(sectionCustom));
-    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id).active !== false);
+    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id, !section.ownerOnly).active !== false);
     if (!editMode && visibleItems.length === 0) return;
 
     const sd = sectionDisplay(section);
@@ -1398,6 +1398,7 @@ function render(){
             : `<button type="button" class="switch-btn ${sectionOn ? 'on' : ''}" style="margin-inline-start:auto;" onclick="toggleSectionStatus('${section.title.replace(/'/g,"\\'")}')"><span class="knob"></span></button>
           <span style="font-size:11px; color:var(--ink-soft); font-family:'Cairo',sans-serif;">${sectionOn ? 'Visible to visitors' : 'Hidden from visitors'}</span>`}` : ''}
       </div>
+      ${section.ownerOnly ? `<div style="font-size:11px; color:var(--ink-soft); margin:-6px 0 10px;">ℹ️ Places here start Off by default in every city — switch any place to Active from Edit mode if it's relevant here.</div>` : ''}
       ${(() => {
         const areas = sectionAreas(section, itemsToShow);
         if (!areas.length) return '';
@@ -1409,7 +1410,7 @@ function render(){
       })()}
       <div class="grid">
         ${itemsToShow.map((item, iIndex) => {
-          const entry = getEntry(item.id);
+          const entry = getEntry(item.id, !section.ownerOnly);
           const filterArea = currentAreaFilter;
           const places = filterArea ? getPlaces(item.id).filter(p => (p.area||'').trim() === filterArea) : getPlaces(item.id);
           const active = entry.active !== false;
