@@ -928,10 +928,26 @@ function renderCountryTabs(){
     : fromCities;
 
   wrap.innerHTML = countries.map(country => `
-    <button class="city-tab ${country === currentCountry ? 'active' : ''}" onclick="selectCountry('${country.replace(/'/g,"\\'")}')">
-      ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
-    </button>`).join('')
+    <span style="display:inline-flex; align-items:center; gap:4px;">
+      <button class="city-tab ${country === currentCountry ? 'active' : ''}" onclick="selectCountry('${country.replace(/'/g,"\\'")}')">
+        ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
+      </button>
+      ${editMode && customCountries.includes(country) ? `<button class="remove-btn" style="font-size:16px;" onclick="removeCountry('${country.replace(/'/g,"\\'")}')" title="Delete country">🗑️</button>` : ''}
+    </span>`).join('')
     + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCountry()">➕ New Country</button>` : '');
+}
+
+async function removeCountry(country){
+  const hasCities = allCities().some(c => c.country === country);
+  if (hasCities){ showToast('Delete all cities under this country first'); return; }
+  customCountries = customCountries.filter(c => c !== country);
+  delete customCountryFlags[country];
+  await saveCustomCountries();
+  if (currentCountry === country) currentCountry = '';
+  showToast('Country deleted');
+  renderCountryTabs();
+  renderCityTabs();
+  render();
 }
 
 function renderCityTabs(){
