@@ -1486,14 +1486,24 @@ function toggleUserActive(id, checked){
   links[id] = e;
   renderMyListModal();
 }
+let myListEditingKeys = new Set(); // مفاتيح "itemId#index" للأماكن اللي حاليًا في وضع تعديل
+
 function addUserPlace(id){
   const e = userEnsurePlaces(id);
   e.places.push({ name:'', url:'', area:'', note:'' });
+  myListEditingKeys.add(id + '#' + (e.places.length - 1));
   renderMyListModal();
 }
 function removeUserPlace(id, index){
   const e = userEnsurePlaces(id);
   e.places.splice(index, 1);
+  [...myListEditingKeys].forEach(k => { if (k.startsWith(id + '#')) myListEditingKeys.delete(k); });
+  renderMyListModal();
+}
+function toggleMyListPlaceEdit(id, index){
+  const key = id + '#' + index;
+  if (myListEditingKeys.has(key)) myListEditingKeys.delete(key);
+  else myListEditingKeys.add(key);
   renderMyListModal();
 }
 function updateUserPlaceField(id, index, field, val){
@@ -1565,13 +1575,29 @@ function renderMyListModal(){
         </div>`;
       if (active){
         places.forEach((p,i) => {
-          html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">
-            <input type="text" class="modal-input" placeholder="Area (optional)" value="${(p.area||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'area', this.value)" style="font-size:12px; padding:6px 8px;">
-            <input type="text" class="modal-input" placeholder="Place name" value="${(p.name||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'name', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px;">
-            <input type="text" class="modal-input" placeholder="Google Maps link" value="${(p.url||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'url', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px; direction:ltr; text-align:left;">
-            <input type="text" class="modal-input" placeholder="Note (optional)" value="${(p.note||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'note', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px;">
-            <button type="button" class="remove-btn" style="margin-top:4px; font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})"><i class="fa-solid fa-trash"></i> Remove</button>
-          </div>`;
+          const key = item.id + '#' + i;
+          const isComplete = p.name && p.name.trim() && p.url && p.url.trim();
+          const isEditing = myListEditingKeys.has(key) || !isComplete;
+          if (isEditing){
+            html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">
+              <input type="text" class="modal-input" placeholder="Area (optional)" value="${(p.area||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'area', this.value)" style="font-size:12px; padding:6px 8px;">
+              <input type="text" class="modal-input" placeholder="Place name" value="${(p.name||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'name', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px;">
+              <input type="text" class="modal-input" placeholder="Google Maps link" value="${(p.url||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'url', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px; direction:ltr; text-align:left;">
+              <input type="text" class="modal-input" placeholder="Note (optional)" value="${(p.note||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'note', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px;">
+              <div style="display:flex; gap:6px; margin-top:4px;">
+                ${isComplete ? `<button type="button" class="add-place-btn" style="flex:1; font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})"><i class="fa-solid fa-check"></i> Done</button>` : ''}
+                <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})"><i class="fa-solid fa-trash"></i> Remove</button>
+              </div>
+            </div>`;
+          } else {
+            html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line); display:flex; align-items:center; gap:8px;">
+              <a class="place-link" style="flex:1; font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${p.name} ←</a>
+              <button type="button" class="remove-btn" style="font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+              <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})" title="Remove"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+            if (p.area && p.area.trim()) html += `<div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">📍 ${p.area}</div>`;
+            if (p.note && p.note.trim()) html += `<div class="place-note" style="margin-top:2px;">${p.note}</div>`;
+          }
         });
         html += `<button type="button" class="add-place-btn" style="width:100%; margin-top:6px; font-size:11.5px;" onclick="addUserPlace('${item.id}')"><i class="fa-solid fa-plus"></i> Add place</button>`;
       }
