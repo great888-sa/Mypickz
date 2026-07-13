@@ -1329,14 +1329,13 @@ function openFavoritesModal(){
   if (!favoritePlaces.length){
     list.innerHTML = `<p style="color:var(--ink-soft); font-size:13px; text-align:center;">No favorite places yet</p>`;
   } else {
-    list.innerHTML = favoritePlaces.map(f => {
-      const crumbs = [f.city, f.category, f.area].filter(x => x && x.trim());
-      return `
-      <div style="margin-bottom:12px;">
-        ${crumbs.length ? `<div style="font-size:11px; color:var(--brass); font-weight:700; margin-bottom:2px;">${crumbs.join(' - ')}</div>` : ''}
-        <a class="place-link" style="display:block;" href="${f.url}" target="_blank" rel="noopener">${f.name} ←</a>
-      </div>`;
-    }).join('');
+    list.innerHTML = favoritePlaces.map(f => `
+      <div style="margin-bottom:10px; border:1px solid var(--line); border-radius:10px; padding:9px 11px; background:var(--card);">
+        ${f.city ? `<div style="font-family:'Cairo',sans-serif; font-size:9.5px; font-weight:700; color:var(--brass); text-transform:uppercase; letter-spacing:1px;">${f.city}</div>` : ''}
+        ${f.category ? `<div style="font-weight:600; font-size:12.5px; color:var(--ink); margin-top:2px;">${f.category}</div>` : ''}
+        ${f.area ? `<div class="area-divider" style="font-size:9.5px; margin-top:5px; padding-top:5px;">${f.area}</div>` : ''}
+        <a class="place-link" style="display:block; margin-top:4px; border-bottom:none;" href="${f.url}" target="_blank" rel="noopener">${f.name}</a>
+      </div>`).join('');
   }
   document.getElementById('favoritesBackdrop').classList.add('show');
 }
