@@ -1075,14 +1075,14 @@ function hashUrl(str){
   return 'p' + Math.abs(hash).toString(36);
 }
 
-async function toggleFavorite(url, name){
+async function toggleFavorite(url, name, category){
   if (!currentUser){ openAuthModal(); return; }
   const exists = isFavorite(url);
   const docId = hashUrl(url);
   if (exists){
     favoritePlaces = favoritePlaces.filter(f => f.url !== url);
   } else {
-    favoritePlaces.push({ url, name: name || 'موقع' });
+    favoritePlaces.push({ url, name: name || 'موقع', category: category || '' });
   }
   render();
   try{
@@ -1221,7 +1221,10 @@ function openFavoritesModal(){
     list.innerHTML = `<p style="color:var(--ink-soft); font-size:13px; text-align:center;">لا يوجد مواقع بالمفضلة بعد</p>`;
   } else {
     list.innerHTML = favoritePlaces.map(f => `
-      <a class="place-link" style="display:block; margin-bottom:8px;" href="${f.url}" target="_blank" rel="noopener">${f.name} ←</a>
+      <div style="margin-bottom:12px;">
+        <a class="place-link" style="display:block;" href="${f.url}" target="_blank" rel="noopener">${f.name} ←</a>
+        ${f.category ? `<div style="font-size:11px; color:var(--brass); font-weight:700; margin-top:2px;">${f.category}</div>` : ''}
+      </div>
     `).join('');
   }
   document.getElementById('favoritesBackdrop').classList.add('show');
@@ -1418,9 +1421,10 @@ function render(){
               const fav = isFavorite(p.url);
               const safeUrl = p.url.replace(/'/g,"\\'");
               const safeName = pName.replace(/'/g,"\\'");
+              const safeCategory = displayName(item).replace(/'/g,"\\'");
               return divider + `<div class="place-row-view">
                   <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
-                  <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}')" title="أضف للمفضلة"><i class="fa-solid fa-heart"></i></button>
+                  <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}')" title="أضف للمفضلة"><i class="fa-solid fa-heart"></i></button>
                 </div>` +
                 (p.note && p.note.trim() && p.noteOn !== false ? `<div class="place-note">${p.note}</div>` : '');
             }).join('');
