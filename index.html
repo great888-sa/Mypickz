@@ -331,6 +331,10 @@
         <span class="action-icon brass"><i class="fa-solid fa-chart-simple"></i></span>
         <span class="action-label">الأكثر تفضيلاً</span>
       </button>
+      <button class="action-btn" onclick="exitOwnerMode()">
+        <span class="action-icon" style="background:#b5545a; color:#fff;"><i class="fa-solid fa-right-from-bracket"></i></span>
+        <span class="action-label">خروج المالك</span>
+      </button>
     </span>
   </div>
 
@@ -486,6 +490,9 @@ const CITIES = [
 
 let customCities = []; // مدن أضفتها لاحقًا: [{id, name, country}]
 let customCountries = []; // دول أضفتها بدون مدن بعد: ["اسم1", "اسم2"]
+let customCountryFlags = {}; // أعلام الدول اللي أضفتها لاحقًا: { "اسم الدولة": "🇦🇪" }
+const COUNTRY_FLAGS = { "فرنسا":"🇫🇷", "إسبانيا":"🇪🇸", "بريطانيا":"🇬🇧", "سويسرا":"🇨🇭" };
+function countryFlag(name){ return COUNTRY_FLAGS[name] || customCountryFlags[name] || ''; }
 function allCities(){ return CITIES.concat(customCities); }
 
 function countryOf(cityId){
@@ -504,12 +511,13 @@ async function loadCustomCountries(){
   try{
     const doc = await db.collection('settings').doc('countries-list').get();
     customCountries = (doc.exists && Array.isArray(doc.data().countries)) ? doc.data().countries : [];
-  }catch(e){ customCountries = []; }
+    customCountryFlags = (doc.exists && doc.data().flags && typeof doc.data().flags === 'object') ? doc.data().flags : {};
+  }catch(e){ customCountries = []; customCountryFlags = {}; }
 }
 
 async function saveCustomCountries(){
   try{
-    await db.collection('settings').doc('countries-list').set({ countries: customCountries }, { merge:true });
+    await db.collection('settings').doc('countries-list').set({ countries: customCountries, flags: customCountryFlags }, { merge:true });
   }catch(e){ showToast('تعذر حفظ الدولة'); }
 }
 
@@ -544,8 +552,12 @@ async function addCountry(){
   const clean = name.trim();
   if (!customCountries.includes(clean)) {
     customCountries.push(clean);
-    await saveCustomCountries();
   }
+  const flag = await openInputModal("علم الدولة (اختياري)", "الصق إيموجي العلم، مثال: 🇸🇦", "");
+  if (flag !== null && flag.trim()) {
+    customCountryFlags[clean] = flag.trim();
+  }
+  await saveCustomCountries();
   currentCountry = clean;
   showToast('تمت إضافة الدولة ✓ — ضيف لها مدينة الآن');
   renderCountryTabs();
@@ -596,7 +608,7 @@ const DATA = [
     {id:"brunch", icon:"🥞", name:"Brunch"},
   ]},
   { title:"Streets & Avenues", icon:"🛣️", items:[
-    {id:"streets", icon:"🛣️", name:"Streets & Avenues (Walking, Shopping, Cafes, Restaurants)"},
+    {id:"streets", icon:"🛣️", name:"Streets & Avenues", desc:"Walking, Shopping, Cafes, Restaurants"},
   ]},
   { title:"Squares & Plazas", icon:"⛲", items:[
     {id:"squares", icon:"⛲", name:"Squares & Plazas"},
@@ -638,6 +650,19 @@ const DATA = [
   ]},
   { title:"Parking", icon:"🅿️", items:[
     {id:"parking", icon:"🅿️", name:"Parking"},
+  ]},
+  { title:"Hospitals & Clinics", icon:"🏥", ownerOnly:true, items:[
+    {id:"hospitals_clinics", icon:"🏥", name:"Hospitals & Clinics"},
+  ]},
+  { title:"Personal", icon:"🔒", ownerOnly:true, items:[
+    {id:"personal_home", icon:"🏠", name:"Home"},
+    {id:"personal_work", icon:"💼", name:"Work"},
+    {id:"personal_family", icon:"👨‍👩‍👧", name:"Family"},
+    {id:"personal_relatives", icon:"👪", name:"Relatives"},
+    {id:"personal_friends", icon:"🧑‍🤝‍🧑", name:"Friends"},
+  ]},
+  { title:"Others", icon:"📌", ownerOnly:true, items:[
+    {id:"others", icon:"📌", name:"Others"},
   ]},
 ];
 
@@ -793,6 +818,23 @@ function revealOwnerUI(){
   document.getElementById('touchIcon').setAttribute('href', 'icon-180-admin.png');
 }
 
+async function exitOwnerMode(){
+  const confirmed = window.confirm('هتخرج من وضع المالك على هذا الجهاز. أي أقسام خاصة بالمالك (زي Hospitals & Clinics, Personal, Others) هتختفي من الواجهة فورًا. تقدر ترجع تفعّله بنفس كلمة السر وقت ما تحتاج.\n\nتأكيد الخروج؟');
+  if (!confirmed) return;
+  try{ localStorage.removeItem('mypickz_owner'); }catch(e){}
+  if (editMode) { editMode = false; }
+  document.getElementById('ownerControls').style.display = 'none';
+  document.getElementById('editModeBanner').classList.remove('show');
+  document.getElementById('footerNote').style.display = 'none';
+  document.getElementById('pageTitle').textContent = 'MyPickz';
+  document.getElementById('webAppTitle').setAttribute('content', 'MyPickz');
+  document.getElementById('touchIcon').setAttribute('href', 'icon-180.png');
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+  showToast('تم الخروج من وضع المالك ✓');
+}
+
 let logoTapCount = 0;
 let logoTapTimer = null;
 async function logoTap(){
@@ -806,10 +848,22 @@ async function logoTap(){
   if (editPassword && entered === editPassword) {
     try{ localStorage.setItem('mypickz_owner', editPassword); }catch(e){}
     revealOwnerUI();
+    await linkOwnerUid();
     showToast('تم تفعيل وضع المالك ✓');
   } else {
     showToast('كلمة مرور غير صحيحة');
   }
+}
+
+// يربط حساب Firebase الحالي (لو مسجّل دخول) كمالك معتمد — يُستخدم لاحقًا في قواعد أمان Firestore
+async function linkOwnerUid(){
+  if (!currentUser) return; // المالك لسه مسجّل دخول بحسابه الشخصي، هيترابط أول ما يسجّل دخول
+  try{
+    const doc = await db.collection('settings').doc('app').get();
+    const savedUid = doc.exists ? doc.data().ownerUid : null;
+    if (savedUid && savedUid !== currentUser.uid) return; // مالك متربط أصلًا بحساب تاني — ما نلمسوش تلقائيًا
+    await db.collection('settings').doc('app').set({ ownerUid: currentUser.uid, ownerEmail: currentUser.email || '' }, { merge:true });
+  }catch(e){ /* صامت — الربط تحسين إضافي، مش شرط لعمل وضع المالك */ }
 }
 
 function checkOwnerAccess(){
@@ -849,7 +903,7 @@ function renderCountryTabs(){
 
   wrap.innerHTML = countries.map(country => `
     <button class="city-tab ${country === currentCountry ? 'active' : ''}" onclick="selectCountry('${country.replace(/'/g,"\\'")}')">
-      ${country}
+      ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
     </button>`).join('')
     + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCountry()">➕ دولة جديدة</button>` : '');
 }
@@ -1075,14 +1129,14 @@ function hashUrl(str){
   return 'p' + Math.abs(hash).toString(36);
 }
 
-async function toggleFavorite(url, name, category){
+async function toggleFavorite(url, name, category, city, area){
   if (!currentUser){ openAuthModal(); return; }
   const exists = isFavorite(url);
   const docId = hashUrl(url);
   if (exists){
     favoritePlaces = favoritePlaces.filter(f => f.url !== url);
   } else {
-    favoritePlaces.push({ url, name: name || 'موقع', category: category || '' });
+    favoritePlaces.push({ url, name: name || 'موقع', category: category || '', city: city || '', area: area || '' });
   }
   render();
   try{
@@ -1220,12 +1274,14 @@ function openFavoritesModal(){
   if (!favoritePlaces.length){
     list.innerHTML = `<p style="color:var(--ink-soft); font-size:13px; text-align:center;">لا يوجد مواقع بالمفضلة بعد</p>`;
   } else {
-    list.innerHTML = favoritePlaces.map(f => `
+    list.innerHTML = favoritePlaces.map(f => {
+      const crumbs = [f.city, f.category, f.area].filter(x => x && x.trim());
+      return `
       <div style="margin-bottom:12px;">
+        ${crumbs.length ? `<div style="font-size:11px; color:var(--brass); font-weight:700; margin-bottom:2px;">${crumbs.join(' - ')}</div>` : ''}
         <a class="place-link" style="display:block;" href="${f.url}" target="_blank" rel="noopener">${f.name} ←</a>
-        ${f.category ? `<div style="font-size:11px; color:var(--brass); font-weight:700; margin-top:2px;">${f.category}</div>` : ''}
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
   document.getElementById('favoritesBackdrop').classList.add('show');
 }
@@ -1291,6 +1347,7 @@ function render(){
 
   // شريط تنقل سريع بين الأقسام — يظهر بس لو فيه أكثر من قسم فيه محتوى
   const visibleSections = DATA.filter(section => {
+    if (!editMode && section.ownerOnly) return false;
     if (!editMode && sectionStatus[section.title] === false) return false;
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = section.items.concat(sectionCustom);
@@ -1308,6 +1365,7 @@ function render(){
   }
 
   DATA.forEach((section, sIndex) => {
+    if (!editMode && section.ownerOnly) return;
     if (!editMode && sectionStatus[section.title] === false) return;
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = orderedItems(section, section.items.concat(sectionCustom));
@@ -1332,8 +1390,10 @@ function render(){
         <h2>${sd.name}</h2><span class="count">${displayCount}</span>
         ${editMode ? `
           <button type="button" class="remove-btn" style="font-size:14px;" onclick="editSection('${section.title.replace(/'/g,"\\'")}')" title="تعديل اسم/أيقونة القسم"><i class="fa-solid fa-pen"></i></button>
-          <button type="button" class="switch-btn ${sectionOn ? 'on' : ''}" style="margin-inline-start:auto;" onclick="toggleSectionStatus('${section.title.replace(/'/g,"\\'")}')"><span class="knob"></span></button>
-          <span style="font-size:11px; color:var(--ink-soft); font-family:'Cairo',sans-serif;">${sectionOn ? 'ظاهر للزوار' : 'مخفي عن الزوار'}</span>` : ''}
+          ${section.ownerOnly
+            ? `<span style="margin-inline-start:auto; font-size:11px; color:#b5545a; font-weight:700; font-family:'Cairo',sans-serif;"><i class="fa-solid fa-lock"></i> خاص بالمالك دائمًا</span>`
+            : `<button type="button" class="switch-btn ${sectionOn ? 'on' : ''}" style="margin-inline-start:auto;" onclick="toggleSectionStatus('${section.title.replace(/'/g,"\\'")}')"><span class="knob"></span></button>
+          <span style="font-size:11px; color:var(--ink-soft); font-family:'Cairo',sans-serif;">${sectionOn ? 'ظاهر للزوار' : 'مخفي عن الزوار'}</span>`}` : ''}
       </div>
       ${(() => {
         const areas = sectionAreas(section, itemsToShow);
@@ -1422,14 +1482,16 @@ function render(){
               const safeUrl = p.url.replace(/'/g,"\\'");
               const safeName = pName.replace(/'/g,"\\'");
               const safeCategory = displayName(item).replace(/'/g,"\\'");
+              const safeCity = (allCities().find(c=>c.id===currentCityId)?.name || '').replace(/'/g,"\\'");
+              const safeArea = area.replace(/'/g,"\\'");
               return divider + `<div class="place-row-view">
                   <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
-                  <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}')" title="أضف للمفضلة"><i class="fa-solid fa-heart"></i></button>
+                  <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}', '${safeCity}', '${safeArea}')" title="أضف للمفضلة"><i class="fa-solid fa-heart"></i></button>
                 </div>` +
                 (p.note && p.note.trim() && p.noteOn !== false ? `<div class="place-note">${p.note}</div>` : '');
             }).join('');
             return `<div class="ticket multi-ticket">
-                      <div class="multi-head"><div class="icon-badge">${icon}</div><div class="name">${displayName(item)}</div></div>
+                      <div class="multi-head"><div class="icon-badge">${icon}</div><div><div class="name">${displayName(item)}</div>${item.desc ? `<div style="font-size:11px; color:var(--ink-soft); font-weight:400;">${item.desc}</div>` : ''}</div></div>
                       <div class="place-list">${rows}</div>
                     </div>`;
           }
@@ -1519,6 +1581,9 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
       currentUser = user;
       updateUserUI();
       await loadFavorites();
+      if (document.getElementById('ownerControls').style.display !== 'none') {
+        await linkOwnerUid();
+      }
       render();
     });
   }
