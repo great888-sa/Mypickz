@@ -322,6 +322,10 @@
       <span class="action-icon brass"><i class="fa-solid fa-list-check"></i></span>
       <span class="action-label">My List</span>
     </button>
+    <button class="action-btn" onclick="openCommunityModal()">
+      <span class="action-icon ink"><i class="fa-solid fa-users"></i></span>
+      <span class="action-label">Community Lists</span>
+    </button>
     <span id="ownerControls" style="display:none;">
       <button class="action-btn" onclick="requestEditAccess()">
         <span class="action-icon ink" id="editIcon"><i class="fa-solid fa-pen"></i></span>
@@ -385,16 +389,26 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="communityBackdrop">
+    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <h3 style="text-align:center;">🌍 Community Lists</h3>
+      <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 12px;">Browse public lists shared by other users. Hospitals & Clinics, Personal, and Others are never shown here.</p>
+      <div id="communityBody"></div>
+      <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeCommunityModal()">Close</button>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="myListBackdrop">
     <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
       <h3 style="text-align:center;">📝 My List — <span id="myListCityName"></span></h3>
       <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 10px;">Add your own places under any category below. Only Google Maps links are accepted.</p>
       <div id="myListCountryChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px;"></div>
       <div id="myListCityChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px;"></div>
-      <div style="display:flex; align-items:center; gap:8px; margin:0 0 14px; padding:8px 10px; background:var(--paper-dark); border-radius:10px;">
+      <div style="display:flex; align-items:center; gap:8px; margin:0 0 6px; padding:8px 10px; background:var(--paper-dark); border-radius:10px;">
         <button type="button" class="switch-btn" id="myListPublicToggle" onclick="toggleMyListPublic()"><span class="knob"></span></button>
         <span style="font-size:11.5px; color:var(--ink-soft);">Allow other users to view this list</span>
       </div>
+      <div id="myListNicknameRow" style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 14px;"></div>
       <div id="myListSections"></div>
       <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="closeMyListModal()">Save & Close</button>
     </div>
@@ -1184,7 +1198,7 @@ function hashUrl(str){
   return 'p' + Math.abs(hash).toString(36);
 }
 
-async function toggleFavorite(url, name, category, city, area){
+async function toggleFavorite(url, name, category, city, area, sourceUid){
   if (!currentUser){ openAuthModal(); return; }
   const exists = isFavorite(url);
   const docId = hashUrl(url);
@@ -1194,6 +1208,7 @@ async function toggleFavorite(url, name, category, city, area){
     favoritePlaces.push({ url, name: name || 'Place', category: category || '', city: city || '', area: area || '' });
   }
   render();
+  if (viewingUserUid) renderCommunityModal();
   try{
     await db.collection('favorites').doc(currentUser.uid).set({ items: favoritePlaces }, { merge:true });
     await db.collection('placeFavoriteCounts').doc(docId).set({
@@ -1201,6 +1216,11 @@ async function toggleFavorite(url, name, category, city, area){
       url: url,
       count: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
     }, { merge:true });
+    if (sourceUid && sourceUid !== currentUser.uid){
+      await db.collection('userLists').doc(sourceUid).set({
+        favoriteCount: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
+      }, { merge:true });
+    }
   }catch(e){ showToast('Could not save favorite'); }
 }
 
@@ -1376,17 +1396,20 @@ let myListCityId = null;   // المدينة اللي المستخدم شغال 
 let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
 
 async function loadUserList(){
-  if (!currentUser){ userListData = { cities: {}, customCities: [], customCountries: [] }; userListPublic = false; myListCityId = null; myListCountry = null; return; }
+  if (!currentUser){ userListData = { cities: {}, customCities: [], customCountries: [], nickname: null }; userListPublic = false; myListCityId = null; myListCountry = null; return; }
   try{
     const doc = await db.collection('userLists').doc(currentUser.uid).get();
     const data = doc.exists ? doc.data() : {};
     userListData = {
       cities: (data.cities && typeof data.cities === 'object') ? data.cities : {},
       customCities: Array.isArray(data.customCities) ? data.customCities : [],
-      customCountries: Array.isArray(data.customCountries) ? data.customCountries : []
+      customCountries: Array.isArray(data.customCountries) ? data.customCountries : [],
+      nickname: data.nickname || null,
+      viewCount: data.viewCount || 0,
+      favoriteCount: data.favoriteCount || 0
     };
     userListPublic = data.public === true;
-  }catch(e){ userListData = { cities: {}, customCities: [], customCountries: [] }; userListPublic = false; }
+  }catch(e){ userListData = { cities: {}, customCities: [], customCountries: [], nickname: null }; userListPublic = false; }
 }
 
 // مدن المالك المتاحة للقائمة الشخصية: المنشورة فقط (زي أي زائر بالظبط) — مش أي مدينة لسه Draft
@@ -1484,7 +1507,7 @@ async function saveUserList(){
   }
   try{
     await db.collection('userLists').doc(currentUser.uid).set(
-      { cities: userListData.cities, customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], public: userListPublic },
+      { cities: userListData.cities, customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], nickname: userListData.nickname || null, public: userListPublic },
       { merge:true }
     );
   }catch(e){ showToast('Could not save your list'); }
@@ -1521,9 +1544,52 @@ function updateUserPlaceField(id, index, field, val){
   const e = userEnsurePlaces(id);
   if (e.places[index]) e.places[index][field] = val;
 }
-function toggleMyListPublic(){
+async function chooseNickname(){
+  const current = userListData.nickname || '';
+  const name = await openInputModal("Choose a nickname", "Shown to other users instead of your email", current);
+  if (name === null) return false;
+  const clean = name.trim();
+  if (!clean || clean.length < 3){ showToast('Nickname must be at least 3 characters'); return false; }
+  if (clean === current) return true;
+  const key = clean.toLowerCase();
+  try{
+    const doc = await db.collection('nicknames').doc(key).get();
+    if (doc.exists && doc.data().uid !== currentUser.uid){
+      showToast('This nickname is already taken — try another');
+      return false;
+    }
+    await db.collection('nicknames').doc(key).set({ uid: currentUser.uid, nickname: clean });
+    if (current){
+      const oldKey = current.toLowerCase();
+      if (oldKey !== key){
+        try{
+          const oldDoc = await db.collection('nicknames').doc(oldKey).get();
+          if (oldDoc.exists && oldDoc.data().uid === currentUser.uid){
+            await db.collection('nicknames').doc(oldKey).delete();
+          }
+        }catch(e){}
+      }
+    }
+    userListData.nickname = clean;
+    await saveUserList();
+    showToast('Nickname saved ✓');
+    return true;
+  }catch(e){
+    showToast('Could not save nickname');
+    return false;
+  }
+}
+
+async function toggleMyListPublic(){
+  if (!userListPublic){
+    if (!userListData.nickname){
+      const ok = await chooseNickname();
+      if (!ok) return;
+    }
+  }
   userListPublic = !userListPublic;
   document.getElementById('myListPublicToggle').classList.toggle('on', userListPublic);
+  await saveUserList();
 }
 
 function openMyListModal(){
@@ -1551,6 +1617,14 @@ function renderMyListModal(){
   const city = myListAllCities().find(c => c.id === myListCityId);
   document.getElementById('myListCityName').textContent = city ? city.name : '';
   document.getElementById('myListPublicToggle').classList.toggle('on', userListPublic);
+
+  const nickRow = document.getElementById('myListNicknameRow');
+  if (userListPublic){
+    nickRow.innerHTML = `Public as <b>${userListData.nickname || '—'}</b> · 👁️ ${userListData.viewCount || 0} views · ❤️ ${userListData.favoriteCount || 0} favorites
+      <button type="button" class="remove-btn" style="font-size:10.5px; margin-inline-start:6px;" onclick="chooseNickname().then(renderMyListModal)"><i class="fa-solid fa-pen"></i> Edit name</button>`;
+  } else {
+    nickRow.innerHTML = '';
+  }
 
   // صف الدول
   const countries = myListAllCountries();
@@ -1622,6 +1696,163 @@ function renderMyListModal(){
     html += `</div>`;
   });
   document.getElementById('myListSections').innerHTML = html;
+}
+
+/* =========================================================
+   تصفح قوائم المستخدمين الآخرين (Community Lists)
+   ========================================================= */
+let communityUsers = [];
+let communityTab = 'city';   // 'city' | 'all'
+let communitySort = 'viewed'; // 'viewed' | 'loved' — يُستخدم بس مع تبويب 'all'
+let viewingUserUid = null;
+let viewingUserData = null;
+let communityViewingCityId = null;
+
+async function loadCommunityLists(){
+  try{
+    const snap = await db.collection('userLists').where('public','==',true).get();
+    communityUsers = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (!d.nickname) return;
+      communityUsers.push({
+        uid: doc.id,
+        nickname: d.nickname,
+        cities: (d.cities && typeof d.cities==='object') ? d.cities : {},
+        customCities: Array.isArray(d.customCities) ? d.customCities : [],
+        viewCount: d.viewCount || 0,
+        favoriteCount: d.favoriteCount || 0
+      });
+    });
+  }catch(e){ communityUsers = []; }
+}
+
+async function openCommunityModal(){
+  document.getElementById('communityBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  document.getElementById('communityBackdrop').classList.add('show');
+  await loadCommunityLists();
+  communityTab = 'city';
+  viewingUserUid = null;
+  renderCommunityModal();
+}
+function closeCommunityModal(){
+  document.getElementById('communityBackdrop').classList.remove('show');
+  viewingUserUid = null;
+}
+function switchCommunityTab(tab){
+  communityTab = tab;
+  viewingUserUid = null;
+  renderCommunityModal();
+}
+function switchCommunitySort(sort){
+  communitySort = sort;
+  renderCommunityModal();
+}
+
+function renderCommunityModal(){
+  const wrap = document.getElementById('communityBody');
+  if (viewingUserUid){ renderCommunityUserList(wrap); return; }
+
+  let usersToShow = communityUsers;
+  let html = `<div style="display:flex; gap:6px; margin-bottom:10px;">
+    <button type="button" class="btn ${communityTab==='city'?'btn-brass':'btn-ghost'}" style="flex:1; margin:0; padding:9px;" onclick="switchCommunityTab('city')">This City</button>
+    <button type="button" class="btn ${communityTab==='all'?'btn-brass':'btn-ghost'}" style="flex:1; margin:0; padding:9px;" onclick="switchCommunityTab('all')">All Users</button>
+  </div>`;
+
+  if (communityTab === 'city'){
+    const cityName = allCities().find(c=>c.id===currentCityId)?.name || '';
+    usersToShow = communityUsers.filter(u => u.cities[currentCityId] && Object.keys(u.cities[currentCityId]).length);
+    html += `<p style="font-size:11px; color:var(--ink-soft); text-align:center; margin-bottom:8px;">Users with a public list for ${cityName}</p>`;
+  } else {
+    html += `<div style="display:flex; gap:6px; margin-bottom:8px;">
+      <button type="button" class="remove-btn" style="flex:1; font-size:11px; ${communitySort==='viewed'?'color:var(--brass);':''}" onclick="switchCommunitySort('viewed')"><i class="fa-solid fa-eye"></i> Most Viewed</button>
+      <button type="button" class="remove-btn" style="flex:1; font-size:11px; ${communitySort==='loved'?'color:var(--brass);':''}" onclick="switchCommunitySort('loved')"><i class="fa-solid fa-heart"></i> Most Loved</button>
+    </div>`;
+    usersToShow = [...communityUsers].sort((a,b) => communitySort==='loved' ? b.favoriteCount - a.favoriteCount : b.viewCount - a.viewCount);
+  }
+
+  if (!usersToShow.length){
+    html += `<p style="color:var(--ink-soft); font-size:12.5px; text-align:center; padding:10px 0;">No public lists yet</p>`;
+  } else {
+    html += usersToShow.map(u => `
+      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;" onclick="viewCommunityUser('${u.uid}')">
+        <span style="font-weight:700;">${u.nickname}</span>
+        <span style="color:var(--ink-soft); font-size:10.5px;">👁️ ${u.viewCount} · ❤️ ${u.favoriteCount}</span>
+      </button>`).join('');
+  }
+  wrap.innerHTML = html;
+}
+
+async function viewCommunityUser(uid){
+  viewingUserUid = uid;
+  viewingUserData = communityUsers.find(u => u.uid === uid);
+  communityViewingCityId = null;
+  try{
+    await db.collection('userLists').doc(uid).set({ viewCount: firebase.firestore.FieldValue.increment(1) }, { merge:true });
+    viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1;
+  }catch(e){}
+  renderCommunityModal();
+}
+function backToCommunityList(){
+  viewingUserUid = null;
+  renderCommunityModal();
+}
+
+function renderCommunityUserList(wrap){
+  const u = viewingUserData;
+  const cities = myListPublishedOwnerCities().concat(u.customCities||[])
+    .filter(c => u.cities[c.id] && Object.keys(u.cities[c.id]).length);
+
+  if (!communityViewingCityId || !cities.find(c => c.id === communityViewingCityId)){
+    communityViewingCityId = cities[0] ? cities[0].id : null;
+  }
+
+  let html = `<button type="button" class="remove-btn" onclick="backToCommunityList()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-right"></i> Back</button>
+  <h4 style="text-align:center; margin:4px 0 10px; font-family:'Cairo',sans-serif;">${u.nickname}'s List</h4>`;
+
+  if (!cities.length){
+    html += `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">No cities in this list yet</p>`;
+    wrap.innerHTML = html;
+    return;
+  }
+
+  html += `<div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px;">` +
+    cities.map(c => `<button type="button" class="city-tab ${c.id===communityViewingCityId?'active':''}" style="font-size:11px; padding:6px 10px;" onclick="communityViewingCityId='${c.id}'; renderCommunityModal();">${c.name}</button>`).join('') +
+    `</div>`;
+
+  const cityLinks = u.cities[communityViewingCityId] || {};
+  const cityObj = cities.find(c => c.id === communityViewingCityId);
+  let hasAnyPlace = false;
+
+  DATA.forEach(section => {
+    if (section.ownerOnly) return; // استثناء ثابت — أبدًا ما يظهر في قوائم الآخرين
+    let sectionHtml = '';
+    section.items.forEach(item => {
+      const entry = cityLinks[item.id];
+      if (!entry || entry.active !== true || !entry.places || !entry.places.length) return;
+      const validPlaces = entry.places.filter(p => p.url && p.name);
+      if (!validPlaces.length) return;
+      hasAnyPlace = true;
+      sectionHtml += `<div style="font-weight:600; font-size:12px; margin:8px 0 4px;">${displayIcon(item)} ${displayName(item)}</div>`;
+      validPlaces.forEach(p => {
+        const fav = isFavorite(p.url);
+        const safeUrl = p.url.replace(/'/g,"\\'"), safeName = p.name.replace(/'/g,"\\'"), safeCat = displayName(item).replace(/'/g,"\\'");
+        const safeCity = (cityObj ? cityObj.name : '').replace(/'/g,"\\'"), safeArea = (p.area||'').replace(/'/g,"\\'");
+        sectionHtml += `<div style="margin-bottom:8px;">
+          ${p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : ''}
+          <div style="display:flex; align-items:center; gap:6px;">
+            <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
+            <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCat}', '${safeCity}', '${safeArea}', '${u.uid}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
+          </div>
+          ${p.note && p.note.trim() ? `<div class="place-note">${p.note}</div>` : ''}
+        </div>`;
+      });
+    });
+    html += sectionHtml;
+  });
+
+  if (!hasAnyPlace) html += `<p style="color:var(--ink-soft); font-size:12px; text-align:center; padding:10px 0;">No active places in this city yet</p>`;
+  wrap.innerHTML = html;
 }
 
 let expandedSections = {}; // { sectionTitle: true } — القسم مفتوح بالكامل
