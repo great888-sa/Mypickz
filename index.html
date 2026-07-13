@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -300,15 +300,15 @@
     <h1 onclick="logoTap()" style="cursor:pointer;">🗺️ MyPickz</h1>
   </div>
 
-  <div class="tab-label">الدولة</div>
+  <div class="tab-label">Country</div>
   <div class="city-tabs" id="countryTabs"></div>
-  <div class="tab-label">المدينة</div>
+  <div class="tab-label">City</div>
   <div class="city-tabs" id="cityTabs"></div>
 
   <div class="action-bar">
     <button class="action-btn" onclick="copyLink()">
       <span class="action-icon ink"><i class="fa-solid fa-link"></i></span>
-      <span class="action-label">نسخ الرابط</span>
+      <span class="action-label">Copy Link</span>
     </button>
     <button class="action-btn" onclick="showQR()">
       <span class="action-icon brass"><i class="fa-solid fa-qrcode"></i></span>
@@ -316,89 +316,89 @@
     </button>
     <button class="action-btn" id="userActionBtn" onclick="handleUserButton()">
       <span class="action-icon ink"><i class="fa-solid fa-user" id="userIcon"></i></span>
-      <span class="action-label" id="userLabel">حسابي</span>
+      <span class="action-label" id="userLabel">My Account</span>
     </button>
     <span id="ownerControls" style="display:none;">
       <button class="action-btn" onclick="requestEditAccess()">
         <span class="action-icon ink" id="editIcon"><i class="fa-solid fa-pen"></i></span>
-        <span class="action-label" id="editBtnLabel">تعديل</span>
+        <span class="action-label" id="editBtnLabel">Edit</span>
       </button>
       <button class="action-btn" onclick="managePassword()">
         <span class="action-icon brass"><i class="fa-solid fa-lock"></i></span>
-        <span class="action-label">الحماية</span>
+        <span class="action-label">Security</span>
       </button>
       <button class="action-btn" onclick="openFavoriteStats()">
         <span class="action-icon brass"><i class="fa-solid fa-chart-simple"></i></span>
-        <span class="action-label">الأكثر تفضيلاً</span>
+        <span class="action-label">Most Loved</span>
       </button>
       <button class="action-btn" onclick="exitOwnerMode()">
         <span class="action-icon" style="background:#b5545a; color:#fff;"><i class="fa-solid fa-right-from-bracket"></i></span>
-        <span class="action-label">خروج المالك</span>
+        <span class="action-label">Owner Logout</span>
       </button>
     </span>
   </div>
 
-  <div id="editModeBanner">وضع التعديل مفعّل — عدّل هذي المدينة فقط. اضغط "حفظ" بالأسفل بعد كل تغيير.</div>
+  <div id="editModeBanner">Edit mode is on — you're editing this city only. Tap "Save" below after each change.</div>
   <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:#fbeceb; border:1px dashed #b5545a; border-radius:10px; font-size:12px; color:#7a2b30; direction:ltr; word-break:break-word; text-align:center;"></div>
 
-  <div id="loadingState">جاري التحميل…</div>
+  <div id="loadingState">Loading…</div>
   <div id="sections" style="display:none"></div>
 
   <div class="footer-note" id="footerNote" style="display:none;">
-    الروابط تُدار من إعدادات المشاركة بخرائط Google (View only يُنصح به). وضع التعديل محمي بكلمة مرور بسيطة — حماية أساسية، مو تشفير قوي.
+    Links are managed via Google Maps sharing settings (View only recommended). Edit mode is protected by a simple password — basic protection, not strong encryption.
   </div>
 
   <div class="modal-backdrop" id="inputBackdrop">
     <div class="modal">
-      <h3 id="inputModalTitle">عنوان</h3>
+      <h3 id="inputModalTitle">Title</h3>
       <input type="text" id="inputModalField" class="modal-input" onkeydown="if(event.key==='Enter') confirmInputModal();">
       <div id="inputModalError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
-        <button class="btn btn-brass" style="flex:1" onclick="confirmInputModal()">تأكيد</button>
-        <button class="btn btn-ghost" style="flex:1" onclick="closeInputModal()">إلغاء</button>
+        <button class="btn btn-brass" style="flex:1" onclick="confirmInputModal()">Confirm</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="closeInputModal()">Cancel</button>
       </div>
     </div>
   </div>
 
   <div class="modal-backdrop" id="authBackdrop">
     <div class="modal">
-      <h3>👤 حسابي</h3>
-      <p style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">سجّل عشان تقدر تحفظ أماكنك المفضلة</p>
-      <input type="email" id="authEmail" class="modal-input" placeholder="الإيميل" style="direction:ltr; text-align:left;">
-      <input type="password" id="authPassword" class="modal-input" placeholder="كلمة المرور (6 أحرف على الأقل)" style="direction:ltr; text-align:left; margin-top:8px;">
-      <button type="button" id="forgotPasswordLink" onclick="doForgotPassword()" style="background:none; border:none; padding:0; margin-top:8px; font-family:'Cairo',sans-serif; font-size:11.5px; font-weight:700; color:var(--brass); cursor:pointer;">نسيت كلمة المرور؟</button>
+      <h3>👤 My Account</h3>
+      <p style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">Sign up so you can save your favorite places</p>
+      <input type="email" id="authEmail" class="modal-input" placeholder="Email" style="direction:ltr; text-align:left;">
+      <input type="password" id="authPassword" class="modal-input" placeholder="Password (6+ characters)" style="direction:ltr; text-align:left; margin-top:8px;">
+      <button type="button" id="forgotPasswordLink" onclick="doForgotPassword()" style="background:none; border:none; padding:0; margin-top:8px; font-family:'Cairo',sans-serif; font-size:11.5px; font-weight:700; color:var(--brass); cursor:pointer;">Forgot password?</button>
       <div id="authError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
-        <button class="btn btn-brass" style="flex:1" onclick="doSignIn()">دخول</button>
-        <button class="btn btn-ghost" style="flex:1" onclick="doSignUp()">حساب جديد</button>
+        <button class="btn btn-brass" style="flex:1" onclick="doSignIn()">Log In</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="doSignUp()">New Account</button>
       </div>
-      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeAuthModal()">إلغاء</button>
+      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeAuthModal()">Cancel</button>
     </div>
   </div>
 
   <div class="modal-backdrop" id="favoritesBackdrop">
     <div class="modal" style="max-width:380px;">
-      <h3>❤️ مفضلتي</h3>
+      <h3>❤️ My Favorites</h3>
       <div id="favoritesList" style="max-height:300px; overflow-y:auto; text-align:right; margin:10px 0;"></div>
-      <button class="btn btn-ghost" style="width:100%;" onclick="doSignOut(); closeFavoritesModal();">تسجيل الخروج</button>
-      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeFavoritesModal()">إغلاق</button>
+      <button class="btn btn-ghost" style="width:100%;" onclick="doSignOut(); closeFavoritesModal();">Log Out</button>
+      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeFavoritesModal()">Close</button>
     </div>
   </div>
 
   <div class="modal-backdrop" id="statsBackdrop">
     <div class="modal" style="max-width:400px;">
-      <h3>📊 الأكثر تفضيلاً (كل المدن)</h3>
+      <h3>📊 Most Loved (All Cities)</h3>
       <div id="statsUserCount" style="font-size:12px; color:var(--ink-soft); margin-bottom:8px;"></div>
       <div id="statsList" style="max-height:360px; overflow-y:auto; text-align:right; margin:10px 0;"></div>
-      <button class="btn btn-ghost" style="width:100%;" onclick="closeStatsModal()">إغلاق</button>
+      <button class="btn btn-ghost" style="width:100%;" onclick="closeStatsModal()">Close</button>
     </div>
   </div>
 
   <div class="modal-backdrop" id="qrBackdrop">
     <div class="modal">
-      <h3>امسح الرمز لفتح الدليل</h3>
+      <h3>Scan the code to open the guide</h3>
       <div id="qrcode"></div>
-      <button class="btn btn-ghost" onclick="closeQR()">إغلاق</button>
+      <button class="btn btn-ghost" onclick="closeQR()">Close</button>
     </div>
   </div>
 
@@ -422,7 +422,7 @@ function loadScriptOnce(src){
     s.src = src;
     s.crossOrigin = 'anonymous';
     s.onload = () => resolve(src);
-    s.onerror = () => reject(new Error('فشل تحميل: ' + src));
+    s.onerror = () => reject(new Error('Failed to load: ' + src));
     document.head.appendChild(s);
   });
 }
@@ -462,7 +462,7 @@ async function initFirebase(){
   try{
     await loadFirebaseSDK();
     if (typeof firebase === 'undefined') {
-      throw new Error('السكربتات تحمّلت لكن الكائن firebase غير موجود (احتمال تعارض مع إضافة بالمتصفح).');
+      throw new Error('Scripts loaded but the firebase object is missing (possibly a browser extension conflict).');
     }
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
@@ -479,19 +479,19 @@ async function initFirebase(){
    2) بيانات المدن والتصنيفات
    ========================================================= */
 const CITIES = [
-  { id:"paris",     name:"باريس",    country:"فرنسا" },
-  { id:"marbella",  name:"ماربيا",   country:"إسبانيا" },
-  { id:"london",    name:"لندن",     country:"بريطانيا" },
-  { id:"barcelona", name:"برشلونة",  country:"إسبانيا" },
-  { id:"geneva",    name:"جنيف",     country:"سويسرا" },
-  { id:"madrid",    name:"مدريد",    country:"إسبانيا" },
-  { id:"mallorca",  name:"مايوركا",  country:"إسبانيا" },
+  { id:"paris",     name:"Paris",    country:"France" },
+  { id:"marbella",  name:"Marbella", country:"Spain" },
+  { id:"london",    name:"London",   country:"UK" },
+  { id:"barcelona", name:"Barcelona", country:"Spain" },
+  { id:"geneva",    name:"Geneva",   country:"Switzerland" },
+  { id:"madrid",    name:"Madrid",   country:"Spain" },
+  { id:"mallorca",  name:"Mallorca", country:"Spain" },
 ];
 
 let customCities = []; // مدن أضفتها لاحقًا: [{id, name, country}]
 let customCountries = []; // دول أضفتها بدون مدن بعد: ["اسم1", "اسم2"]
 let customCountryFlags = {}; // أعلام الدول اللي أضفتها لاحقًا: { "اسم الدولة": "🇦🇪" }
-const COUNTRY_FLAGS = { "فرنسا":"🇫🇷", "إسبانيا":"🇪🇸", "بريطانيا":"🇬🇧", "سويسرا":"🇨🇭" };
+const COUNTRY_FLAGS = { "France":"🇫🇷", "Spain":"🇪🇸", "UK":"🇬🇧", "Switzerland":"🇨🇭" };
 function countryFlag(name){ return COUNTRY_FLAGS[name] || customCountryFlags[name] || ''; }
 function allCities(){ return CITIES.concat(customCities); }
 
@@ -518,7 +518,7 @@ async function loadCustomCountries(){
 async function saveCustomCountries(){
   try{
     await db.collection('settings').doc('countries-list').set({ countries: customCountries, flags: customCountryFlags }, { merge:true });
-  }catch(e){ showToast('تعذر حفظ الدولة'); }
+  }catch(e){ showToast('Could not save the country'); }
 }
 
 // ===== قالب التصنيفات المشترك (كل المدن تقرأ من نفس المستند) =====
@@ -540,43 +540,43 @@ async function saveCategoryTemplate(){
       { customItems, sectionOverrides, itemOrder, itemOverrides },
       { merge:true }
     );
-    showToast('تم حفظ التصنيف لكل المدن ✓');
+    showToast('Category saved for all cities ✓');
   }catch(e){
-    showToast('تعذر حفظ التصنيف');
+    showToast('Could not save the category');
   }
 }
 
 async function addCountry(){
-  const name = await openInputModal("دولة جديدة", "مثال: السعودية، قطر، أمريكا...", "");
+  const name = await openInputModal("New Country", "e.g. Saudi Arabia, Qatar, USA...", "");
   if (!name || !name.trim()) return;
   const clean = name.trim();
   if (!customCountries.includes(clean)) {
     customCountries.push(clean);
   }
-  const flag = await openInputModal("علم الدولة (اختياري)", "الصق إيموجي العلم، مثال: 🇸🇦", "");
+  const flag = await openInputModal("Country flag (optional)", "Paste the flag emoji, e.g. 🇸🇦", "");
   if (flag !== null && flag.trim()) {
     customCountryFlags[clean] = flag.trim();
   }
   await saveCustomCountries();
   currentCountry = clean;
-  showToast('تمت إضافة الدولة ✓ — ضيف لها مدينة الآن');
+  showToast('Country added ✓ — now add a city for it');
   renderCountryTabs();
   renderCityTabs();
   render();
 }
 
 async function addCity(){
-  const name = await openInputModal("مدينة جديدة", "مثال: ميلانو، دبي...", "");
+  const name = await openInputModal("New City", "e.g. Milan, Dubai...", "");
   if (!name || !name.trim()) return;
-  const country = await openInputModal("الدولة", "مثال: إيطاليا، الإمارات...", currentCountry || "");
-  if (country === null || !country.trim()) { showToast('لازم تحدد الدولة'); return; }
+  const country = await openInputModal("Country", "e.g. Italy, UAE...", currentCountry || "");
+  if (country === null || !country.trim()) { showToast('You must specify the country'); return; }
   const id = "city_" + Date.now();
   customCities.push({ id, name: name.trim(), country: country.trim() });
   try{
     await db.collection('settings').doc('cities-list').set({ cities: customCities }, { merge:true });
-    showToast('تمت إضافة المدينة ✓');
+    showToast('City added ✓');
   }catch(e){
-    showToast('تعذر الحفظ — حاول مرة ثانية');
+    showToast('Could not save — try again');
     return;
   }
   await loadCity(id); // ينقلك مباشرة للمدينة الجديدة عشان تبدأ التعبئة
@@ -586,8 +586,8 @@ async function removeCity(cityId){
   customCities = customCities.filter(c => c.id !== cityId);
   try{
     await db.collection('settings').doc('cities-list').set({ cities: customCities }, { merge:true });
-    showToast('تم حذف المدينة');
-  }catch(e){ showToast('تعذر الحذف'); }
+    showToast('City deleted');
+  }catch(e){ showToast('Could not delete'); }
   loadCity(pickInitialCity());
 }
 
@@ -748,7 +748,7 @@ async function loadCity(cityId){
       dbg.style.direction = 'ltr';
       dbg.textContent = 'Firestore error: ' + (e && e.message ? e.message : e) + ' (code: ' + (e && e.code ? e.code : 'n/a') + ')';
     }
-    showToast('خطأ بالاتصال — التفاصيل بالمربع الأحمر بالأعلى');
+    showToast('Connection error — details in the red box above');
   }
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('sections').style.display = 'block';
@@ -798,9 +798,9 @@ async function saveCity(){
       { links, published: cityStatus[currentCityId] === true, sectionStatus },
       { merge:true }
     );
-    showToast('تم الحفظ ✓');
+    showToast('Saved ✓');
   }catch(e){
-    showToast('تعذر الحفظ — تحقق من قواعد أمان Firestore');
+    showToast('Could not save — check Firestore security rules');
   }
 }
 
@@ -819,7 +819,7 @@ function revealOwnerUI(){
 }
 
 async function exitOwnerMode(){
-  const confirmed = window.confirm('هتخرج من وضع المالك على هذا الجهاز. أي أقسام خاصة بالمالك (زي Hospitals & Clinics, Personal, Others) هتختفي من الواجهة فورًا. تقدر ترجع تفعّله بنفس كلمة السر وقت ما تحتاج.\n\nتأكيد الخروج؟');
+  const confirmed = window.confirm('You\'ll be logged out of owner mode on this device. Any owner-only sections (like Hospitals & Clinics, Personal, Others) will disappear from the interface immediately. You can log back in anytime with the same password.\n\nConfirm logout?');
   if (!confirmed) return;
   try{ localStorage.removeItem('mypickz_owner'); }catch(e){}
   if (editMode) { editMode = false; }
@@ -832,7 +832,7 @@ async function exitOwnerMode(){
   renderCountryTabs();
   renderCityTabs();
   render();
-  showToast('تم الخروج من وضع المالك ✓');
+  showToast('Logged out of owner mode ✓');
 }
 
 let logoTapCount = 0;
@@ -843,15 +843,15 @@ async function logoTap(){
   logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 2000); // لازم الضغطات متقاربة
   if (logoTapCount < 5) return;
   logoTapCount = 0;
-  const entered = await openInputModal("دخول المالك", "أدخل كلمة المرور", "");
+  const entered = await openInputModal("Owner Login", "Enter password", "");
   if (entered === null) return;
   if (editPassword && entered === editPassword) {
     try{ localStorage.setItem('mypickz_owner', editPassword); }catch(e){}
     revealOwnerUI();
     await linkOwnerUid();
-    showToast('تم تفعيل وضع المالك ✓');
+    showToast('Owner mode activated ✓');
   } else {
-    showToast('كلمة مرور غير صحيحة');
+    showToast('Incorrect password');
   }
 }
 
@@ -885,7 +885,7 @@ function checkOwnerAccess(){
 async function savePassword(){
   try{
     await db.collection('settings').doc('app').set({ password: editPassword }, { merge:true });
-  }catch(e){ showToast('تعذر حفظ كلمة المرور'); }
+  }catch(e){ showToast('Could not save password'); }
 }
 
 /* =========================================================
@@ -905,7 +905,7 @@ function renderCountryTabs(){
     <button class="city-tab ${country === currentCountry ? 'active' : ''}" onclick="selectCountry('${country.replace(/'/g,"\\'")}')">
       ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
     </button>`).join('')
-    + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCountry()">➕ دولة جديدة</button>` : '');
+    + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCountry()">➕ New Country</button>` : '');
 }
 
 function renderCityTabs(){
@@ -917,9 +917,9 @@ function renderCityTabs(){
       <button class="city-tab ${c.id === currentCityId ? 'active' : ''}" onclick="loadCity('${c.id}')">
         ${c.name}${editMode && !cityStatus[c.id] ? ' <i class="fa-solid fa-screwdriver-wrench"></i>' : ''}
       </button>
-      ${editMode && c.id.startsWith('city_') ? `<button class="remove-btn" style="font-size:16px;" onclick="removeCity('${c.id}')" title="حذف المدينة">🗑️</button>` : ''}
+      ${editMode && c.id.startsWith('city_') ? `<button class="remove-btn" style="font-size:16px;" onclick="removeCity('${c.id}')" title="Delete city">🗑️</button>` : ''}
     </span>`).join('')
-    + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCity()">➕ مدينة جديدة</button>` : '');
+    + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCity()">➕ New City</button>` : '');
 }
 
 function getEntry(id){ return links[id] || { active:true }; }
@@ -945,9 +945,9 @@ async function editSection(sectionTitle){
   const section = DATA.find(s => s.title === sectionTitle);
   if (!section) return;
   const cur = sectionDisplay(section);
-  const newName = await openInputModal("اسم القسم الرئيسي (لكل المدن)", "مثال: Restaurants & Cafes", cur.name);
+  const newName = await openInputModal("Main section name (all cities)", "e.g. Restaurants & Cafes", cur.name);
   if (newName === null) return;
-  const newIcon = await openInputModal("أيقونة القسم (إيموجي)", "مثال: 🍴", cur.icon);
+  const newIcon = await openInputModal("Section icon (emoji)", "e.g. 🍴", cur.icon);
   if (newIcon === null) return;
   sectionOverrides[section.title] = {
     name: newName.trim() || section.title,
@@ -999,12 +999,12 @@ function ensurePlaces(id){
 async function pasteToPlaceUrl(itemId, index){
   try{
     const text = await navigator.clipboard.readText();
-    if (!text || !text.trim()){ showToast('الحافظة فاضية'); return; }
+    if (!text || !text.trim()){ showToast('Clipboard is empty'); return; }
     updatePlaceUrl(itemId, index, text.trim());
     render();
-    showToast('تم اللصق ✓');
+    showToast('Pasted ✓');
   }catch(e){
-    showToast('تعذر الوصول للحافظة — الصق يدويًا بالخانة');
+    showToast('Could not access clipboard — paste manually in the field');
   }
 }
 
@@ -1051,9 +1051,9 @@ function toggleActive(id, checked){ const e = getEntry(id); e.active = checked; 
 
 // --- إضافة/حذف تصنيف فرعي مخصص (مشترك لكل المدن) ---
 async function addCustomItem(sectionTitle){
-  const name = await openInputModal("تصنيف جديد (يظهر كخيار بكل المدن)", "مثال: Village, City...", "");
+  const name = await openInputModal("New category (shown as an option in all cities)", "e.g. Village, City...", "");
   if (!name || !name.trim()) return;
-  const icon = await openInputModal("أيقونة التصنيف (إيموجي)", "الصق إيموجي مناسب، مثال: 🏘️", "🏷️");
+  const icon = await openInputModal("Category icon (emoji)", "Paste a suitable emoji, e.g. 🏘️", "🏷️");
   const id = "custom_" + Date.now();
   customItems.push({ id, section: sectionTitle, icon: (icon && icon.trim()) ? icon.trim() : "🏷️", name:name.trim() });
   await saveCategoryTemplate();
@@ -1069,7 +1069,7 @@ function removeCustomItem(id){
 
 function toggleEdit(){
   editMode = !editMode;
-  document.getElementById('editBtnLabel').textContent = editMode ? 'إنهاء' : 'تعديل';
+  document.getElementById('editBtnLabel').textContent = editMode ? 'Done' : 'Edit';
   document.getElementById('editIcon').innerHTML = editMode ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-pen"></i>';
   document.getElementById('editModeBanner').classList.toggle('show', editMode);
   document.getElementById('footerNote').style.display = editMode ? 'block' : 'none';
@@ -1085,9 +1085,9 @@ function toggleEdit(){
 async function requestEditAccess(){
   if (editMode){ toggleEdit(); return; }
   if (editPassword){
-    const entered = await openInputModal("كلمة المرور", "أدخل كلمة المرور للتعديل", "");
+    const entered = await openInputModal("Password", "Enter password to edit", "");
     if (entered === null) return;
-    if (entered !== editPassword){ showToast('كلمة مرور غير صحيحة'); return; }
+    if (entered !== editPassword){ showToast('Incorrect password'); return; }
   }
   await loadVisitCount();
   toggleEdit();
@@ -1095,15 +1095,15 @@ async function requestEditAccess(){
 
 async function managePassword(){
   if (editPassword){
-    const current = await openInputModal("تأكيد الهوية", "أدخل كلمة المرور الحالية", "");
+    const current = await openInputModal("Confirm Identity", "Enter current password", "");
     if (current === null) return;
-    if (current !== editPassword){ showToast('كلمة مرور غير صحيحة'); return; }
+    if (current !== editPassword){ showToast('Incorrect password'); return; }
   }
-  const next = await openInputModal(editPassword ? "كلمة مرور جديدة" : "ضع كلمة مرور", "اتركها فارغة لإلغاء الحماية", "");
+  const next = await openInputModal(editPassword ? "New password" : "Set a password", "Leave empty to remove protection", "");
   if (next === null) return;
   editPassword = next.trim();
   await savePassword();
-  showToast(editPassword ? 'تم تفعيل كلمة المرور ✓' : 'تم إلغاء كلمة المرور');
+  showToast(editPassword ? 'Password enabled ✓' : 'Password removed');
 }
 
 // ===== حسابات المستخدمين والمفضلة (للزوار) =====
@@ -1136,27 +1136,27 @@ async function toggleFavorite(url, name, category, city, area){
   if (exists){
     favoritePlaces = favoritePlaces.filter(f => f.url !== url);
   } else {
-    favoritePlaces.push({ url, name: name || 'موقع', category: category || '', city: city || '', area: area || '' });
+    favoritePlaces.push({ url, name: name || 'Place', category: category || '', city: city || '', area: area || '' });
   }
   render();
   try{
     await db.collection('favorites').doc(currentUser.uid).set({ items: favoritePlaces }, { merge:true });
     await db.collection('placeFavoriteCounts').doc(docId).set({
-      name: name || 'موقع',
+      name: name || 'Place',
       url: url,
       count: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
     }, { merge:true });
-  }catch(e){ showToast('تعذر حفظ المفضلة'); }
+  }catch(e){ showToast('Could not save favorite'); }
 }
 
 async function openFavoriteStats(){
   const list = document.getElementById('statsList');
-  list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">جاري التحميل...</p>`;
+  list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">Loading...</p>`;
   document.getElementById('statsBackdrop').classList.add('show');
   try{
     const userDoc = await db.collection('stats').doc('users').get();
     const userCount = (userDoc.exists && userDoc.data().count) ? userDoc.data().count : 0;
-    document.getElementById('statsUserCount').textContent = `👤 عدد الحسابات المسجّلة: ${userCount}`;
+    document.getElementById('statsUserCount').textContent = `👤 Registered accounts: ${userCount}`;
   }catch(e){
     document.getElementById('statsUserCount').textContent = '';
   }
@@ -1168,7 +1168,7 @@ async function openFavoriteStats(){
       if (d.count > 0) rows.push(d);
     });
     if (!rows.length){
-      list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">لا يوجد أي تفضيلات مسجّلة بعد</p>`;
+      list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">No favorites recorded yet</p>`;
     } else {
       list.innerHTML = rows.map((d, i) => `
         <div class="stats-row">
@@ -1178,7 +1178,7 @@ async function openFavoriteStats(){
         </div>`).join('');
     }
   }catch(e){
-    list.innerHTML = `<p style="color:#b5545a; font-size:12px; text-align:center;">تعذر تحميل الإحصائيات</p>`;
+    list.innerHTML = `<p style="color:#b5545a; font-size:12px; text-align:center;">Could not load statistics</p>`;
   }
 }
 function closeStatsModal(){
@@ -1203,13 +1203,13 @@ async function doSignUp(){
   const errEl = document.getElementById('authError');
   errEl.textContent = '';
   if (!email || !pass || pass.length < 6){
-    errEl.textContent = 'أدخل إيميل صحيح وكلمة مرور 6 أحرف على الأقل';
+    errEl.textContent = 'Enter a valid email and a password of 6+ characters';
     return;
   }
   try{
     await auth.createUserWithEmailAndPassword(email, pass);
     closeAuthModal();
-    showToast('تم إنشاء الحساب ✓');
+    showToast('Account created ✓');
     db.collection('stats').doc('users').set(
       { count: firebase.firestore.FieldValue.increment(1) }, { merge:true }
     ).catch(()=>{});
@@ -1223,25 +1223,25 @@ async function doSignIn(){
   const errEl = document.getElementById('authError');
   errEl.textContent = '';
   if (!email || !pass){
-    errEl.textContent = 'أدخل الإيميل وكلمة المرور';
+    errEl.textContent = 'Enter email and password';
     return;
   }
   try{
     await auth.signInWithEmailAndPassword(email, pass);
     closeAuthModal();
-    showToast('أهلًا بك ✓');
+    showToast('Welcome ✓');
   }catch(e){
     errEl.textContent = authErrorMessage(e);
   }
 }
 function authErrorMessage(e){
   const code = e && e.code || '';
-  if (code.includes('email-already-in-use')) return 'هذا الإيميل مسجّل من قبل — جرب تسجيل الدخول';
-  if (code.includes('invalid-email')) return 'صيغة الإيميل غير صحيحة';
-  if (code.includes('wrong-password') || code.includes('user-not-found') || code.includes('invalid-credential')) return 'الإيميل أو كلمة المرور غير صحيحة';
-  if (code.includes('weak-password')) return 'كلمة المرور ضعيفة — 6 أحرف على الأقل';
-  if (code.includes('too-many-requests')) return 'محاولات كثيرة — انتظر شوي وحاول مرة ثانية';
-  return 'حدث خطأ، حاول مرة ثانية';
+  if (code.includes('email-already-in-use')) return 'This email is already registered — try logging in';
+  if (code.includes('invalid-email')) return 'Invalid email format';
+  if (code.includes('wrong-password') || code.includes('user-not-found') || code.includes('invalid-credential')) return 'Incorrect email or password';
+  if (code.includes('weak-password')) return 'Weak password — 6+ characters required';
+  if (code.includes('too-many-requests')) return 'Too many attempts — wait a bit and try again';
+  return 'Something went wrong, try again';
 }
 
 async function doForgotPassword(){
@@ -1249,30 +1249,30 @@ async function doForgotPassword(){
   const errEl = document.getElementById('authError');
   if (!email){
     errEl.style.color = '#b5545a';
-    errEl.textContent = 'اكتب إيميلك في الحقل فوق، وبعدين اضغط "نسيت كلمة المرور؟"';
+    errEl.textContent = 'Enter your email in the field above, then tap "Forgot password?"';
     return;
   }
   errEl.style.color = '#4a5a68';
-  errEl.textContent = 'جاري الإرسال...';
+  errEl.textContent = 'Sending...';
   try{
     await auth.sendPasswordResetEmail(email);
     errEl.style.color = '#2f7a4d';
-    errEl.textContent = 'تم إرسال رابط إعادة التعيين على إيميلك ✓ افحص صندوق الوارد (وسبام)';
+    errEl.textContent = 'Reset link sent to your email ✓ Check your inbox (and spam)';
   }catch(e){
     errEl.style.color = '#b5545a';
-    if ((e.code||'').includes('invalid-email')) errEl.textContent = 'صيغة الإيميل غير صحيحة';
-    else errEl.textContent = 'تعذر الإرسال — تأكد إن الإيميل صحيح وحاول مرة ثانية';
+    if ((e.code||'').includes('invalid-email')) errEl.textContent = 'Invalid email format';
+    else errEl.textContent = 'Could not send — make sure the email is correct and try again';
   }
 }
 function doSignOut(){
   auth.signOut();
-  showToast('تم تسجيل الخروج');
+  showToast('Logged out');
 }
 
 function openFavoritesModal(){
   const list = document.getElementById('favoritesList');
   if (!favoritePlaces.length){
-    list.innerHTML = `<p style="color:var(--ink-soft); font-size:13px; text-align:center;">لا يوجد مواقع بالمفضلة بعد</p>`;
+    list.innerHTML = `<p style="color:var(--ink-soft); font-size:13px; text-align:center;">No favorite places yet</p>`;
   } else {
     list.innerHTML = favoritePlaces.map(f => {
       const crumbs = [f.city, f.category, f.area].filter(x => x && x.trim());
@@ -1300,10 +1300,10 @@ function updateUserUI(){
   if (!icon || !label) return;
   if (currentUser){
     icon.className = 'fa-solid fa-heart';
-    label.textContent = 'مفضلتي';
+    label.textContent = 'Favorites';
   } else {
     icon.className = 'fa-solid fa-user';
-    label.textContent = 'حسابي';
+    label.textContent = 'My Account';
   }
 }
 
@@ -1338,10 +1338,10 @@ function render(){
     statusBar.innerHTML = `
       <button class="status-toggle ${published ? 'published' : ''}" onclick="togglePublish()">
         <span class="status-dot"></span>
-        <span>${published ? 'منشورة — ظاهرة للزوار' : 'تحت التطوير — مخفية عن الزوار'}</span>
+        <span>${published ? 'Published — visible to visitors' : 'Under development — hidden from visitors'}</span>
       </button>
       <div class="status-divider"></div>
-      <div class="status-stat">👁️ ${visitCount === null ? '...' : visitCount} زيارة إجمالية</div>`;
+      <div class="status-stat">👁️ ${visitCount === null ? '...' : visitCount} total visits</div>`;
     wrap.appendChild(statusBar);
   }
 
@@ -1389,18 +1389,18 @@ function render(){
         <span class="section-icon">${sd.icon}</span>
         <h2>${sd.name}</h2><span class="count">${displayCount}</span>
         ${editMode ? `
-          <button type="button" class="remove-btn" style="font-size:14px;" onclick="editSection('${section.title.replace(/'/g,"\\'")}')" title="تعديل اسم/أيقونة القسم"><i class="fa-solid fa-pen"></i></button>
+          <button type="button" class="remove-btn" style="font-size:14px;" onclick="editSection('${section.title.replace(/'/g,"\\'")}')" title="Edit section name/icon"><i class="fa-solid fa-pen"></i></button>
           ${section.ownerOnly
-            ? `<span style="margin-inline-start:auto; font-size:11px; color:#b5545a; font-weight:700; font-family:'Cairo',sans-serif;"><i class="fa-solid fa-lock"></i> خاص بالمالك دائمًا</span>`
+            ? `<span style="margin-inline-start:auto; font-size:11px; color:#b5545a; font-weight:700; font-family:'Cairo',sans-serif;"><i class="fa-solid fa-lock"></i> Always owner-only</span>`
             : `<button type="button" class="switch-btn ${sectionOn ? 'on' : ''}" style="margin-inline-start:auto;" onclick="toggleSectionStatus('${section.title.replace(/'/g,"\\'")}')"><span class="knob"></span></button>
-          <span style="font-size:11px; color:var(--ink-soft); font-family:'Cairo',sans-serif;">${sectionOn ? 'ظاهر للزوار' : 'مخفي عن الزوار'}</span>`}` : ''}
+          <span style="font-size:11px; color:var(--ink-soft); font-family:'Cairo',sans-serif;">${sectionOn ? 'Visible to visitors' : 'Hidden from visitors'}</span>`}` : ''}
       </div>
       ${(() => {
         const areas = sectionAreas(section, itemsToShow);
         if (!areas.length) return '';
         const active = areaFilter[section.title] || '';
         return `<div class="area-filter-row">
-          <button type="button" class="area-chip ${!active ? 'active' : ''}" onclick="setAreaFilter('${section.title.replace(/'/g,"\\'")}', '')">الكل</button>
+          <button type="button" class="area-chip ${!active ? 'active' : ''}" onclick="setAreaFilter('${section.title.replace(/'/g,"\\'")}', '')">All</button>
           ${areas.map(a => `<button type="button" class="area-chip ${active===a ? 'active' : ''}" onclick="setAreaFilter('${section.title.replace(/'/g,"\\'")}', '${a.replace(/'/g,"\\'")}')">📍 ${a}</button>`).join('')}
         </div>`;
       })()}
@@ -1416,20 +1416,20 @@ function render(){
           if (editMode) {
             const placeRows = places.map((p, i) => `
               <div class="place-row">
-                <input type="text" class="place-area-input" placeholder="المنطقة (اختياري)"
+                <input type="text" class="place-area-input" placeholder="Area (optional)"
                   value="${(p.area||'').replace(/"/g,'&quot;')}"
                   oninput="updatePlaceArea('${item.id}', ${i}, this.value)">
-                <input type="text" class="place-name-input" placeholder="اسم المكان"
+                <input type="text" class="place-name-input" placeholder="Place name"
                   value="${(p.name||'').replace(/"/g,'&quot;')}"
                   oninput="updatePlaceName('${item.id}', ${i}, this.value)">
-                <input type="text" class="place-url-input" placeholder="رابط الموقع"
+                <input type="text" class="place-url-input" placeholder="Website link"
                   value="${(p.url||'').replace(/"/g,'&quot;')}"
                   oninput="updatePlaceUrl('${item.id}', ${i}, this.value)">
-                <button type="button" class="remove-btn" onclick="pasteToPlaceUrl('${item.id}', ${i}); return false;" title="لصق الرابط من الحافظة"><i class="fa-solid fa-paste"></i></button>
-                <button type="button" class="remove-btn" onclick="removePlace('${item.id}', ${i}); return false;" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                <button type="button" class="remove-btn" onclick="pasteToPlaceUrl('${item.id}', ${i}); return false;" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button>
+                <button type="button" class="remove-btn" onclick="removePlace('${item.id}', ${i}); return false;" title="Delete"><i class="fa-solid fa-trash"></i></button>
                 <div class="place-note-row">
                   <button type="button" class="switch-btn small ${p.noteOn !== false ? 'on' : ''}" onclick="togglePlaceNote('${item.id}', ${i}, ${p.noteOn !== false ? 'false' : 'true'})"><span class="knob"></span></button>
-                  <input type="text" class="place-note-input" placeholder="مثال: جرب البرجر الخاص، أو: أجواء رائعة بالمساء"
+                  <input type="text" class="place-note-input" placeholder="e.g. Try the special burger, or: great evening vibe"
                     value="${(p.note||'').replace(/"/g,'&quot;')}"
                     oninput="updatePlaceNote('${item.id}', ${i}, this.value)">
                 </div>
@@ -1441,20 +1441,20 @@ function render(){
                   <button type="button" class="reorder-btn" ${iIndex===0?'disabled':''} onclick="moveItem('${section.title.replace(/'/g,"\\'")}', '${item.id}', -1)">▲</button>
                   <button type="button" class="reorder-btn" ${iIndex===itemsToShow.length-1?'disabled':''} onclick="moveItem('${section.title.replace(/'/g,"\\'")}', '${item.id}', 1)">▼</button>
                 </div>
-                <input type="text" class="icon-edit" value="${icon.replace(/"/g,'&quot;')}" oninput="updateIcon('${item.id}', this.value)" title="أيقونة (إيموجي)">
+                <input type="text" class="icon-edit" value="${icon.replace(/"/g,'&quot;')}" oninput="updateIcon('${item.id}', this.value)" title="Icon (emoji)">
                 <div style="flex:1">
                   <input type="text" class="name-edit" value="${displayName(item).replace(/"/g,'&quot;')}" oninput="updateName('${item.id}', this.value)">
                   <div class="toggle-row">
                     <button type="button" class="switch-btn ${active ? 'on' : ''}" onclick="toggleActive('${item.id}', ${active ? 'false' : 'true'})"><span class="knob"></span></button>
-                    <span>${active ? 'مفعّل' : 'موقوف'}</span>
-                    ${isCustom ? `<button type="button" class="remove-btn" onclick="removeCustomItem('${item.id}')"><i class="fa-solid fa-trash"></i> حذف التصنيف</button>` : ''}
+                    <span>${active ? 'Active' : 'Off'}</span>
+                    ${isCustom ? `<button type="button" class="remove-btn" onclick="removeCustomItem('${item.id}')"><i class="fa-solid fa-trash"></i> Delete category</button>` : ''}
                   </div>
                   <div class="places-edit-list">
                     ${placeRows}
                   </div>
                   <div style="display:flex; gap:6px;">
-                    <button type="button" class="add-place-btn" style="flex:1" onclick="addPlace('${item.id}')"><i class="fa-solid fa-plus"></i> إضافة موقع</button>
-                    <button type="button" class="add-place-btn" style="flex:1" onclick="openMapsForCurrentCity()"><i class="fa-solid fa-map-location-dot"></i> فتح خرائط ${allCities().find(c=>c.id===currentCityId)?.name || ''}</button>
+                    <button type="button" class="add-place-btn" style="flex:1" onclick="addPlace('${item.id}')"><i class="fa-solid fa-plus"></i> Add place</button>
+                    <button type="button" class="add-place-btn" style="flex:1" onclick="openMapsForCurrentCity()"><i class="fa-solid fa-map-location-dot"></i> Open Maps for ${allCities().find(c=>c.id===currentCityId)?.name || ''}</button>
                   </div>
                 </div>
               </div>`;
@@ -1477,7 +1477,7 @@ function render(){
               } else if (!area && lastArea !== '') {
                 lastArea = '';
               }
-              const pName = (p.name && p.name.trim() ? p.name : 'موقع');
+              const pName = (p.name && p.name.trim() ? p.name : 'Place');
               const fav = isFavorite(p.url);
               const safeUrl = p.url.replace(/'/g,"\\'");
               const safeName = pName.replace(/'/g,"\\'");
@@ -1486,7 +1486,7 @@ function render(){
               const safeArea = area.replace(/'/g,"\\'");
               return divider + `<div class="place-row-view">
                   <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
-                  <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}', '${safeCity}', '${safeArea}')" title="أضف للمفضلة"><i class="fa-solid fa-heart"></i></button>
+                  <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}', '${safeCity}', '${safeArea}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
                 </div>` +
                 (p.note && p.note.trim() && p.noteOn !== false ? `<div class="place-note">${p.note}</div>` : '');
             }).join('');
@@ -1496,13 +1496,13 @@ function render(){
                     </div>`;
           }
           if (filterArea) return ''; // فلتر منطقة نشط وما فيه مواقع مطابقة — نخفي التصنيف بدل ما نوريه "قريبًا"
-          return `<div class="ticket disabled"><div class="icon-badge">${icon}</div><div class="name">${displayName(item)}</div><div class="missing">قريبًا</div></div>`;
+          return `<div class="ticket disabled"><div class="icon-badge">${icon}</div><div class="name">${displayName(item)}</div><div class="missing">Coming soon</div></div>`;
         }).join('')}
-        ${editMode ? `<button type="button" class="ticket add-ticket" onclick="addCustomItem('${section.title}')"><div class="icon-badge"><i class="fa-solid fa-plus"></i></div><div class="name">إضافة تصنيف جديد</div></button>` : ''}
+        ${editMode ? `<button type="button" class="ticket add-ticket" onclick="addCustomItem('${section.title}')"><div class="icon-badge"><i class="fa-solid fa-plus"></i></div><div class="name">Add new category</div></button>` : ''}
       </div>
       ${!editMode && visibleItems.length > COLLAPSE_LIMIT ? `
         <button type="button" class="show-more-btn" onclick="toggleSection('${section.title.replace(/'/g,"\\'")}')">
-          ${isExpanded ? 'عرض أقل ▴' : `عرض الكل (${visibleItems.length}) ▾`}
+          ${isExpanded ? 'Show less ▴' : `Show all (${visibleItems.length}) ▾`}
         </button>` : ''}`;
     wrap.appendChild(sec);
   });
@@ -1510,7 +1510,7 @@ function render(){
   if (editMode){
     const saveWrap = document.createElement('div');
     saveWrap.className = 'toolbar';
-    saveWrap.innerHTML = `<button class="btn btn-brass" onclick="saveAll()"><i class="fa-solid fa-floppy-disk"></i> حفظ (${allCities().find(c=>c.id===currentCityId)?.name || ''})</button>`;
+    saveWrap.innerHTML = `<button class="btn btn-brass" onclick="saveAll()"><i class="fa-solid fa-floppy-disk"></i> Save (${allCities().find(c=>c.id===currentCityId)?.name || ''})</button>`;
     wrap.appendChild(saveWrap);
   }
 }
@@ -1551,13 +1551,13 @@ function showToast(msg){
   setTimeout(()=> t.classList.remove('show'), 2200);
 }
 function copyLink(){
-  navigator.clipboard.writeText(window.location.href).then(()=> showToast('تم نسخ الرابط ✓'))
-    .catch(()=> showToast('انسخ الرابط يدويًا من شريط العنوان'));
+  navigator.clipboard.writeText(window.location.href).then(()=> showToast('Link copied ✓'))
+    .catch(()=> showToast('Copy the link manually from the address bar'));
 }
 function showQR(){
   const box = document.getElementById('qrcode'); box.innerHTML = '';
   try{ new QRCode(box, { text: window.location.href, width:180, height:180, colorDark:'#1c2b3a', colorLight:'#faf6ec' }); }
-  catch(e){ box.innerHTML = '<div style="font-size:12px;color:#4a5a68">تعذر توليد الرمز</div>'; }
+  catch(e){ box.innerHTML = '<div style="font-size:12px;color:#4a5a68">Could not generate the code</div>'; }
   document.getElementById('qrBackdrop').classList.add('show');
 }
 function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show'); }
