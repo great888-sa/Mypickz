@@ -1051,6 +1051,18 @@ async function pasteToPlaceUrl(itemId, index){
   }
 }
 
+async function pasteToUserPlaceUrl(itemId, index){
+  try{
+    const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()){ showToast('Clipboard is empty'); return; }
+    updateUserPlaceField(itemId, index, 'url', text.trim());
+    renderMyListModal();
+    showToast('Pasted ✓');
+  }catch(e){
+    showToast('Could not access clipboard — paste manually in the field');
+  }
+}
+
 // يفتح خرائط Google بحث مباشر على اسم المدينة الحالية بتبويب جديد
 function openMapsForCurrentCity(){
   const cityName = allCities().find(c => c.id === currentCityId)?.name || '';
@@ -1582,7 +1594,10 @@ function renderMyListModal(){
             html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">
               <input type="text" class="modal-input" placeholder="Area (optional)" value="${(p.area||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'area', this.value)" style="font-size:12px; padding:6px 8px;">
               <input type="text" class="modal-input" placeholder="Place name" value="${(p.name||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'name', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px;">
-              <input type="text" class="modal-input" placeholder="Google Maps link" value="${(p.url||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'url', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px; direction:ltr; text-align:left;">
+              <div style="display:flex; gap:6px; margin-top:4px; align-items:center;">
+                <input type="text" class="modal-input" placeholder="Google Maps link" value="${(p.url||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'url', this.value)" style="flex:1; font-size:12px; padding:6px 8px; direction:ltr; text-align:left;">
+                <button type="button" class="remove-btn" onclick="pasteToUserPlaceUrl('${item.id}', ${i}); return false;" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button>
+              </div>
               <input type="text" class="modal-input" placeholder="Note (optional)" value="${(p.note||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'note', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px;">
               <div style="display:flex; gap:6px; margin-top:4px;">
                 ${isComplete ? `<button type="button" class="add-place-btn" style="flex:1; font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})"><i class="fa-solid fa-check"></i> Done</button>` : ''}
