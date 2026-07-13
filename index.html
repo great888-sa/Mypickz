@@ -1373,7 +1373,7 @@ function render(){
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = orderedItems(section, section.items.concat(sectionCustom));
     const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id, !section.ownerOnly).active !== false);
-    if (!editMode && visibleItems.length === 0) return;
+    if (!editMode && visibleItems.length === 0 && !(section.ownerOnly && isOwner)) return;
 
     const sd = sectionDisplay(section);
     const sectionOn = sectionStatus[section.title] !== false;
