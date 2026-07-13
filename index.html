@@ -673,6 +673,7 @@ let currentCityId = CITIES[0].id;
 let currentCountry = CITIES[0].country;
 let links = {};          // (لكل مدينة) { itemId: {active, places:[{name,url,area}]} }
 let editMode = false;
+let isOwner = false; // true من لحظة تفعيل وضع المالك، بغض النظر عن دخول/خروج وضع التعديل نفسه
 let editPassword = "";
 let cityStatus = {};     // (لكل مدينة) { cityId: true/false } — true = منشورة وظاهرة للزوار
 let sectionStatus = {};  // (لكل مدينة) { sectionTitle: true/false } — true (أو غير موجود) = القسم الرئيسي ظاهر
@@ -812,6 +813,7 @@ async function loadPassword(){
 }
 
 function revealOwnerUI(){
+  isOwner = true;
   document.getElementById('ownerControls').style.display = 'contents';
   document.getElementById('pageTitle').textContent = 'MyPickz — Admin';
   document.getElementById('webAppTitle').setAttribute('content', 'MyPickz Admin');
@@ -822,6 +824,7 @@ async function exitOwnerMode(){
   const confirmed = window.confirm('You\'ll be logged out of owner mode on this device. Any owner-only sections (like Hospitals & Clinics, Personal, Others) will disappear from the interface immediately. You can log back in anytime with the same password.\n\nConfirm logout?');
   if (!confirmed) return;
   try{ localStorage.removeItem('mypickz_owner'); }catch(e){}
+  isOwner = false;
   if (editMode) { editMode = false; }
   document.getElementById('ownerControls').style.display = 'none';
   document.getElementById('editModeBanner').classList.remove('show');
@@ -1347,7 +1350,7 @@ function render(){
 
   // شريط تنقل سريع بين الأقسام — يظهر بس لو فيه أكثر من قسم فيه محتوى
   const visibleSections = DATA.filter(section => {
-    if (!editMode && section.ownerOnly) return false;
+    if (!isOwner && section.ownerOnly) return false;
     if (!editMode && sectionStatus[section.title] === false) return false;
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = section.items.concat(sectionCustom);
@@ -1365,7 +1368,7 @@ function render(){
   }
 
   DATA.forEach((section, sIndex) => {
-    if (!editMode && section.ownerOnly) return;
+    if (!isOwner && section.ownerOnly) return;
     if (!editMode && sectionStatus[section.title] === false) return;
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = orderedItems(section, section.items.concat(sectionCustom));
