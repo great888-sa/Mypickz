@@ -1605,13 +1605,15 @@ function renderMyListModal(){
               </div>
             </div>`;
           } else {
-            html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line); display:flex; align-items:center; gap:8px;">
+            html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">`;
+            if (p.area && p.area.trim()) html += `<div style="font-size:10.5px; color:var(--ink-soft); margin-bottom:2px;">📍 ${p.area}</div>`;
+            html += `<div style="display:flex; align-items:center; gap:8px;">
               <a class="place-link" style="flex:1; font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${p.name} ←</a>
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})" title="Edit"><i class="fa-solid fa-pen"></i></button>
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})" title="Remove"><i class="fa-solid fa-trash"></i></button>
             </div>`;
-            if (p.area && p.area.trim()) html += `<div style="font-size:10.5px; color:var(--ink-soft); margin-top:2px;">📍 ${p.area}</div>`;
             if (p.note && p.note.trim()) html += `<div class="place-note" style="margin-top:2px;">${p.note}</div>`;
+            html += `</div>`;
           }
         });
         html += `<button type="button" class="add-place-btn" style="width:100%; margin-top:6px; font-size:11.5px;" onclick="addUserPlace('${item.id}')"><i class="fa-solid fa-plus"></i> Add place</button>`;
