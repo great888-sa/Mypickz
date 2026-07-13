@@ -1359,22 +1359,23 @@ function updateUserUI(){
 /* =========================================================
    القائمة الشخصية (Personal List) — بيانات كل مستخدم مسجّل، منفصلة تمامًا عن قائمة المالك
    ========================================================= */
-let userListData = { cities: {}, customCities: [] }; // { cities: {cityId: {...}}, customCities: [{id,name,country}] }
+let userListData = { cities: {}, customCities: [], customCountries: [] };
 let userListPublic = false;
 let myListCityId = null;   // المدينة اللي المستخدم شغال عليها جوه "My List"
 let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
 
 async function loadUserList(){
-  if (!currentUser){ userListData = { cities: {}, customCities: [] }; userListPublic = false; myListCityId = null; myListCountry = null; return; }
+  if (!currentUser){ userListData = { cities: {}, customCities: [], customCountries: [] }; userListPublic = false; myListCityId = null; myListCountry = null; return; }
   try{
     const doc = await db.collection('userLists').doc(currentUser.uid).get();
     const data = doc.exists ? doc.data() : {};
     userListData = {
       cities: (data.cities && typeof data.cities === 'object') ? data.cities : {},
-      customCities: Array.isArray(data.customCities) ? data.customCities : []
+      customCities: Array.isArray(data.customCities) ? data.customCities : [],
+      customCountries: Array.isArray(data.customCountries) ? data.customCountries : []
     };
     userListPublic = data.public === true;
-  }catch(e){ userListData = { cities: {}, customCities: [] }; userListPublic = false; }
+  }catch(e){ userListData = { cities: {}, customCities: [], customCountries: [] }; userListPublic = false; }
 }
 
 // مدن المالك المتاحة للقائمة الشخصية: المنشورة فقط (زي أي زائر بالظبط) — مش أي مدينة لسه Draft
@@ -1386,13 +1387,26 @@ function myListAllCities(){
   return myListPublishedOwnerCities().concat(userListData.customCities || []);
 }
 function myListAllCountries(){
-  return [...new Set(myListAllCities().map(c => c.country).filter(Boolean))];
+  const fromCities = myListAllCities().map(c => c.country).filter(Boolean);
+  return [...new Set(fromCities.concat(userListData.customCountries || []))];
 }
 
 function selectMyListCountry(country){
   myListCountry = country;
   const firstCity = myListAllCities().find(c => c.country === country);
   myListCityId = firstCity ? firstCity.id : null;
+  renderMyListModal();
+}
+
+async function addMyListCountry(){
+  const name = await openInputModal("New country (private to your list)", "e.g. Japan, USA...", "");
+  if (!name || !name.trim()) return;
+  const clean = name.trim();
+  if (!Array.isArray(userListData.customCountries)) userListData.customCountries = [];
+  if (!myListAllCountries().includes(clean)) userListData.customCountries.push(clean);
+  myListCountry = clean;
+  myListCityId = null;
+  await saveUserList();
   renderMyListModal();
 }
 
@@ -1459,7 +1473,7 @@ async function saveUserList(){
   }
   try{
     await db.collection('userLists').doc(currentUser.uid).set(
-      { cities: userListData.cities, customCities: userListData.customCities || [], public: userListPublic },
+      { cities: userListData.cities, customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], public: userListPublic },
       { merge:true }
     );
   }catch(e){ showToast('Could not save your list'); }
@@ -1522,7 +1536,8 @@ function renderMyListModal(){
   const countryChips = countries.map(country => `
     <button type="button" class="city-tab ${country === myListCountry ? 'active' : ''}" style="font-size:11.5px; padding:7px 12px;" onclick="selectMyListCountry('${country.replace(/'/g,"\\'")}')">
       ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
-    </button>`).join('');
+    </button>`).join('')
+    + `<button type="button" class="city-tab" style="font-size:11.5px; padding:7px 12px; border-style:dashed; color:var(--brass);" onclick="addMyListCountry()">➕ Add Country</button>`;
   document.getElementById('myListCountryChips').innerHTML = countryChips;
 
   // صف المدن — بس مدن الدولة المختارة + زرار إضافة مدينة جديدة (تحت نفس الدولة)
