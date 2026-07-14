@@ -347,6 +347,10 @@
         <span class="action-icon brass"><i class="fa-solid fa-chart-simple"></i></span>
         <span class="action-label">Most Loved</span>
       </button>
+      <button class="action-btn" onclick="openUsersModal()">
+        <span class="action-icon ink"><i class="fa-solid fa-user-group"></i></span>
+        <span class="action-label">Manage Users</span>
+      </button>
       <button class="action-btn" onclick="exitOwnerMode()">
         <span class="action-icon" style="background:#b5545a; color:#fff;"><i class="fa-solid fa-right-from-bracket"></i></span>
         <span class="action-label">Owner Logout</span>
@@ -398,6 +402,16 @@
         <button class="btn btn-ghost" style="flex:1" onclick="doSignUp()">New Account</button>
       </div>
       <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeAuthModal()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="usersBackdrop">
+    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <h3 style="text-align:center;">👥 Manage Users</h3>
+      <div id="usersStatsLine" style="font-size:12px; color:var(--ink-soft); text-align:center; margin:0 0 12px; line-height:1.8;"></div>
+      <input type="text" id="usersSearchInput" class="modal-input" placeholder="Search by nickname or email..." oninput="renderUsersModal(this.value)" style="margin-bottom:12px;">
+      <div id="usersListBody"></div>
+      <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeUsersModal()">Close</button>
     </div>
   </div>
 
@@ -1427,9 +1441,10 @@ let userListData = { cities: {}, customCities: [], customCountries: [] };
 let userListPublic = false;
 let myListCityId = null;   // المدينة اللي المستخدم شغال عليها جوه "My List"
 let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
+let currentUserSuspended = false;
 
 async function loadUserList(){
-  if (!currentUser){ userListData = { cities: {}, customCities: [], customCountries: [], nickname: null }; userListPublic = false; myListCityId = null; myListCountry = null; return; }
+  if (!currentUser){ userListData = { cities: {}, customCities: [], customCountries: [], nickname: null }; userListPublic = false; myListCityId = null; myListCountry = null; currentUserSuspended = false; return; }
   try{
     const doc = await db.collection('userLists').doc(currentUser.uid).get();
     const data = doc.exists ? doc.data() : {};
@@ -1443,6 +1458,10 @@ async function loadUserList(){
     };
     userListPublic = data.public === true;
   }catch(e){ userListData = { cities: {}, customCities: [], customCountries: [], nickname: null }; userListPublic = false; }
+  try{
+    const uDoc = await db.collection('users').doc(currentUser.uid).get();
+    currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
+  }catch(e){ currentUserSuspended = false; }
 }
 
 // مدن المالك المتاحة للقائمة الشخصية: المنشورة فقط (زي أي زائر بالظبط) — مش أي مدينة لسه Draft
@@ -1522,6 +1541,7 @@ function isGoogleMapsUrl(url){
 
 async function saveUserList(){
   if (!currentUser) return;
+  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   let invalidCount = 0;
   Object.keys(userListData.cities).forEach(cityId => {
     const links = userListData.cities[cityId];
@@ -1651,6 +1671,15 @@ function renderMyListModal(){
   document.getElementById('myListCityName').textContent = city ? city.name : '';
   document.getElementById('myListPublicToggle').classList.toggle('on', userListPublic);
 
+  if (currentUserSuspended){
+    document.getElementById('myListSections').innerHTML =
+      `<div style="background:#fbeceb; border:1.5px dashed #b5545a; border-radius:12px; padding:14px; text-align:center;">
+        <div style="font-weight:700; color:#7a2b30; margin-bottom:4px;">🚫 Account Suspended</div>
+        <div style="font-size:12px; color:#7a2b30;">Your account has been suspended and can no longer add or edit places, or share your list publicly.</div>
+      </div>`;
+    return;
+  }
+
   const nickRow = document.getElementById('myListNicknameRow');
   if (userListPublic){
     nickRow.innerHTML = `Public as <b>${userListData.nickname || '—'}</b> · 👁️ ${userListData.viewCount || 0} views · ❤️ ${userListData.favoriteCount || 0} favorites
@@ -1747,7 +1776,7 @@ async function loadCommunityLists(){
     communityUsers = [];
     snap.forEach(doc => {
       const d = doc.data();
-      if (!d.nickname) return;
+      if (!d.nickname || d.suspended) return;
       communityUsers.push({
         uid: doc.id,
         nickname: d.nickname,
@@ -1973,6 +2002,92 @@ function maybeAutoOpenHelp(){
       openHelpModal();
     }
   }catch(e){}
+}
+
+/* =========================================================
+   إدارة المستخدمين (Manage Users) — سجل خفيف لكل مستخدم مسجّل + لوحة للمالك
+   ========================================================= */
+async function registerUserRecord(){
+  if (!currentUser) return;
+  try{
+    const ref = db.collection('users').doc(currentUser.uid);
+    const doc = await ref.get();
+    if (!doc.exists){
+      await ref.set({ email: currentUser.email || '', firstSeen: Date.now(), lastSeen: Date.now(), suspended: false });
+    } else {
+      await ref.set({ lastSeen: Date.now() }, { merge:true });
+    }
+  }catch(e){ /* صامت — التسجيل تحسين إضافي، مش شرط لعمل التطبيق */ }
+}
+
+let allUsersCache = [];
+
+async function openUsersModal(){
+  document.getElementById('usersSearchInput').value = '';
+  document.getElementById('usersListBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft);">Loading...</p>`;
+  document.getElementById('usersBackdrop').classList.add('show');
+  try{
+    const snap = await db.collection('users').get();
+    allUsersCache = [];
+    snap.forEach(doc => allUsersCache.push({ uid: doc.id, ...doc.data() }));
+  }catch(e){ allUsersCache = []; }
+  if (!communityUsers.length) await loadCommunityLists(); // نحتاجها عشان نعرف مين مفعّل المشاركة العامة
+  renderUsersModal();
+}
+function closeUsersModal(){
+  document.getElementById('usersBackdrop').classList.remove('show');
+}
+
+function renderUsersModal(query){
+  const total = allUsersCache.length;
+  const nicknameMap = {};
+  communityUsers.forEach(u => { nicknameMap[u.uid] = u.nickname; });
+  const publicCount = communityUsers.length;
+  const pct = total ? Math.round((publicCount / total) * 100) : 0;
+
+  document.getElementById('usersStatsLine').innerHTML =
+    `👥 Total registered: <b>${total}</b> &nbsp;·&nbsp; 🌍 Public sharing: <b>${publicCount}</b> (<b>${pct}%</b> of total)`;
+
+  const q = (query || '').trim().toLowerCase();
+  let list = allUsersCache;
+  if (q){
+    list = list.filter(u =>
+      (u.email || '').toLowerCase().includes(q) ||
+      (nicknameMap[u.uid] || '').toLowerCase().includes(q)
+    );
+  }
+  list = [...list].sort((a,b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+
+  const wrap = document.getElementById('usersListBody');
+  if (!list.length){
+    wrap.innerHTML = `<p style="text-align:center; color:var(--ink-soft); padding:10px 0;">No users found</p>`;
+    return;
+  }
+  wrap.innerHTML = list.map(u => `
+    <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); border-radius:10px; padding:9px 11px; margin-bottom:6px; ${u.suspended ? 'background:#fbeceb;' : ''}">
+      <div style="font-size:11.5px;">
+        <div style="font-weight:700;">${nicknameMap[u.uid] || '<span style="color:var(--ink-soft); font-weight:400;">(no public list)</span>'}</div>
+        <div style="color:var(--ink-soft); font-size:10.5px; margin-top:2px;">${u.email || ''}</div>
+        ${u.suspended ? '<div style="color:#b5545a; font-size:10px; font-weight:700; margin-top:2px;">🚫 Suspended</div>' : ''}
+      </div>
+      <button type="button" class="btn ${u.suspended ? 'btn-ghost' : 'btn-brass'}" style="margin:0; padding:7px 14px; font-size:11px; ${u.suspended ? '' : 'background:#b5545a;'}" onclick="toggleSuspendUser('${u.uid}')">${u.suspended ? 'Unsuspend' : 'Suspend'}</button>
+    </div>`).join('');
+}
+
+async function toggleSuspendUser(uid){
+  const u = allUsersCache.find(x => x.uid === uid);
+  if (!u) return;
+  const newVal = !u.suspended;
+  try{
+    await db.collection('users').doc(uid).set({ suspended: newVal }, { merge:true });
+    const listUpdate = { suspended: newVal };
+    if (newVal) listUpdate.public = false; // الإيقاف بيخفي المشاركة العامة فورًا
+    await db.collection('userLists').doc(uid).set(listUpdate, { merge:true });
+    u.suspended = newVal;
+    showToast(newVal ? 'User suspended' : 'User unsuspended');
+    await loadCommunityLists();
+    renderUsersModal(document.getElementById('usersSearchInput').value);
+  }catch(e){ showToast('Could not update user'); }
 }
 
 let expandedSections = {}; // { sectionTitle: true } — القسم مفتوح بالكامل
@@ -2254,6 +2369,7 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
       updateUserUI();
       await loadFavorites();
       await loadUserList();
+      await registerUserRecord();
       if (document.getElementById('ownerControls').style.display !== 'none') {
         await linkOwnerUid();
       }
