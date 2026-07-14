@@ -2057,7 +2057,17 @@ async function openUsersModal(){
     allUsersCache = [];
     snap.forEach(doc => allUsersCache.push({ uid: doc.id, ...doc.data() }));
   }catch(e){ allUsersCache = []; }
-  if (!communityUsers.length) await loadCommunityLists(); // نحتاجها عشان نعرف مين مفعّل المشاركة العامة
+  await loadCommunityLists(); // نحتاجها دايمًا عشان نعرف مين مفعّل المشاركة العامة، ونستخدمها كمان لتصحيح أسماء قديمة ناقصة
+
+  // إصلاح تلقائي: لو حساب عنده قائمة عامة فعليًا لكن سجله الجديد ناقص الاسم المستعار (اسم اتحدد قبل إضافة هذه الميزة)، نستكمله من بيانات القائمة العامة نفسها
+  communityUsers.forEach(cu => {
+    const u = allUsersCache.find(x => x.uid === cu.uid);
+    if (u && !u.nickname && cu.nickname){
+      u.nickname = cu.nickname;
+      db.collection('users').doc(cu.uid).set({ nickname: cu.nickname }, { merge:true }).catch(()=>{});
+    }
+  });
+
   renderUsersModal();
 }
 function closeUsersModal(){
