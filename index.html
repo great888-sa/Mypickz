@@ -16,7 +16,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <!-- Firebase SDK is loaded dynamically below (with retry + clear error reporting) -->
 
@@ -355,6 +355,10 @@
   </div>
 
   <div id="editModeBanner">Edit mode is on — you're editing this city only. Tap "Save" below after each change.</div>
+  <div id="ownerAuthWarning" style="display:none; max-width:760px; margin:14px auto 0; padding:12px 18px; background:#fbeceb; border:1.5px dashed #b5545a; border-radius:14px; text-align:center;">
+    <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:#7a2b30; margin-bottom:4px;">⚠️ Not signed in</div>
+    <div style="font-size:11.5px; color:#7a2b30; line-height:1.6;">Owner mode is active on this device, but you're not signed in with the owner account — saving will fail. Tap "My Account" and log in with the owner email to fix this.</div>
+  </div>
   <div id="guestPromoBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:14px 18px; background:var(--card); border:1.5px dashed var(--brass); border-radius:14px; text-align:center;">
     <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin-bottom:4px;">✨ Create a free account</div>
     <div style="font-size:11.5px; color:var(--ink-soft); margin-bottom:10px; line-height:1.6;">Save your favorite places ❤️ and build your own personal list 📝 — takes less than a minute.</div>
@@ -477,6 +481,7 @@ function loadScriptOnce(src){
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
+    s.async = false; // يحافظ على ترتيب التشغيل حتى لو التحميل من الشبكة متوازي
     s.crossOrigin = 'anonymous';
     s.onload = () => resolve(src);
     s.onerror = () => reject(new Error('Failed to load: ' + src));
@@ -493,9 +498,11 @@ async function loadScriptWithRetry(src, attempts){
 
 async function loadFirebaseSDK(){
   const base = "https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/";
-  await loadScriptWithRetry(base + "firebase-app-compat.min.js", 3);
-  await loadScriptWithRetry(base + "firebase-firestore-compat.min.js", 3);
-  await loadScriptWithRetry(base + "firebase-auth-compat.min.js", 3);
+  await Promise.all([
+    loadScriptWithRetry(base + "firebase-app-compat.min.js", 3),
+    loadScriptWithRetry(base + "firebase-firestore-compat.min.js", 3),
+    loadScriptWithRetry(base + "firebase-auth-compat.min.js", 3)
+  ]);
 }
 
 /* =========================================================
@@ -1179,11 +1186,6 @@ function toggleEdit(){
 
 async function requestEditAccess(){
   if (editMode){ toggleEdit(); return; }
-  if (editPassword){
-    const entered = await openInputModal("Password", "Enter password to edit", "");
-    if (entered === null) return;
-    if (entered !== editPassword){ showToast('Incorrect password'); return; }
-  }
   await loadVisitCount();
   toggleEdit();
 }
@@ -1994,6 +1996,9 @@ function setAreaFilter(sectionTitle, area){
 const COLLAPSE_LIMIT = 6;
 
 function render(){
+  const ownerWarning = document.getElementById('ownerAuthWarning');
+  if (ownerWarning) ownerWarning.style.display = (isOwner && !currentUser) ? 'block' : 'none';
+
   const wrap = document.getElementById('sections');
   wrap.innerHTML = '';
 
