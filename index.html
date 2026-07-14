@@ -405,6 +405,15 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="reportBackdrop">
+    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <h3 style="text-align:center;">📄 Users Report</h3>
+      <textarea id="reportTextArea" readonly style="width:100%; height:260px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:monospace; font-size:11.5px; direction:ltr; text-align:left; background:#fff; color:var(--ink);"></textarea>
+      <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="copyUsersReport()"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
+      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="document.getElementById('reportBackdrop').classList.remove('show')">Close</button>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="usersBackdrop">
     <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
       <h3 style="text-align:center;">👥 Manage Users</h3>
@@ -463,7 +472,6 @@
   <div class="modal-backdrop" id="statsBackdrop">
     <div class="modal" style="max-width:400px;">
       <h3>📊 Most Loved (All Cities)</h3>
-      <div id="statsUserCount" style="font-size:12px; color:var(--ink-soft); margin-bottom:8px;"></div>
       <div id="statsList" style="max-height:360px; overflow-y:auto; text-align:right; margin:10px 0;"></div>
       <button class="btn btn-ghost" style="width:100%;" onclick="closeStatsModal()">Close</button>
     </div>
@@ -1260,6 +1268,9 @@ async function toggleFavorite(url, name, category, city, area, sourceUid){
       url: url,
       count: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
     }, { merge:true });
+    if (!exists){
+      db.collection('users').doc(currentUser.uid).set({ hasFavorited: true }, { merge:true }).catch(()=>{});
+    }
     if (sourceUid && sourceUid !== currentUser.uid){
       await db.collection('userLists').doc(sourceUid).set({
         favoriteCount: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
@@ -1272,13 +1283,6 @@ async function openFavoriteStats(){
   const list = document.getElementById('statsList');
   list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">Loading...</p>`;
   document.getElementById('statsBackdrop').classList.add('show');
-  try{
-    const userDoc = await db.collection('stats').doc('users').get();
-    const userCount = (userDoc.exists && userDoc.data().count) ? userDoc.data().count : 0;
-    document.getElementById('statsUserCount').textContent = `👤 Registered accounts: ${userCount}`;
-  }catch(e){
-    document.getElementById('statsUserCount').textContent = '';
-  }
   try{
     const snap = await db.collection('placeFavoriteCounts').orderBy('count', 'desc').limit(30).get();
     const rows = [];
@@ -1563,6 +1567,12 @@ async function saveUserList(){
       { cities: userListData.cities, customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], nickname: userListData.nickname || null, public: userListPublic },
       { merge:true }
     );
+    const hasRealPlace = Object.values(userListData.cities).some(links =>
+      Object.values(links).some(entry => (entry.places || []).some(p => p.url && p.name))
+    );
+    if (hasRealPlace){
+      db.collection('users').doc(currentUser.uid).set({ hasMyListActivity: true }, { merge:true }).catch(()=>{});
+    }
   }catch(e){ showToast('Could not save your list'); }
 }
 
@@ -1625,6 +1635,7 @@ async function chooseNickname(){
     }
     userListData.nickname = clean;
     await saveUserList();
+    try{ await db.collection('users').doc(currentUser.uid).set({ nickname: clean }, { merge:true }); }catch(e){}
     showToast('Nickname saved ✓');
     return true;
   }catch(e){
@@ -2007,15 +2018,30 @@ function maybeAutoOpenHelp(){
 /* =========================================================
    إدارة المستخدمين (Manage Users) — سجل خفيف لكل مستخدم مسجّل + لوحة للمالك
    ========================================================= */
+function todayKey(){
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
 async function registerUserRecord(){
   if (!currentUser) return;
+  const today = todayKey();
   try{
     const ref = db.collection('users').doc(currentUser.uid);
     const doc = await ref.get();
     if (!doc.exists){
-      await ref.set({ email: currentUser.email || '', firstSeen: Date.now(), lastSeen: Date.now(), suspended: false });
+      await ref.set({ email: currentUser.email || '', firstSeen: Date.now(), lastSeen: Date.now(), suspended: false, lastActiveDay: today });
+      await db.collection('dailyStats').doc(today).set({
+        newSignupsToday: firebase.firestore.FieldValue.increment(1),
+        activeToday: firebase.firestore.FieldValue.increment(1)
+      }, { merge:true });
     } else {
-      await ref.set({ lastSeen: Date.now() }, { merge:true });
+      const prevDay = doc.data().lastActiveDay;
+      await ref.set({ lastSeen: Date.now(), lastActiveDay: today }, { merge:true });
+      if (prevDay !== today){ // نتجنب عدّ نفس المستخدم مرتين في نفس اليوم
+        await db.collection('dailyStats').doc(today).set({
+          activeToday: firebase.firestore.FieldValue.increment(1)
+        }, { merge:true });
+      }
     }
   }catch(e){ /* صامت — التسجيل تحسين إضافي، مش شرط لعمل التطبيق */ }
 }
@@ -2040,20 +2066,28 @@ function closeUsersModal(){
 
 function renderUsersModal(query){
   const total = allUsersCache.length;
-  const nicknameMap = {};
-  communityUsers.forEach(u => { nicknameMap[u.uid] = u.nickname; });
+  const publicSet = new Set(communityUsers.map(u => u.uid)); // مين مفعّل المشاركة العامة دلوقتي بالتحديد
   const publicCount = communityUsers.length;
   const pct = total ? Math.round((publicCount / total) * 100) : 0;
 
+  const now = Date.now();
+  const active7 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 7*24*60*60*1000).length;
+  const active30 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 30*24*60*60*1000).length;
+  const usedMyList = allUsersCache.filter(u => u.hasMyListActivity).length;
+  const usedFavorites = allUsersCache.filter(u => u.hasFavorited).length;
+
   document.getElementById('usersStatsLine').innerHTML =
-    `👥 Total registered: <b>${total}</b> &nbsp;·&nbsp; 🌍 Public sharing: <b>${publicCount}</b> (<b>${pct}%</b> of total)`;
+    `👥 Total registered: <b>${total}</b> &nbsp;·&nbsp; 🌍 Public sharing: <b>${publicCount}</b> (<b>${pct}%</b>)<br>
+     🟢 Active last 7d: <b>${active7}</b> &nbsp;·&nbsp; Active last 30d: <b>${active30}</b><br>
+     📝 Used My List: <b>${usedMyList}</b> &nbsp;·&nbsp; ❤️ Favorited something: <b>${usedFavorites}</b>
+     <button type="button" class="remove-btn" style="display:block; margin:8px auto 0; font-size:11px;" onclick="generateUsersReport()"><i class="fa-solid fa-file-lines"></i> Generate Report</button>`;
 
   const q = (query || '').trim().toLowerCase();
   let list = allUsersCache;
   if (q){
     list = list.filter(u =>
       (u.email || '').toLowerCase().includes(q) ||
-      (nicknameMap[u.uid] || '').toLowerCase().includes(q)
+      (u.nickname || '').toLowerCase().includes(q)
     );
   }
   list = [...list].sort((a,b) => (b.lastSeen || 0) - (a.lastSeen || 0));
@@ -2063,15 +2097,57 @@ function renderUsersModal(query){
     wrap.innerHTML = `<p style="text-align:center; color:var(--ink-soft); padding:10px 0;">No users found</p>`;
     return;
   }
-  wrap.innerHTML = list.map(u => `
+  wrap.innerHTML = list.map(u => {
+    const isPublicNow = publicSet.has(u.uid);
+    return `
     <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); border-radius:10px; padding:9px 11px; margin-bottom:6px; ${u.suspended ? 'background:#fbeceb;' : ''}">
       <div style="font-size:11.5px;">
-        <div style="font-weight:700;">${nicknameMap[u.uid] || '<span style="color:var(--ink-soft); font-weight:400;">(no public list)</span>'}</div>
+        <div style="font-weight:700;">${u.nickname || '<span style="color:var(--ink-soft); font-weight:400;">(no nickname yet)</span>'}</div>
         <div style="color:var(--ink-soft); font-size:10.5px; margin-top:2px;">${u.email || ''}</div>
+        <div style="font-size:10px; font-weight:700; margin-top:2px; color:${isPublicNow ? '#2f7a4d' : 'var(--ink-soft)'};">${isPublicNow ? '🌍 Public now' : '🔒 Not public now'}</div>
         ${u.suspended ? '<div style="color:#b5545a; font-size:10px; font-weight:700; margin-top:2px;">🚫 Suspended</div>' : ''}
       </div>
       <button type="button" class="btn ${u.suspended ? 'btn-ghost' : 'btn-brass'}" style="margin:0; padding:7px 14px; font-size:11px; ${u.suspended ? '' : 'background:#b5545a;'}" onclick="toggleSuspendUser('${u.uid}')">${u.suspended ? 'Unsuspend' : 'Suspend'}</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+function generateUsersReport(){
+  const total = allUsersCache.length;
+  const publicSet = new Set(communityUsers.map(u => u.uid));
+  const publicCount = communityUsers.length;
+  const now = Date.now();
+  const active7 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 7*24*60*60*1000).length;
+  const active30 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 30*24*60*60*1000).length;
+  const usedMyList = allUsersCache.filter(u => u.hasMyListActivity).length;
+  const usedFavorites = allUsersCache.filter(u => u.hasFavorited).length;
+  const suspendedCount = allUsersCache.filter(u => u.suspended).length;
+  const pct = (n) => total ? Math.round((n/total)*100) : 0;
+
+  const lines = [
+    `MyPickz — Users Report`,
+    `Generated: ${new Date().toLocaleString()}`,
+    ``,
+    `Total registered users: ${total}`,
+    `Active in last 7 days: ${active7} (${pct(active7)}%)`,
+    `Active in last 30 days: ${active30} (${pct(active30)}%)`,
+    `Used My List at least once: ${usedMyList} (${pct(usedMyList)}%)`,
+    `Favorited at least one place: ${usedFavorites} (${pct(usedFavorites)}%)`,
+    `Sharing publicly (Community Lists): ${publicCount} (${pct(publicCount)}%)`,
+    `Suspended accounts: ${suspendedCount}`,
+  ];
+  document.getElementById('reportTextArea').value = lines.join('\n');
+  document.getElementById('reportBackdrop').classList.add('show');
+}
+
+async function copyUsersReport(){
+  const text = document.getElementById('reportTextArea').value;
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Report copied ✓');
+  }catch(e){
+    showToast('Could not copy — select and copy manually');
+  }
 }
 
 async function toggleSuspendUser(uid){
