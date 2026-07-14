@@ -322,6 +322,10 @@
       <span class="action-icon ink"><i class="fa-solid fa-user" id="userIcon"></i></span>
       <span class="action-label" id="userLabel">My Account</span>
     </button>
+    <button class="action-btn" id="userLogoutBtn" onclick="doSignOut()" style="display:none;">
+      <span class="action-icon" style="background:#b5545a; color:#fff;"><i class="fa-solid fa-right-from-bracket"></i></span>
+      <span class="action-label">Log Out</span>
+    </button>
     <button class="action-btn" id="myListBtn" onclick="openMyListModal()" style="display:none;">
       <span class="action-icon brass"><i class="fa-solid fa-list-check"></i></span>
       <span class="action-label">My List</span>
@@ -434,8 +438,7 @@
     <div class="modal" style="max-width:380px;">
       <h3>❤️ My Favorites</h3>
       <div id="favoritesList" style="max-height:300px; overflow-y:auto; text-align:right; margin:10px 0;"></div>
-      <button class="btn btn-ghost" style="width:100%;" onclick="doSignOut(); closeFavoritesModal();">Log Out</button>
-      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeFavoritesModal()">Close</button>
+      <button class="btn btn-ghost" style="width:100%;" onclick="closeFavoritesModal()">Close</button>
     </div>
   </div>
 
@@ -1389,17 +1392,20 @@ function updateUserUI(){
   const label = document.getElementById('userLabel');
   const myListBtn = document.getElementById('myListBtn');
   const promoBanner = document.getElementById('guestPromoBanner');
+  const logoutBtn = document.getElementById('userLogoutBtn');
   if (!icon || !label) return;
   if (currentUser){
     icon.className = 'fa-solid fa-heart';
     label.textContent = 'Favorites';
     if (myListBtn) myListBtn.style.display = '';
     if (promoBanner) promoBanner.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = '';
   } else {
     icon.className = 'fa-solid fa-user';
     label.textContent = 'My Account';
     if (myListBtn) myListBtn.style.display = 'none';
     if (promoBanner) promoBanner.style.display = 'block';
+    if (logoutBtn) logoutBtn.style.display = 'none';
   }
 }
 
@@ -1882,10 +1888,11 @@ const HELP_CONTENT = {
     title: '📖 كيف يعمل MyPickz',
     closeLabel: 'إغلاق',
     sections: [
-      { h: 'ما هو MyPickz؟', b: 'منصة لحفظ جميع أماكنك في مكانٍ واحد، مع سهولة الوصول المباشر إلى موقعها على خرائط جوجل من خلال رابط المكان. إنه دليل مدينة شخصي — كل مكان هنا مُختار بعناية، سواء من فريق التطبيق، منك أنت، أو من مستخدم آخر شارك قائمته.' },
+      { h: 'ما هو MyPickz؟', b: 'منصة لحفظ جميع أماكنك في مكانٍ واحد، مصنّفة بعدة مستويات من التصنيفات، مع سهولة الوصول المباشر إلى موقعها على خرائط جوجل من خلال رابط المكان. إنه دليل مدينة شخصي — كل مكان هنا مُختار بعناية، سواء من فريق التطبيق، منك أنت، أو من مستخدم آخر شارك قائمته.' },
       { h: 'لماذا تنشئ حسابًا؟', b: '❤️ احفظ أي مكان في مفضلتك، من أي جزء في التطبيق<br>📝 أنشئ قائمتك الشخصية بأماكنك، في أي مدينة — حتى لو لم تكن مدرجة في التطبيق من قبل فريق العمل<br>🌍 شارك قائمتك بشكل عام (اختياري)، وتصفّح قوائم مستخدمين آخرين' },
       { h: 'إضافة MyPickz إلى سطح المكتب سواء في جهاز الجوال أو الكمبيوتر', b: '1. افتح الموقع من المتصفح (Safari أو غيره)<br>2. اضغط زر المشاركة (Share) على الجوال، أو قائمة الخيارات على الكمبيوتر<br>3. اختر "Add to Home Screen" (جوال) أو "Create Shortcut" (كمبيوتر)<br>4. الآن يمكنك فتح MyPickz بضغطة واحدة، تمامًا كأي تطبيق آخر' },
       { h: 'كيف تضيف رابطًا بشكل صحيح', b: '1. افتح المكان في خرائط جوجل\n2. اضغط Share ← Copy\n3. عد إلى هنا واضغط زر اللصق 📋 المجاور لخانة الرابط — تجنّب اللصق اليدوي، فهذه الطريقة أكثر ضمانًا\n4. الروابط المقبولة فقط من خرائط جوجل (google.com/maps، maps.app.goo.gl...)'.replace(/\n/g,'<br>') },
+      { h: 'الاستفادة من خانة اسم المنطقة', b: 'يسهّل تمييز المنطقة التي يقع فيها المكان (مثال: مقهى)، خصوصًا في المدن الكبيرة أو الجزر حيث تجد قائمة طويلة من الأماكن ضمن نفس التصنيف.' },
       { h: 'الاستفادة من خانة Note', b: 'تجنّب الأوصاف العامة، واكتب ما جعل المكان يستحق الزيارة فعلًا. عبارة مثل <i>"أجمل إطلالة غروب من الجلسة الخارجية"</i> أفيد بكثير من <i>"مكان جميل."</i>' },
       { h: 'من أين تتجمّع مفضلتي؟', b: 'تفضيلاتك ❤️ قد تأتي من ثلاثة مصادر مختلفة، مجتمعة في مكانٍ واحد:<br>• الدليل الرسمي (الذي ينشره فريق التطبيق)<br>• قائمتك الشخصية<br>• أي قائمة عامة شاركها مستخدم آخر' },
       { h: 'الفرق بين My List وCommunity Lists', b: '<b>My List</b> = أماكنك الخاصة، وأنت وحدك من يستطيع تعديلها<br><b>Community Lists</b> = تصفّح القوائم العامة لمستخدمين آخرين، وأضِف أماكن منها إلى مفضلتك' },
@@ -1896,10 +1903,11 @@ const HELP_CONTENT = {
     title: '📖 How MyPickz Works',
     closeLabel: 'Close',
     sections: [
-      { h: 'What is MyPickz?', b: "A platform to save all your places in one spot, with easy direct access to their location on Google Maps through the place link. It's a personal city guide — every place here is hand-picked, by the App Team, by you, or by someone else who shared their list." },
+      { h: 'What is MyPickz?', b: "A platform to save all your places in one spot, organized across multiple levels of categories, with easy direct access to their location on Google Maps through the place link. It's a personal city guide — every place here is hand-picked, by the App Team, by you, or by someone else who shared their list." },
       { h: 'Why create an account?', b: '❤️ Save any place to your own Favorites, from anywhere in the app<br>📝 Build your own personal list of places, in any city — even ones not yet added to the app by the App Team<br>🌍 Share your list publicly (optional) and browse lists from other users' },
       { h: 'Adding MyPickz to your Home Screen or Desktop, on mobile or computer', b: '1. Open the site in your browser (Safari or others)<br>2. Tap the Share button on mobile, or the options menu on desktop<br>3. Choose "Add to Home Screen" (mobile) or "Create Shortcut" (desktop)<br>4. Now you can open MyPickz with one tap, like any other app' },
       { h: 'How to add a link correctly', b: "1. Open the place in Google Maps<br>2. Tap Share → Copy<br>3. Come back here and tap the 📋 paste button next to the link field — don't paste manually, it's more reliable<br>4. Only Google Maps links are accepted (google.com/maps, maps.app.goo.gl...)" },
+      { h: 'Using the Area field', b: "Makes it easier to tell where a place is located (e.g. a café), especially in large cities or islands where you'll find a long list of places under the same category." },
       { h: 'Using the Note field', b: 'Skip generic descriptions — share what made the place worth it. <i>"Best sunset view from the outdoor seating"</i> is more useful than <i>"nice cafe."</i>' },
       { h: 'Where does My Favorites come from?', b: 'Your ❤️ can come from three different sources, all in one place:<br>• The official guide (published by the App Team)<br>• Your own personal list<br>• Any public list shared by another user' },
       { h: 'My List vs. Community Lists — what\'s the difference?', b: '<b>My List</b> = your own places, only you can edit it<br><b>Community Lists</b> = browse other users\' public lists, and favorite places from them' },
