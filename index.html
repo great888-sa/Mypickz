@@ -2453,12 +2453,11 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
     auth.onAuthStateChanged(async (user) => {
       currentUser = user;
       updateUserUI();
-      await loadFavorites();
-      await loadUserList();
-      await registerUserRecord();
+      const tasks = [loadFavorites(), loadUserList(), registerUserRecord()];
       if (document.getElementById('ownerControls').style.display !== 'none') {
-        await linkOwnerUid();
+        tasks.push(linkOwnerUid());
       }
+      await Promise.all(tasks);
       resolveAuthReady();
       render();
     });
