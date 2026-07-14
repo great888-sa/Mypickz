@@ -592,6 +592,7 @@ async function loadCategoryTemplate(){
   }
 }
 async function saveCategoryTemplate(){
+  await authReadyPromise;
   try{
     await db.collection('settings').doc('category-template').set(
       { customItems, sectionOverrides, itemOrder, itemOverrides },
@@ -614,6 +615,7 @@ async function addCountry(){
   if (flag !== null && flag.trim()) {
     customCountryFlags[clean] = flag.trim();
   }
+  await authReadyPromise;
   await saveCustomCountries();
   currentCountry = clean;
   showToast('Country added ✓ — now add a city for it');
@@ -629,6 +631,7 @@ async function addCity(){
   if (country === null || !country.trim()) { showToast('You must specify the country'); return; }
   const id = "city_" + Date.now();
   customCities.push({ id, name: name.trim(), country: country.trim() });
+  await authReadyPromise;
   try{
     await db.collection('settings').doc('cities-list').set({ cities: customCities }, { merge:true });
     showToast('City added ✓');
@@ -641,6 +644,7 @@ async function addCity(){
 
 async function removeCity(cityId){
   customCities = customCities.filter(c => c.id !== cityId);
+  await authReadyPromise;
   try{
     await db.collection('settings').doc('cities-list').set({ cities: customCities }, { merge:true });
     showToast('City deleted');
@@ -851,6 +855,7 @@ async function saveAll(){
 }
 
 async function saveCity(){
+  await authReadyPromise;
   try{
     await db.collection('cities').doc(currentCityId).set(
       { links, published: cityStatus[currentCityId] === true, sectionStatus },
@@ -943,6 +948,7 @@ function checkOwnerAccess(){
 }
 
 async function savePassword(){
+  await authReadyPromise;
   try{
     await db.collection('settings').doc('app').set({ password: editPassword }, { merge:true });
   }catch(e){ showToast('Could not save password'); }
@@ -976,6 +982,7 @@ async function removeCountry(country){
   if (hasCities){ showToast('Delete all cities under this country first'); return; }
   customCountries = customCountries.filter(c => c !== country);
   delete customCountryFlags[country];
+  await authReadyPromise;
   await saveCustomCountries();
   if (currentCountry === country) currentCountry = '';
   showToast('Country deleted');
@@ -1196,6 +1203,8 @@ async function managePassword(){
 
 // ===== حسابات المستخدمين والمفضلة (للزوار) =====
 let currentUser = null;
+let resolveAuthReady;
+const authReadyPromise = new Promise(res => { resolveAuthReady = res; }); // يكتمل أول ما Firebase يتأكد من حالة تسجيل الدخول (بغض النظر لو فاضية أو حساب حقيقي)
 let favoritePlaces = []; // [{url, name}]
 
 function isFavorite(url){ return favoritePlaces.some(f => f.url === url); }
@@ -1895,7 +1904,7 @@ const HELP_CONTENT = {
       { h: 'الاستفادة من خانة اسم المنطقة', b: 'يسهّل تمييز المنطقة التي يقع فيها المكان (مثال: مقهى)، خصوصًا في المدن الكبيرة أو الجزر حيث تجد قائمة طويلة من الأماكن ضمن نفس التصنيف.' },
       { h: 'الاستفادة من خانة Note', b: 'تجنّب الأوصاف العامة، واكتب ما جعل المكان يستحق الزيارة فعلًا. عبارة مثل <i>"أجمل إطلالة غروب من الجلسة الخارجية"</i> أفيد بكثير من <i>"مكان جميل."</i>' },
       { h: 'من أين تتجمّع مفضلتي؟', b: 'تفضيلاتك ❤️ قد تأتي من ثلاثة مصادر مختلفة، مجتمعة في مكانٍ واحد:<br>• الدليل الرسمي (الذي ينشره فريق التطبيق)<br>• قائمتك الشخصية<br>• أي قائمة عامة شاركها مستخدم آخر' },
-      { h: 'الفرق بين My List وCommunity Lists', b: '<b>My List</b> = أماكنك الخاصة، وأنت وحدك من يستطيع تعديلها<br><b>Community Lists</b> = تصفّح القوائم العامة لمستخدمين آخرين، وأضِف أماكن منها إلى مفضلتك' },
+      { h: 'الفرق بين My List و Community Lists', b: '<b>My List</b> = أماكنك الخاصة، وأنت وحدك من يستطيع تعديلها<br><b>Community Lists</b> = تصفّح القوائم العامة لمستخدمين آخرين، وأضِف أماكن منها إلى مفضلتك' },
       { h: '🔒 شارة "خاص دائمًا"', b: 'بعض التصنيفات (Hospitals & Clinics, Personal, Others) مخصصة لمرجعك الشخصي فقط. لا تظهر لأي شخص آخر مطلقًا، حتى لو كانت قائمتك عامة — ولا يوجد إعداد يمكنه تغيير ذلك.' }
     ]
   },
@@ -2243,8 +2252,11 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
       if (document.getElementById('ownerControls').style.display !== 'none') {
         await linkOwnerUid();
       }
+      resolveAuthReady();
       render();
     });
+  } else {
+    resolveAuthReady(); // ما فيش Firebase أصلًا — منعرقلش أي حاجة
   }
   trackVisit(); // لا ننتظرها، ما نأخر تحميل الصفحة
   await loadCity(pickInitialCity());
