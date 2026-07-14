@@ -306,6 +306,10 @@
   <div class="city-tabs" id="cityTabs"></div>
 
   <div class="action-bar">
+    <button class="action-btn" onclick="openHelpModal()">
+      <span class="action-icon brass"><i class="fa-solid fa-circle-info"></i></span>
+      <span class="action-label" id="helpBtnLabel">دليل الاستخدام</span>
+    </button>
     <button class="action-btn" onclick="copyLink()">
       <span class="action-icon ink"><i class="fa-solid fa-link"></i></span>
       <span class="action-label">Copy Link</span>
@@ -395,6 +399,18 @@
       <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 12px;">Browse public lists shared by other users. Hospitals & Clinics, Personal, and Others are never shown here.</p>
       <div id="communityBody"></div>
       <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeCommunityModal()">Close</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="helpBackdrop">
+    <div class="modal" style="max-width:480px; max-height:85vh; overflow-y:auto; text-align:right;">
+      <div style="display:flex; justify-content:center; gap:8px; margin-bottom:14px;">
+        <button type="button" class="btn" id="helpLangArBtn" style="margin:0; padding:8px 20px; font-size:12px;" onclick="setHelpLang('ar')">عربي</button>
+        <button type="button" class="btn" id="helpLangEnBtn" style="margin:0; padding:8px 20px; font-size:12px;" onclick="setHelpLang('en')">EN</button>
+      </div>
+      <h3 id="helpTitle" style="text-align:center;"></h3>
+      <div id="helpSections"></div>
+      <button class="btn btn-brass" style="width:100%; margin-top:14px;" onclick="closeHelpModal()" id="helpCloseBtn">إغلاق</button>
     </div>
   </div>
 
@@ -1855,6 +1871,91 @@ function renderCommunityUserList(wrap){
   wrap.innerHTML = html;
 }
 
+/* =========================================================
+   دليل الاستخدام (Help Guide) — نافذة ثابتة بالعربي/الإنجليزي، أقسام قابلة للطي
+   ========================================================= */
+let helpLang = 'ar';
+let helpOpenIndex = 0; // القسم المفتوح افتراضيًا (الأول)
+
+const HELP_CONTENT = {
+  ar: {
+    title: '📖 كيف يعمل MyPickz',
+    closeLabel: 'إغلاق',
+    sections: [
+      { h: 'ما هو MyPickz؟', b: 'منصة لحفظ جميع أماكنك في مكانٍ واحد، مع سهولة الوصول المباشر إلى موقعها على خرائط جوجل من خلال رابط المكان. إنه دليل مدينة شخصي — كل مكان هنا مُختار بعناية، سواء من فريق التطبيق، منك أنت، أو من مستخدم آخر شارك قائمته.' },
+      { h: 'لماذا تنشئ حسابًا؟', b: '❤️ احفظ أي مكان في مفضلتك، من أي جزء في التطبيق<br>📝 أنشئ قائمتك الشخصية بأماكنك، في أي مدينة — حتى لو لم تكن مدرجة في التطبيق من قبل فريق العمل<br>🌍 شارك قائمتك بشكل عام (اختياري)، وتصفّح قوائم مستخدمين آخرين' },
+      { h: 'إضافة MyPickz إلى سطح المكتب سواء في جهاز الجوال أو الكمبيوتر', b: '1. افتح الموقع من المتصفح (Safari أو غيره)<br>2. اضغط زر المشاركة (Share) على الجوال، أو قائمة الخيارات على الكمبيوتر<br>3. اختر "Add to Home Screen" (جوال) أو "Create Shortcut" (كمبيوتر)<br>4. الآن يمكنك فتح MyPickz بضغطة واحدة، تمامًا كأي تطبيق آخر' },
+      { h: 'كيف تضيف رابطًا بشكل صحيح', b: '1. افتح المكان في خرائط جوجل\n2. اضغط Share ← Copy\n3. عد إلى هنا واضغط زر اللصق 📋 المجاور لخانة الرابط — تجنّب اللصق اليدوي، فهذه الطريقة أكثر ضمانًا\n4. الروابط المقبولة فقط من خرائط جوجل (google.com/maps، maps.app.goo.gl...)'.replace(/\n/g,'<br>') },
+      { h: 'الاستفادة من خانة Note', b: 'تجنّب الأوصاف العامة، واكتب ما جعل المكان يستحق الزيارة فعلًا. عبارة مثل <i>"أجمل إطلالة غروب من الجلسة الخارجية"</i> أفيد بكثير من <i>"مكان جميل."</i>' },
+      { h: 'من أين تتجمّع مفضلتي؟', b: 'تفضيلاتك ❤️ قد تأتي من ثلاثة مصادر مختلفة، مجتمعة في مكانٍ واحد:<br>• الدليل الرسمي (الذي ينشره فريق التطبيق)<br>• قائمتك الشخصية<br>• أي قائمة عامة شاركها مستخدم آخر' },
+      { h: 'الفرق بين My List وCommunity Lists', b: '<b>My List</b> = أماكنك الخاصة، وأنت وحدك من يستطيع تعديلها<br><b>Community Lists</b> = تصفّح القوائم العامة لمستخدمين آخرين، وأضِف أماكن منها إلى مفضلتك' },
+      { h: '🔒 شارة "خاص دائمًا"', b: 'بعض التصنيفات (Hospitals & Clinics, Personal, Others) مخصصة لمرجعك الشخصي فقط. لا تظهر لأي شخص آخر مطلقًا، حتى لو كانت قائمتك عامة — ولا يوجد إعداد يمكنه تغيير ذلك.' }
+    ]
+  },
+  en: {
+    title: '📖 How MyPickz Works',
+    closeLabel: 'Close',
+    sections: [
+      { h: 'What is MyPickz?', b: "A platform to save all your places in one spot, with easy direct access to their location on Google Maps through the place link. It's a personal city guide — every place here is hand-picked, by the App Team, by you, or by someone else who shared their list." },
+      { h: 'Why create an account?', b: '❤️ Save any place to your own Favorites, from anywhere in the app<br>📝 Build your own personal list of places, in any city — even ones not yet added to the app by the App Team<br>🌍 Share your list publicly (optional) and browse lists from other users' },
+      { h: 'Adding MyPickz to your Home Screen or Desktop, on mobile or computer', b: '1. Open the site in your browser (Safari or others)<br>2. Tap the Share button on mobile, or the options menu on desktop<br>3. Choose "Add to Home Screen" (mobile) or "Create Shortcut" (desktop)<br>4. Now you can open MyPickz with one tap, like any other app' },
+      { h: 'How to add a link correctly', b: "1. Open the place in Google Maps<br>2. Tap Share → Copy<br>3. Come back here and tap the 📋 paste button next to the link field — don't paste manually, it's more reliable<br>4. Only Google Maps links are accepted (google.com/maps, maps.app.goo.gl...)" },
+      { h: 'Using the Note field', b: 'Skip generic descriptions — share what made the place worth it. <i>"Best sunset view from the outdoor seating"</i> is more useful than <i>"nice cafe."</i>' },
+      { h: 'Where does My Favorites come from?', b: 'Your ❤️ can come from three different sources, all in one place:<br>• The official guide (published by the App Team)<br>• Your own personal list<br>• Any public list shared by another user' },
+      { h: 'My List vs. Community Lists — what\'s the difference?', b: '<b>My List</b> = your own places, only you can edit it<br><b>Community Lists</b> = browse other users\' public lists, and favorite places from them' },
+      { h: '🔒 "Always private" badge', b: 'Some categories (Hospitals & Clinics, Personal, Others) are for your own reference only. They\'re never visible to anyone else, even if your list is public — no setting can change that.' }
+    ]
+  }
+};
+
+function setHelpLang(lang){
+  helpLang = lang;
+  document.getElementById('helpLangArBtn').className = 'btn ' + (lang==='ar' ? 'btn-brass' : 'btn-ghost');
+  document.getElementById('helpLangEnBtn').className = 'btn ' + (lang==='en' ? 'btn-brass' : 'btn-ghost');
+  renderHelpModal();
+}
+
+function toggleHelpSection(i){
+  helpOpenIndex = (helpOpenIndex === i) ? -1 : i;
+  renderHelpModal();
+}
+
+function renderHelpModal(){
+  const data = HELP_CONTENT[helpLang];
+  const dir = helpLang === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('helpTitle').textContent = data.title;
+  document.getElementById('helpCloseBtn').textContent = data.closeLabel;
+  const wrap = document.getElementById('helpSections');
+  wrap.style.direction = dir;
+  wrap.style.textAlign = helpLang === 'ar' ? 'right' : 'left';
+  wrap.innerHTML = data.sections.map((s,i) => `
+    <div style="border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden;">
+      <button type="button" onclick="toggleHelpSection(${i})" style="width:100%; text-align:${helpLang==='ar'?'right':'left'}; background:var(--paper-dark); border:none; padding:11px 14px; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <span>${s.h}</span>
+        <span style="font-size:11px; color:var(--brass);">${helpOpenIndex===i ? '▲' : '▼'}</span>
+      </button>
+      ${helpOpenIndex===i ? `<div style="padding:12px 14px; font-size:12.5px; line-height:1.9; color:var(--ink);">${s.b}</div>` : ''}
+    </div>`).join('');
+}
+
+function openHelpModal(){
+  renderHelpModal();
+  document.getElementById('helpLangArBtn').className = 'btn ' + (helpLang==='ar' ? 'btn-brass' : 'btn-ghost');
+  document.getElementById('helpLangEnBtn').className = 'btn ' + (helpLang==='en' ? 'btn-brass' : 'btn-ghost');
+  document.getElementById('helpBackdrop').classList.add('show');
+}
+function closeHelpModal(){
+  document.getElementById('helpBackdrop').classList.remove('show');
+}
+function maybeAutoOpenHelp(){
+  try{
+    if (!localStorage.getItem('mypickz_help_seen')){
+      localStorage.setItem('mypickz_help_seen', '1');
+      openHelpModal();
+    }
+  }catch(e){}
+}
+
 let expandedSections = {}; // { sectionTitle: true } — القسم مفتوح بالكامل
 let areaFilter = {};       // { sectionTitle: "اسم المنطقة" } — فلتر نشط على مستوى القسم الرئيسي
 
@@ -2139,6 +2240,7 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
   }
   trackVisit(); // لا ننتظرها، ما نأخر تحميل الصفحة
   await loadCity(pickInitialCity());
+  maybeAutoOpenHelp();
 })();
 </script>
 </body>
