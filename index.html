@@ -177,6 +177,11 @@
     font-size:11.5px; color:var(--ink-soft); font-style:italic;
     padding:2px 0 4px; line-height:1.5;
   }
+  .note-toggle{
+    background:none; border:none; padding:0; margin:0 2px; cursor:pointer;
+    font-size:11px; font-style:normal; font-weight:700; color:var(--brass);
+    font-family:'Tajawal',sans-serif; text-decoration:underline;
+  }
   .place-area-input{
     width:25%; min-width:80px; border:none; background:transparent; font-size:11.5px;
     font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid var(--line); color:var(--brass);
@@ -793,6 +798,31 @@ async function trackVisit(){
 }
 
 let visitCount = null;
+
+/* عرض ملاحظة المكان — بتضيف "More/Less" تلقائيًا لو النص طويل، وتعرضه كامل من غير أي زر لو قصير */
+let noteToggleCounter = 0;
+const NOTE_TRUNCATE_LIMIT = 80;
+function renderNoteHtml(note){
+  if (!note || !note.trim()) return '';
+  const text = note.trim();
+  if (text.length <= NOTE_TRUNCATE_LIMIT) {
+    return `<div class="place-note">${text}</div>`;
+  }
+  const id = 'noteTxt' + (noteToggleCounter++);
+  const shortText = text.slice(0, NOTE_TRUNCATE_LIMIT).trim();
+  return `<div class="place-note">
+    <span id="${id}_short">${shortText}… <button type="button" class="note-toggle" onclick="toggleNoteText('${id}')">More</button></span>
+    <span id="${id}_full" style="display:none;">${text} <button type="button" class="note-toggle" onclick="toggleNoteText('${id}')">Less</button></span>
+  </div>`;
+}
+function toggleNoteText(id){
+  const shortEl = document.getElementById(id + '_short');
+  const fullEl = document.getElementById(id + '_full');
+  if (!shortEl || !fullEl) return;
+  const showingShort = shortEl.style.display !== 'none';
+  shortEl.style.display = showingShort ? 'none' : '';
+  fullEl.style.display = showingShort ? '' : 'none';
+}
 async function loadVisitCount(){
   try{
     const doc = await db.collection('analytics').doc('visits').get();
@@ -1762,7 +1792,7 @@ function renderMyListModal(){
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})" title="Edit"><i class="fa-solid fa-pen"></i></button>
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})" title="Remove"><i class="fa-solid fa-trash"></i></button>
             </div>`;
-            if (p.note && p.note.trim()) html += `<div class="place-note" style="margin-top:2px;">${p.note}</div>`;
+            if (p.note && p.note.trim()) html += renderNoteHtml(p.note);
             html += `</div>`;
           }
         });
@@ -1921,7 +1951,7 @@ function renderCommunityUserList(wrap){
             <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
             <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCat}', '${safeCity}', '${safeArea}', '${u.uid}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
           </div>
-          ${p.note && p.note.trim() ? `<div class="place-note">${p.note}</div>` : ''}
+          ${renderNoteHtml(p.note)}
         </div>`;
       });
     });
@@ -2368,7 +2398,7 @@ function render(){
                   <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
                   <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}', '${safeCity}', '${safeArea}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
                 </div>` +
-                (p.note && p.note.trim() && p.noteOn !== false ? `<div class="place-note">${p.note}</div>` : '');
+                (p.note && p.note.trim() && p.noteOn !== false ? renderNoteHtml(p.note) : '');
             }).join('');
             return `<div class="ticket multi-ticket">
                       <div class="multi-head"><div class="icon-badge">${icon}</div><div><div class="name">${displayName(item)}</div>${item.desc ? `<div style="font-size:11px; color:var(--ink-soft); font-weight:400;">${item.desc}</div>` : ''}</div></div>
