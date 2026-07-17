@@ -291,7 +291,7 @@
   .modal-input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px; }
   #qrcode{ display:flex; justify-content:center; margin:12px 0; }
   .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper);
-          padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:60; }
+          padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:9999; }
   .toast.show{ opacity:1; }
   #editModeBanner{ max-width:760px; margin:14px auto 0; padding:11px 18px; background:rgba(165,117,31,0.12);
                     border:1px dashed var(--brass); border-radius:10px; font-size:12px; display:none; text-align:center; }
@@ -1615,6 +1615,52 @@ async function addMyListCity(){
   renderMyListModal();
 }
 
+async function removeMyListCity(cityId){
+  const city = (userListData.customCities || []).find(c => c.id === cityId);
+  if (!city) return; // حماية: يسمح فقط بحذف المدن اللي أضافها المستخدم نفسه
+  const placesCount = (userListData.cities && userListData.cities[cityId] && userListData.cities[cityId].places)
+    ? userListData.cities[cityId].places.length : 0;
+  const msg = placesCount > 0
+    ? `Delete "${city.name}" and the ${placesCount} place(s) saved under it? This cannot be undone.`
+    : `Delete "${city.name}" from your list?`;
+  if (!confirm(msg)) return;
+  userListData.customCities = (userListData.customCities || []).filter(c => c.id !== cityId);
+  if (userListData.cities && userListData.cities[cityId]) delete userListData.cities[cityId];
+  if (myListCityId === cityId){
+    const remaining = myListAllCities().filter(c => c.country === myListCountry);
+    myListCityId = remaining.length ? remaining[0].id : null;
+  }
+  await saveUserList();
+  showToast('City deleted');
+  renderMyListModal();
+}
+
+async function removeMyListCountry(country){
+  if (!(userListData.customCountries || []).includes(country)) return; // حماية: يسمح فقط بحذف الدول اللي أضافها المستخدم نفسه
+  const citiesToRemove = (userListData.customCities || []).filter(c => c.country === country);
+  const totalPlaces = citiesToRemove.reduce((sum, c) => {
+    const p = userListData.cities && userListData.cities[c.id] && userListData.cities[c.id].places;
+    return sum + (p ? p.length : 0);
+  }, 0);
+  const msg = citiesToRemove.length
+    ? `Delete "${country}" with its ${citiesToRemove.length} custom ${citiesToRemove.length === 1 ? 'city' : 'cities'}${totalPlaces > 0 ? ` and ${totalPlaces} saved place(s)` : ''}? This cannot be undone.`
+    : `Delete "${country}" from your list?`;
+  if (!confirm(msg)) return;
+  userListData.customCountries = (userListData.customCountries || []).filter(c => c !== country);
+  const removeIds = citiesToRemove.map(c => c.id);
+  userListData.customCities = (userListData.customCities || []).filter(c => c.country !== country);
+  removeIds.forEach(id => { if (userListData.cities && userListData.cities[id]) delete userListData.cities[id]; });
+  if (myListCountry === country){
+    const remaining = myListAllCountries();
+    myListCountry = remaining.length ? remaining[0] : null;
+    const firstCity = myListCountry ? myListAllCities().find(c => c.country === myListCountry) : null;
+    myListCityId = firstCity ? firstCity.id : null;
+  }
+  await saveUserList();
+  showToast('Country deleted');
+  renderMyListModal();
+}
+
 function userCityLinks(){
   if (!myListCityId) return {};
   if (!userListData.cities[myListCityId]) userListData.cities[myListCityId] = {};
@@ -1803,18 +1849,24 @@ function renderMyListModal(){
   // صف الدول
   const countries = myListAllCountries();
   const countryChips = countries.map(country => `
-    <button type="button" class="city-tab ${country === myListCountry ? 'active' : ''}" style="font-size:11.5px; padding:7px 12px;" onclick="selectMyListCountry('${country.replace(/'/g,"\\'")}')">
-      ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
-    </button>`).join('')
+    <span style="display:inline-flex; align-items:center; gap:4px;">
+      <button type="button" class="city-tab ${country === myListCountry ? 'active' : ''}" style="font-size:11.5px; padding:7px 12px;" onclick="selectMyListCountry('${country.replace(/'/g,"\\'")}')">
+        ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
+      </button>
+      ${(userListData.customCountries || []).includes(country) ? `<button type="button" class="remove-btn" style="font-size:14px;" onclick="removeMyListCountry('${country.replace(/'/g,"\\'")}')" title="Delete country">🗑️</button>` : ''}
+    </span>`).join('')
     + `<button type="button" class="city-tab" style="font-size:11.5px; padding:7px 12px; border-style:dashed; color:var(--brass);" onclick="addMyListCountry()">➕ Add Country</button>`;
   document.getElementById('myListCountryChips').innerHTML = countryChips;
 
   // صف المدن — بس مدن الدولة المختارة + زرار إضافة مدينة جديدة (تحت نفس الدولة)
   const citiesInCountry = myListAllCities().filter(c => c.country === myListCountry);
   const cityChips = citiesInCountry.map(c => `
-    <button type="button" class="city-tab ${c.id === myListCityId ? 'active' : ''}" style="font-size:11.5px; padding:7px 12px;" onclick="selectMyListCity('${c.id}')">
-      ${c.name}${c.id.startsWith('mylist_') ? ' 🔒' : ''}
-    </button>`).join('')
+    <span style="display:inline-flex; align-items:center; gap:4px;">
+      <button type="button" class="city-tab ${c.id === myListCityId ? 'active' : ''}" style="font-size:11.5px; padding:7px 12px;" onclick="selectMyListCity('${c.id}')">
+        ${c.name}${c.id.startsWith('mylist_') ? ' 👤' : ''}
+      </button>
+      ${c.id.startsWith('mylist_') ? `<button type="button" class="remove-btn" style="font-size:14px;" onclick="removeMyListCity('${c.id}')" title="Delete city">🗑️</button>` : ''}
+    </span>`).join('')
     + `<button type="button" class="city-tab" style="font-size:11.5px; padding:7px 12px; border-style:dashed; color:var(--brass);" onclick="addMyListCity()">➕ Add City</button>`;
   document.getElementById('myListCityChips').innerHTML = cityChips;
 
