@@ -1093,14 +1093,18 @@ function renderCountryTabs(){
     ? [...new Set(fromCities.concat(customCountries))]
     : fromCities;
 
-  wrap.innerHTML = countries.map(country => `
-    <span style="display:inline-flex; align-items:center; gap:4px;">
-      <button class="city-tab ${country === currentCountry ? 'active' : ''}" onclick="selectCountry('${country.replace(/'/g,"\\'")}')">
-        ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
-      </button>
-      ${editMode && customCountries.includes(country) ? `<button class="remove-btn" style="font-size:16px;" onclick="removeCountry('${country.replace(/'/g,"\\'")}')" title="Delete country">🗑️</button>` : ''}
-    </span>`).join('')
-    + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCountry()">➕ New Country</button>` : '');
+  const options = countries.map(country => `
+    <option value="${country.replace(/"/g,'&quot;')}" ${country === currentCountry ? 'selected' : ''}>
+      ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
+    </option>`).join('');
+
+  wrap.innerHTML = `
+    <select class="city-tab" style="flex:1; min-width:140px;" onchange="selectCountry(this.value)">
+      ${options}
+    </select>
+    ${editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCountry()">➕ New Country</button>` : ''}
+    ${editMode && customCountries.includes(currentCountry) ? `<button class="remove-btn" style="font-size:16px;" onclick="removeCountry('${currentCountry.replace(/'/g,"\\'")}')" title="Delete country">🗑️</button>` : ''}
+  `;
 }
 
 async function removeCountry(country){
@@ -1848,15 +1852,17 @@ function renderMyListModal(){
 
   // صف الدول
   const countries = myListAllCountries();
-  const countryChips = countries.map(country => `
-    <span style="display:inline-flex; align-items:center; gap:4px;">
-      <button type="button" class="city-tab ${country === myListCountry ? 'active' : ''}" style="font-size:11.5px; padding:7px 12px;" onclick="selectMyListCountry('${country.replace(/'/g,"\\'")}')">
-        ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
-      </button>
-      ${(userListData.customCountries || []).includes(country) ? `<button type="button" class="remove-btn" style="font-size:14px;" onclick="removeMyListCountry('${country.replace(/'/g,"\\'")}')" title="Delete country">🗑️</button>` : ''}
-    </span>`).join('')
-    + `<button type="button" class="city-tab" style="font-size:11.5px; padding:7px 12px; border-style:dashed; color:var(--brass);" onclick="addMyListCountry()">➕ Add Country</button>`;
-  document.getElementById('myListCountryChips').innerHTML = countryChips;
+  const countryOptions = countries.map(country => `
+    <option value="${country.replace(/"/g,'&quot;')}" ${country === myListCountry ? 'selected' : ''}>
+      ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
+    </option>`).join('');
+  document.getElementById('myListCountryChips').innerHTML = `
+    <select class="city-tab" style="flex:1; min-width:140px; font-size:11.5px; padding:7px 12px;" onchange="selectMyListCountry(this.value)">
+      ${countryOptions}
+    </select>
+    <button type="button" class="city-tab" style="font-size:11.5px; padding:7px 12px; border-style:dashed; color:var(--brass);" onclick="addMyListCountry()">➕ Add Country</button>
+    ${(userListData.customCountries || []).includes(myListCountry) ? `<button type="button" class="remove-btn" style="font-size:14px;" onclick="removeMyListCountry('${(myListCountry||'').replace(/'/g,"\\'")}')" title="Delete country">🗑️</button>` : ''}
+  `;
 
   // صف المدن — بس مدن الدولة المختارة + زرار إضافة مدينة جديدة (تحت نفس الدولة)
   const citiesInCountry = myListAllCities().filter(c => c.country === myListCountry);
