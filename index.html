@@ -161,22 +161,24 @@
     background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px;
   }
   .place-note-row{
-    display:flex; align-items:center; gap:8px; width:100%;
+    display:flex; align-items:flex-start; gap:8px; width:100%;
     margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);
   }
   .place-note-input{
     flex:1; border:none; background:transparent; font-size:11.5px;
     font-family:'Tajawal',sans-serif; padding:4px 2px; color:var(--ink);
+    resize:vertical; min-height:34px; line-height:1.5;
   }
   .place-note-input:focus{ outline:none; }
   .place-note-input::placeholder{ color:#b8ada0; }
-  .switch-btn.small{ width:30px; height:18px; flex:none; }
+  .switch-btn.small{ width:30px; height:18px; flex:none; margin-top:2px; }
   .switch-btn.small .knob{ width:12px; height:12px; top:3px; right:3px; }
   .switch-btn.small.on .knob{ transform:translateX(-12px); }
   .place-note{
     font-size:11.5px; color:var(--ink-soft); font-style:italic;
     padding:2px 0 4px; line-height:1.5;
   }
+  .note-link{ color:var(--brass); font-style:normal; font-weight:700; text-decoration:underline; }
   .note-toggle{
     background:none; border:none; padding:0; margin:0 2px; cursor:pointer;
     font-size:11px; font-style:normal; font-weight:700; color:var(--brass);
@@ -863,19 +865,29 @@ async function trackVisit(){
 let visitCount = null;
 
 /* عرض ملاحظة المكان — بتضيف "More/Less" تلقائيًا لو النص طويل، وتعرضه كامل من غير أي زر لو قصير */
+function escapeHtml(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// يحوّل روابط Google Maps المذكورة داخل نص الملاحظة لروابط قابلة للضغط تلقائيًا، ويحافظ على الأسطر (للنقاط)
+const GMAPS_LINK_REGEX = /(https?:\/\/(?:www\.)?(?:google\.com\/maps[^\s]*|maps\.app\.goo\.gl\/[^\s]*|goo\.gl\/[^\s]*))/gi;
+function formatNoteText(text){
+  const escaped = escapeHtml(text);
+  const linked = escaped.replace(GMAPS_LINK_REGEX, url => `<a href="${url}" target="_blank" rel="noopener" class="note-link">${url}</a>`);
+  return linked.replace(/\n/g, '<br>');
+}
 let noteToggleCounter = 0;
-const NOTE_TRUNCATE_LIMIT = 80;
+const NOTE_TRUNCATE_LIMIT = 120;
 function renderNoteHtml(note){
   if (!note || !note.trim()) return '';
   const text = note.trim();
   if (text.length <= NOTE_TRUNCATE_LIMIT) {
-    return `<div class="place-note">${text}</div>`;
+    return `<div class="place-note">${formatNoteText(text)}</div>`;
   }
   const id = 'noteTxt' + (noteToggleCounter++);
   const shortText = text.slice(0, NOTE_TRUNCATE_LIMIT).trim();
   return `<div class="place-note">
-    <span id="${id}_short">${shortText}… <button type="button" class="note-toggle" onclick="toggleNoteText('${id}')">More</button></span>
-    <span id="${id}_full" style="display:none;">${text} <button type="button" class="note-toggle" onclick="toggleNoteText('${id}')">Less</button></span>
+    <span id="${id}_short">${formatNoteText(shortText)}… <button type="button" class="note-toggle" onclick="toggleNoteText('${id}')">More</button></span>
+    <span id="${id}_full" style="display:none;">${formatNoteText(text)} <button type="button" class="note-toggle" onclick="toggleNoteText('${id}')">Less</button></span>
   </div>`;
 }
 function toggleNoteText(id){
@@ -1903,7 +1915,7 @@ function renderMyListModal(){
                 <input type="text" class="modal-input" placeholder="Google Maps link" value="${(p.url||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'url', this.value)" style="flex:1; font-size:12px; padding:6px 8px; direction:ltr; text-align:left;">
                 <button type="button" class="remove-btn" onclick="pasteToUserPlaceUrl('${item.id}', ${i}); return false;" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button>
               </div>
-              <input type="text" class="modal-input" placeholder="Note (optional)" value="${(p.note||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'note', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px;">
+              <textarea class="modal-input" rows="2" maxlength="120" placeholder="Note (optional) — e.g. - Great burger&#10;- Paste a Google Maps link for a nearby café" oninput="updateUserPlaceField('${item.id}', ${i}, 'note', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px; resize:vertical; line-height:1.5;">${escapeHtml(p.note||'')}</textarea>
               <div style="display:flex; gap:6px; margin-top:4px;">
                 ${isComplete ? `<button type="button" class="add-place-btn" style="flex:1; font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})"><i class="fa-solid fa-check"></i> Done</button>` : ''}
                 <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})"><i class="fa-solid fa-trash"></i> Remove</button>
@@ -2103,7 +2115,7 @@ const HELP_CONTENT = {
       { h: 'إضافة MyPickz إلى سطح المكتب سواء في جهاز الجوال أو الكمبيوتر', b: '1. افتح الموقع من المتصفح (Safari أو غيره)<br>2. اضغط زر المشاركة (Share) على الجوال، أو قائمة الخيارات على الكمبيوتر<br>3. اختر "Add to Home Screen" (جوال) أو "Create Shortcut" (كمبيوتر)<br>4. الآن يمكنك فتح MyPickz بضغطة واحدة، تمامًا كأي تطبيق آخر' },
       { h: 'كيف تضيف رابطًا بشكل صحيح', b: '1. افتح المكان في خرائط جوجل\n2. اضغط Share ← Copy\n3. عد إلى هنا واضغط زر اللصق 📋 المجاور لخانة الرابط — تجنّب اللصق اليدوي، فهذه الطريقة أكثر ضمانًا\n4. الروابط المقبولة فقط من خرائط جوجل (google.com/maps، maps.app.goo.gl...)'.replace(/\n/g,'<br>') },
       { h: 'الاستفادة من خانة اسم المنطقة', b: 'يسهّل تمييز المنطقة التي يقع فيها المكان (مثال: مقهى)، خصوصًا في المدن الكبيرة أو الجزر حيث تجد قائمة طويلة من الأماكن ضمن نفس التصنيف.' },
-      { h: 'الاستفادة من خانة Note', b: 'تجنّب الأوصاف العامة، واكتب ما جعل المكان يستحق الزيارة فعلًا. عبارة مثل <i>"أجمل إطلالة غروب من الجلسة الخارجية"</i> أفيد بكثير من <i>"مكان جميل."</i>' },
+      { h: 'الاستفادة من خانة Note', b: 'تجنّب الأوصاف العامة، واكتب ما جعل المكان يستحق الزيارة فعلًا. عبارة مثل <i>"أجمل إطلالة غروب من الجلسة الخارجية"</i> أفيد بكثير من <i>"مكان جميل."</i> تقدر تكتب أكثر من نقطة بأسطر منفصلة، وأي رابط Google Maps تلصقه بالنص (مثلًا لمطعم أو مقهى قريب) يتحول تلقائيًا لرابط قابل للضغط.' },
       { h: 'من أين تتجمّع مفضلتي؟', b: 'تفضيلاتك ❤️ قد تأتي من ثلاثة مصادر مختلفة، مجتمعة في مكانٍ واحد:<br>• الدليل الرسمي (الذي ينشره فريق التطبيق)<br>• قائمتك الشخصية<br>• أي قائمة عامة شاركها مستخدم آخر' },
       { h: 'الفرق بين My List و Community Lists', b: '<b>My List</b> = أماكنك الخاصة، وأنت وحدك من يستطيع تعديلها<br><b>Community Lists</b> = تصفّح القوائم العامة لمستخدمين آخرين، وأضِف أماكن منها إلى مفضلتك' },
       { h: '🔒 شارة "خاص دائمًا"', b: 'بعض التصنيفات (Hospitals & Clinics, Personal, Others) مخصصة لمرجعك الشخصي فقط. لا تظهر لأي شخص آخر مطلقًا، حتى لو كانت قائمتك عامة — ولا يوجد إعداد يمكنه تغيير ذلك.' }
@@ -2118,7 +2130,7 @@ const HELP_CONTENT = {
       { h: 'Adding MyPickz to your Home Screen or Desktop, on mobile or computer', b: '1. Open the site in your browser (Safari or others)<br>2. Tap the Share button on mobile, or the options menu on desktop<br>3. Choose "Add to Home Screen" (mobile) or "Create Shortcut" (desktop)<br>4. Now you can open MyPickz with one tap, like any other app' },
       { h: 'How to add a link correctly', b: "1. Open the place in Google Maps<br>2. Tap Share → Copy<br>3. Come back here and tap the 📋 paste button next to the link field — don't paste manually, it's more reliable<br>4. Only Google Maps links are accepted (google.com/maps, maps.app.goo.gl...)" },
       { h: 'Using the Area field', b: "Makes it easier to tell where a place is located (e.g. a café), especially in large cities or islands where you'll find a long list of places under the same category." },
-      { h: 'Using the Note field', b: 'Skip generic descriptions — share what made the place worth it. <i>"Best sunset view from the outdoor seating"</i> is more useful than <i>"nice cafe."</i>' },
+      { h: 'Using the Note field', b: 'Skip generic descriptions — share what made the place worth it. <i>"Best sunset view from the outdoor seating"</i> is more useful than <i>"nice cafe."</i> You can write more than one point on separate lines, and any Google Maps link you paste in (like a nearby restaurant or café) automatically becomes clickable.' },
       { h: 'Where does My Favorites come from?', b: 'Your ❤️ can come from three different sources, all in one place:<br>• The official guide (published by the App Team)<br>• Your own personal list<br>• Any public list shared by another user' },
       { h: 'My List vs. Community Lists — what\'s the difference?', b: '<b>My List</b> = your own places, only you can edit it<br><b>Community Lists</b> = browse other users\' public lists, and favorite places from them' },
       { h: '🔒 "Always private" badge', b: 'Some categories (Hospitals & Clinics, Personal, Others) are for your own reference only. They\'re never visible to anyone else, even if your list is public — no setting can change that.' }
@@ -2464,9 +2476,8 @@ function render(){
                 <button type="button" class="remove-btn" onclick="removePlace('${item.id}', ${i}); return false;" title="Delete"><i class="fa-solid fa-trash"></i></button>
                 <div class="place-note-row">
                   <button type="button" class="switch-btn small ${p.noteOn !== false ? 'on' : ''}" onclick="togglePlaceNote('${item.id}', ${i}, ${p.noteOn !== false ? 'false' : 'true'})"><span class="knob"></span></button>
-                  <input type="text" class="place-note-input" placeholder="e.g. Try the special burger, or: great evening vibe"
-                    value="${(p.note||'').replace(/"/g,'&quot;')}"
-                    oninput="updatePlaceNote('${item.id}', ${i}, this.value)">
+                  <textarea class="place-note-input" rows="2" maxlength="120" placeholder="e.g. - Try the special burger&#10;- Paste a Google Maps link for a nearby café"
+                    oninput="updatePlaceNote('${item.id}', ${i}, this.value)">${escapeHtml(p.note||'')}</textarea>
                 </div>
               </div>`).join('');
 
