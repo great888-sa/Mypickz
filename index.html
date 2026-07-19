@@ -1915,7 +1915,7 @@ function renderMyListModal(){
                 <input type="text" class="modal-input" placeholder="Google Maps link" value="${(p.url||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'url', this.value)" style="flex:1; font-size:12px; padding:6px 8px; direction:ltr; text-align:left;">
                 <button type="button" class="remove-btn" onclick="pasteToUserPlaceUrl('${item.id}', ${i}); return false;" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button>
               </div>
-              <textarea class="modal-input" rows="2" maxlength="120" placeholder="Note (optional) — e.g. - Great burger&#10;- Paste a Google Maps link for a nearby café" oninput="updateUserPlaceField('${item.id}', ${i}, 'note', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px; resize:vertical; line-height:1.5;">${escapeHtml(p.note||'')}</textarea>
+              <textarea class="modal-input" rows="2" placeholder="Note (optional) — e.g. - Great burger&#10;- Paste a Google Maps link for a nearby café" oninput="updateUserPlaceField('${item.id}', ${i}, 'note', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px; resize:vertical; line-height:1.5;">${escapeHtml(p.note||'')}</textarea>
               <div style="display:flex; gap:6px; margin-top:4px;">
                 ${isComplete ? `<button type="button" class="add-place-btn" style="flex:1; font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})"><i class="fa-solid fa-check"></i> Done</button>` : ''}
                 <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})"><i class="fa-solid fa-trash"></i> Remove</button>
@@ -2397,7 +2397,7 @@ function render(){
     if (!editMode && sectionStatus[section.title] === false) return false;
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = section.items.concat(sectionCustom);
-    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id, !section.ownerOnly).active !== false);
+    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id, !section.ownerOnly).active !== false && getPlaces(item.id).length > 0);
     return visibleItems.length > 0;
   });
   if (visibleSections.length > 1) {
@@ -2415,7 +2415,7 @@ function render(){
     if (!editMode && sectionStatus[section.title] === false) return;
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = orderedItems(section, section.items.concat(sectionCustom));
-    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id, !section.ownerOnly).active !== false);
+    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id, !section.ownerOnly).active !== false && getPlaces(item.id).length > 0);
     if (!editMode && visibleItems.length === 0 && !(section.ownerOnly && isOwner)) return;
 
     const sd = sectionDisplay(section);
@@ -2476,7 +2476,7 @@ function render(){
                 <button type="button" class="remove-btn" onclick="removePlace('${item.id}', ${i}); return false;" title="Delete"><i class="fa-solid fa-trash"></i></button>
                 <div class="place-note-row">
                   <button type="button" class="switch-btn small ${p.noteOn !== false ? 'on' : ''}" onclick="togglePlaceNote('${item.id}', ${i}, ${p.noteOn !== false ? 'false' : 'true'})"><span class="knob"></span></button>
-                  <textarea class="place-note-input" rows="2" maxlength="120" placeholder="e.g. - Try the special burger&#10;- Paste a Google Maps link for a nearby café"
+                  <textarea class="place-note-input" rows="2" placeholder="e.g. - Try the special burger&#10;- Paste a Google Maps link for a nearby café"
                     oninput="updatePlaceNote('${item.id}', ${i}, this.value)">${escapeHtml(p.note||'')}</textarea>
                 </div>
               </div>`).join('');
