@@ -756,20 +756,24 @@ async function removeCity(cityId){
 }
 
 const DATA = [
-  { title:"Restaurants & Cafes", icon:"🍴", items:[
-    {id:"burger", icon:"🍔", name:"Burger"},
+  { title:"Cafes", icon:"☕", items:[
+    {id:"brunch", icon:"🥞", name:"Breakfast & Brunch"},
     {id:"coffee_bakery", icon:"☕", name:"Coffee & Bakery"},
     {id:"bakery", icon:"🥐", name:"Bakery"},
-    {id:"shawarma", icon:"🌯", name:"Shawarma"},
-    {id:"steak", icon:"🥩", name:"Steak"},
-    {id:"fine_lebanese", icon:"🍽️", name:"Fine Dining - Lebanese"},
-    {id:"fine_italian", icon:"🍝", name:"Fine Dining - Italian"},
-    {id:"fine_japanese", icon:"🍣", name:"Fine Dining - Japanese"},
-    {id:"pizza", icon:"🍕", name:"Pizza"},
-    {id:"taco", icon:"🌮", name:"Taco / Mexican"},
-    {id:"seafood", icon:"🦐", name:"Seafood"},
     {id:"icecream", icon:"🍦", name:"Ice Cream"},
-    {id:"brunch", icon:"🥞", name:"Brunch"},
+  ]},
+  { title:"Restaurants & Cafes", icon:"🍴", items:[
+    {id:"shawarma", icon:"🌯", name:"Sandwiches"},
+    {id:"burger", icon:"🍔", name:"Burger"},
+    {id:"pizza", icon:"🍕", name:"Pizza"},
+    {id:"seafood", icon:"🦐", name:"Seafood"},
+    {id:"steak", icon:"🥩", name:"Grill & Steak"},
+    {id:"fine_lebanese", icon:"🍽️", name:"Lebanese"},
+    {id:"fine_italian", icon:"🍝", name:"Italian"},
+    {id:"fine_japanese", icon:"🍣", name:"Japanese"},
+    {id:"chinese", icon:"🥡", name:"Chinese"},
+    {id:"indian", icon:"🍛", name:"Indian"},
+    {id:"taco", icon:"🌮", name:"Other Cuisines"},
   ]},
   { title:"Streets & Avenues", icon:"🛣️", items:[
     {id:"streets", icon:"🛣️", name:"Streets & Avenues", desc:"Walking, Shopping, Cafes, Restaurants"},
@@ -794,7 +798,7 @@ const DATA = [
   ]},
   { title:"Beaches", icon:"🏖️", items:[
     {id:"corniche", icon:"🚶‍♂️", name:"Corniche Walk"},
-    {id:"beaches", icon:"🏝️", name:"Swimming Beaches"},
+    {id:"beaches", icon:"🏝️", name:"Public Beaches"},
     {id:"beachclub", icon:"🍹", name:"Beach Club"},
   ]},
   { title:"Historical & Cultural Landmarks", icon:"🏛️", items:[
