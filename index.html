@@ -341,6 +341,14 @@
       <span class="action-icon brass"><i class="fa-solid fa-list-check"></i></span>
       <span class="action-label">My List</span>
     </button>
+    <button class="action-btn" id="myTripsBtn" onclick="openMyTripsModal()" style="display:none;">
+      <span class="action-icon brass"><i class="fa-solid fa-suitcase-rolling"></i></span>
+      <span class="action-label">My Trips</span>
+    </button>
+    <button class="action-btn" id="selectModeBtn" onclick="toggleSelectionMode()" style="display:none;">
+      <span class="action-icon ink"><i class="fa-solid fa-square-check"></i></span>
+      <span class="action-label" id="selectModeLabel">Select</span>
+    </button>
     <button class="action-btn" onclick="openCommunityModal()">
       <span class="action-icon ink"><i class="fa-solid fa-users"></i></span>
       <span class="action-label">Community Lists</span>
@@ -388,6 +396,28 @@
     Links are managed via Google Maps sharing settings (View only recommended). Edit mode is protected by a simple password — basic protection, not strong encryption.
   </div>
 
+  <div id="selectionBar" style="display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:500; background:var(--ink); color:#fff; border-radius:30px; padding:10px 18px; box-shadow:0 6px 24px rgba(0,0,0,.3); align-items:center; gap:12px;">
+    <span>Add <span id="selectionCount">0</span> to trip →</span>
+    <button type="button" class="btn btn-brass" style="margin:0; padding:6px 14px; font-size:12px;" onclick="confirmBulkAddToTrip()">Add</button>
+    <button type="button" style="background:none; border:none; color:#fff; opacity:.7; cursor:pointer;" onclick="toggleSelectionMode()"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+
+  <div class="modal-backdrop" id="tripPickerBackdrop">
+    <div class="modal" style="max-width:380px;">
+      <h3>➕ Add to Trip</h3>
+      <div id="tripPickerBody"></div>
+      <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeTripPickerModal()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="myTripsBackdrop">
+    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <h3 style="text-align:center;">🧳 My Trips</h3>
+      <div id="myTripsBody"></div>
+      <button class="btn btn-ghost" style="width:100%; margin-top:12px;" onclick="closeMyTripsModal()">Close</button>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="inputBackdrop">
     <div class="modal">
       <h3 id="inputModalTitle">Title</h3>
@@ -404,8 +434,9 @@
   <div class="modal-backdrop" id="authBackdrop">
     <div class="modal">
       <h3>👤 My Account</h3>
-      <p style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">Sign up to save favorites, build your own list, and share it with others</p>
-      <input type="email" id="authEmail" class="modal-input" placeholder="Email" style="direction:ltr; text-align:left;">
+      <p style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">Sign up to save favorites, build your own list, plan trips, and share them with others</p>
+      <input type="text" id="authNickname" class="modal-input" placeholder="Username (shown to other users)">
+      <input type="email" id="authEmail" class="modal-input" placeholder="Email" style="direction:ltr; text-align:left; margin-top:8px;">
       <input type="password" id="authPassword" class="modal-input" placeholder="Password (6+ characters)" style="direction:ltr; text-align:left; margin-top:8px;">
       <button type="button" id="forgotPasswordLink" onclick="doForgotPassword()" style="background:none; border:none; padding:0; margin-top:8px; font-family:'Cairo',sans-serif; font-size:11.5px; font-weight:700; color:var(--brass); cursor:pointer;">Forgot password?</button>
       <div id="authError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
@@ -928,11 +959,27 @@ async function loadAllCityStatus(){
 }
 
 function pickInitialCity(){
+  try{
+    const lastVisited = localStorage.getItem('mypickz_last_city');
+    if (lastVisited && cityStatus[lastVisited]) return lastVisited;
+  }catch(e){ /* localStorage قد يكون معطّلاً بمتصفح الزائر — نتجاهل بصمت */ }
   if (cityStatus[currentCityId]) return currentCityId;
   const firstPublished = allCities().find(c => cityStatus[c.id]);
   return firstPublished ? firstPublished.id : CITIES[0].id;
 }
 
+// يفحص كل الأماكن بكائن links ويولّد معرّفًا لأي مكان قديم بلا معرّف (بأثر رجعي) — يُرجع true لو أي تغيير صار
+function backfillPlaceIds(linksObj){
+  let changed = false;
+  Object.keys(linksObj || {}).forEach(subcatId => {
+    const entry = linksObj[subcatId];
+    if (!entry || !Array.isArray(entry.places)) return;
+    entry.places.forEach(p => {
+      if (!p.id){ p.id = generatePlaceId(); changed = true; }
+    });
+  });
+  return changed;
+}
 async function loadCity(cityId){
   document.getElementById('loadingState').style.display = 'block';
   document.getElementById('sections').style.display = 'none';
@@ -944,6 +991,11 @@ async function loadCity(cityId){
     links = data.links || {};
     cityStatus[cityId] = data.published === true;
     sectionStatus = data.sectionStatus || {};
+    try{ localStorage.setItem('mypickz_last_city', cityId); }catch(e){ /* صامت */ }
+    // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة — محاولة حفظ صامتة (تنجح فقط لو الكاتب هو المالك، بحسب قواعد الأمان)
+    if (backfillPlaceIds(links)){
+      db.collection('cities').doc(cityId).set({ links }, { merge:true }).catch(()=>{});
+    }
   }catch(e){
     links = {}; sectionStatus = {};
     const dbg = document.getElementById('debugBanner');
@@ -1256,9 +1308,13 @@ function openMapsForCurrentCity(){
   window.location.href = url;
 }
 
+// معرّف ثابت فريد لكل مكان (يُستخدم لاحقًا للربط الحي بميزة Add Trip) — بنفس نمط توليد معرّفات مدن My List المخصّصة
+function generatePlaceId(){
+  return "place_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9);
+}
 function addPlace(id){
   const e = ensurePlaces(id);
-  e.places.push({ name:"", url:"", area:"", note:"", noteOn:true });
+  e.places.push({ id: generatePlaceId(), name:"", url:"", area:"", note:"", noteOn:true });
   render();
 }
 function removePlace(id, index){
@@ -1396,6 +1452,432 @@ async function toggleFavorite(url, name, category, city, area, sourceUid){
   }catch(e){ showToast('Could not save favorite'); }
 }
 
+/* =========================================================
+   Add Trip — تنظيم رحلة من أماكن بالمالك/My List/قوائم مستخدمين آخرين
+   بنية التخزين (مُعاد هيكلتها): trips/{tripId} = { ownerId, cityId, cityName, customLabel, public, days:[{dayNumber, places:[ref]}] }
+   ref مكان = { sourceType:'owner'|'mylist'|'community', subcatId, placeId, sourceUid? (فقط لـcommunity) }
+   ملاحظة: كل رحلة مستند مستقل (يسمح بمشاركة/إخفاء كل رحلة لحالها عبر حقل public)
+   ========================================================= */
+let userTrips = [];
+let tripsLoaded = false;
+let currentTripId = null;      // الرحلة المفتوحة حاليًا بوضع العرض/التعديل
+let tripViewMode = false;      // false = وضع تعديل (يظهر المصدر)، true = وضع عرض نهائي مصقول (بدون مصدر)
+let resolvedTripCache = {};    // { tripId: [ {dayNumber, places:[place أو {_available:false}]} ] } — يُعاد بناؤه كل فتح
+
+async function loadUserTrips(){
+  if (!currentUser){ userTrips = []; tripsLoaded = true; return; }
+  try{
+    const snap = await db.collection('trips').where('ownerId','==',currentUser.uid).get();
+    userTrips = [];
+    snap.forEach(doc => userTrips.push({ id: doc.id, ...doc.data() }));
+  }catch(e){ userTrips = []; }
+  tripsLoaded = true;
+}
+async function saveTrip(trip){
+  try{
+    await db.collection('trips').doc(trip.id).set({ ...trip, ownerId: currentUser.uid }, { merge:true });
+  }catch(e){ showToast('Could not save trip'); }
+}
+function generateTripId(){
+  return "trip_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+}
+
+// يبحث عن مكان بمعرّفه الثابت داخل كائن links (أيًا كان مصدره)
+function findPlaceInLinksById(linksObj, subcatId, placeId){
+  const entry = linksObj && linksObj[subcatId];
+  if (!entry || !Array.isArray(entry.places)) return null;
+  return entry.places.find(p => p.id === placeId) || null;
+}
+
+// الحل الموحّد: يجلب بيانات كل مكان بكل يوم بالرحلة، أيًا كان مصدره — يُستدعى فقط لحظة فتح رحلة معيّنة
+async function resolveTripPlaces(trip){
+  let ownerLinks = {};
+  try{
+    const cityDoc = await db.collection('cities').doc(trip.cityId).get();
+    ownerLinks = (cityDoc.exists && cityDoc.data().links) || {};
+  }catch(e){}
+
+  let myLinks = {};
+  if (userListData.cities && userListData.cities[trip.cityId]) myLinks = userListData.cities[trip.cityId];
+
+  const communityUids = new Set();
+  trip.days.forEach(day => day.places.forEach(ref => {
+    if (ref.sourceType === 'community' && ref.sourceUid) communityUids.add(ref.sourceUid);
+  }));
+  const communityLinksByUid = {};
+  for (const uid of communityUids){
+    try{
+      const d = await db.collection('userLists').doc(uid).get();
+      const data = d.exists ? d.data() : {};
+      communityLinksByUid[uid] = (data.cities && data.cities[trip.cityId]) || {};
+    }catch(e){ communityLinksByUid[uid] = {}; }
+  }
+
+  return trip.days.map(day => ({
+    dayNumber: day.dayNumber,
+    places: day.places.map(ref => {
+      let linksObj;
+      if (ref.sourceType === 'owner') linksObj = ownerLinks;
+      else if (ref.sourceType === 'mylist') linksObj = myLinks;
+      else linksObj = communityLinksByUid[ref.sourceUid] || {};
+      const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
+      return place ? { ...place, _ref: ref, _available: true } : { _available: false, _ref: ref };
+    })
+  }));
+}
+
+// ينشئ رحلة جديدة أو يضيف مكان لرحلة موجودة — يُستدعى من زر "➕ Trip" على أي بطاقة مكان بأي مصدر
+async function addPlaceToTrip(sourceType, cityId, subcatId, placeId, sourceUid){
+  if (!currentUser){ openAuthModal(); return; }
+  if (!tripsLoaded) await loadUserTrips();
+  pendingTripRef = { sourceType, cityId, subcatId, placeId, sourceUid: sourceUid || null };
+  openTripPickerModal();
+}
+
+let pendingTripRef = null;
+
+function openTripPickerModal(){
+  const cityTrips = userTrips.filter(t => t.cityId === pendingTripRef.cityId);
+  const wrap = document.getElementById('tripPickerBody');
+  const cityName = allCities().find(c => c.id === pendingTripRef.cityId)?.name || pendingTripRef.cityId;
+  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Add to a trip in ${cityName}</p>`;
+  html += cityTrips.map(t => `
+    <button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="chooseTripDay('${t.id}')">
+      ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
+    </button>`).join('');
+  html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="createTripAndAdd()">➕ New trip in ${cityName}</button>`;
+  wrap.innerHTML = html;
+  document.getElementById('tripPickerBackdrop').classList.add('show');
+}
+function closeTripPickerModal(){
+  document.getElementById('tripPickerBackdrop').classList.remove('show');
+  pendingTripRef = null;
+}
+
+/* ===== وضع التحديد الجماعي — إضافة عدة أماكن لرحلة بضغطة واحدة ===== */
+let selectionMode = false;
+let selectedPlaces = []; // [{sourceType, cityId, subcatId, placeId, sourceUid}]
+
+function refKey(ref){ return [ref.sourceType, ref.cityId, ref.subcatId, ref.placeId, ref.sourceUid||''].join('|'); }
+function isPlaceSelected(sourceType, cityId, subcatId, placeId, sourceUid){
+  const key = refKey({ sourceType, cityId, subcatId, placeId, sourceUid: sourceUid||null });
+  return selectedPlaces.some(r => refKey(r) === key);
+}
+function togglePlaceSelection(sourceType, cityId, subcatId, placeId, sourceUid){
+  if (!currentUser){ openAuthModal(); return; }
+  const ref = { sourceType, cityId, subcatId, placeId, sourceUid: sourceUid || null };
+  const key = refKey(ref);
+  const idx = selectedPlaces.findIndex(r => refKey(r) === key);
+  if (idx >= 0) selectedPlaces.splice(idx, 1);
+  else selectedPlaces.push(ref);
+  refreshAfterSelectionChange();
+}
+function toggleSelectionMode(){
+  if (!currentUser){ openAuthModal(); return; }
+  selectionMode = !selectionMode;
+  selectedPlaces = [];
+  refreshAfterSelectionChange();
+}
+function refreshAfterSelectionChange(){
+  render();
+  if (viewingUserUid) renderCommunityModal();
+  if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
+  updateSelectionBar();
+}
+function updateSelectionBar(){
+  const btn = document.getElementById('selectModeBtn');
+  const btnLabel = document.getElementById('selectModeLabel');
+  if (btn && btnLabel){
+    btn.classList.toggle('active-select', selectionMode);
+    btnLabel.textContent = selectionMode ? 'Cancel' : 'Select';
+  }
+  const bar = document.getElementById('selectionBar');
+  if (!bar) return;
+  if (selectionMode && selectedPlaces.length > 0){
+    bar.style.display = 'flex';
+    document.getElementById('selectionCount').textContent = selectedPlaces.length;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+let pendingBulkRefs = null;
+async function confirmBulkAddToTrip(){
+  if (!selectedPlaces.length) return;
+  if (!currentUser){ openAuthModal(); return; }
+  const cityIds = [...new Set(selectedPlaces.map(r => r.cityId))];
+  if (cityIds.length > 1){
+    showToast('Select places from one city at a time');
+    return;
+  }
+  if (!tripsLoaded) await loadUserTrips();
+  pendingBulkRefs = [...selectedPlaces];
+  openBulkTripPickerModal(cityIds[0]);
+}
+function openBulkTripPickerModal(cityId){
+  const cityTrips = userTrips.filter(t => t.cityId === cityId);
+  const wrap = document.getElementById('tripPickerBody');
+  const cityName = allCities().find(c => c.id === cityId)?.name || cityId;
+  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Add ${pendingBulkRefs.length} places to a trip in ${cityName}</p>`;
+  html += cityTrips.map(t => `
+    <button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="chooseBulkTripDay('${t.id}')">
+      ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
+    </button>`).join('');
+  html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="createBulkTripAndAdd('${cityId}')">➕ New trip in ${cityName}</button>`;
+  wrap.innerHTML = html;
+  document.getElementById('tripPickerBackdrop').classList.add('show');
+}
+async function createBulkTripAndAdd(cityId){
+  const cityName = allCities().find(c => c.id === cityId)?.name || cityId;
+  const label = await openInputModal("Trip label (optional)", "e.g. August 2026", "");
+  if (label === null) return;
+  const trip = { id: generateTripId(), cityId, cityName, customLabel: (label||'').trim(), public: false, days: [{ dayNumber: 1, places: [] }] };
+  userTrips.push(trip);
+  chooseBulkTripDay(trip.id);
+}
+function chooseBulkTripDay(tripId){
+  const trip = userTrips.find(t => t.id === tripId);
+  if (!trip) return;
+  const wrap = document.getElementById('tripPickerBody');
+  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Which day?</p>`;
+  html += trip.days.map(d => `
+    <button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="confirmBulkAddToTripDay('${tripId}', ${d.dayNumber})">Day ${d.dayNumber} (${d.places.length} places)</button>`).join('');
+  html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="confirmBulkAddToTripDay('${tripId}', ${trip.days.length + 1})">➕ New day (Day ${trip.days.length + 1})</button>`;
+  wrap.innerHTML = html;
+}
+async function confirmBulkAddToTripDay(tripId, dayNumber){
+  const trip = userTrips.find(t => t.id === tripId);
+  if (!trip || !pendingBulkRefs) return;
+  let day = trip.days.find(d => d.dayNumber === dayNumber);
+  if (!day){ day = { dayNumber, places: [] }; trip.days.push(day); }
+  pendingBulkRefs.forEach(ref => day.places.push({ ...ref }));
+  const count = pendingBulkRefs.length;
+  closeTripPickerModal();
+  await saveTrip(trip);
+  showToast(`Added ${count} places to trip ✓`);
+  pendingBulkRefs = null;
+  selectionMode = false;
+  selectedPlaces = [];
+  refreshAfterSelectionChange();
+}
+
+async function createTripAndAdd(){
+  const cityName = allCities().find(c => c.id === pendingTripRef.cityId)?.name || pendingTripRef.cityId;
+  const label = await openInputModal("Trip label (optional)", "e.g. August 2026", "");
+  if (label === null) return; // ألغى
+  const trip = { id: generateTripId(), cityId: pendingTripRef.cityId, cityName, customLabel: (label||'').trim(), public: false, days: [{ dayNumber: 1, places: [] }] };
+  userTrips.push(trip);
+  chooseTripDay(trip.id);
+}
+function chooseTripDay(tripId){
+  const trip = userTrips.find(t => t.id === tripId);
+  if (!trip) return;
+  const wrap = document.getElementById('tripPickerBody');
+  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Which day?</p>`;
+  html += trip.days.map(d => `
+    <button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="confirmAddToTripDay('${tripId}', ${d.dayNumber})">Day ${d.dayNumber} (${d.places.length} places)</button>`).join('');
+  html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="confirmAddToTripDay('${tripId}', ${trip.days.length + 1})">➕ New day (Day ${trip.days.length + 1})</button>`;
+  wrap.innerHTML = html;
+}
+async function confirmAddToTripDay(tripId, dayNumber){
+  const trip = userTrips.find(t => t.id === tripId);
+  if (!trip || !pendingTripRef) return;
+  let day = trip.days.find(d => d.dayNumber === dayNumber);
+  if (!day){ day = { dayNumber, places: [] }; trip.days.push(day); }
+  day.places.push({ ...pendingTripRef });
+  closeTripPickerModal();
+  await saveTrip(trip);
+  showToast('Added to trip ✓');
+}
+
+/* ===== My Trips — قائمة الرحلات + عرض/تعديل رحلة واحدة ===== */
+async function openMyTripsModal(){
+  if (!currentUser){ openAuthModal(); return; }
+  document.getElementById('myTripsBackdrop').classList.add('show');
+  if (!tripsLoaded) await loadUserTrips();
+  currentTripId = null;
+  renderMyTripsModal();
+}
+function closeMyTripsModal(){
+  document.getElementById('myTripsBackdrop').classList.remove('show');
+  currentTripId = null;
+}
+function renderMyTripsModal(){
+  const wrap = document.getElementById('myTripsBody');
+  if (currentTripId){ renderTripDetail(wrap); return; }
+  if (!userTrips.length){
+    wrap.innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12.5px; padding:16px 0;">No trips yet. Tap "➕ Trip" on any place to start one.</p>`;
+    return;
+  }
+  wrap.innerHTML = userTrips.map(t => `
+    <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;" onclick="openTripDetail('${t.id}')">
+      <span style="font-weight:700;">${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}${t.public ? ' 🌐' : ''}</span>
+      <span style="color:var(--ink-soft); font-size:10.5px;">${t.days.length} day${t.days.length>1?'s':''}</span>
+    </button>`).join('');
+}
+async function openTripDetail(tripId){
+  currentTripId = tripId;
+  tripViewMode = false;
+  const trip = userTrips.find(t => t.id === tripId);
+  document.getElementById('myTripsBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  resolvedTripCache[tripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+function backToTripsList(){ currentTripId = null; renderMyTripsModal(); }
+function toggleTripViewMode(){ tripViewMode = !tripViewMode; renderMyTripsModal(); }
+async function toggleTripPublic(){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  if (!trip.public && !userListData.nickname){
+    const ok = await chooseNickname();
+    if (!ok) return;
+  }
+  trip.public = !trip.public;
+  await saveTrip(trip);
+  showToast(trip.public ? 'Trip is now public 🌐' : 'Trip is now private');
+  renderMyTripsModal();
+}
+
+const SOURCE_LABELS = { owner: '📖 App guide', mylist: '📋 My List', community: '👤 Shared list' };
+
+function renderTripDetail(wrap){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip){ currentTripId = null; renderMyTripsModal(); return; }
+  const resolved = resolvedTripCache[currentTripId] || [];
+  const title = trip.customLabel ? `${trip.cityName} — ${trip.customLabel}` : trip.cityName;
+
+  let html = `<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+    <button type="button" class="remove-btn" onclick="backToTripsList()"><i class="fa-solid fa-arrow-right"></i></button>
+    <span style="font-weight:700; flex:1;">${title}</span>
+    <button type="button" class="btn btn-ghost" style="margin:0; padding:6px 12px; font-size:11px;" onclick="toggleTripViewMode()">${tripViewMode ? '✏️ Edit' : '👁️ View'}</button>
+  </div>`;
+
+  if (!tripViewMode){
+    html += `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--sand,#f5f0e6); border-radius:10px; padding:8px 12px; margin-bottom:12px;">
+      <span style="font-size:11.5px;">🌐 Share with Community Lists (view-only)</span>
+      <button type="button" class="switch-btn small ${trip.public ? 'on' : ''}" onclick="toggleTripPublic()"><span class="knob"></span></button>
+    </div>`;
+  }
+
+  resolved.forEach((day, dIdx) => {
+    html += `<div style="font-weight:700; font-size:13px; margin:14px 0 8px; padding-bottom:6px; border-bottom:2px solid var(--sand,#eee);">Day ${day.dayNumber}</div>`;
+    if (!day.places.length){
+      html += `<p style="font-size:11.5px; color:var(--ink-soft);">No places yet.</p>`;
+    }
+    day.places.forEach((p, pIdx) => {
+      if (!p._available){
+        html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px;">⚠️ This place is no longer available</div>`;
+        return;
+      }
+      const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
+      const sourceLine = (!tripViewMode) ? `<div style="font-size:9.5px; color:var(--ink-soft); opacity:.75;">${SOURCE_LABELS[p._ref.sourceType] || ''}</div>` : '';
+      html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
+          ${!tripViewMode ? `
+          <button type="button" class="reorder-btn" ${pIdx===0?'disabled':''} onclick="moveTripPlace(${dIdx}, ${pIdx}, -1)">▲</button>
+          <button type="button" class="reorder-btn" ${pIdx===day.places.length-1?'disabled':''} onclick="moveTripPlace(${dIdx}, ${pIdx}, 1)">▼</button>
+          <button type="button" class="remove-btn" onclick="removeTripPlace(${dIdx}, ${pIdx})" title="Remove from trip"><i class="fa-solid fa-trash"></i></button>` : ''}
+        </div>
+        ${areaLine}${sourceLine}
+        ${p.note ? renderNoteHtml(p.note) : ''}
+      </div>`;
+    });
+  });
+
+  if (!tripViewMode){
+    html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="addTripDay()">➕ Add day</button>
+    <button type="button" class="remove-btn" style="width:100%; margin-top:14px; color:#b5545a;" onclick="deleteTrip()">🗑️ Delete this trip</button>`;
+  }
+  wrap.innerHTML = html;
+}
+
+async function addTripDay(){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const nextNum = trip.days.length ? Math.max(...trip.days.map(d=>d.dayNumber)) + 1 : 1;
+  trip.days.push({ dayNumber: nextNum, places: [] });
+  resolvedTripCache[currentTripId].push({ dayNumber: nextNum, places: [] });
+  await saveTrip(trip);
+  renderMyTripsModal();
+}
+async function moveTripPlace(dayIdx, placeIdx, dir){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const day = trip.days[dayIdx];
+  const j = placeIdx + dir;
+  if (j < 0 || j >= day.places.length) return;
+  [day.places[placeIdx], day.places[j]] = [day.places[j], day.places[placeIdx]];
+  const rDay = resolvedTripCache[currentTripId][dayIdx];
+  [rDay.places[placeIdx], rDay.places[j]] = [rDay.places[j], rDay.places[placeIdx]];
+  await saveTrip(trip);
+  renderMyTripsModal();
+}
+async function removeTripPlace(dayIdx, placeIdx){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  trip.days[dayIdx].places.splice(placeIdx, 1);
+  resolvedTripCache[currentTripId][dayIdx].places.splice(placeIdx, 1);
+  await saveTrip(trip);
+  renderMyTripsModal();
+}
+async function deleteTrip(){
+  if (!confirm('Delete this trip? This cannot be undone.')) return;
+  try{ await db.collection('trips').doc(currentTripId).delete(); }catch(e){}
+  userTrips = userTrips.filter(t => t.id !== currentTripId);
+  delete resolvedTripCache[currentTripId];
+  currentTripId = null;
+  renderMyTripsModal();
+}
+
+/* ===== عرض رحلات مستخدم آخر (Community Lists → تبويب Trips) — قراءة فقط ===== */
+let communityUserTrips = [];
+let viewingCommunityTripId = null;
+
+async function loadCommunityUserTrips(uid){
+  try{
+    const snap = await db.collection('trips').where('ownerId','==',uid).where('public','==',true).get();
+    communityUserTrips = [];
+    snap.forEach(doc => communityUserTrips.push({ id: doc.id, ...doc.data() }));
+  }catch(e){ communityUserTrips = []; }
+}
+async function openCommunityTrip(tripId){
+  viewingCommunityTripId = tripId;
+  const trip = communityUserTrips.find(t => t.id === tripId);
+  const wrap = document.getElementById('communityBody');
+  wrap.innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  resolvedTripCache['community_'+tripId] = await resolveTripPlaces(trip);
+  renderCommunityModal();
+}
+function backFromCommunityTrip(){ viewingCommunityTripId = null; renderCommunityModal(); }
+
+function renderCommunityTripDetail(wrap){
+  const trip = communityUserTrips.find(t => t.id === viewingCommunityTripId);
+  if (!trip){ viewingCommunityTripId = null; renderCommunityModal(); return; }
+  const resolved = resolvedTripCache['community_'+trip.id] || [];
+  const title = trip.customLabel ? `${trip.cityName} — ${trip.customLabel}` : trip.cityName;
+
+  let html = `<button type="button" class="remove-btn" onclick="backFromCommunityTrip()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-right"></i> Back</button>
+  <h4 style="text-align:center; margin:4px 0 12px; font-family:'Cairo',sans-serif;">${title}</h4>`;
+
+  resolved.forEach(day => {
+    html += `<div style="font-weight:700; font-size:13px; margin:14px 0 8px; padding-bottom:6px; border-bottom:2px solid var(--sand,#eee);">Day ${day.dayNumber}</div>`;
+    day.places.forEach(p => {
+      if (!p._available){
+        html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px;">⚠️ This place is no longer available</div>`;
+        return;
+      }
+      const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
+      html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px;">
+        <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
+        ${areaLine}
+        ${p.note ? renderNoteHtml(p.note) : ''}
+      </div>`;
+    });
+  });
+  wrap.innerHTML = html;
+}
+
 async function openFavoriteStats(){
   const list = document.getElementById('statsList');
   list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">Loading...</p>`;
@@ -1438,16 +1920,39 @@ function closeAuthModal(){
 }
 
 async function doSignUp(){
+  const nickname = document.getElementById('authNickname').value.trim();
   const email = document.getElementById('authEmail').value.trim();
   const pass = document.getElementById('authPassword').value;
   const errEl = document.getElementById('authError');
   errEl.textContent = '';
+  if (!nickname || nickname.length < 3){
+    errEl.textContent = 'Choose a username of at least 3 characters';
+    return;
+  }
   if (!email || !pass || pass.length < 6){
     errEl.textContent = 'Enter a valid email and a password of 6+ characters';
     return;
   }
+  const key = nickname.toLowerCase();
   try{
-    await auth.createUserWithEmailAndPassword(email, pass);
+    const nickDoc = await db.collection('nicknames').doc(key).get();
+    if (nickDoc.exists){
+      errEl.textContent = 'This username is already taken — try another';
+      return;
+    }
+  }catch(e){
+    errEl.textContent = 'Could not verify username — try again';
+    return;
+  }
+  try{
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const newUid = cred.user.uid;
+    // بعد إنشاء الحساب، نحجز اسم المستخدم فورًا كجزء من نفس العملية — نستخدم newUid مباشرة (مضمون)، لا currentUser العام (قد لا يتحدّث فورًا)
+    try{
+      await db.collection('nicknames').doc(key).set({ uid: newUid, nickname });
+      await db.collection('userLists').doc(newUid).set({ nickname }, { merge:true });
+      await db.collection('users').doc(newUid).set({ nickname }, { merge:true });
+    }catch(e){ /* الحساب أُنشئ بنجاح؛ لو فشل حجز الاسم لسبب نادر، يقدر يعيّنه لاحقًا من My List */ }
     closeAuthModal();
     showToast('Account created ✓');
     db.collection('stats').doc('users').set(
@@ -1537,6 +2042,8 @@ function updateUserUI(){
   const icon = document.getElementById('userIcon');
   const label = document.getElementById('userLabel');
   const myListBtn = document.getElementById('myListBtn');
+  const myTripsBtn = document.getElementById('myTripsBtn');
+  const selectModeBtn = document.getElementById('selectModeBtn');
   const promoBanner = document.getElementById('guestPromoBanner');
   const logoutBtn = document.getElementById('userLogoutBtn');
   if (!icon || !label) return;
@@ -1544,12 +2051,16 @@ function updateUserUI(){
     icon.className = 'fa-solid fa-heart';
     label.textContent = 'Favorites';
     if (myListBtn) myListBtn.style.display = '';
+    if (myTripsBtn) myTripsBtn.style.display = '';
+    if (selectModeBtn) selectModeBtn.style.display = '';
     if (promoBanner) promoBanner.style.display = 'none';
     if (logoutBtn) logoutBtn.style.display = '';
   } else {
     icon.className = 'fa-solid fa-user';
     label.textContent = 'My Account';
     if (myListBtn) myListBtn.style.display = 'none';
+    if (myTripsBtn) myTripsBtn.style.display = 'none';
+    if (selectModeBtn) selectModeBtn.style.display = 'none';
     if (promoBanner) promoBanner.style.display = 'block';
     if (logoutBtn) logoutBtn.style.display = 'none';
   }
@@ -1578,6 +2089,14 @@ async function loadUserList(){
       favoriteCount: data.favoriteCount || 0
     };
     userListPublic = data.public === true;
+    // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة بكل مدن My List الخاصة بالمستخدم
+    let anyChanged = false;
+    Object.keys(userListData.cities).forEach(cId => {
+      if (backfillPlaceIds(userListData.cities[cId])) anyChanged = true;
+    });
+    if (anyChanged){
+      db.collection('userLists').doc(currentUser.uid).set({ cities: userListData.cities }, { merge:true }).catch(()=>{});
+    }
   }catch(e){ userListData = { cities: {}, customCities: [], customCountries: [], nickname: null }; userListPublic = false; }
   try{
     const uDoc = await db.collection('users').doc(currentUser.uid).get();
@@ -1754,7 +2273,7 @@ let myListEditingKeys = new Set(); // مفاتيح "itemId#index" للأماكن
 
 function addUserPlace(id){
   const e = userEnsurePlaces(id);
-  e.places.push({ name:'', url:'', area:'', note:'' });
+  e.places.push({ id: generatePlaceId(), name:'', url:'', area:'', note:'' });
   myListEditingKeys.add(id + '#' + (e.places.length - 1));
   renderMyListModal();
 }
@@ -1928,11 +2447,20 @@ function renderMyListModal(){
           } else {
             html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">`;
             if (p.area && p.area.trim()) html += `<div style="font-size:10.5px; color:var(--ink-soft); margin-bottom:2px;">📍 ${p.area}</div>`;
+            if (selectionMode && p.id){
+              const sel = isPlaceSelected('mylist', myListCityId, item.id, p.id, null);
+              html += `<div style="display:flex; align-items:center; gap:8px; cursor:pointer;" onclick="togglePlaceSelection('mylist', '${myListCityId}', '${item.id}', '${p.id}')">
+                <span style="font-size:16px;">${sel ? '✅' : '⬜'}</span>
+                <span style="flex:1; font-size:12.5px;">${escapeHtml(p.name||'Place')}</span>
+              </div>`;
+            } else {
             html += `<div style="display:flex; align-items:center; gap:8px;">
               <a class="place-link" style="flex:1; font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${p.name} ←</a>
+              ${p.id ? `<button type="button" class="remove-btn" style="font-size:11px;" onclick="addPlaceToTrip('mylist', '${myListCityId}', '${item.id}', '${p.id}')" title="Add to trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})" title="Edit"><i class="fa-solid fa-pen"></i></button>
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})" title="Remove"><i class="fa-solid fa-trash"></i></button>
             </div>`;
+            }
             if (p.note && p.note.trim()) html += renderNoteHtml(p.note);
             html += `</div>`;
           }
@@ -2035,10 +2563,12 @@ async function viewCommunityUser(uid){
   viewingUserUid = uid;
   viewingUserData = communityUsers.find(u => u.uid === uid);
   communityViewingCityId = null;
+  viewingCommunityTripId = null;
   try{
     await db.collection('userLists').doc(uid).set({ viewCount: firebase.firestore.FieldValue.increment(1) }, { merge:true });
     viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1;
   }catch(e){}
+  await loadCommunityUserTrips(uid);
   renderCommunityModal();
 }
 function backToCommunityList(){
@@ -2047,6 +2577,7 @@ function backToCommunityList(){
 }
 
 function renderCommunityUserList(wrap){
+  if (viewingCommunityTripId){ renderCommunityTripDetail(wrap); return; }
   const u = viewingUserData;
   const cities = myListPublishedOwnerCities().concat(u.customCities||[])
     .filter(c => u.cities[c.id] && Object.keys(u.cities[c.id]).length);
@@ -2058,11 +2589,21 @@ function renderCommunityUserList(wrap){
   let html = `<button type="button" class="remove-btn" onclick="backToCommunityList()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-right"></i> Back</button>
   <h4 style="text-align:center; margin:4px 0 10px; font-family:'Cairo',sans-serif;">${u.nickname}'s List</h4>`;
 
-  if (!cities.length){
+  if (communityUserTrips.length){
+    html += `<div style="font-weight:700; font-size:12.5px; margin:6px 0 8px;">🧳 Shared Trips</div>`;
+    html += communityUserTrips.map(t => `
+      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px;" onclick="openCommunityTrip('${t.id}')">
+        ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
+      </button>`).join('');
+    html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
+  }
+
+  if (!cities.length && !communityUserTrips.length){
     html += `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">No cities in this list yet</p>`;
     wrap.innerHTML = html;
     return;
   }
+  if (!cities.length){ wrap.innerHTML = html; return; }
 
   html += `<div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px;">` +
     cities.map(c => `<button type="button" class="city-tab ${c.id===communityViewingCityId?'active':''}" style="font-size:11px; padding:6px 10px;" onclick="communityViewingCityId='${c.id}'; renderCommunityModal();">${c.name}</button>`).join('') +
@@ -2086,11 +2627,23 @@ function renderCommunityUserList(wrap){
         const fav = isFavorite(p.url);
         const safeUrl = p.url.replace(/'/g,"\\'"), safeName = p.name.replace(/'/g,"\\'"), safeCat = displayName(item).replace(/'/g,"\\'");
         const safeCity = (cityObj ? cityObj.name : '').replace(/'/g,"\\'"), safeArea = (p.area||'').replace(/'/g,"\\'");
+        if (selectionMode && p.id){
+          const sel = isPlaceSelected('community', communityViewingCityId, item.id, p.id, u.uid);
+          sectionHtml += `<div style="margin-bottom:8px;">
+            ${p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : ''}
+            <div style="display:flex; align-items:center; gap:6px; cursor:pointer;" onclick="togglePlaceSelection('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}')">
+              <span style="font-size:16px;">${sel ? '✅' : '⬜'}</span>
+              <span style="flex:1;">${escapeHtml(p.name)}</span>
+            </div>
+          </div>`;
+          return;
+        }
         sectionHtml += `<div style="margin-bottom:8px;">
           ${p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : ''}
           <div style="display:flex; align-items:center; gap:6px;">
             <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
             <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCat}', '${safeCity}', '${safeArea}', '${u.uid}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
+            ${p.id ? `<button type="button" class="remove-btn" onclick="addPlaceToTrip('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}')" title="Add to trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
           </div>
           ${renderNoteHtml(p.note)}
         </div>`;
@@ -2204,7 +2757,7 @@ async function registerUserRecord(){
     const ref = db.collection('users').doc(currentUser.uid);
     const doc = await ref.get();
     if (!doc.exists){
-      await ref.set({ email: currentUser.email || '', firstSeen: Date.now(), lastSeen: Date.now(), suspended: false, lastActiveDay: today });
+      await ref.set({ email: currentUser.email || '', firstSeen: Date.now(), lastSeen: Date.now(), suspended: false, lastActiveDay: today }, { merge:true });
       await db.collection('dailyStats').doc(today).set({
         newSignupsToday: firebase.firestore.FieldValue.increment(1),
         activeToday: firebase.firestore.FieldValue.increment(1)
@@ -2534,9 +3087,17 @@ function render(){
               const safeCategory = displayName(item).replace(/'/g,"\\'");
               const safeCity = (allCities().find(c=>c.id===currentCityId)?.name || '').replace(/'/g,"\\'");
               const safeArea = area.replace(/'/g,"\\'");
+              if (selectionMode && p.id){
+                const sel = isPlaceSelected('owner', currentCityId, item.id, p.id, null);
+                return divider + `<div class="place-row-view" style="cursor:pointer;" onclick="togglePlaceSelection('owner', '${currentCityId}', '${item.id}', '${p.id}')">
+                    <span style="font-size:16px; margin-left:6px;">${sel ? '✅' : '⬜'}</span>
+                    <span style="flex:1;">${escapeHtml(pName)}</span>
+                  </div>`;
+              }
               return divider + `<div class="place-row-view">
                   <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
                   <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}', '${safeCity}', '${safeArea}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
+                  ${p.id ? `<button type="button" class="remove-btn" onclick="addPlaceToTrip('owner', '${currentCityId}', '${item.id}', '${p.id}')" title="Add to trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
                 </div>` +
                 (p.note && p.note.trim() && p.noteOn !== false ? renderNoteHtml(p.note) : '');
             }).join('');
@@ -2660,7 +3221,7 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
     auth.onAuthStateChanged(async (user) => {
       currentUser = user;
       updateUserUI();
-      const tasks = [loadFavorites(), loadUserList(), registerUserRecord()];
+      const tasks = [loadFavorites(), loadUserList(), registerUserRecord(), loadUserTrips()];
       if (document.getElementById('ownerControls').style.display !== 'none') {
         tasks.push(linkOwnerUid());
       }
@@ -2673,7 +3234,14 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
   }
   trackVisit(); // لا ننتظرها، ما نأخر تحميل الصفحة
   await loadCity(pickInitialCity());
-  maybeAutoOpenHelp();
+  // نافذة تسجيل مبكرة: تظهر تلقائيًا للزائر غير المسجّل، مع محتوى المدينة ظاهر بالخلفية كسياق تحفيزي
+  authReadyPromise.then(() => {
+    if (!currentUser) {
+      openAuthModal();
+    } else {
+      maybeAutoOpenHelp();
+    }
+  });
 })();
 </script>
 </body>
