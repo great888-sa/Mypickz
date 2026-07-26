@@ -439,7 +439,7 @@
         <button class="btn btn-brass" style="flex:1" onclick="doSignIn()">Log In</button>
         <button class="btn btn-ghost" style="flex:1" onclick="doSignUp()">New Account</button>
       </div>
-      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeAuthModal()">Cancel</button>
+      <p style="font-size:10.5px; color:var(--ink-soft); margin-top:10px;">Sign up or log in to continue exploring</p>
     </div>
   </div>
 
@@ -1461,16 +1461,16 @@ async function toggleFavorite(url, name, category, city, area, sourceUid){
    ========================================================= */
 
 const TRIP_CATEGORIES = [
-  { id:'breakfast',  label:'Breakfast',  icon:'🍳' },
-  { id:'coffee_tea', label:'Coffee/Tea', icon:'☕' },
-  { id:'bakery',     label:'Bakery',     icon:'🥐' },
-  { id:'lunch',      label:'Lunch',      icon:'🍽️' },
-  { id:'activity',   label:'Activity',   icon:'🎟️' },
-  { id:'icecream',   label:'Ice Cream',  icon:'🍦' },
-  { id:'dinner',     label:'Dinner',     icon:'🌙' },
+  { id:'breakfast',  label:'Breakfast',  icon:'🍳', color:'#E8A33D' },
+  { id:'coffee_tea', label:'Coffee/Tea', icon:'☕', color:'#8B5E3C' },
+  { id:'bakery',     label:'Bakery',     icon:'🥐', color:'#C97B3D' },
+  { id:'lunch',      label:'Lunch',      icon:'🍽️', color:'#D9704F' },
+  { id:'activity',   label:'Activity',   icon:'🎟️', color:'#4A7C9B' },
+  { id:'icecream',   label:'Ice Cream',  icon:'🍦', color:'#D98CA3' },
+  { id:'dinner',     label:'Dinner',     icon:'🌙', color:'#3D4F66' },
 ];
 function defaultCategoryOrder(){ return TRIP_CATEGORIES.map(c => c.id); }
-function categoryMeta(id){ return TRIP_CATEGORIES.find(c => c.id === id) || { id, label:id, icon:'📍' }; }
+function categoryMeta(id){ return TRIP_CATEGORIES.find(c => c.id === id) || { id, label:id, icon:'📍', color:'#8A8A8A' }; }
 function emptyDay(dayNumber){
   const places = {};
   TRIP_CATEGORIES.forEach(c => places[c.id] = []);
@@ -1783,30 +1783,35 @@ function renderTripDetail(wrap){
   }
 
   resolved.forEach((day, dIdx) => {
-    html += `<div style="font-weight:800; font-size:14px; margin:16px 0 8px; padding:6px 0; border-bottom:2px solid var(--ink);">Day ${day.dayNumber}</div>`;
+    html += `<div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
+      <span style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; font-weight:800; font-size:13px; flex-shrink:0;">${day.dayNumber}</span>
+      <span style="font-weight:800; font-size:15px; letter-spacing:.5px;">DAY ${day.dayNumber}</span>
+      <span style="flex:1; height:2px; background:linear-gradient(to left, var(--line), transparent);"></span>
+    </div>`;
     const order = day.categoryOrder || defaultCategoryOrder();
     const visibleCats = order.filter(catId => (day.places[catId]||[]).length > 0);
     if (!visibleCats.length){
-      html += `<p style="font-size:11.5px; color:var(--ink-soft);">No places yet.</p>`;
+      html += `<p style="font-size:11.5px; color:var(--ink-soft); padding-right:14px;">No places yet.</p>`;
     }
     visibleCats.forEach((catId, catIdx) => {
       const meta = categoryMeta(catId);
       const places = day.places[catId];
-      html += `<div style="margin:10px 0 4px; display:flex; align-items:center; gap:6px;">
-        <span style="font-size:13px; font-weight:700;">${meta.icon} ${meta.label}</span>
+      html += `<div style="margin:12px 0 6px; display:flex; align-items:center; gap:8px;">
+        <span style="width:9px; height:9px; border-radius:50%; background:${meta.color}; flex-shrink:0;"></span>
+        <span style="font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:${meta.color};">${meta.icon} ${meta.label}</span>
         ${!readOnly ? `
         <button type="button" class="reorder-btn" style="margin-right:auto;" ${catIdx===0?'disabled':''} onclick="moveCategoryOrder(${dIdx}, '${catId}', -1)">▲</button>
         <button type="button" class="reorder-btn" ${catIdx===visibleCats.length-1?'disabled':''} onclick="moveCategoryOrder(${dIdx}, '${catId}', 1)">▼</button>` : ''}
       </div>`;
       places.forEach((p, pIdx) => {
         if (!p._available){
-          html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px;">⚠️ This place is no longer available</div>`;
+          html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px; margin-right:17px;">⚠️ This place is no longer available</div>`;
           return;
         }
         const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
         const sourceLine = (!readOnly) ? `<div style="font-size:9.5px; color:var(--ink-soft); opacity:.75;">${SOURCE_LABELS[p._ref.sourceType] || ''}</div>` : '';
-        const tripNoteLine = p._ref.tripNote ? `<div style="font-size:11px; color:var(--brass); font-weight:600; margin-top:3px;">🏷️ ${escapeHtml(p._ref.tripNote)}</div>` : '';
-        html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px; border-right:3.5px solid var(--brass);">
+        const tripNoteLine = p._ref.tripNote ? `<div style="font-size:11px; color:${meta.color}; font-weight:700; margin-top:3px;">🏷️ ${escapeHtml(p._ref.tripNote)}</div>` : '';
+        html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px; margin-right:17px; border-right:3.5px solid ${meta.color}; box-shadow:0 2px 10px rgba(0,0,0,.06);">
           <div style="display:flex; align-items:center; gap:6px;">
             <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
             ${!readOnly ? `
@@ -1926,20 +1931,27 @@ function renderCommunityTripDetail(wrap){
   <h4 style="text-align:center; margin:4px 0 12px; font-family:'Cairo',sans-serif;">${title}</h4>`;
 
   resolved.forEach(day => {
-    html += `<div style="font-weight:800; font-size:14px; margin:16px 0 8px; padding:6px 0; border-bottom:2px solid var(--ink);">Day ${day.dayNumber}</div>`;
+    html += `<div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
+      <span style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; font-weight:800; font-size:13px; flex-shrink:0;">${day.dayNumber}</span>
+      <span style="font-weight:800; font-size:15px; letter-spacing:.5px;">DAY ${day.dayNumber}</span>
+      <span style="flex:1; height:2px; background:linear-gradient(to left, var(--line), transparent);"></span>
+    </div>`;
     const order = day.categoryOrder || defaultCategoryOrder();
     const visibleCats = order.filter(catId => (day.places[catId]||[]).length > 0);
     visibleCats.forEach(catId => {
       const meta = categoryMeta(catId);
-      html += `<div style="margin:10px 0 4px; font-size:13px; font-weight:700;">${meta.icon} ${meta.label}</div>`;
+      html += `<div style="margin:12px 0 6px; display:flex; align-items:center; gap:8px;">
+        <span style="width:9px; height:9px; border-radius:50%; background:${meta.color}; flex-shrink:0;"></span>
+        <span style="font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:${meta.color};">${meta.icon} ${meta.label}</span>
+      </div>`;
       day.places[catId].forEach(p => {
         if (!p._available){
-          html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px;">⚠️ This place is no longer available</div>`;
+          html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px; margin-right:17px;">⚠️ This place is no longer available</div>`;
           return;
         }
         const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
-        const tripNoteLine = p._ref.tripNote ? `<div style="font-size:11px; color:var(--brass); font-weight:600; margin-top:3px;">🏷️ ${escapeHtml(p._ref.tripNote)}</div>` : '';
-        html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px; border-right:3.5px solid var(--brass);">
+        const tripNoteLine = p._ref.tripNote ? `<div style="font-size:11px; color:${meta.color}; font-weight:700; margin-top:3px;">🏷️ ${escapeHtml(p._ref.tripNote)}</div>` : '';
+        html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px; margin-right:17px; border-right:3.5px solid ${meta.color}; box-shadow:0 2px 10px rgba(0,0,0,.06);">
           <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
           ${areaLine}${tripNoteLine}
           ${p.note ? renderNoteHtml(p.note) : ''}
