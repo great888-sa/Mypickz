@@ -345,10 +345,6 @@
       <span class="action-icon brass"><i class="fa-solid fa-suitcase-rolling"></i></span>
       <span class="action-label">My Trips</span>
     </button>
-    <button class="action-btn" id="selectModeBtn" onclick="toggleSelectionMode()" style="display:none;">
-      <span class="action-icon ink"><i class="fa-solid fa-square-check"></i></span>
-      <span class="action-label" id="selectModeLabel">Select</span>
-    </button>
     <button class="action-btn" onclick="openCommunityModal()">
       <span class="action-icon ink"><i class="fa-solid fa-users"></i></span>
       <span class="action-label">Community Lists</span>
@@ -396,10 +392,9 @@
     Links are managed via Google Maps sharing settings (View only recommended). Edit mode is protected by a simple password — basic protection, not strong encryption.
   </div>
 
-  <div id="selectionBar" style="display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:500; background:var(--ink); color:#fff; border-radius:30px; padding:10px 18px; box-shadow:0 6px 24px rgba(0,0,0,.3); align-items:center; gap:12px;">
-    <span>Add <span id="selectionCount">0</span> to trip →</span>
-    <button type="button" class="btn btn-brass" style="margin:0; padding:6px 14px; font-size:12px;" onclick="confirmBulkAddToTrip()">Add</button>
-    <button type="button" style="background:none; border:none; color:#fff; opacity:.7; cursor:pointer;" onclick="toggleSelectionMode()"><i class="fa-solid fa-xmark"></i></button>
+  <div id="activeTripBar" style="display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:500; background:var(--ink); color:#fff; border-radius:30px; padding:10px 18px; box-shadow:0 6px 24px rgba(0,0,0,.3); align-items:center; gap:12px; max-width:90vw;">
+    <span id="activeTripLabel" style="font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Adding to: —</span>
+    <button type="button" style="background:var(--brass); border:none; color:var(--ink); border-radius:20px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer;" onclick="stopAddingToTrip()">Done</button>
   </div>
 
   <div class="modal-backdrop" id="tripPickerBackdrop">
@@ -1453,24 +1448,56 @@ async function toggleFavorite(url, name, category, city, area, sourceUid){
 }
 
 /* =========================================================
-   Add Trip — تنظيم رحلة من أماكن بالمالك/My List/قوائم مستخدمين آخرين
-   بنية التخزين (مُعاد هيكلتها): trips/{tripId} = { ownerId, cityId, cityName, customLabel, public, days:[{dayNumber, places:[ref]}] }
-   ref مكان = { sourceType:'owner'|'mylist'|'community', subcatId, placeId, sourceUid? (فقط لـcommunity) }
-   ملاحظة: كل رحلة مستند مستقل (يسمح بمشاركة/إخفاء كل رحلة لحالها عبر حقل public)
+   Add Trip — إعادة تصميم كاملة (يوليو 2026)
+   - نقطة بداية وحيدة: My Trips (لا زر Select مستقل)
+   - وضع "إضافة نشطة" لرحلة محددة (activeTripId) — أي بطاقة تُضغط تُضاف لها مباشرة
+   - تصنيف صريح لكل مكان وقت الإضافة (7 فئات ثابتة)، ترتيب قابل للتخصيص لكل يوم
+   - مشاركة مزدوجة: Public (عام عبر Community Lists) + Share with someone (محدد بالاسم)
+   بنية التخزين: trips/{tripId} = {
+     ownerId, cityId, cityName, customLabel, public, sharedWith:[uid...], sharedWithNames:{uid:nickname},
+     days:[{ dayNumber, categoryOrder:[...7 فئات...], places:{ categoryId: [ref, ...] } }]
+   }
+   ref مكان = { sourceType:'owner'|'mylist'|'community', subcatId, placeId, sourceUid? }
    ========================================================= */
+
+const TRIP_CATEGORIES = [
+  { id:'breakfast',  label:'Breakfast',  icon:'🍳' },
+  { id:'coffee_tea', label:'Coffee/Tea', icon:'☕' },
+  { id:'bakery',     label:'Bakery',     icon:'🥐' },
+  { id:'lunch',      label:'Lunch',      icon:'🍽️' },
+  { id:'activity',   label:'Activity',   icon:'🎟️' },
+  { id:'icecream',   label:'Ice Cream',  icon:'🍦' },
+  { id:'dinner',     label:'Dinner',     icon:'🌙' },
+];
+function defaultCategoryOrder(){ return TRIP_CATEGORIES.map(c => c.id); }
+function categoryMeta(id){ return TRIP_CATEGORIES.find(c => c.id === id) || { id, label:id, icon:'📍' }; }
+function emptyDay(dayNumber){
+  const places = {};
+  TRIP_CATEGORIES.forEach(c => places[c.id] = []);
+  return { dayNumber, categoryOrder: defaultCategoryOrder(), places };
+}
+
 let userTrips = [];
+let sharedTrips = [];           // رحلات شُوركت معي بالتحديد (sharedWith)
 let tripsLoaded = false;
-let currentTripId = null;      // الرحلة المفتوحة حاليًا بوضع العرض/التعديل
-let tripViewMode = false;      // false = وضع تعديل (يظهر المصدر)، true = وضع عرض نهائي مصقول (بدون مصدر)
-let resolvedTripCache = {};    // { tripId: [ {dayNumber, places:[place أو {_available:false}]} ] } — يُعاد بناؤه كل فتح
+let currentTripId = null;       // الرحلة المفتوحة حاليًا بوضع العرض/التعديل داخل My Trips
+let viewingSharedTrip = false;  // الرحلة المفتوحة من "شُوركت معي" — قراءة فقط دائمًا
+let tripViewMode = false;       // false = وضع تعديل، true = وضع عرض نهائي مصقول
+let resolvedTripCache = {};
+let activeTripId = null;        // الرحلة اللي "وضع الإضافة النشط" مفعّل لها حاليًا
 
 async function loadUserTrips(){
-  if (!currentUser){ userTrips = []; tripsLoaded = true; return; }
+  if (!currentUser){ userTrips = []; sharedTrips = []; tripsLoaded = true; return; }
   try{
     const snap = await db.collection('trips').where('ownerId','==',currentUser.uid).get();
     userTrips = [];
     snap.forEach(doc => userTrips.push({ id: doc.id, ...doc.data() }));
   }catch(e){ userTrips = []; }
+  try{
+    const snap2 = await db.collection('trips').where('sharedWith','array-contains',currentUser.uid).get();
+    sharedTrips = [];
+    snap2.forEach(doc => sharedTrips.push({ id: doc.id, ...doc.data() }));
+  }catch(e){ sharedTrips = []; }
   tripsLoaded = true;
 }
 async function saveTrip(trip){
@@ -1482,28 +1509,26 @@ function generateTripId(){
   return "trip_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
 }
 
-// يبحث عن مكان بمعرّفه الثابت داخل كائن links (أيًا كان مصدره)
 function findPlaceInLinksById(linksObj, subcatId, placeId){
   const entry = linksObj && linksObj[subcatId];
   if (!entry || !Array.isArray(entry.places)) return null;
   return entry.places.find(p => p.id === placeId) || null;
 }
 
-// الحل الموحّد: يجلب بيانات كل مكان بكل يوم بالرحلة، أيًا كان مصدره — يُستدعى فقط لحظة فتح رحلة معيّنة
+// الحل الموحّد: يجلب بيانات كل مكان بكل فئة بكل يوم بالرحلة، أيًا كان مصدره — يُستدعى فقط لحظة فتح رحلة معيّنة
 async function resolveTripPlaces(trip){
   let ownerLinks = {};
   try{
     const cityDoc = await db.collection('cities').doc(trip.cityId).get();
     ownerLinks = (cityDoc.exists && cityDoc.data().links) || {};
   }catch(e){}
-
   let myLinks = {};
   if (userListData.cities && userListData.cities[trip.cityId]) myLinks = userListData.cities[trip.cityId];
 
   const communityUids = new Set();
-  trip.days.forEach(day => day.places.forEach(ref => {
+  trip.days.forEach(day => TRIP_CATEGORIES.forEach(c => (day.places[c.id]||[]).forEach(ref => {
     if (ref.sourceType === 'community' && ref.sourceUid) communityUids.add(ref.sourceUid);
-  }));
+  })));
   const communityLinksByUid = {};
   for (const uid of communityUids){
     try{
@@ -1512,190 +1537,100 @@ async function resolveTripPlaces(trip){
       communityLinksByUid[uid] = (data.cities && data.cities[trip.cityId]) || {};
     }catch(e){ communityLinksByUid[uid] = {}; }
   }
-
+  function resolveRef(ref){
+    let linksObj;
+    if (ref.sourceType === 'owner') linksObj = ownerLinks;
+    else if (ref.sourceType === 'mylist') linksObj = myLinks;
+    else linksObj = communityLinksByUid[ref.sourceUid] || {};
+    const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
+    return place ? { ...place, _ref: ref, _available: true } : { _available: false, _ref: ref };
+  }
   return trip.days.map(day => ({
     dayNumber: day.dayNumber,
-    places: day.places.map(ref => {
-      let linksObj;
-      if (ref.sourceType === 'owner') linksObj = ownerLinks;
-      else if (ref.sourceType === 'mylist') linksObj = myLinks;
-      else linksObj = communityLinksByUid[ref.sourceUid] || {};
-      const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
-      return place ? { ...place, _ref: ref, _available: true } : { _available: false, _ref: ref };
-    })
+    categoryOrder: day.categoryOrder || defaultCategoryOrder(),
+    places: Object.fromEntries(TRIP_CATEGORIES.map(c => [c.id, (day.places[c.id]||[]).map(resolveRef)]))
   }));
 }
 
-// ينشئ رحلة جديدة أو يضيف مكان لرحلة موجودة — يُستدعى من زر "➕ Trip" على أي بطاقة مكان بأي مصدر
-async function addPlaceToTrip(sourceType, cityId, subcatId, placeId, sourceUid){
-  if (!currentUser){ openAuthModal(); return; }
-  if (!tripsLoaded) await loadUserTrips();
-  pendingTripRef = { sourceType, cityId, subcatId, placeId, sourceUid: sourceUid || null };
-  openTripPickerModal();
+/* ===== وضع الإضافة النشط — يستبدل التحديد الجماعي القديم بالكامل ===== */
+function activeTripLabel(){
+  const t = userTrips.find(tr => tr.id === activeTripId);
+  if (!t) return '';
+  return t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName;
 }
-
-let pendingTripRef = null;
-
-function openTripPickerModal(){
-  const cityTrips = userTrips.filter(t => t.cityId === pendingTripRef.cityId);
-  const wrap = document.getElementById('tripPickerBody');
-  const cityName = allCities().find(c => c.id === pendingTripRef.cityId)?.name || pendingTripRef.cityId;
-  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Add to a trip in ${cityName}</p>`;
-  html += cityTrips.map(t => `
-    <button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="chooseTripDay('${t.id}')">
-      ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
-    </button>`).join('');
-  html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="createTripAndAdd()">➕ New trip in ${cityName}</button>`;
-  wrap.innerHTML = html;
-  document.getElementById('tripPickerBackdrop').classList.add('show');
+function startAddingToTrip(tripId){
+  activeTripId = tripId;
+  closeMyTripsModal();
+  showToast('Now tap any place to add it here');
+  updateActiveTripBanner();
 }
-function closeTripPickerModal(){
-  document.getElementById('tripPickerBackdrop').classList.remove('show');
-  pendingTripRef = null;
-}
-
-/* ===== وضع التحديد الجماعي — إضافة عدة أماكن لرحلة بضغطة واحدة ===== */
-let selectionMode = false;
-let selectedPlaces = []; // [{sourceType, cityId, subcatId, placeId, sourceUid}]
-
-function refKey(ref){ return [ref.sourceType, ref.cityId, ref.subcatId, ref.placeId, ref.sourceUid||''].join('|'); }
-function isPlaceSelected(sourceType, cityId, subcatId, placeId, sourceUid){
-  const key = refKey({ sourceType, cityId, subcatId, placeId, sourceUid: sourceUid||null });
-  return selectedPlaces.some(r => refKey(r) === key);
-}
-function togglePlaceSelection(sourceType, cityId, subcatId, placeId, sourceUid){
-  if (!currentUser){ openAuthModal(); return; }
-  const ref = { sourceType, cityId, subcatId, placeId, sourceUid: sourceUid || null };
-  const key = refKey(ref);
-  const idx = selectedPlaces.findIndex(r => refKey(r) === key);
-  if (idx >= 0) selectedPlaces.splice(idx, 1);
-  else selectedPlaces.push(ref);
-  refreshAfterSelectionChange();
-}
-function toggleSelectionMode(){
-  if (!currentUser){ openAuthModal(); return; }
-  selectionMode = !selectionMode;
-  selectedPlaces = [];
-  refreshAfterSelectionChange();
-}
-function refreshAfterSelectionChange(){
+function stopAddingToTrip(){
+  activeTripId = null;
+  updateActiveTripBanner();
   render();
   if (viewingUserUid) renderCommunityModal();
   if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
-  updateSelectionBar();
 }
-function updateSelectionBar(){
-  const btn = document.getElementById('selectModeBtn');
-  const btnLabel = document.getElementById('selectModeLabel');
-  if (btn && btnLabel){
-    btn.classList.toggle('active-select', selectionMode);
-    btnLabel.textContent = selectionMode ? 'Cancel' : 'Select';
-  }
-  const bar = document.getElementById('selectionBar');
+function updateActiveTripBanner(){
+  const bar = document.getElementById('activeTripBar');
   if (!bar) return;
-  if (selectionMode && selectedPlaces.length > 0){
+  if (activeTripId){
     bar.style.display = 'flex';
-    document.getElementById('selectionCount').textContent = selectedPlaces.length;
+    document.getElementById('activeTripLabel').textContent = 'Adding to: ' + activeTripLabel();
   } else {
     bar.style.display = 'none';
   }
+  render();
+  if (viewingUserUid) renderCommunityModal();
+  if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
 }
 
-let pendingBulkRefs = null;
-async function confirmBulkAddToTrip(){
-  if (!selectedPlaces.length) return;
+let pendingPlaceRef = null;
+// يُستدعى من زر "➕" على أي بطاقة مكان — يظهر فقط أثناء وضع الإضافة النشط لرحلة معيّنة
+async function addPlaceToTrip(sourceType, cityId, subcatId, placeId, sourceUid){
   if (!currentUser){ openAuthModal(); return; }
-  const cityIds = [...new Set(selectedPlaces.map(r => r.cityId))];
-  if (cityIds.length > 1){
-    showToast('Select places from one city at a time');
-    return;
-  }
-  if (!tripsLoaded) await loadUserTrips();
-  pendingBulkRefs = [...selectedPlaces];
-  openBulkTripPickerModal(cityIds[0]);
+  if (!activeTripId){ showToast('Open a trip from My Trips first'); return; }
+  const trip = userTrips.find(t => t.id === activeTripId);
+  if (!trip || trip.cityId !== cityId){ showToast('This place is not in the same city as your active trip'); return; }
+  pendingPlaceRef = { sourceType, cityId, subcatId, placeId, sourceUid: sourceUid || null };
+  if (trip.days.length === 1) openCategoryPicker(trip.id, 1);
+  else openDayPicker(trip.id);
 }
-function openBulkTripPickerModal(cityId){
-  const cityTrips = userTrips.filter(t => t.cityId === cityId);
+function openDayPicker(tripId){
+  const trip = userTrips.find(t => t.id === tripId);
   const wrap = document.getElementById('tripPickerBody');
-  const cityName = allCities().find(c => c.id === cityId)?.name || cityId;
-  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Add ${pendingBulkRefs.length} places to a trip in ${cityName}</p>`;
-  html += cityTrips.map(t => `
-    <button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="chooseBulkTripDay('${t.id}')">
-      ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
-    </button>`).join('');
-  html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="createBulkTripAndAdd('${cityId}')">➕ New trip in ${cityName}</button>`;
+  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Which day?</p>`;
+  html += trip.days.map(d => `<button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="openCategoryPicker('${tripId}', ${d.dayNumber})">Day ${d.dayNumber}</button>`).join('');
   wrap.innerHTML = html;
   document.getElementById('tripPickerBackdrop').classList.add('show');
 }
-async function createBulkTripAndAdd(cityId){
-  const cityName = allCities().find(c => c.id === cityId)?.name || cityId;
-  const label = await openInputModal("Trip label (optional)", "e.g. August 2026", "");
-  if (label === null) return;
-  const trip = { id: generateTripId(), cityId, cityName, customLabel: (label||'').trim(), public: false, days: [{ dayNumber: 1, places: [] }] };
-  userTrips.push(trip);
-  chooseBulkTripDay(trip.id);
-}
-function chooseBulkTripDay(tripId){
-  const trip = userTrips.find(t => t.id === tripId);
-  if (!trip) return;
+function openCategoryPicker(tripId, dayNumber){
   const wrap = document.getElementById('tripPickerBody');
-  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Which day?</p>`;
-  html += trip.days.map(d => `
-    <button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="confirmBulkAddToTripDay('${tripId}', ${d.dayNumber})">Day ${d.dayNumber} (${d.places.length} places)</button>`).join('');
-  html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="confirmBulkAddToTripDay('${tripId}', ${trip.days.length + 1})">➕ New day (Day ${trip.days.length + 1})</button>`;
+  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Which category?</p>`;
+  html += TRIP_CATEGORIES.map(c => `<button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="confirmAddPlace('${tripId}', ${dayNumber}, '${c.id}')">${c.icon} ${c.label}</button>`).join('');
   wrap.innerHTML = html;
+  document.getElementById('tripPickerBackdrop').classList.add('show');
 }
-async function confirmBulkAddToTripDay(tripId, dayNumber){
+async function confirmAddPlace(tripId, dayNumber, categoryId){
   const trip = userTrips.find(t => t.id === tripId);
-  if (!trip || !pendingBulkRefs) return;
+  if (!trip || !pendingPlaceRef) return;
   let day = trip.days.find(d => d.dayNumber === dayNumber);
-  if (!day){ day = { dayNumber, places: [] }; trip.days.push(day); }
-  pendingBulkRefs.forEach(ref => day.places.push({ ...ref }));
-  const count = pendingBulkRefs.length;
-  closeTripPickerModal();
+  if (!day){ day = emptyDay(dayNumber); trip.days.push(day); }
+  if (!day.places[categoryId]) day.places[categoryId] = [];
+  day.places[categoryId].push({ ...pendingPlaceRef });
+  document.getElementById('tripPickerBackdrop').classList.remove('show');
+  pendingPlaceRef = null;
   await saveTrip(trip);
-  showToast(`Added ${count} places to trip ✓`);
-  pendingBulkRefs = null;
-  selectionMode = false;
-  selectedPlaces = [];
-  refreshAfterSelectionChange();
+  showToast('Added ✓');
 }
 
-async function createTripAndAdd(){
-  const cityName = allCities().find(c => c.id === pendingTripRef.cityId)?.name || pendingTripRef.cityId;
-  const label = await openInputModal("Trip label (optional)", "e.g. August 2026", "");
-  if (label === null) return; // ألغى
-  const trip = { id: generateTripId(), cityId: pendingTripRef.cityId, cityName, customLabel: (label||'').trim(), public: false, days: [{ dayNumber: 1, places: [] }] };
-  userTrips.push(trip);
-  chooseTripDay(trip.id);
-}
-function chooseTripDay(tripId){
-  const trip = userTrips.find(t => t.id === tripId);
-  if (!trip) return;
-  const wrap = document.getElementById('tripPickerBody');
-  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Which day?</p>`;
-  html += trip.days.map(d => `
-    <button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="confirmAddToTripDay('${tripId}', ${d.dayNumber})">Day ${d.dayNumber} (${d.places.length} places)</button>`).join('');
-  html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="confirmAddToTripDay('${tripId}', ${trip.days.length + 1})">➕ New day (Day ${trip.days.length + 1})</button>`;
-  wrap.innerHTML = html;
-}
-async function confirmAddToTripDay(tripId, dayNumber){
-  const trip = userTrips.find(t => t.id === tripId);
-  if (!trip || !pendingTripRef) return;
-  let day = trip.days.find(d => d.dayNumber === dayNumber);
-  if (!day){ day = { dayNumber, places: [] }; trip.days.push(day); }
-  day.places.push({ ...pendingTripRef });
-  closeTripPickerModal();
-  await saveTrip(trip);
-  showToast('Added to trip ✓');
-}
-
-/* ===== My Trips — قائمة الرحلات + عرض/تعديل رحلة واحدة ===== */
+/* ===== My Trips — القائمة + إنشاء رحلة + تفاصيل رحلة ===== */
 async function openMyTripsModal(){
   if (!currentUser){ openAuthModal(); return; }
   document.getElementById('myTripsBackdrop').classList.add('show');
   if (!tripsLoaded) await loadUserTrips();
   currentTripId = null;
+  viewingSharedTrip = false;
   renderMyTripsModal();
 }
 function closeMyTripsModal(){
@@ -1705,26 +1640,70 @@ function closeMyTripsModal(){
 function renderMyTripsModal(){
   const wrap = document.getElementById('myTripsBody');
   if (currentTripId){ renderTripDetail(wrap); return; }
-  if (!userTrips.length){
-    wrap.innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12.5px; padding:16px 0;">No trips yet. Tap "➕ Trip" on any place to start one.</p>`;
-    return;
+  let html = '';
+  if (sharedTrips.length){
+    html += `<div style="font-weight:700; font-size:12.5px; margin-bottom:8px;">🔗 Shared with you</div>`;
+    html += sharedTrips.map(t => `
+      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px;" onclick="openSharedTripDetail('${t.id}')">
+        ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
+      </button>`).join('');
+    html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
   }
-  wrap.innerHTML = userTrips.map(t => `
-    <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;" onclick="openTripDetail('${t.id}')">
-      <span style="font-weight:700;">${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}${t.public ? ' 🌐' : ''}</span>
-      <span style="color:var(--ink-soft); font-size:10.5px;">${t.days.length} day${t.days.length>1?'s':''}</span>
-    </button>`).join('');
+  html += `<div style="font-weight:700; font-size:12.5px; margin-bottom:8px;">🧳 Your Trips</div>`;
+  if (!userTrips.length){
+    html += `<p style="text-align:center; color:var(--ink-soft); font-size:12.5px; padding:10px 0;">No trips yet.</p>`;
+  } else {
+    html += userTrips.map(t => `
+      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;" onclick="openTripDetail('${t.id}')">
+        <span style="font-weight:700;">${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}${t.public ? ' 🌐' : ''}${(t.sharedWith&&t.sharedWith.length) ? ' 🔗' : ''}</span>
+        <span style="color:var(--ink-soft); font-size:10.5px;">${t.days.length} day${t.days.length>1?'s':''}</span>
+      </button>`).join('');
+  }
+  html += `<button type="button" class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="openCreateTripFlow()">➕ Create trip</button>`;
+  wrap.innerHTML = html;
+}
+async function openCreateTripFlow(){
+  const cities = allCities();
+  if (!cities.length){ showToast('No cities available yet'); return; }
+  const cityName = await openInputModal("Which city is this trip for?", "", cities[0].name, cities.map(c => c.name));
+  if (cityName === null) return;
+  const cityObj = cities.find(c => c.name === cityName);
+  if (!cityObj) return;
+  const label = await openInputModal("Trip label (optional)", "e.g. August 2026", "");
+  if (label === null) return;
+  const daysStr = await openInputModal("How many days?", "e.g. 3", "3");
+  if (daysStr === null) return;
+  let numDays = parseInt(daysStr, 10);
+  if (!numDays || numDays < 1) numDays = 1;
+  if (numDays > 30) numDays = 30;
+  const days = [];
+  for (let i = 1; i <= numDays; i++) days.push(emptyDay(i));
+  const trip = { id: generateTripId(), cityId: cityObj.id, cityName: cityObj.name, customLabel: (label||'').trim(), public:false, sharedWith:[], sharedWithNames:{}, days };
+  userTrips.push(trip);
+  await saveTrip(trip);
+  startAddingToTrip(trip.id);
 }
 async function openTripDetail(tripId){
   currentTripId = tripId;
+  viewingSharedTrip = false;
   tripViewMode = false;
   const trip = userTrips.find(t => t.id === tripId);
   document.getElementById('myTripsBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
   resolvedTripCache[tripId] = await resolveTripPlaces(trip);
   renderMyTripsModal();
 }
-function backToTripsList(){ currentTripId = null; renderMyTripsModal(); }
+async function openSharedTripDetail(tripId){
+  currentTripId = tripId;
+  viewingSharedTrip = true;
+  tripViewMode = true;
+  const trip = sharedTrips.find(t => t.id === tripId);
+  document.getElementById('myTripsBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  resolvedTripCache[tripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+function backToTripsList(){ currentTripId = null; viewingSharedTrip = false; renderMyTripsModal(); }
 function toggleTripViewMode(){ tripViewMode = !tripViewMode; renderMyTripsModal(); }
+
 async function toggleTripPublic(){
   const trip = userTrips.find(t => t.id === currentTripId);
   if (!trip) return;
@@ -1737,88 +1716,174 @@ async function toggleTripPublic(){
   showToast(trip.public ? 'Trip is now public 🌐' : 'Trip is now private');
   renderMyTripsModal();
 }
+async function shareTripWithSomeone(){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const name = await openInputModal("Share with (username)", "Enter their exact username", "");
+  if (name === null) return;
+  const key = name.trim().toLowerCase();
+  if (!key) return;
+  try{
+    const doc = await db.collection('nicknames').doc(key).get();
+    if (!doc.exists){ showToast('No user found with that username'); return; }
+    const data = doc.data();
+    const targetUid = data.uid;
+    if (targetUid === currentUser.uid){ showToast("You can't share a trip with yourself"); return; }
+    if (!trip.sharedWith) trip.sharedWith = [];
+    if (!trip.sharedWithNames) trip.sharedWithNames = {};
+    if (trip.sharedWith.includes(targetUid)){ showToast('Already shared with this user'); return; }
+    trip.sharedWith.push(targetUid);
+    trip.sharedWithNames[targetUid] = data.nickname || name.trim();
+    await saveTrip(trip);
+    showToast('Shared ✓');
+    renderMyTripsModal();
+  }catch(e){ showToast('Could not verify username'); }
+}
+async function removeTripShare(uid){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip || !trip.sharedWith) return;
+  trip.sharedWith = trip.sharedWith.filter(u => u !== uid);
+  await saveTrip(trip);
+  renderMyTripsModal();
+}
 
 const SOURCE_LABELS = { owner: '📖 App guide', mylist: '📋 My List', community: '👤 Shared list' };
 
 function renderTripDetail(wrap){
-  const trip = userTrips.find(t => t.id === currentTripId);
+  const sourceList = viewingSharedTrip ? sharedTrips : userTrips;
+  const trip = sourceList.find(t => t.id === currentTripId);
   if (!trip){ currentTripId = null; renderMyTripsModal(); return; }
   const resolved = resolvedTripCache[currentTripId] || [];
   const title = trip.customLabel ? `${trip.cityName} — ${trip.customLabel}` : trip.cityName;
+  const readOnly = viewingSharedTrip || tripViewMode;
 
   let html = `<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
     <button type="button" class="remove-btn" onclick="backToTripsList()"><i class="fa-solid fa-arrow-right"></i></button>
     <span style="font-weight:700; flex:1;">${title}</span>
-    <button type="button" class="btn btn-ghost" style="margin:0; padding:6px 12px; font-size:11px;" onclick="toggleTripViewMode()">${tripViewMode ? '✏️ Edit' : '👁️ View'}</button>
+    ${!viewingSharedTrip ? `<button type="button" class="btn btn-ghost" style="margin:0; padding:6px 12px; font-size:11px;" onclick="toggleTripViewMode()">${tripViewMode ? '✏️ Edit' : '👁️ View'}</button>` : ''}
   </div>`;
 
-  if (!tripViewMode){
-    html += `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--sand,#f5f0e6); border-radius:10px; padding:8px 12px; margin-bottom:12px;">
-      <span style="font-size:11.5px;">🌐 Share with Community Lists (view-only)</span>
+  if (!readOnly){
+    html += `<button type="button" class="btn btn-brass" style="width:100%; margin-bottom:10px;" onclick="startAddingToTrip('${trip.id}')">➕ Add places to this trip</button>`;
+    html += `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--sand,#f5f0e6); border-radius:10px; padding:8px 12px; margin-bottom:8px;">
+      <span style="font-size:11.5px;">🌐 Public (via Community Lists)</span>
       <button type="button" class="switch-btn small ${trip.public ? 'on' : ''}" onclick="toggleTripPublic()"><span class="knob"></span></button>
+    </div>`;
+    html += `<div style="background:var(--sand,#f5f0e6); border-radius:10px; padding:8px 12px; margin-bottom:12px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <span style="font-size:11.5px;">🔗 Shared with someone</span>
+        <button type="button" class="btn btn-ghost" style="margin:0; padding:4px 10px; font-size:10.5px;" onclick="shareTripWithSomeone()">➕ Add</button>
+      </div>
+      ${(trip.sharedWith && trip.sharedWith.length) ? trip.sharedWith.map(uid => `
+        <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; margin-top:6px;">
+          <span>👤 ${escapeHtml((trip.sharedWithNames && trip.sharedWithNames[uid]) || 'User')}</span>
+          <button type="button" class="remove-btn" style="font-size:10px;" onclick="removeTripShare('${uid}')"><i class="fa-solid fa-xmark"></i></button>
+        </div>`).join('') : ''}
     </div>`;
   }
 
   resolved.forEach((day, dIdx) => {
-    html += `<div style="font-weight:700; font-size:13px; margin:14px 0 8px; padding-bottom:6px; border-bottom:2px solid var(--sand,#eee);">Day ${day.dayNumber}</div>`;
-    if (!day.places.length){
+    html += `<div style="font-weight:800; font-size:14px; margin:16px 0 8px; padding:6px 0; border-bottom:2px solid var(--ink);">Day ${day.dayNumber}</div>`;
+    const order = day.categoryOrder || defaultCategoryOrder();
+    const visibleCats = order.filter(catId => (day.places[catId]||[]).length > 0);
+    if (!visibleCats.length){
       html += `<p style="font-size:11.5px; color:var(--ink-soft);">No places yet.</p>`;
     }
-    day.places.forEach((p, pIdx) => {
-      if (!p._available){
-        html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px;">⚠️ This place is no longer available</div>`;
-        return;
-      }
-      const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
-      const sourceLine = (!tripViewMode) ? `<div style="font-size:9.5px; color:var(--ink-soft); opacity:.75;">${SOURCE_LABELS[p._ref.sourceType] || ''}</div>` : '';
-      html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px;">
-        <div style="display:flex; align-items:center; gap:6px;">
-          <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
-          ${!tripViewMode ? `
-          <button type="button" class="reorder-btn" ${pIdx===0?'disabled':''} onclick="moveTripPlace(${dIdx}, ${pIdx}, -1)">▲</button>
-          <button type="button" class="reorder-btn" ${pIdx===day.places.length-1?'disabled':''} onclick="moveTripPlace(${dIdx}, ${pIdx}, 1)">▼</button>
-          <button type="button" class="remove-btn" onclick="removeTripPlace(${dIdx}, ${pIdx})" title="Remove from trip"><i class="fa-solid fa-trash"></i></button>` : ''}
-        </div>
-        ${areaLine}${sourceLine}
-        ${p.note ? renderNoteHtml(p.note) : ''}
+    visibleCats.forEach((catId, catIdx) => {
+      const meta = categoryMeta(catId);
+      const places = day.places[catId];
+      html += `<div style="margin:10px 0 4px; display:flex; align-items:center; gap:6px;">
+        <span style="font-size:13px; font-weight:700;">${meta.icon} ${meta.label}</span>
+        ${!readOnly ? `
+        <button type="button" class="reorder-btn" style="margin-right:auto;" ${catIdx===0?'disabled':''} onclick="moveCategoryOrder(${dIdx}, '${catId}', -1)">▲</button>
+        <button type="button" class="reorder-btn" ${catIdx===visibleCats.length-1?'disabled':''} onclick="moveCategoryOrder(${dIdx}, '${catId}', 1)">▼</button>` : ''}
       </div>`;
+      places.forEach((p, pIdx) => {
+        if (!p._available){
+          html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px;">⚠️ This place is no longer available</div>`;
+          return;
+        }
+        const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
+        const sourceLine = (!readOnly) ? `<div style="font-size:9.5px; color:var(--ink-soft); opacity:.75;">${SOURCE_LABELS[p._ref.sourceType] || ''}</div>` : '';
+        const tripNoteLine = p._ref.tripNote ? `<div style="font-size:11px; color:var(--brass); font-weight:600; margin-top:3px;">🏷️ ${escapeHtml(p._ref.tripNote)}</div>` : '';
+        html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px; border-right:3.5px solid var(--brass);">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
+            ${!readOnly ? `
+            <button type="button" class="reorder-btn" ${pIdx===0?'disabled':''} onclick="movePlaceInCategory(${dIdx}, '${catId}', ${pIdx}, -1)">▲</button>
+            <button type="button" class="reorder-btn" ${pIdx===places.length-1?'disabled':''} onclick="movePlaceInCategory(${dIdx}, '${catId}', ${pIdx}, 1)">▼</button>
+            <button type="button" class="reorder-btn" onclick="editTripPlaceNote(${dIdx}, '${catId}', ${pIdx})" title="Note for this trip"><i class="fa-solid fa-tag"></i></button>
+            <button type="button" class="remove-btn" onclick="removeTripPlace(${dIdx}, '${catId}', ${pIdx})"><i class="fa-solid fa-trash"></i></button>` : ''}
+          </div>
+          ${areaLine}${sourceLine}${tripNoteLine}
+          ${p.note ? renderNoteHtml(p.note) : ''}
+        </div>`;
+      });
     });
   });
 
-  if (!tripViewMode){
+  if (!readOnly){
     html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="addTripDay()">➕ Add day</button>
     <button type="button" class="remove-btn" style="width:100%; margin-top:14px; color:#b5545a;" onclick="deleteTrip()">🗑️ Delete this trip</button>`;
   }
   wrap.innerHTML = html;
 }
 
+async function moveCategoryOrder(dayIdx, catId, dir){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const day = trip.days[dayIdx];
+  const order = day.categoryOrder || defaultCategoryOrder();
+  const visible = order.filter(c => (day.places[c]||[]).length > 0);
+  const i = visible.indexOf(catId);
+  const j = i + dir;
+  if (j < 0 || j >= visible.length) return;
+  const otherCat = visible[j];
+  const iFull = order.indexOf(catId), jFull = order.indexOf(otherCat);
+  [order[iFull], order[jFull]] = [order[jFull], order[iFull]];
+  day.categoryOrder = order;
+  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+async function movePlaceInCategory(dayIdx, catId, placeIdx, dir){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const arr = trip.days[dayIdx].places[catId];
+  const j = placeIdx + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[placeIdx], arr[j]] = [arr[j], arr[placeIdx]];
+  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+async function editTripPlaceNote(dayIdx, catId, placeIdx){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const ref = trip.days[dayIdx].places[catId][placeIdx];
+  const current = ref.tripNote || '';
+  const val = await openInputModal("Note for this trip", "e.g. First choice — closest to hotel", current);
+  if (val === null) return;
+  ref.tripNote = val.trim();
+  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+async function removeTripPlace(dayIdx, catId, placeIdx){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  trip.days[dayIdx].places[catId].splice(placeIdx, 1);
+  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
 async function addTripDay(){
   const trip = userTrips.find(t => t.id === currentTripId);
   if (!trip) return;
   const nextNum = trip.days.length ? Math.max(...trip.days.map(d=>d.dayNumber)) + 1 : 1;
-  trip.days.push({ dayNumber: nextNum, places: [] });
-  resolvedTripCache[currentTripId].push({ dayNumber: nextNum, places: [] });
+  trip.days.push(emptyDay(nextNum));
   await saveTrip(trip);
-  renderMyTripsModal();
-}
-async function moveTripPlace(dayIdx, placeIdx, dir){
-  const trip = userTrips.find(t => t.id === currentTripId);
-  if (!trip) return;
-  const day = trip.days[dayIdx];
-  const j = placeIdx + dir;
-  if (j < 0 || j >= day.places.length) return;
-  [day.places[placeIdx], day.places[j]] = [day.places[j], day.places[placeIdx]];
-  const rDay = resolvedTripCache[currentTripId][dayIdx];
-  [rDay.places[placeIdx], rDay.places[j]] = [rDay.places[j], rDay.places[placeIdx]];
-  await saveTrip(trip);
-  renderMyTripsModal();
-}
-async function removeTripPlace(dayIdx, placeIdx){
-  const trip = userTrips.find(t => t.id === currentTripId);
-  if (!trip) return;
-  trip.days[dayIdx].places.splice(placeIdx, 1);
-  resolvedTripCache[currentTripId][dayIdx].places.splice(placeIdx, 1);
-  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
   renderMyTripsModal();
 }
 async function deleteTrip(){
@@ -1830,7 +1895,7 @@ async function deleteTrip(){
   renderMyTripsModal();
 }
 
-/* ===== عرض رحلات مستخدم آخر (Community Lists → تبويب Trips) — قراءة فقط ===== */
+/* ===== عرض رحلات مستخدم آخر (Community Lists → تبويب Trips، Public فقط) — قراءة فقط ===== */
 let communityUserTrips = [];
 let viewingCommunityTripId = null;
 
@@ -1861,18 +1926,25 @@ function renderCommunityTripDetail(wrap){
   <h4 style="text-align:center; margin:4px 0 12px; font-family:'Cairo',sans-serif;">${title}</h4>`;
 
   resolved.forEach(day => {
-    html += `<div style="font-weight:700; font-size:13px; margin:14px 0 8px; padding-bottom:6px; border-bottom:2px solid var(--sand,#eee);">Day ${day.dayNumber}</div>`;
-    day.places.forEach(p => {
-      if (!p._available){
-        html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px;">⚠️ This place is no longer available</div>`;
-        return;
-      }
-      const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
-      html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px;">
-        <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
-        ${areaLine}
-        ${p.note ? renderNoteHtml(p.note) : ''}
-      </div>`;
+    html += `<div style="font-weight:800; font-size:14px; margin:16px 0 8px; padding:6px 0; border-bottom:2px solid var(--ink);">Day ${day.dayNumber}</div>`;
+    const order = day.categoryOrder || defaultCategoryOrder();
+    const visibleCats = order.filter(catId => (day.places[catId]||[]).length > 0);
+    visibleCats.forEach(catId => {
+      const meta = categoryMeta(catId);
+      html += `<div style="margin:10px 0 4px; font-size:13px; font-weight:700;">${meta.icon} ${meta.label}</div>`;
+      day.places[catId].forEach(p => {
+        if (!p._available){
+          html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px;">⚠️ This place is no longer available</div>`;
+          return;
+        }
+        const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
+        const tripNoteLine = p._ref.tripNote ? `<div style="font-size:11px; color:var(--brass); font-weight:600; margin-top:3px;">🏷️ ${escapeHtml(p._ref.tripNote)}</div>` : '';
+        html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px; border-right:3.5px solid var(--brass);">
+          <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
+          ${areaLine}${tripNoteLine}
+          ${p.note ? renderNoteHtml(p.note) : ''}
+        </div>`;
+      });
     });
   });
   wrap.innerHTML = html;
@@ -2043,7 +2115,6 @@ function updateUserUI(){
   const label = document.getElementById('userLabel');
   const myListBtn = document.getElementById('myListBtn');
   const myTripsBtn = document.getElementById('myTripsBtn');
-  const selectModeBtn = document.getElementById('selectModeBtn');
   const promoBanner = document.getElementById('guestPromoBanner');
   const logoutBtn = document.getElementById('userLogoutBtn');
   if (!icon || !label) return;
@@ -2052,7 +2123,6 @@ function updateUserUI(){
     label.textContent = 'Favorites';
     if (myListBtn) myListBtn.style.display = '';
     if (myTripsBtn) myTripsBtn.style.display = '';
-    if (selectModeBtn) selectModeBtn.style.display = '';
     if (promoBanner) promoBanner.style.display = 'none';
     if (logoutBtn) logoutBtn.style.display = '';
   } else {
@@ -2060,7 +2130,6 @@ function updateUserUI(){
     label.textContent = 'My Account';
     if (myListBtn) myListBtn.style.display = 'none';
     if (myTripsBtn) myTripsBtn.style.display = 'none';
-    if (selectModeBtn) selectModeBtn.style.display = 'none';
     if (promoBanner) promoBanner.style.display = 'block';
     if (logoutBtn) logoutBtn.style.display = 'none';
   }
@@ -2447,20 +2516,12 @@ function renderMyListModal(){
           } else {
             html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">`;
             if (p.area && p.area.trim()) html += `<div style="font-size:10.5px; color:var(--ink-soft); margin-bottom:2px;">📍 ${p.area}</div>`;
-            if (selectionMode && p.id){
-              const sel = isPlaceSelected('mylist', myListCityId, item.id, p.id, null);
-              html += `<div style="display:flex; align-items:center; gap:8px; cursor:pointer;" onclick="togglePlaceSelection('mylist', '${myListCityId}', '${item.id}', '${p.id}')">
-                <span style="font-size:16px;">${sel ? '✅' : '⬜'}</span>
-                <span style="flex:1; font-size:12.5px;">${escapeHtml(p.name||'Place')}</span>
-              </div>`;
-            } else {
             html += `<div style="display:flex; align-items:center; gap:8px;">
               <a class="place-link" style="flex:1; font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${p.name} ←</a>
-              ${p.id ? `<button type="button" class="remove-btn" style="font-size:11px;" onclick="addPlaceToTrip('mylist', '${myListCityId}', '${item.id}', '${p.id}')" title="Add to trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
+              ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="font-size:11px; color:var(--brass);" onclick="addPlaceToTrip('mylist', '${myListCityId}', '${item.id}', '${p.id}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})" title="Edit"><i class="fa-solid fa-pen"></i></button>
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})" title="Remove"><i class="fa-solid fa-trash"></i></button>
             </div>`;
-            }
             if (p.note && p.note.trim()) html += renderNoteHtml(p.note);
             html += `</div>`;
           }
@@ -2627,23 +2688,12 @@ function renderCommunityUserList(wrap){
         const fav = isFavorite(p.url);
         const safeUrl = p.url.replace(/'/g,"\\'"), safeName = p.name.replace(/'/g,"\\'"), safeCat = displayName(item).replace(/'/g,"\\'");
         const safeCity = (cityObj ? cityObj.name : '').replace(/'/g,"\\'"), safeArea = (p.area||'').replace(/'/g,"\\'");
-        if (selectionMode && p.id){
-          const sel = isPlaceSelected('community', communityViewingCityId, item.id, p.id, u.uid);
-          sectionHtml += `<div style="margin-bottom:8px;">
-            ${p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : ''}
-            <div style="display:flex; align-items:center; gap:6px; cursor:pointer;" onclick="togglePlaceSelection('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}')">
-              <span style="font-size:16px;">${sel ? '✅' : '⬜'}</span>
-              <span style="flex:1;">${escapeHtml(p.name)}</span>
-            </div>
-          </div>`;
-          return;
-        }
         sectionHtml += `<div style="margin-bottom:8px;">
           ${p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : ''}
           <div style="display:flex; align-items:center; gap:6px;">
             <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
             <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCat}', '${safeCity}', '${safeArea}', '${u.uid}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
-            ${p.id ? `<button type="button" class="remove-btn" onclick="addPlaceToTrip('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}')" title="Add to trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
+            ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
           </div>
           ${renderNoteHtml(p.note)}
         </div>`;
@@ -3087,17 +3137,10 @@ function render(){
               const safeCategory = displayName(item).replace(/'/g,"\\'");
               const safeCity = (allCities().find(c=>c.id===currentCityId)?.name || '').replace(/'/g,"\\'");
               const safeArea = area.replace(/'/g,"\\'");
-              if (selectionMode && p.id){
-                const sel = isPlaceSelected('owner', currentCityId, item.id, p.id, null);
-                return divider + `<div class="place-row-view" style="cursor:pointer;" onclick="togglePlaceSelection('owner', '${currentCityId}', '${item.id}', '${p.id}')">
-                    <span style="font-size:16px; margin-left:6px;">${sel ? '✅' : '⬜'}</span>
-                    <span style="flex:1;">${escapeHtml(pName)}</span>
-                  </div>`;
-              }
               return divider + `<div class="place-row-view">
                   <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
                   <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}', '${safeCity}', '${safeArea}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
-                  ${p.id ? `<button type="button" class="remove-btn" onclick="addPlaceToTrip('owner', '${currentCityId}', '${item.id}', '${p.id}')" title="Add to trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
+                  ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('owner', '${currentCityId}', '${item.id}', '${p.id}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
                 </div>` +
                 (p.note && p.note.trim() && p.noteOn !== false ? renderNoteHtml(p.note) : '');
             }).join('');
