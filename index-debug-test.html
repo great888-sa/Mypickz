@@ -487,6 +487,7 @@
     <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
       <h3 style="text-align:center;">📝 My List — <span id="myListCityName"></span></h3>
       <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 10px;">Add your own places under any category below. Only Google Maps links are accepted.</p>
+      <div id="myListSharedRow" style="margin:0 0 10px;"></div>
       <div id="myListCountryChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px;"></div>
       <div id="myListCityChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px;"></div>
       <div style="display:flex; align-items:center; gap:8px; margin:0 0 6px; padding:8px 10px; background:var(--paper-dark); border-radius:10px;">
@@ -1511,12 +1512,12 @@ async function loadUserTrips(){
     const snap = await db.collection('trips').where('ownerId','==',currentUser.uid).get();
     userTrips = [];
     snap.forEach(doc => userTrips.push({ id: doc.id, ...doc.data() }));
-  }catch(e){ userTrips = []; }
+  }catch(e){ showDebugError('loadUserTrips-own', e); userTrips = []; }
   try{
     const snap2 = await db.collection('trips').where('sharedWith','array-contains',currentUser.uid).get();
     sharedTrips = [];
     snap2.forEach(doc => sharedTrips.push({ id: doc.id, ...doc.data() }));
-  }catch(e){ sharedTrips = []; }
+  }catch(e){ showDebugError('loadUserTrips-shared', e); sharedTrips = []; }
   tripsLoaded = true;
 }
 async function saveTrip(trip){
@@ -1663,14 +1664,16 @@ function renderMyTripsModal(){
   const wrap = document.getElementById('myTripsBody');
   if (currentTripId){ renderTripDetail(wrap); return; }
   let html = '';
+  html += `<div style="font-weight:700; font-size:12.5px; margin-bottom:8px;">🔗 Shared with you</div>`;
   if (sharedTrips.length){
-    html += `<div style="font-weight:700; font-size:12.5px; margin-bottom:8px;">🔗 Shared with you</div>`;
     html += sharedTrips.map(t => `
       <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px;" onclick="openSharedTripDetail('${t.id}')">
         ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
       </button>`).join('');
-    html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
+  } else {
+    html += `<p style="color:var(--ink-soft); font-size:11.5px; text-align:center; padding:6px 0;">No trips have been shared with you yet</p>`;
   }
+  html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
   html += `<div style="font-weight:700; font-size:12.5px; margin-bottom:8px;">🧳 Your Trips</div>`;
   if (!userTrips.length){
     html += `<p style="text-align:center; color:var(--ink-soft); font-size:12.5px; padding:10px 0;">No trips yet.</p>`;
@@ -2203,10 +2206,21 @@ function updateUserUI(){
    ========================================================= */
 let userListData = { customCities: [], customCountries: [] };
 let myListCityId = null;   // المدينة اللي المستخدم شغال عليها جوه "My List"
+let sharedCityLists = [];  // قوائم مدن مستخدمين آخرين شُوركت معي بالتحديد (Share with someone)
+let viewingSharedCityListId = null; // معرّف القائمة المشتركة المفتوحة حاليًا للعرض (قراءة فقط)
 let myCityListData = null; // بيانات المدينة الحالية بـMy List (المرحلة ١ من إعادة الهيكلة): { public, sharedWith, sharedWithNames, favoriteCount, categories:{} }
 let myCityListLoadedFor = null; // أي cityId مُحمَّل حاليًا بـmyCityListData (لتفادي إعادة تحميل غير ضرورية)
 let currentUserSuspended = false;
 let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
+
+async function loadSharedCityLists(){
+  if (!currentUser){ sharedCityLists = []; return; }
+  try{
+    const snap = await db.collection('userCityLists').where('sharedWith','array-contains',currentUser.uid).get();
+    sharedCityLists = [];
+    snap.forEach(doc => sharedCityLists.push({ docId: doc.id, ...doc.data() }));
+  }catch(e){ showDebugError('loadSharedCityLists', e); sharedCityLists = []; }
+}
 
 async function loadUserList(){
   if (!currentUser){ userListData = { customCities: [], customCountries: [], nickname: null }; myListCityId = null; myListCountry = null; currentUserSuspended = false; myCityListData = null; myCityListLoadedFor = null; return; }
@@ -2426,6 +2440,7 @@ function toggleUserActive(id, checked){
   e.active = checked;
   links[id] = e;
   renderMyListModal();
+  saveMyCityList();
 }
 let myListEditingKeys = new Set(); // مفاتيح "itemId#index" للأماكن اللي حاليًا في وضع تعديل
 
@@ -2434,12 +2449,14 @@ function addUserPlace(id){
   e.places.push({ id: generatePlaceId(), name:'', url:'', area:'', note:'' });
   myListEditingKeys.add(id + '#' + (e.places.length - 1));
   renderMyListModal();
+  saveMyCityList();
 }
 function removeUserPlace(id, index){
   const e = userEnsurePlaces(id);
   e.places.splice(index, 1);
   [...myListEditingKeys].forEach(k => { if (k.startsWith(id + '#')) myListEditingKeys.delete(k); });
   renderMyListModal();
+  saveMyCityList();
 }
 function toggleMyListPlaceEdit(id, index){
   const key = id + '#' + index;
@@ -2447,9 +2464,13 @@ function toggleMyListPlaceEdit(id, index){
   else myListEditingKeys.add(key);
   renderMyListModal();
 }
+let updateFieldSaveTimer = null;
 function updateUserPlaceField(id, index, field, val){
   const e = userEnsurePlaces(id);
   if (e.places[index]) e.places[index][field] = val;
+  // حفظ مؤجَّل (Debounced) — يمنع كتابة على Firestore بكل ضغطة حرف، لكن يضمن عدم فقدان أي تعديل لو غادر المستخدم النافذة بأي طريقة (لا الاعتماد على الإغلاق الصريح فقط)
+  clearTimeout(updateFieldSaveTimer);
+  updateFieldSaveTimer = setTimeout(() => { saveMyCityList(); }, 900);
 }
 async function chooseNickname(){
   const current = userListData.nickname || '';
@@ -2598,10 +2619,79 @@ async function selectMyListCity(cityId){
   renderMyListModal();
 }
 
+async function openSharedCityList(docId){
+  viewingSharedCityListId = docId;
+  document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  renderMyListModal();
+}
+function closeSharedCityList(){
+  viewingSharedCityListId = null;
+  renderMyListModal();
+}
+function renderSharedCityListDetail(){
+  const s = sharedCityLists.find(x => x.docId === viewingSharedCityListId);
+  const wrap = document.getElementById('myListSections');
+  if (!s){ viewingSharedCityListId = null; renderMyListModal(); return; }
+  document.getElementById('myListSharedRow').innerHTML = '';
+  document.getElementById('myListCountryChips').innerHTML = '';
+  document.getElementById('myListCityChips').innerHTML = '';
+  const cityMeta = allCities().find(c => c.id === s.cityId);
+  document.getElementById('myListCityName').textContent = (cityMeta ? cityMeta.name : s.cityId) + ' — ' + (s.nickname || 'User');
+  document.getElementById('myListPublicToggle').closest('div').style.display = 'none';
+  document.getElementById('myListNicknameRow').innerHTML = '';
+
+  let html = `<button type="button" class="remove-btn" onclick="closeSharedCityList()" style="margin-bottom:10px;"><i class="fa-solid fa-arrow-right"></i> Back to your list</button>`;
+  let hasAny = false;
+  DATA.forEach(section => {
+    if (section.ownerOnly) return; // خصوصية: تصنيفات المالك حصرًا لا تُعرَض هنا حتى لو موجودة بالبيانات
+    const items = section.items.filter(item => {
+      const entry = (s.categories && s.categories[item.id]) || { active:false, places:[] };
+      return entry.active && (entry.places||[]).length > 0;
+    });
+    if (!items.length) return;
+    hasAny = true;
+    html += `<div style="margin-bottom:14px;">
+      <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; margin-bottom:6px; color:var(--ink);">${sectionDisplay(section).icon} ${sectionDisplay(section).name}</div>`;
+    items.forEach(item => {
+      const entry = s.categories[item.id];
+      html += `<div style="border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:6px; background:var(--card);">
+        <div style="font-size:12.5px; font-weight:600; margin-bottom:4px;">${displayIcon(item)} ${displayName(item)}</div>`;
+      entry.places.forEach(p => {
+        html += `<div style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--line);">
+          ${p.area ? `<div style="font-size:10.5px; color:var(--ink-soft);">📍 ${escapeHtml(p.area)}</div>` : ''}
+          <a class="place-link" style="font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')} ←</a>
+          ${p.note ? renderNoteHtml(p.note) : ''}
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+  if (!hasAny) html += `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">No places in this list yet</p>`;
+  wrap.innerHTML = html;
+}
+
 function renderMyListModal(){
   if (!document.getElementById('myListSections')) return; // النافذة لسه بحالة "Loading..." — العناصر مش موجودة بالـDOM بعد، تجنّب أي كراش
+  if (viewingSharedCityListId){ renderSharedCityListDetail(); return; }
+  const sharedRow = document.getElementById('myListSharedRow');
+  if (sharedRow){
+    sharedRow.innerHTML = `<div style="font-weight:700; font-size:12.5px; margin-bottom:6px;">🔗 Shared with you</div>`;
+    if (sharedCityLists.length){
+      sharedRow.innerHTML += sharedCityLists.map(s => {
+        const cityMeta = allCities().find(c => c.id === s.cityId);
+        return `<button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px;" onclick="openSharedCityList('${s.docId}')">
+          ${s.nickname || 'User'} — ${cityMeta ? cityMeta.name : s.cityId}
+        </button>`;
+      }).join('');
+    } else {
+      sharedRow.innerHTML += `<p style="color:var(--ink-soft); font-size:11.5px; text-align:center; padding:4px 0;">No lists have been shared with you yet</p>`;
+    }
+    sharedRow.innerHTML += `<div style="border-top:1px dashed var(--line); margin:10px 0;"></div>`;
+  }
   const city = myListAllCities().find(c => c.id === myListCityId);
   document.getElementById('myListCityName').textContent = city ? city.name : '';
+  document.getElementById('myListPublicToggle').closest('div').style.display = '';
   document.getElementById('myListPublicToggle').classList.toggle('on', !!(myCityListData && myCityListData.public));
 
   if (currentUserSuspended){
@@ -2851,14 +2941,16 @@ function renderCommunityUserList(wrap){
   let html = `<button type="button" class="remove-btn" onclick="backToCommunityList()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-right"></i> Back</button>
   <h4 style="text-align:center; margin:4px 0 10px; font-family:'Cairo',sans-serif;">${u.nickname}'s List</h4>`;
 
+  html += `<div style="font-weight:700; font-size:12.5px; margin:6px 0 8px;">🧳 Shared Trips</div>`;
   if (communityUserTrips.length){
-    html += `<div style="font-weight:700; font-size:12.5px; margin:6px 0 8px;">🧳 Shared Trips</div>`;
     html += communityUserTrips.map(t => `
       <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px;" onclick="openCommunityTrip('${t.id}')">
         ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
       </button>`).join('');
-    html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
+  } else {
+    html += `<p style="color:var(--ink-soft); font-size:11.5px; text-align:center; padding:6px 0;">No shared trips yet</p>`;
   }
+  html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
 
   if (!cities.length && !communityUserTrips.length){
     html += `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">No cities in this list yet</p>`;
@@ -3488,7 +3580,7 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
     auth.onAuthStateChanged(async (user) => {
       currentUser = user;
       updateUserUI();
-      const tasks = [loadFavorites(), loadUserList(), registerUserRecord(), loadUserTrips()];
+      const tasks = [loadFavorites(), loadUserList(), registerUserRecord(), loadUserTrips(), loadSharedCityLists()];
       if (document.getElementById('ownerControls').style.display !== 'none') {
         tasks.push(linkOwnerUid());
       }
