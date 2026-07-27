@@ -1,0 +1,3515 @@
+<!DOCTYPE html>
+<html lang="en" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="pageTitle">MyPickz</title>
+
+<!-- تثبيت كتطبيق (PWA) -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png" id="touchIcon">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MyPickz" id="webAppTitle">
+<meta name="theme-color" content="#1c2b3a">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- Firebase SDK is loaded dynamically below (with retry + clear error reporting) -->
+
+<style>
+  :root{
+    --paper:#efe7d6; --paper-dark:#e4d9c1; --ink:#1c2b3a; --ink-soft:#4a5a68;
+    --brass:#a5751f; --brass-light:#c99a3f; --line:#c9bda1; --card:#faf6ec;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><g fill='none' stroke='%23a5751f' stroke-width='0.6' opacity='0.05'><path d='M-20 40 Q 40 10, 100 40 T 220 40'/><path d='M-20 90 Q 40 60, 100 90 T 220 90'/><path d='M-20 140 Q 40 110, 100 140 T 220 140'/></g></svg>"),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/></svg>"),
+      radial-gradient(circle at 15% 8%, rgba(165,117,31,0.08), transparent 42%),
+      radial-gradient(circle at 85% 30%, rgba(28,43,58,0.05), transparent 38%),
+      radial-gradient(circle at 50% 95%, rgba(165,117,31,0.05), transparent 45%),
+      var(--paper);
+    background-attachment: fixed, fixed, fixed, fixed, fixed, fixed;
+    font-family:'Tajawal', sans-serif; color:var(--ink); min-height:100vh; padding:0 0 60px;
+  }
+  .cover{ max-width:760px; margin:0 auto; padding:40px 20px 20px; text-align:center; }
+  .eyebrow{ font-family:'Cairo',sans-serif; font-size:12px; letter-spacing:4px; color:var(--brass); font-weight:700; text-transform:uppercase; }
+  h1{ font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0 4px; }
+  .sub{ color:var(--ink-soft); font-size:14px; max-width:460px; margin:0 auto; line-height:1.7; }
+
+  .tab-label{
+    max-width:900px; margin:18px auto 6px; padding:0 20px;
+    font-family:'Cairo',sans-serif; font-size:11px; font-weight:700;
+    color:var(--ink-soft); letter-spacing:2px; text-transform:uppercase;
+  }
+  .city-tabs{
+    max-width:900px; margin:22px auto 0; padding:0 16px;
+    display:flex; gap:8px; overflow-x:auto; padding-bottom:6px;
+  }
+  .city-tab{
+    flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px;
+    padding:9px 18px; border-radius:999px; border:1.5px solid var(--line);
+    background:var(--card); color:var(--ink-soft); cursor:pointer; white-space:nowrap;
+  }
+  .city-tab.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+  .toolbar{ max-width:760px; margin:20px auto 6px; padding:0 20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+  .action-bar{
+    max-width:420px; margin:24px auto 6px;
+    background:var(--card); border:1px solid var(--line); border-radius:20px;
+    display:flex; flex-wrap:wrap; justify-content:center; padding:10px 4px;
+    box-shadow:0 2px 10px rgba(28,43,58,0.05);
+  }
+  .action-btn{
+    flex:0 0 auto; width:76px; background:none; border:none; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:6px 2px; border-radius:14px; transition:background .15s ease;
+  }
+  .action-btn:active{ background:rgba(165,117,31,0.08); }
+  .action-icon{
+    width:38px; height:38px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px;
+  }
+  .action-icon.ink{ background:var(--ink); color:var(--paper); }
+  .action-icon.brass{ background:var(--brass); color:#fff; }
+  .action-label{
+    font-family:'Cairo',sans-serif; font-size:10.5px; font-weight:700; color:var(--ink-soft);
+  }
+  .btn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; border:none; border-radius:999px;
+        padding:10px 18px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .btn-ink{ background:var(--ink); color:var(--paper); }
+  .btn-brass{ background:var(--brass); color:#fff; }
+  .btn-ghost{ background:transparent; color:var(--ink); border:1.5px solid var(--line); }
+
+  .quick-nav{
+    position:sticky; top:0; z-index:20;
+    max-width:760px; margin:0 auto 18px; padding:10px 20px;
+    background:rgba(239,231,214,0.92); backdrop-filter:blur(6px);
+    display:flex; gap:8px; overflow-x:auto; border-bottom:1px solid var(--line);
+  }
+  .quick-nav-btn{
+    flex:none; background:var(--card); border:1px solid var(--line); border-radius:999px;
+    width:46px; height:46px; font-size:18px; color:var(--ink);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .quick-nav-btn:active{ background:rgba(165,117,31,0.12); }
+
+  .show-more-btn{
+    display:block; margin:10px auto 0; background:transparent; border:none;
+    color:var(--brass); font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px;
+    cursor:pointer; padding:6px 12px;
+  }
+
+  .section{ max-width:760px; margin:30px auto 0; padding:0 20px; }
+
+  .area-filter-row{
+    display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px;
+  }
+  .area-chip{
+    flex:none; background:var(--card); border:1px solid var(--line); border-radius:999px;
+    padding:6px 13px; font-size:11.5px; font-family:'Cairo',sans-serif; font-weight:700;
+    color:var(--ink-soft); cursor:pointer; white-space:nowrap;
+  }
+  .area-chip.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .section-head{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .section-head h2{ font-family:'Cairo',sans-serif; font-size:19px; font-weight:700; margin:0; }
+  .section-head .count{ font-family:'Cairo',sans-serif; font-size:11px; color:var(--brass); font-weight:700; }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px; }
+  .ticket{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:13px 15px;
+           display:flex; align-items:center; gap:11px; text-decoration:none; color:var(--ink); }
+  .ticket:hover{ border-color:var(--brass); }
+  .ticket.disabled{ opacity:.55; }
+  .icon-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    background:var(--ink); color:var(--paper);
+    display:flex; align-items:center; justify-content:center; font-size:19px;
+    box-shadow:0 1px 3px rgba(28,43,58,0.25);
+  }
+  .ticket.disabled .icon-badge{ background:var(--ink); opacity:.55; }
+  .ticket .name{ font-weight:600; font-size:14px; flex:1; line-height:1.4; }
+  .section-icon{
+    color:#fff; background:var(--ink); font-size:15px; width:30px; height:30px;
+    border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex:none;
+  }
+  .ticket .go{ font-size:11px; color:var(--brass); font-weight:700; }
+  .ticket .missing{ font-size:11px; color:var(--ink-soft); }
+
+  .toggle-row{ display:flex; align-items:center; gap:8px; margin-top:8px; font-size:11.5px; color:var(--ink-soft); }
+  .switch-btn{ width:36px; height:21px; border-radius:999px; border:none; padding:0; background:#cfc4a8; position:relative; cursor:pointer; flex:none; }
+  .switch-btn .knob{ position:absolute; top:3px; right:3px; width:15px; height:15px; border-radius:50%; background:#fff; transition:transform .2s; }
+  .switch-btn.on{ background:var(--brass); }
+  .switch-btn.on .knob{ transform:translateX(-15px); }
+  .remove-btn{ background:none; border:none; cursor:pointer; margin-inline-start:auto; opacity:.7; }
+
+  .name-edit{ width:100%; border:none; border-bottom:1px dashed var(--line); background:transparent;
+              font-weight:600; font-size:14px; font-family:'Tajawal',sans-serif; padding:2px 0 4px; }
+  .name-edit:focus{ outline:none; border-color:var(--brass); }
+  .edit-row{ margin-top:8px; }
+
+  .places-edit-list{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+  .place-row{
+    display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+    background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px;
+  }
+  .place-note-row{
+    display:flex; align-items:flex-start; gap:8px; width:100%;
+    margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);
+  }
+  .place-note-input{
+    flex:1; border:none; background:transparent; font-size:11.5px;
+    font-family:'Tajawal',sans-serif; padding:4px 2px; color:var(--ink);
+    resize:vertical; min-height:34px; line-height:1.5;
+  }
+  .place-note-input:focus{ outline:none; }
+  .place-note-input::placeholder{ color:#b8ada0; }
+  .switch-btn.small{ width:30px; height:18px; flex:none; margin-top:2px; }
+  .switch-btn.small .knob{ width:12px; height:12px; top:3px; right:3px; }
+  .switch-btn.small.on .knob{ transform:translateX(-12px); }
+  .place-note{
+    font-size:11.5px; color:var(--ink-soft); font-style:italic;
+    padding:2px 0 4px; line-height:1.5;
+  }
+  .note-link{ color:var(--brass); font-style:normal; font-weight:700; text-decoration:underline; }
+  .note-toggle{
+    background:none; border:none; padding:0; margin:0 2px; cursor:pointer;
+    font-size:11px; font-style:normal; font-weight:700; color:var(--brass);
+    font-family:'Tajawal',sans-serif; text-decoration:underline;
+  }
+  .place-area-input{
+    width:25%; min-width:80px; border:none; background:transparent; font-size:11.5px;
+    font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid var(--line); color:var(--brass);
+  }
+  .place-area-input:focus{ outline:none; }
+  .place-name-input{
+    width:28%; min-width:90px; border:none; background:transparent; font-size:12px;
+    font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid var(--line);
+  }
+  .place-name-input:focus{ outline:none; }
+  .place-url-input{
+    flex:1; min-width:100px; border:none; background:transparent; font-size:12px;
+    font-family:'Tajawal',sans-serif; direction:ltr; text-align:left; padding:4px 6px;
+  }
+  .place-url-input:focus{ outline:none; }
+  .add-place-btn{
+    margin-top:8px; width:100%; background:transparent; border:1.5px dashed var(--line);
+    color:var(--brass); border-radius:8px; padding:8px; font-family:'Cairo',sans-serif;
+    font-weight:700; font-size:12px; cursor:pointer;
+  }
+  .multi-edit .toggle-row{ flex-wrap:wrap; }
+
+  .reorder-col{ display:flex; flex-direction:column; gap:2px; flex:none; }
+  .reorder-btn{
+    width:22px; height:20px; border:1px solid var(--line); background:#fff; border-radius:5px;
+    font-size:10px; color:var(--ink-soft); cursor:pointer; line-height:1;
+  }
+  .reorder-btn:disabled{ opacity:.25; cursor:default; }
+
+  .icon-edit{
+    width:38px; height:38px; border-radius:50%; flex:none; text-align:center;
+    background:var(--ink); color:#fff; border:none; font-size:17px;
+  }
+
+  .area-tag{
+    display:inline-block; font-size:10px; color:var(--ink-soft); font-weight:700;
+    background:rgba(74,90,104,0.1); border-radius:5px; padding:1px 6px; margin-inline-start:4px;
+  }
+  .area-divider{
+    font-family:'Cairo',sans-serif; font-size:10.5px; font-weight:700; color:var(--ink-soft);
+    text-transform:uppercase; letter-spacing:0.5px;
+    margin-top:8px; padding-top:6px; border-top:1px dashed var(--line);
+  }
+  .area-divider::before{ content:"📍 "; }
+  .place-list .area-divider:first-child{ margin-top:0; border-top:none; padding-top:0; }
+
+  .multi-ticket{ flex-direction:column; align-items:stretch; gap:8px; }
+  .multi-head{ display:flex; align-items:center; gap:11px; }
+  .place-list{ display:flex; flex-direction:column; gap:4px; padding-inline-start:37px; }
+  .place-row-view{ display:flex; align-items:center; gap:6px; }
+  .place-row-view .place-link{ flex:1; }
+  .fav-btn{
+    background:none; border:none; cursor:pointer; font-size:14px; padding:2px 4px;
+    color:#cfc4a8; flex:none;
+  }
+  .fav-btn.on{ color:#b5545a; }
+
+  .stats-row{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 4px; border-bottom:1px solid var(--line);
+  }
+  .stats-rank{
+    width:22px; height:22px; border-radius:50%; background:var(--ink); color:#fff;
+    font-family:'Cairo',sans-serif; font-weight:700; font-size:11px;
+    display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .stats-name{ flex:1; font-size:13px; font-weight:600; color:var(--ink); text-decoration:none; }
+  .stats-count{ font-size:12px; font-weight:700; color:#b5545a; flex:none; }
+  .place-link{
+    font-size:12.5px; color:var(--brass); font-weight:600; text-decoration:none;
+    border-bottom:1px dashed var(--line); padding:3px 0;
+  }
+  .place-link:last-child{ border-bottom:none; }
+  .edit-row input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px;
+                    font-size:12px; direction:ltr; text-align:left; background:#fff; }
+
+  .status-card{
+    max-width:760px; margin:0 auto 24px; padding:0 20px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    justify-content:center;
+  }
+  .status-toggle{
+    display:flex; align-items:center; gap:8px;
+    background:var(--card); border:1px solid var(--line); border-radius:999px;
+    padding:9px 16px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .status-toggle.published{ border-color:var(--brass); color:var(--brass); background:rgba(165,117,31,0.08); }
+  .status-dot{ width:8px; height:8px; border-radius:50%; background:var(--ink-soft); flex:none; }
+  .status-toggle.published .status-dot{ background:var(--brass); }
+  .status-divider{ width:1px; height:16px; background:var(--line); }
+  .status-stat{
+    font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; color:var(--ink-soft);
+  }
+  .add-ticket{
+    background:transparent; border:1.5px dashed var(--brass); color:var(--brass);
+    font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
+
+  .footer-note{ max-width:760px; margin:40px auto 0; padding:16px 20px; text-align:center;
+                color:var(--ink-soft); font-size:11.5px; line-height:1.8; border-top:1px solid var(--line); }
+
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(28,43,58,0.55); display:none;
+                    align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .modal-backdrop.show{ display:flex; }
+  .modal{ background:var(--card); border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; }
+  .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 12px; }
+  .modal-input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px; }
+  #qrcode{ display:flex; justify-content:center; margin:12px 0; }
+  .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper);
+          padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:9999; }
+  .toast.show{ opacity:1; }
+  #editModeBanner{ max-width:760px; margin:14px auto 0; padding:11px 18px; background:rgba(165,117,31,0.12);
+                    border:1px dashed var(--brass); border-radius:10px; font-size:12px; display:none; text-align:center; }
+  #editModeBanner.show{ display:block; }
+  #loadingState{ text-align:center; padding:60px 20px; color:var(--ink-soft); font-family:'Cairo',sans-serif; }
+</style>
+</head>
+<body>
+
+  <div class="cover">
+    <h1 onclick="logoTap()" style="cursor:pointer;">🗺️ MyPickz</h1>
+  </div>
+
+  <div class="tab-label">Country</div>
+  <div class="city-tabs" id="countryTabs"></div>
+  <div class="tab-label">City</div>
+  <div class="city-tabs" id="cityTabs"></div>
+
+  <div class="action-bar">
+    <button class="action-btn" onclick="openHelpModal()">
+      <span class="action-icon brass"><i class="fa-solid fa-circle-info"></i></span>
+      <span class="action-label" id="helpBtnLabel">دليل الاستخدام</span>
+    </button>
+    <a class="action-btn" href="mailto:mypickz.app@gmail.com?subject=MyPickz%20Feedback" style="text-decoration:none;">
+      <span class="action-icon ink"><i class="fa-solid fa-envelope"></i></span>
+      <span class="action-label">Contact Us</span>
+    </a>
+    <button class="action-btn" onclick="copyLink()">
+      <span class="action-icon ink"><i class="fa-solid fa-link"></i></span>
+      <span class="action-label">Copy Link</span>
+    </button>
+    <button class="action-btn" onclick="showQR()">
+      <span class="action-icon brass"><i class="fa-solid fa-qrcode"></i></span>
+      <span class="action-label">QR</span>
+    </button>
+    <button class="action-btn" id="userActionBtn" onclick="handleUserButton()">
+      <span class="action-icon ink"><i class="fa-solid fa-user" id="userIcon"></i></span>
+      <span class="action-label" id="userLabel">My Account</span>
+    </button>
+    <button class="action-btn" id="userLogoutBtn" onclick="doSignOut()" style="display:none;">
+      <span class="action-icon" style="background:#b5545a; color:#fff;"><i class="fa-solid fa-right-from-bracket"></i></span>
+      <span class="action-label">Log Out</span>
+    </button>
+    <button class="action-btn" id="myListBtn" onclick="openMyListModal()" style="display:none;">
+      <span class="action-icon brass"><i class="fa-solid fa-list-check"></i></span>
+      <span class="action-label">My List</span>
+    </button>
+    <button class="action-btn" id="myTripsBtn" onclick="openMyTripsModal()" style="display:none;">
+      <span class="action-icon brass"><i class="fa-solid fa-suitcase-rolling"></i></span>
+      <span class="action-label">My Trips</span>
+    </button>
+    <button class="action-btn" onclick="openCommunityModal()">
+      <span class="action-icon ink"><i class="fa-solid fa-users"></i></span>
+      <span class="action-label">Community Lists</span>
+    </button>
+    <span id="ownerControls" style="display:none;">
+      <button class="action-btn" onclick="requestEditAccess()">
+        <span class="action-icon ink" id="editIcon"><i class="fa-solid fa-pen"></i></span>
+        <span class="action-label" id="editBtnLabel">Edit</span>
+      </button>
+      <button class="action-btn" onclick="managePassword()">
+        <span class="action-icon brass"><i class="fa-solid fa-lock"></i></span>
+        <span class="action-label">Security</span>
+      </button>
+      <button class="action-btn" onclick="openFavoriteStats()">
+        <span class="action-icon brass"><i class="fa-solid fa-chart-simple"></i></span>
+        <span class="action-label">Most Loved</span>
+      </button>
+      <button class="action-btn" onclick="openUsersModal()">
+        <span class="action-icon ink"><i class="fa-solid fa-user-group"></i></span>
+        <span class="action-label">Manage Users</span>
+      </button>
+      <button class="action-btn" onclick="exitOwnerMode()">
+        <span class="action-icon" style="background:#b5545a; color:#fff;"><i class="fa-solid fa-right-from-bracket"></i></span>
+        <span class="action-label">Owner Logout</span>
+      </button>
+    </span>
+  </div>
+
+  <div id="editModeBanner">Edit mode is on — you're editing this city only. Tap "Save" below after each change.</div>
+  <div id="ownerAuthWarning" style="display:none; max-width:760px; margin:14px auto 0; padding:12px 18px; background:#fbeceb; border:1.5px dashed #b5545a; border-radius:14px; text-align:center;">
+    <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:#7a2b30; margin-bottom:4px;">⚠️ Not signed in</div>
+    <div style="font-size:11.5px; color:#7a2b30; line-height:1.6;">Owner mode is active on this device, but you're not signed in with the owner account — saving will fail. Tap "My Account" and log in with the owner email to fix this.</div>
+  </div>
+  <div id="guestPromoBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:14px 18px; background:var(--card); border:1.5px dashed var(--brass); border-radius:14px; text-align:center;">
+    <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin-bottom:4px;">✨ Create a free account</div>
+    <div style="font-size:11.5px; color:var(--ink-soft); margin-bottom:10px; line-height:1.6;">Save your favorite places ❤️ and build your own personal list 📝 — takes less than a minute.</div>
+    <button class="btn btn-brass" onclick="openAuthModal()">Sign Up</button>
+  </div>
+  <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:#fbeceb; border:1px dashed #b5545a; border-radius:10px; font-size:12px; color:#7a2b30; direction:ltr; word-break:break-word; text-align:center;"></div>
+
+  <div id="loadingState">Loading…</div>
+  <div id="sections" style="display:none"></div>
+
+  <div class="footer-note" id="footerNote" style="display:none;">
+    Links are managed via Google Maps sharing settings (View only recommended). Edit mode is protected by a simple password — basic protection, not strong encryption.
+  </div>
+
+  <div id="activeTripBar" style="display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:500; background:var(--ink); color:#fff; border-radius:30px; padding:10px 18px; box-shadow:0 6px 24px rgba(0,0,0,.3); align-items:center; gap:12px; max-width:90vw;">
+    <span id="activeTripLabel" style="font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Adding to: —</span>
+    <button type="button" style="background:var(--brass); border:none; color:var(--ink); border-radius:20px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer;" onclick="stopAddingToTrip()">Done</button>
+  </div>
+
+  <div class="modal-backdrop" id="tripPickerBackdrop">
+    <div class="modal" style="max-width:380px;">
+      <h3>➕ Add to Trip</h3>
+      <div id="tripPickerBody"></div>
+      <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeTripPickerModal()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="myTripsBackdrop">
+    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <h3 style="text-align:center;">🧳 My Trips</h3>
+      <div id="myTripsBody"></div>
+      <button class="btn btn-ghost" style="width:100%; margin-top:12px;" onclick="closeMyTripsModal()">Close</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="inputBackdrop">
+    <div class="modal">
+      <h3 id="inputModalTitle">Title</h3>
+      <input type="text" id="inputModalField" class="modal-input" onkeydown="if(event.key==='Enter') confirmInputModal();">
+      <select id="inputModalSelect" class="modal-input" style="display:none;"></select>
+      <div id="inputModalError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn btn-brass" style="flex:1" onclick="confirmInputModal()">Confirm</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="closeInputModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="authBackdrop">
+    <div class="modal">
+      <h3>👤 My Account</h3>
+      <p style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">Sign up to save favorites, build your own list, plan trips, and share them with others</p>
+      <input type="text" id="authNickname" class="modal-input" placeholder="Username (shown to other users)">
+      <input type="email" id="authEmail" class="modal-input" placeholder="Email" style="direction:ltr; text-align:left; margin-top:8px;">
+      <input type="password" id="authPassword" class="modal-input" placeholder="Password (6+ characters)" style="direction:ltr; text-align:left; margin-top:8px;">
+      <button type="button" id="forgotPasswordLink" onclick="doForgotPassword()" style="background:none; border:none; padding:0; margin-top:8px; font-family:'Cairo',sans-serif; font-size:11.5px; font-weight:700; color:var(--brass); cursor:pointer;">Forgot password?</button>
+      <div id="authError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn btn-brass" style="flex:1" onclick="doSignIn()">Log In</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="doSignUp()">New Account</button>
+      </div>
+      <p style="font-size:10.5px; color:var(--ink-soft); margin-top:10px;">Sign up or log in to continue exploring</p>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="reportBackdrop">
+    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <h3 style="text-align:center;">📄 Users Report</h3>
+      <textarea id="reportTextArea" readonly style="width:100%; height:260px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:monospace; font-size:11.5px; direction:ltr; text-align:left; background:#fff; color:var(--ink);"></textarea>
+      <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="copyUsersReport()"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
+      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="document.getElementById('reportBackdrop').classList.remove('show')">Close</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="usersBackdrop">
+    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <h3 style="text-align:center;">👥 Manage Users</h3>
+      <div id="usersStatsLine" style="font-size:12px; color:var(--ink-soft); text-align:center; margin:0 0 12px; line-height:1.8;"></div>
+      <input type="text" id="usersSearchInput" class="modal-input" placeholder="Search by nickname or email..." oninput="renderUsersModal(this.value)" style="margin-bottom:12px;">
+      <div id="usersListBody"></div>
+      <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeUsersModal()">Close</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="communityBackdrop">
+    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <h3 style="text-align:center;">🌍 Community Lists</h3>
+      <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 12px;">Browse public lists shared by other users. Hospitals & Clinics, Personal, and Others are never shown here.</p>
+      <div id="communityBody"></div>
+      <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeCommunityModal()">Close</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="helpBackdrop">
+    <div class="modal" style="max-width:480px; max-height:85vh; overflow-y:auto; text-align:right;">
+      <div style="display:flex; justify-content:center; gap:8px; margin-bottom:14px;">
+        <button type="button" class="btn" id="helpLangArBtn" style="margin:0; padding:8px 20px; font-size:12px;" onclick="setHelpLang('ar')">عربي</button>
+        <button type="button" class="btn" id="helpLangEnBtn" style="margin:0; padding:8px 20px; font-size:12px;" onclick="setHelpLang('en')">EN</button>
+      </div>
+      <h3 id="helpTitle" style="text-align:center;"></h3>
+      <div id="helpSections"></div>
+      <button class="btn btn-brass" style="width:100%; margin-top:14px;" onclick="closeHelpModal()" id="helpCloseBtn">إغلاق</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="myListBackdrop">
+    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <h3 style="text-align:center;">📝 My List — <span id="myListCityName"></span></h3>
+      <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 10px;">Add your own places under any category below. Only Google Maps links are accepted.</p>
+      <div id="myListCountryChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px;"></div>
+      <div id="myListCityChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px;"></div>
+      <div style="display:flex; align-items:center; gap:8px; margin:0 0 6px; padding:8px 10px; background:var(--paper-dark); border-radius:10px;">
+        <button type="button" class="switch-btn" id="myListPublicToggle" onclick="toggleMyListPublic()"><span class="knob"></span></button>
+        <span style="font-size:11.5px; color:var(--ink-soft);">Allow other users to view this list</span>
+      </div>
+      <div id="myListNicknameRow" style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 8px;"></div>
+      <div id="myListShareRow" style="margin:0 0 14px;"></div>
+      <div id="myListSections"></div>
+      <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="closeMyListModal()">Save & Close</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="favoritesBackdrop">
+    <div class="modal" style="max-width:380px;">
+      <h3>❤️ My Favorites</h3>
+      <div id="favoritesList" style="max-height:300px; overflow-y:auto; text-align:right; margin:10px 0;"></div>
+      <button class="btn btn-ghost" style="width:100%;" onclick="closeFavoritesModal()">Close</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="statsBackdrop">
+    <div class="modal" style="max-width:400px;">
+      <h3>📊 Most Loved (All Cities)</h3>
+      <div id="statsList" style="max-height:360px; overflow-y:auto; text-align:right; margin:10px 0;"></div>
+      <button class="btn btn-ghost" style="width:100%;" onclick="closeStatsModal()">Close</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="qrBackdrop">
+    <div class="modal">
+      <h3>Scan the code to open the guide</h3>
+      <div id="qrcode"></div>
+      <button class="btn btn-ghost" onclick="closeQR()">Close</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   0) عرض أي خطأ مباشرة على الصفحة (للتشخيص)
+   ========================================================= */
+window.onerror = function(msg, url, line, col, error){
+  console.warn('Background script warning (non-critical):', msg);
+  return false;
+};
+
+/* =========================================================
+   0.5) أداة تشخيص مؤقتة — تعرض أي خطأ حقيقي من Firestore مباشرة على الشاشة (صندوق أحمر بالأعلى)
+   بدون الحاجة لأدوات المطوّرين. تُحذَف لاحقًا بعد انتهاء التشخيص.
+   ========================================================= */
+function showDebugError(context, error){
+  try{
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:99999; background:#b5545a; color:#fff; padding:12px 16px; font-size:12px; font-family:monospace; direction:ltr; text-align:left; max-height:40vh; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.4);';
+    box.innerHTML = `<b>⚠️ DEBUG [${context}]</b><br>` + String(error && error.message || error).replace(/</g,'&lt;') +
+      `<br><button style="margin-top:8px; padding:6px 12px; background:#fff; color:#b5545a; border:none; border-radius:6px; font-weight:bold;" onclick="this.parentElement.remove()">Close</button>`;
+    document.body.appendChild(box);
+  }catch(e){}
+}
+
+/* =========================================================
+   1) تحميل Firebase SDK ديناميكيًا مع إعادة محاولة تلقائية
+   ========================================================= */
+function loadScriptOnce(src){
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = false; // يحافظ على ترتيب التشغيل حتى لو التحميل من الشبكة متوازي
+    s.crossOrigin = 'anonymous';
+    s.onload = () => resolve(src);
+    s.onerror = () => reject(new Error('Failed to load: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+async function loadScriptWithRetry(src, attempts){
+  for (let i = 1; i <= attempts; i++){
+    try{ await loadScriptOnce(src + (src.includes('?') ? '&' : '?') + 'retry=' + i); return; }
+    catch(e){ if (i === attempts) throw e; await new Promise(r => setTimeout(r, 800)); }
+  }
+}
+
+async function loadFirebaseSDK(){
+  const base = "https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/";
+  await Promise.all([
+    loadScriptWithRetry(base + "firebase-app-compat.min.js", 3),
+    loadScriptWithRetry(base + "firebase-firestore-compat.min.js", 3),
+    loadScriptWithRetry(base + "firebase-auth-compat.min.js", 3)
+  ]);
+}
+
+/* =========================================================
+   2) FIREBASE CONFIG — ⚠️ استبدل هذا الكائن بالكامل بالكود
+   اللي يعطيك إياه Firebase Console بعد إنشاء المشروع:
+   Project settings → General → Your apps → Web app → Config
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAZMUTMidMIJCeif5rYBi4MkKa-E4ASAHY",
+  authDomain: "mypickz-6f809.firebaseapp.com",
+  projectId: "mypickz-6f809",
+  storageBucket: "mypickz-6f809.firebasestorage.app",
+  messagingSenderId: "134744574180",
+  appId: "1:134744574180:web:bd6370482b3548913e04f1"
+};
+
+let db = null;
+let auth = null;
+
+async function initFirebase(){
+  try{
+    await loadFirebaseSDK();
+    if (typeof firebase === 'undefined') {
+      throw new Error('Scripts loaded but the firebase object is missing (possibly a browser extension conflict).');
+    }
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+  }catch(e){
+    const dbg = document.getElementById('debugBanner');
+    dbg.style.display = 'block';
+    dbg.style.direction = 'ltr';
+    dbg.textContent = '⚠️ Firebase load/init failed: ' + e.message;
+  }
+}
+
+/* =========================================================
+   2) بيانات المدن والتصنيفات
+   ========================================================= */
+const CITIES = [
+  { id:"paris",     name:"Paris",    country:"France" },
+  { id:"marbella",  name:"Marbella", country:"Spain" },
+  { id:"london",    name:"London",   country:"UK" },
+  { id:"barcelona", name:"Barcelona", country:"Spain" },
+  { id:"geneva",    name:"Geneva",   country:"Switzerland" },
+  { id:"madrid",    name:"Madrid",   country:"Spain" },
+  { id:"mallorca",  name:"Mallorca", country:"Spain" },
+];
+
+let customCities = []; // مدن أضفتها لاحقًا: [{id, name, country}]
+let customCountries = []; // دول أضفتها بدون مدن بعد: ["اسم1", "اسم2"]
+let customCountryFlags = {}; // أعلام الدول اللي أضفتها لاحقًا: { "اسم الدولة": "🇦🇪" }
+const COUNTRY_FLAGS = { "France":"🇫🇷", "Spain":"🇪🇸", "UK":"🇬🇧", "Switzerland":"🇨🇭" };
+function countryFlag(name){ return COUNTRY_FLAGS[name] || customCountryFlags[name] || ''; }
+
+// قائمة دول العالم الثابتة (اسم + كود ISO2) لاستخدامها في القائمة المنسدلة عند إضافة دولة جديدة
+const WORLD_COUNTRIES = [
+  {code:"AF",name:"Afghanistan"},{code:"AL",name:"Albania"},{code:"DZ",name:"Algeria"},{code:"AD",name:"Andorra"},
+  {code:"AO",name:"Angola"},{code:"AG",name:"Antigua and Barbuda"},{code:"AR",name:"Argentina"},{code:"AM",name:"Armenia"},
+  {code:"AU",name:"Australia"},{code:"AT",name:"Austria"},{code:"AZ",name:"Azerbaijan"},{code:"BS",name:"Bahamas"},
+  {code:"BH",name:"Bahrain"},{code:"BD",name:"Bangladesh"},{code:"BB",name:"Barbados"},{code:"BY",name:"Belarus"},
+  {code:"BE",name:"Belgium"},{code:"BZ",name:"Belize"},{code:"BJ",name:"Benin"},{code:"BT",name:"Bhutan"},
+  {code:"BO",name:"Bolivia"},{code:"BA",name:"Bosnia and Herzegovina"},{code:"BW",name:"Botswana"},{code:"BR",name:"Brazil"},
+  {code:"BN",name:"Brunei"},{code:"BG",name:"Bulgaria"},{code:"BF",name:"Burkina Faso"},{code:"BI",name:"Burundi"},
+  {code:"CV",name:"Cabo Verde"},{code:"KH",name:"Cambodia"},{code:"CM",name:"Cameroon"},{code:"CA",name:"Canada"},
+  {code:"CF",name:"Central African Republic"},{code:"TD",name:"Chad"},{code:"CL",name:"Chile"},{code:"CN",name:"China"},
+  {code:"CO",name:"Colombia"},{code:"KM",name:"Comoros"},{code:"CG",name:"Congo"},{code:"CD",name:"Congo (DRC)"},
+  {code:"CR",name:"Costa Rica"},{code:"CI",name:"Cote d'Ivoire"},{code:"HR",name:"Croatia"},{code:"CU",name:"Cuba"},
+  {code:"CY",name:"Cyprus"},{code:"CZ",name:"Czechia"},{code:"DK",name:"Denmark"},{code:"DJ",name:"Djibouti"},
+  {code:"DM",name:"Dominica"},{code:"DO",name:"Dominican Republic"},{code:"EC",name:"Ecuador"},{code:"EG",name:"Egypt"},
+  {code:"SV",name:"El Salvador"},{code:"GQ",name:"Equatorial Guinea"},{code:"ER",name:"Eritrea"},{code:"EE",name:"Estonia"},
+  {code:"SZ",name:"Eswatini"},{code:"ET",name:"Ethiopia"},{code:"FJ",name:"Fiji"},{code:"FI",name:"Finland"},
+  {code:"FR",name:"France"},{code:"GA",name:"Gabon"},{code:"GM",name:"Gambia"},{code:"GE",name:"Georgia"},
+  {code:"DE",name:"Germany"},{code:"GH",name:"Ghana"},{code:"GR",name:"Greece"},{code:"GD",name:"Grenada"},
+  {code:"GT",name:"Guatemala"},{code:"GN",name:"Guinea"},{code:"GW",name:"Guinea-Bissau"},{code:"GY",name:"Guyana"},
+  {code:"HT",name:"Haiti"},{code:"HN",name:"Honduras"},{code:"HK",name:"Hong Kong"},{code:"HU",name:"Hungary"},
+  {code:"IS",name:"Iceland"},{code:"IN",name:"India"},{code:"ID",name:"Indonesia"},{code:"IR",name:"Iran"},
+  {code:"IQ",name:"Iraq"},{code:"IE",name:"Ireland"},{code:"IL",name:"Israel"},{code:"IT",name:"Italy"},
+  {code:"JM",name:"Jamaica"},{code:"JP",name:"Japan"},{code:"JO",name:"Jordan"},{code:"KZ",name:"Kazakhstan"},
+  {code:"KE",name:"Kenya"},{code:"KI",name:"Kiribati"},{code:"KW",name:"Kuwait"},{code:"KG",name:"Kyrgyzstan"},
+  {code:"LA",name:"Laos"},{code:"LV",name:"Latvia"},{code:"LB",name:"Lebanon"},{code:"LS",name:"Lesotho"},
+  {code:"LR",name:"Liberia"},{code:"LY",name:"Libya"},{code:"LI",name:"Liechtenstein"},{code:"LT",name:"Lithuania"},
+  {code:"LU",name:"Luxembourg"},{code:"MO",name:"Macau"},{code:"MG",name:"Madagascar"},{code:"MW",name:"Malawi"},
+  {code:"MY",name:"Malaysia"},{code:"MV",name:"Maldives"},{code:"ML",name:"Mali"},{code:"MT",name:"Malta"},
+  {code:"MH",name:"Marshall Islands"},{code:"MR",name:"Mauritania"},{code:"MU",name:"Mauritius"},{code:"MX",name:"Mexico"},
+  {code:"FM",name:"Micronesia"},{code:"MD",name:"Moldova"},{code:"MC",name:"Monaco"},{code:"MN",name:"Mongolia"},
+  {code:"ME",name:"Montenegro"},{code:"MA",name:"Morocco"},{code:"MZ",name:"Mozambique"},{code:"MM",name:"Myanmar"},
+  {code:"NA",name:"Namibia"},{code:"NR",name:"Nauru"},{code:"NP",name:"Nepal"},{code:"NL",name:"Netherlands"},
+  {code:"NZ",name:"New Zealand"},{code:"NI",name:"Nicaragua"},{code:"NE",name:"Niger"},{code:"NG",name:"Nigeria"},
+  {code:"KP",name:"North Korea"},{code:"MK",name:"North Macedonia"},{code:"NO",name:"Norway"},{code:"OM",name:"Oman"},
+  {code:"PK",name:"Pakistan"},{code:"PW",name:"Palau"},{code:"PS",name:"Palestine"},{code:"PA",name:"Panama"},
+  {code:"PG",name:"Papua New Guinea"},{code:"PY",name:"Paraguay"},{code:"PE",name:"Peru"},{code:"PH",name:"Philippines"},
+  {code:"PL",name:"Poland"},{code:"PT",name:"Portugal"},{code:"QA",name:"Qatar"},{code:"RO",name:"Romania"},
+  {code:"RU",name:"Russia"},{code:"RW",name:"Rwanda"},{code:"KN",name:"Saint Kitts and Nevis"},{code:"LC",name:"Saint Lucia"},
+  {code:"VC",name:"Saint Vincent and the Grenadines"},{code:"WS",name:"Samoa"},{code:"SM",name:"San Marino"},
+  {code:"ST",name:"Sao Tome and Principe"},{code:"SA",name:"Saudi Arabia"},{code:"SN",name:"Senegal"},{code:"RS",name:"Serbia"},
+  {code:"SC",name:"Seychelles"},{code:"SL",name:"Sierra Leone"},{code:"SG",name:"Singapore"},{code:"SK",name:"Slovakia"},
+  {code:"SI",name:"Slovenia"},{code:"SB",name:"Solomon Islands"},{code:"SO",name:"Somalia"},{code:"ZA",name:"South Africa"},
+  {code:"KR",name:"South Korea"},{code:"SS",name:"South Sudan"},{code:"ES",name:"Spain"},{code:"LK",name:"Sri Lanka"},
+  {code:"SD",name:"Sudan"},{code:"SR",name:"Suriname"},{code:"SE",name:"Sweden"},{code:"CH",name:"Switzerland"},
+  {code:"SY",name:"Syria"},{code:"TW",name:"Taiwan"},{code:"TJ",name:"Tajikistan"},{code:"TZ",name:"Tanzania"},
+  {code:"TH",name:"Thailand"},{code:"TL",name:"Timor-Leste"},{code:"TG",name:"Togo"},{code:"TO",name:"Tonga"},
+  {code:"TT",name:"Trinidad and Tobago"},{code:"TN",name:"Tunisia"},{code:"TR",name:"Turkiye"},{code:"TM",name:"Turkmenistan"},
+  {code:"TV",name:"Tuvalu"},{code:"UG",name:"Uganda"},{code:"UA",name:"Ukraine"},{code:"AE",name:"United Arab Emirates"},
+  {code:"GB",name:"United Kingdom"},{code:"US",name:"United States"},{code:"UY",name:"Uruguay"},{code:"UZ",name:"Uzbekistan"},
+  {code:"VU",name:"Vanuatu"},{code:"VA",name:"Vatican City"},{code:"VE",name:"Venezuela"},{code:"VN",name:"Vietnam"},
+  {code:"YE",name:"Yemen"},{code:"ZM",name:"Zambia"},{code:"ZW",name:"Zimbabwe"}
+];
+// يحسب رمز العلم تلقائيًا من كود الدولة (ISO2) — بدون الحاجة لإدخال العلم يدويًا
+function isoFlagEmoji(code){
+  return code.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+}
+// تحقق: يسمح فقط بأحرف لاتينية/إنجليزية (+ مسافة، شرطة، فاصلة، فاصلة عليا، نقطة) لأسماء المدن
+function isLatinOnly(text){
+  return /^[A-Za-z\s.,'\-]+$/.test(text.trim());
+}
+function allCities(){ return CITIES.concat(customCities); }
+
+function countryOf(cityId){
+  const c = allCities().find(c => c.id === cityId);
+  return c ? c.country : "";
+}
+
+async function loadCustomCities(){
+  try{
+    const doc = await db.collection('settings').doc('cities-list').get();
+    customCities = (doc.exists && Array.isArray(doc.data().cities)) ? doc.data().cities : [];
+  }catch(e){ customCities = []; }
+}
+
+async function loadCustomCountries(){
+  try{
+    const doc = await db.collection('settings').doc('countries-list').get();
+    customCountries = (doc.exists && Array.isArray(doc.data().countries)) ? doc.data().countries : [];
+    customCountryFlags = (doc.exists && doc.data().flags && typeof doc.data().flags === 'object') ? doc.data().flags : {};
+  }catch(e){ customCountries = []; customCountryFlags = {}; }
+}
+
+async function saveCustomCountries(){
+  try{
+    await db.collection('settings').doc('countries-list').set({ countries: customCountries, flags: customCountryFlags }, { merge:true });
+  }catch(e){ showToast('Could not save the country'); }
+}
+
+// ===== قالب التصنيفات المشترك (كل المدن تقرأ من نفس المستند) =====
+async function loadCategoryTemplate(){
+  try{
+    const doc = await db.collection('settings').doc('category-template').get();
+    const data = doc.exists ? doc.data() : {};
+    customItems = data.customItems || [];
+    sectionOverrides = data.sectionOverrides || {};
+    itemOrder = data.itemOrder || {};
+    itemOverrides = data.itemOverrides || {};
+  }catch(e){
+    customItems = []; sectionOverrides = {}; itemOrder = {}; itemOverrides = {};
+  }
+}
+async function saveCategoryTemplate(){
+  await authReadyPromise;
+  try{
+    await db.collection('settings').doc('category-template').set(
+      { customItems, sectionOverrides, itemOrder, itemOverrides },
+      { merge:true }
+    );
+    showToast('Category saved for all cities ✓');
+  }catch(e){
+    showToast('Could not save the category');
+  }
+}
+
+async function addCountry(){
+  const options = WORLD_COUNTRIES.map(c => c.name);
+  const name = await openInputModal("New Country", "", "", options);
+  if (!name || !name.trim()) return;
+  const clean = name.trim();
+  if (!customCountries.includes(clean)) {
+    customCountries.push(clean);
+  }
+  const match = WORLD_COUNTRIES.find(c => c.name === clean);
+  if (match) customCountryFlags[clean] = isoFlagEmoji(match.code);
+  await authReadyPromise;
+  await saveCustomCountries();
+  currentCountry = clean;
+  showToast('Country added ✓ — now add a city for it');
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+}
+
+async function addCity(){
+  const name = await openInputModal("New City", "e.g. Milan, Dubai... (English letters only)", "");
+  if (!name || !name.trim()) return;
+  if (!isLatinOnly(name)) { showToast('City name must be in English letters only'); return; }
+  const country = await openInputModal("Country", "e.g. Italy, UAE...", currentCountry || "");
+  if (country === null || !country.trim()) { showToast('You must specify the country'); return; }
+  const id = "city_" + Date.now();
+  customCities.push({ id, name: name.trim(), country: country.trim() });
+  await authReadyPromise;
+  try{
+    await db.collection('settings').doc('cities-list').set({ cities: customCities }, { merge:true });
+    showToast('City added ✓');
+  }catch(e){
+    showToast('Could not save — try again');
+    return;
+  }
+  await loadCity(id); // ينقلك مباشرة للمدينة الجديدة عشان تبدأ التعبئة
+}
+
+async function removeCity(cityId){
+  customCities = customCities.filter(c => c.id !== cityId);
+  await authReadyPromise;
+  try{
+    await db.collection('settings').doc('cities-list').set({ cities: customCities }, { merge:true });
+    showToast('City deleted');
+  }catch(e){ showToast('Could not delete'); }
+  loadCity(pickInitialCity());
+}
+
+const DATA = [
+  { title:"Cafes", icon:"☕", items:[
+    {id:"brunch", icon:"🥞", name:"Breakfast & Brunch"},
+    {id:"coffee_bakery", icon:"☕", name:"Coffee & Bakery"},
+    {id:"bakery", icon:"🥐", name:"Bakery"},
+    {id:"icecream", icon:"🍦", name:"Ice Cream"},
+  ]},
+  { title:"Restaurants & Cafes", icon:"🍴", items:[
+    {id:"shawarma", icon:"🌯", name:"Sandwiches"},
+    {id:"burger", icon:"🍔", name:"Burger"},
+    {id:"pizza", icon:"🍕", name:"Pizza"},
+    {id:"seafood", icon:"🦐", name:"Seafood"},
+    {id:"steak", icon:"🥩", name:"Grill & Steak"},
+    {id:"fine_lebanese", icon:"🍽️", name:"Lebanese"},
+    {id:"fine_italian", icon:"🍝", name:"Italian"},
+    {id:"fine_japanese", icon:"🍣", name:"Japanese"},
+    {id:"chinese", icon:"🥡", name:"Chinese"},
+    {id:"indian", icon:"🍛", name:"Indian"},
+    {id:"taco", icon:"🌮", name:"Other Cuisines"},
+  ]},
+  { title:"Streets & Avenues", icon:"🛣️", items:[
+    {id:"streets", icon:"🛣️", name:"Streets & Avenues", desc:"Walking, Shopping, Cafes, Restaurants"},
+  ]},
+  { title:"Squares & Plazas", icon:"⛲", items:[
+    {id:"squares", icon:"⛲", name:"Squares & Plazas"},
+  ]},
+  { title:"Shopping", icon:"🛍️", items:[
+    {id:"department", icon:"🛍️", name:"Department Stores"},
+    {id:"local_markets", icon:"🧺", name:"Local Markets"},
+    {id:"boutiques", icon:"👜", name:"Boutiques"},
+    {id:"malls", icon:"🏬", name:"Malls"},
+  ]},
+  { title:"Parks & Gardens", icon:"🌳", items:[
+    {id:"parks", icon:"🌳", name:"Public Parks"},
+  ]},
+  { title:"Entertainment & Family Experience", icon:"🎡", items:[
+    {id:"amusement", icon:"🎡", name:"Amusement Park"},
+    {id:"aquarium", icon:"🐠", name:"Aquarium"},
+    {id:"zoo", icon:"🦁", name:"Zoo"},
+    {id:"safari", icon:"🐪", name:"Safari"},
+  ]},
+  { title:"Beaches", icon:"🏖️", items:[
+    {id:"corniche", icon:"🚶‍♂️", name:"Corniche Walk"},
+    {id:"beaches", icon:"🏝️", name:"Public Beaches"},
+    {id:"beachclub", icon:"🍹", name:"Beach Club"},
+  ]},
+  { title:"Historical & Cultural Landmarks", icon:"🏛️", items:[
+    {id:"landmarks", icon:"🏛️", name:"Historical Landmarks"},
+    {id:"palaces", icon:"👑", name:"Royal Palaces"},
+  ]},
+  { title:"Natural Landmarks", icon:"🏔️", items:[
+    {id:"mountains", icon:"🏔️", name:"Mountains"},
+    {id:"waterfalls", icon:"💦", name:"Waterfalls"},
+    {id:"lakes", icon:"🏞️", name:"Lakes"},
+  ]},
+  { title:"Hotels & Apartments", icon:"🏨", items:[
+    {id:"hotels", icon:"🏨", name:"Hotels & Apartments"},
+  ]},
+  { title:"Airports & Train Stations", icon:"✈️", items:[
+    {id:"airports", icon:"✈️", name:"Airports & Train Stations"},
+  ]},
+  { title:"Parking", icon:"🅿️", items:[
+    {id:"parking", icon:"🅿️", name:"Parking"},
+  ]},
+  { title:"Hospitals & Clinics", icon:"🏥", ownerOnly:true, items:[
+    {id:"hospitals_clinics", icon:"🏥", name:"Hospitals & Clinics"},
+  ]},
+  { title:"Personal", icon:"🔒", ownerOnly:true, items:[
+    {id:"personal_home", icon:"🏠", name:"Home"},
+    {id:"personal_work", icon:"💼", name:"Work"},
+    {id:"personal_family", icon:"👨‍👩‍👧", name:"Family"},
+    {id:"personal_relatives", icon:"👪", name:"Relatives"},
+    {id:"personal_friends", icon:"🧑‍🤝‍🧑", name:"Friends"},
+  ]},
+  { title:"Others", icon:"📌", ownerOnly:true, items:[
+    {id:"others", icon:"📌", name:"Others"},
+  ]},
+];
+
+/* =========================================================
+   3) الحالة العامة
+   ========================================================= */
+let currentCityId = CITIES[0].id;
+let currentCountry = CITIES[0].country;
+let links = {};          // (لكل مدينة) { itemId: {active, places:[{name,url,area}]} }
+let editMode = false;
+let isOwner = false; // true من لحظة تفعيل وضع المالك، بغض النظر عن دخول/خروج وضع التعديل نفسه
+let editPassword = "";
+let cityStatus = {};     // (لكل مدينة) { cityId: true/false } — true = منشورة وظاهرة للزوار
+let sectionStatus = {};  // (لكل مدينة) { sectionTitle: true/false } — true (أو غير موجود) = القسم الرئيسي ظاهر
+
+// ===== قالب التصنيفات — مشترك بين كل المدن (تعديله بأي مدينة ينعكس على الجميع) =====
+let customItems = [];      // [{id, section, icon, name}] — تصنيفات فرعية مضافة يدويًا
+let sectionOverrides = {}; // { sectionTitle: {name, icon} } — تخصيص اسم/أيقونة القسم الرئيسي
+let itemOrder = {};        // { sectionTitle: [itemId, itemId, ...] } — ترتيب التصنيفات الفرعية
+let itemOverrides = {};    // { itemId: {name, icon} } — تخصيص اسم/أيقونة تصنيف فرعي
+
+/* =========================================================
+   4) تحميل/حفظ من Firestore
+   بنية الوثيقة: cities/{cityId} = { links: {...}, customItems: [...] }
+   الإعدادات المشتركة (كلمة المرور): settings/app = { password: "" }
+   ========================================================= */
+async function trackVisit(){
+  try{
+    await db.collection('analytics').doc('visits').set(
+      { count: firebase.firestore.FieldValue.increment(1) },
+      { merge: true }
+    );
+  }catch(e){ /* صامت — ما نزعج الزائر لو فشل */ }
+}
+
+let visitCount = null;
+
+/* عرض ملاحظة المكان — بتضيف "More/Less" تلقائيًا لو النص طويل، وتعرضه كامل من غير أي زر لو قصير */
+function escapeHtml(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// يحوّل روابط Google Maps المذكورة داخل نص الملاحظة لروابط قابلة للضغط تلقائيًا، ويحافظ على الأسطر (للنقاط)
+const GMAPS_LINK_REGEX = /(https?:\/\/(?:www\.)?(?:google\.com\/maps[^\s]*|maps\.app\.goo\.gl\/[^\s]*|goo\.gl\/[^\s]*))/gi;
+function formatNoteText(text){
+  const escaped = escapeHtml(text);
+  const linked = escaped.replace(GMAPS_LINK_REGEX, url => `<a href="${url}" target="_blank" rel="noopener" class="note-link">${url}</a>`);
+  return linked.replace(/\n/g, '<br>');
+}
+let noteToggleCounter = 0;
+const NOTE_TRUNCATE_LIMIT = 120;
+function renderNoteHtml(note){
+  if (!note || !note.trim()) return '';
+  const text = note.trim();
+  if (text.length <= NOTE_TRUNCATE_LIMIT) {
+    return `<div class="place-note">${formatNoteText(text)}</div>`;
+  }
+  const id = 'noteTxt' + (noteToggleCounter++);
+  const shortText = text.slice(0, NOTE_TRUNCATE_LIMIT).trim();
+  return `<div class="place-note">
+    <span id="${id}_short">${formatNoteText(shortText)}… <button type="button" class="note-toggle" onclick="toggleNoteText('${id}')">More</button></span>
+    <span id="${id}_full" style="display:none;">${formatNoteText(text)} <button type="button" class="note-toggle" onclick="toggleNoteText('${id}')">Less</button></span>
+  </div>`;
+}
+function toggleNoteText(id){
+  const shortEl = document.getElementById(id + '_short');
+  const fullEl = document.getElementById(id + '_full');
+  if (!shortEl || !fullEl) return;
+  const showingShort = shortEl.style.display !== 'none';
+  shortEl.style.display = showingShort ? 'none' : '';
+  fullEl.style.display = showingShort ? '' : 'none';
+}
+async function loadVisitCount(){
+  try{
+    const doc = await db.collection('analytics').doc('visits').get();
+    visitCount = doc.exists ? (doc.data().count || 0) : 0;
+  }catch(e){ visitCount = null; }
+}
+
+async function loadAllCityStatus(){
+  try{
+    const doc = await db.collection('settings').doc('publish-status').get();
+    if (doc.exists && doc.data().status) {
+      cityStatus = doc.data().status;
+    } else {
+      // ترقية تلقائية مرة وحدة بس: الملخص السريع مو موجود بعد، نبنيه من بيانات المدن الفعلية
+      const snap = await db.collection('cities').get();
+      const map = {};
+      snap.forEach(d => { map[d.id] = d.data().published === true; });
+      cityStatus = map;
+      db.collection('settings').doc('publish-status').set({ status: map }, { merge:true }).catch(()=>{});
+    }
+  }catch(e){
+    cityStatus = {};
+  }
+}
+
+function pickInitialCity(){
+  try{
+    const lastVisited = localStorage.getItem('mypickz_last_city');
+    if (lastVisited && cityStatus[lastVisited]) return lastVisited;
+  }catch(e){ /* localStorage قد يكون معطّلاً بمتصفح الزائر — نتجاهل بصمت */ }
+  if (cityStatus[currentCityId]) return currentCityId;
+  const firstPublished = allCities().find(c => cityStatus[c.id]);
+  return firstPublished ? firstPublished.id : CITIES[0].id;
+}
+
+// يفحص كل الأماكن بكائن links ويولّد معرّفًا لأي مكان قديم بلا معرّف (بأثر رجعي) — يُرجع true لو أي تغيير صار
+function backfillPlaceIds(linksObj){
+  let changed = false;
+  Object.keys(linksObj || {}).forEach(subcatId => {
+    const entry = linksObj[subcatId];
+    if (!entry || !Array.isArray(entry.places)) return;
+    entry.places.forEach(p => {
+      if (!p.id){ p.id = generatePlaceId(); changed = true; }
+    });
+  });
+  return changed;
+}
+async function loadCity(cityId){
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('sections').style.display = 'none';
+  currentCityId = cityId;
+  currentCountry = countryOf(cityId) || currentCountry;
+  try{
+    const doc = await db.collection('cities').doc(cityId).get();
+    const data = doc.exists ? doc.data() : {};
+    links = data.links || {};
+    cityStatus[cityId] = data.published === true;
+    sectionStatus = data.sectionStatus || {};
+    try{ localStorage.setItem('mypickz_last_city', cityId); }catch(e){ /* صامت */ }
+    // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة — محاولة حفظ صامتة (تنجح فقط لو الكاتب هو المالك، بحسب قواعد الأمان)
+    if (backfillPlaceIds(links)){
+      db.collection('cities').doc(cityId).set({ links }, { merge:true }).catch(()=>{});
+    }
+  }catch(e){
+    links = {}; sectionStatus = {};
+    const dbg = document.getElementById('debugBanner');
+    if (dbg.style.display !== 'block') {
+      dbg.style.display = 'block';
+      dbg.style.direction = 'ltr';
+      dbg.textContent = 'Firestore error: ' + (e && e.message ? e.message : e) + ' (code: ' + (e && e.code ? e.code : 'n/a') + ')';
+    }
+    showToast('Connection error — details in the red box above');
+  }
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('sections').style.display = 'block';
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+}
+
+function selectCountry(country){
+  currentCountry = country;
+  const list = allCities().filter(c => c.country === country);
+  const visible = editMode ? list : list.filter(c => cityStatus[c.id]);
+  const target = visible.find(c => c.id === currentCityId) || visible[0];
+  if (target) { loadCity(target.id); }
+  else { renderCountryTabs(); renderCityTabs(); render(); }
+}
+
+function togglePublish(){
+  cityStatus[currentCityId] = !cityStatus[currentCityId];
+  saveCity();
+  saveCityStatusSummary();
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+}
+
+async function saveCityStatusSummary(){
+  try{
+    await db.collection('settings').doc('publish-status').set({ status: cityStatus }, { merge:true });
+  }catch(e){ /* صامت — الحفظ الأساسي بـ saveCity() نجح على أي حال */ }
+}
+
+function toggleSectionStatus(title){
+  sectionStatus[title] = sectionStatus[title] === false ? true : false;
+  saveCity();
+  render();
+}
+
+async function saveAll(){
+  await saveCategoryTemplate();
+  await saveCity();
+}
+
+async function saveCity(){
+  await authReadyPromise;
+  try{
+    await db.collection('cities').doc(currentCityId).set(
+      { links, published: cityStatus[currentCityId] === true, sectionStatus },
+      { merge:true }
+    );
+    showToast('Saved ✓');
+  }catch(e){
+    showToast('Could not save — check Firestore security rules');
+  }
+}
+
+async function loadPassword(){
+  try{
+    const doc = await db.collection('settings').doc('app').get();
+    editPassword = doc.exists ? (doc.data().password || "") : "";
+  }catch(e){ editPassword = ""; }
+}
+
+function revealOwnerUI(){
+  isOwner = true;
+  document.getElementById('ownerControls').style.display = 'contents';
+  document.getElementById('pageTitle').textContent = 'MyPickz — Admin';
+  document.getElementById('webAppTitle').setAttribute('content', 'MyPickz Admin');
+  document.getElementById('touchIcon').setAttribute('href', 'icon-180-admin.png');
+}
+
+async function exitOwnerMode(){
+  const confirmed = window.confirm('You\'ll be logged out of owner mode on this device. Any owner-only sections (like Hospitals & Clinics, Personal, Others) will disappear from the interface immediately. You can log back in anytime with the same password.\n\nConfirm logout?');
+  if (!confirmed) return;
+  try{ localStorage.removeItem('mypickz_owner'); }catch(e){}
+  isOwner = false;
+  if (editMode) { editMode = false; }
+  document.getElementById('ownerControls').style.display = 'none';
+  document.getElementById('editModeBanner').classList.remove('show');
+  document.getElementById('footerNote').style.display = 'none';
+  document.getElementById('pageTitle').textContent = 'MyPickz';
+  document.getElementById('webAppTitle').setAttribute('content', 'MyPickz');
+  document.getElementById('touchIcon').setAttribute('href', 'icon-180.png');
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+  showToast('Logged out of owner mode ✓');
+}
+
+let logoTapCount = 0;
+let logoTapTimer = null;
+async function logoTap(){
+  logoTapCount++;
+  clearTimeout(logoTapTimer);
+  logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 2000); // لازم الضغطات متقاربة
+  if (logoTapCount < 5) return;
+  logoTapCount = 0;
+  const entered = await openInputModal("Owner Login", "Enter password", "");
+  if (entered === null) return;
+  if (editPassword && entered === editPassword) {
+    try{ localStorage.setItem('mypickz_owner', editPassword); }catch(e){}
+    revealOwnerUI();
+    await linkOwnerUid();
+    showToast('Owner mode activated ✓');
+  } else {
+    showToast('Incorrect password');
+  }
+}
+
+// يربط حساب Firebase الحالي (لو مسجّل دخول) كمالك معتمد — يُستخدم لاحقًا في قواعد أمان Firestore
+async function linkOwnerUid(){
+  if (!currentUser) return; // المالك لسه مسجّل دخول بحسابه الشخصي، هيترابط أول ما يسجّل دخول
+  try{
+    const doc = await db.collection('settings').doc('app').get();
+    const savedUid = doc.exists ? doc.data().ownerUid : null;
+    if (savedUid && savedUid !== currentUser.uid) return; // مالك متربط أصلًا بحساب تاني — ما نلمسوش تلقائيًا
+    await db.collection('settings').doc('app').set({ ownerUid: currentUser.uid, ownerEmail: currentUser.email || '' }, { merge:true });
+  }catch(e){ /* صامت — الربط تحسين إضافي، مش شرط لعمل وضع المالك */ }
+}
+
+function checkOwnerAccess(){
+  const key = new URLSearchParams(window.location.search).get('key');
+  if (key && editPassword && key === editPassword) {
+    try{ localStorage.setItem('mypickz_owner', editPassword); }catch(e){}
+    revealOwnerUI();
+    return;
+  }
+  // احتياطي: لو iOS تجاهل الرابط بعد ؟ وقت فتح الأيقونة المحفوظة، نتحقق من الجهاز نفسه
+  try{
+    const remembered = localStorage.getItem('mypickz_owner');
+    if (remembered && editPassword && remembered === editPassword) {
+      revealOwnerUI();
+    }
+  }catch(e){}
+}
+
+async function savePassword(){
+  await authReadyPromise;
+  try{
+    await db.collection('settings').doc('app').set({ password: editPassword }, { merge:true });
+  }catch(e){ showToast('Could not save password'); }
+}
+
+/* =========================================================
+   5) واجهة المستخدم
+   ========================================================= */
+function renderCountryTabs(){
+  const wrap = document.getElementById('countryTabs');
+  const list = allCities().filter(c => c.country); // نتجاهل أي مدينة بدون دولة محددة
+  const fromCities = [...new Set(
+    (editMode ? list : list.filter(c => cityStatus[c.id])).map(c => c.country)
+  )];
+  const countries = editMode
+    ? [...new Set(fromCities.concat(customCountries))]
+    : fromCities;
+
+  const options = countries.map(country => `
+    <option value="${country.replace(/"/g,'&quot;')}" ${country === currentCountry ? 'selected' : ''}>
+      ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
+    </option>`).join('');
+
+  wrap.innerHTML = `
+    <select class="city-tab" style="flex:1; min-width:140px;" onchange="selectCountry(this.value)">
+      ${options}
+    </select>
+    ${editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCountry()">➕ New Country</button>` : ''}
+    ${editMode && customCountries.includes(currentCountry) ? `<button class="remove-btn" style="font-size:16px;" onclick="removeCountry('${currentCountry.replace(/'/g,"\\'")}')" title="Delete country">🗑️</button>` : ''}
+  `;
+}
+
+async function removeCountry(country){
+  const hasCities = allCities().some(c => c.country === country);
+  if (hasCities){ showToast('Delete all cities under this country first'); return; }
+  customCountries = customCountries.filter(c => c !== country);
+  delete customCountryFlags[country];
+  await authReadyPromise;
+  await saveCustomCountries();
+  if (currentCountry === country) currentCountry = '';
+  showToast('Country deleted');
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+}
+
+function renderCityTabs(){
+  const wrap = document.getElementById('cityTabs');
+  const list = allCities().filter(c => c.country === currentCountry);
+  const visibleCities = editMode ? list : list.filter(c => cityStatus[c.id]);
+  wrap.innerHTML = visibleCities.map(c => `
+    <span style="display:inline-flex; align-items:center; gap:4px;">
+      <button class="city-tab ${c.id === currentCityId ? 'active' : ''}" onclick="loadCity('${c.id}')">
+        ${c.name}${editMode && !cityStatus[c.id] ? ' <i class="fa-solid fa-screwdriver-wrench"></i>' : ''}
+      </button>
+      ${editMode && c.id.startsWith('city_') ? `<button class="remove-btn" style="font-size:16px;" onclick="removeCity('${c.id}')" title="Delete city">🗑️</button>` : ''}
+    </span>`).join('')
+    + (editMode ? `<button class="city-tab" style="border-style:dashed; color:var(--brass);" onclick="addCity()">➕ New City</button>` : '');
+}
+
+function getEntry(id, defaultActive = true){ return links[id] || { active: defaultActive }; }
+
+// --- اسم/أيقونة التصنيف الفرعي (مشترك لكل المدن) ---
+function displayName(item){ const o = itemOverrides[item.id]; return (o && o.name) ? o.name : item.name; }
+function displayIcon(item){ const o = itemOverrides[item.id]; return (o && o.icon) ? o.icon : item.icon; }
+function updateName(id, val){
+  itemOverrides[id] = itemOverrides[id] || {};
+  itemOverrides[id].name = val.trim();
+}
+function updateIcon(id, val){
+  itemOverrides[id] = itemOverrides[id] || {};
+  itemOverrides[id].icon = val.trim();
+}
+
+// --- تخصيص اسم/أيقونة القسم الرئيسي (مشترك لكل المدن) ---
+function sectionDisplay(section){
+  const o = sectionOverrides[section.title];
+  return { name: (o && o.name) ? o.name : section.title, icon: (o && o.icon) ? o.icon : section.icon };
+}
+async function editSection(sectionTitle){
+  const section = DATA.find(s => s.title === sectionTitle);
+  if (!section) return;
+  const cur = sectionDisplay(section);
+  const newName = await openInputModal("Main section name (all cities)", "e.g. Restaurants & Cafes", cur.name);
+  if (newName === null) return;
+  const newIcon = await openInputModal("Section icon (emoji)", "e.g. 🍴", cur.icon);
+  if (newIcon === null) return;
+  sectionOverrides[section.title] = {
+    name: newName.trim() || section.title,
+    icon: newIcon.trim() || section.icon
+  };
+  await saveCategoryTemplate();
+  render();
+}
+
+// --- ترتيب التصنيفات الفرعية داخل قسم (مشترك لكل المدن) ---
+function orderedItems(section, allItems){
+  const order = itemOrder[section.title];
+  if (!order || !order.length) return allItems;
+  const byId = {}; allItems.forEach(it => byId[it.id] = it);
+  const ordered = order.map(id => byId[id]).filter(Boolean);
+  allItems.forEach(it => { if (!order.includes(it.id)) ordered.push(it); });
+  return ordered;
+}
+function moveItem(sectionTitle, id, dir){
+  const section = DATA.find(s => s.title === sectionTitle);
+  if (!section) return;
+  const sectionCustom = customItems.filter(c => c.section === sectionTitle);
+  const allItems = orderedItems(section, section.items.concat(sectionCustom));
+  const list = allItems.map(it => it.id);
+  const i = list.indexOf(id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  itemOrder[sectionTitle] = list;
+  saveCategoryTemplate();
+  render();
+}
+
+// يرجع مصفوفة المواقع لتصنيف معيّن (بيانات هذي المدينة بس)
+function getPlaces(id){
+  const e = getEntry(id);
+  if (Array.isArray(e.places) && e.places.length) return e.places;
+  return [];
+}
+
+function ensurePlaces(id){
+  const e = getEntry(id);
+  if (!Array.isArray(e.places)) e.places = [];
+  links[id] = e;
+  return e;
+}
+
+// لصق رابط من حافظة الجهاز مباشرة بخانة رابط موقع معيّن
+async function pasteToPlaceUrl(itemId, index){
+  try{
+    const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()){ showToast('Clipboard is empty'); return; }
+    updatePlaceUrl(itemId, index, text.trim());
+    render();
+    showToast('Pasted ✓');
+  }catch(e){
+    showToast('Could not access clipboard — paste manually in the field');
+  }
+}
+
+async function pasteToUserPlaceUrl(itemId, index){
+  try{
+    const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()){ showToast('Clipboard is empty'); return; }
+    updateUserPlaceField(itemId, index, 'url', text.trim());
+    renderMyListModal();
+    showToast('Pasted ✓');
+  }catch(e){
+    showToast('Could not access clipboard — paste manually in the field');
+  }
+}
+
+// يفتح خرائط Google بحث مباشر على اسم المدينة الحالية بتبويب جديد
+function openMapsForCurrentCity(){
+  const cityName = allCities().find(c => c.id === currentCityId)?.name || '';
+  const url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(cityName);
+  window.location.href = url;
+}
+
+// معرّف ثابت فريد لكل مكان (يُستخدم لاحقًا للربط الحي بميزة Add Trip) — بنفس نمط توليد معرّفات مدن My List المخصّصة
+function generatePlaceId(){
+  return "place_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9);
+}
+function addPlace(id){
+  const e = ensurePlaces(id);
+  e.places.push({ id: generatePlaceId(), name:"", url:"", area:"", note:"", noteOn:true });
+  render();
+}
+function removePlace(id, index){
+  const e = ensurePlaces(id);
+  e.places.splice(index, 1);
+  render();
+}
+function updatePlaceName(id, index, val){
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].name = val;
+}
+function updatePlaceUrl(id, index, val){
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].url = val.trim();
+}
+function updatePlaceArea(id, index, val){
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].area = val;
+}
+function updatePlaceNote(id, index, val){
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].note = val;
+}
+function togglePlaceNote(id, index, checked){
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].noteOn = checked;
+  render();
+}
+
+function toggleActive(id, checked){ const e = getEntry(id); e.active = checked; links[id] = e; render(); }
+
+// --- إضافة/حذف تصنيف فرعي مخصص (مشترك لكل المدن) ---
+async function addCustomItem(sectionTitle){
+  const name = await openInputModal("New category (shown as an option in all cities)", "e.g. Village, City...", "");
+  if (!name || !name.trim()) return;
+  const icon = await openInputModal("Category icon (emoji)", "Paste a suitable emoji, e.g. 🏘️", "🏷️");
+  const id = "custom_" + Date.now();
+  customItems.push({ id, section: sectionTitle, icon: (icon && icon.trim()) ? icon.trim() : "🏷️", name:name.trim() });
+  await saveCategoryTemplate();
+  render();
+}
+function removeCustomItem(id){
+  customItems = customItems.filter(c => c.id !== id);
+  delete links[id];
+  saveCategoryTemplate();
+  saveCity();
+  render();
+}
+
+function toggleEdit(){
+  editMode = !editMode;
+  document.getElementById('editBtnLabel').textContent = editMode ? 'Done' : 'Edit';
+  document.getElementById('editIcon').innerHTML = editMode ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-pen"></i>';
+  document.getElementById('editModeBanner').classList.toggle('show', editMode);
+  document.getElementById('footerNote').style.display = editMode ? 'block' : 'none';
+  if (!editMode && !cityStatus[currentCityId]) {
+    loadCity(pickInitialCity());
+    return;
+  }
+  renderCountryTabs();
+  renderCityTabs();
+  render();
+}
+
+async function requestEditAccess(){
+  if (editMode){ toggleEdit(); return; }
+  await loadVisitCount();
+  toggleEdit();
+}
+
+async function managePassword(){
+  if (editPassword){
+    const current = await openInputModal("Confirm Identity", "Enter current password", "");
+    if (current === null) return;
+    if (current !== editPassword){ showToast('Incorrect password'); return; }
+  }
+  const next = await openInputModal(editPassword ? "New password" : "Set a password", "Leave empty to remove protection", "");
+  if (next === null) return;
+  editPassword = next.trim();
+  await savePassword();
+  showToast(editPassword ? 'Password enabled ✓' : 'Password removed');
+}
+
+// ===== حسابات المستخدمين والمفضلة (للزوار) =====
+let currentUser = null;
+let resolveAuthReady;
+const authReadyPromise = new Promise(res => { resolveAuthReady = res; }); // يكتمل أول ما Firebase يتأكد من حالة تسجيل الدخول (بغض النظر لو فاضية أو حساب حقيقي)
+let favoritePlaces = []; // [{url, name}]
+
+function isFavorite(url){ return favoritePlaces.some(f => f.url === url); }
+
+async function loadFavorites(){
+  if (!currentUser) { favoritePlaces = []; return; }
+  try{
+    const doc = await db.collection('favorites').doc(currentUser.uid).get();
+    favoritePlaces = (doc.exists && Array.isArray(doc.data().items)) ? doc.data().items : [];
+  }catch(e){ favoritePlaces = []; }
+}
+
+// معرّف آمن ومختصر لأي رابط (Firestore ما يقبل / بمعرّف المستند)
+function hashUrl(str){
+  let hash = 0;
+  for (let i = 0; i < str.length; i++){
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return 'p' + Math.abs(hash).toString(36);
+}
+
+async function toggleFavorite(url, name, category, city, area, sourceUid, sourceCityId){
+  if (!currentUser){ openAuthModal(); return; }
+  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
+  const exists = isFavorite(url);
+  const docId = hashUrl(url);
+  if (exists){
+    favoritePlaces = favoritePlaces.filter(f => f.url !== url);
+  } else {
+    favoritePlaces.push({ url, name: name || 'Place', category: category || '', city: city || '', area: area || '' });
+  }
+  render();
+  if (viewingUserUid) renderCommunityModal();
+  try{
+    await db.collection('favorites').doc(currentUser.uid).set({ items: favoritePlaces }, { merge:true });
+    await db.collection('placeFavoriteCounts').doc(docId).set({
+      name: name || 'Place',
+      url: url,
+      count: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
+    }, { merge:true });
+    if (!exists){
+      db.collection('users').doc(currentUser.uid).set({ hasFavorited: true }, { merge:true }).catch(()=>{});
+    }
+    if (sourceUid && sourceCityId && sourceUid !== currentUser.uid){
+      await db.collection('userCityLists').doc(sourceUid + '_' + sourceCityId).set({
+        favoriteCount: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
+      }, { merge:true });
+      db.collection('communityProfiles').doc(sourceUid).set({
+        totalFavoriteCount: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
+      }, { merge:true }).catch(()=>{});
+    }
+  }catch(e){ showToast('Could not save favorite'); }
+}
+
+/* =========================================================
+   Add Trip — إعادة تصميم كاملة (يوليو 2026)
+   - نقطة بداية وحيدة: My Trips (لا زر Select مستقل)
+   - وضع "إضافة نشطة" لرحلة محددة (activeTripId) — أي بطاقة تُضغط تُضاف لها مباشرة
+   - تصنيف صريح لكل مكان وقت الإضافة (7 فئات ثابتة)، ترتيب قابل للتخصيص لكل يوم
+   - مشاركة مزدوجة: Public (عام عبر Community Lists) + Share with someone (محدد بالاسم)
+   بنية التخزين: trips/{tripId} = {
+     ownerId, cityId, cityName, customLabel, public, sharedWith:[uid...], sharedWithNames:{uid:nickname},
+     days:[{ dayNumber, categoryOrder:[...7 فئات...], places:{ categoryId: [ref, ...] } }]
+   }
+   ref مكان = { sourceType:'owner'|'mylist'|'community', subcatId, placeId, sourceUid? }
+   ========================================================= */
+
+const TRIP_CATEGORIES = [
+  { id:'breakfast',  label:'Breakfast',  icon:'🍳', color:'#E8A33D' },
+  { id:'coffee_tea', label:'Coffee/Tea', icon:'☕', color:'#8B5E3C' },
+  { id:'bakery',     label:'Bakery',     icon:'🥐', color:'#C97B3D' },
+  { id:'lunch',      label:'Lunch',      icon:'🍽️', color:'#D9704F' },
+  { id:'activity',   label:'Activity',   icon:'🎟️', color:'#4A7C9B' },
+  { id:'icecream',   label:'Ice Cream',  icon:'🍦', color:'#D98CA3' },
+  { id:'dinner',     label:'Dinner',     icon:'🌙', color:'#3D4F66' },
+];
+function defaultCategoryOrder(){ return TRIP_CATEGORIES.map(c => c.id); }
+function categoryMeta(id){ return TRIP_CATEGORIES.find(c => c.id === id) || { id, label:id, icon:'📍', color:'#8A8A8A' }; }
+function emptyDay(dayNumber){
+  const places = {};
+  TRIP_CATEGORIES.forEach(c => places[c.id] = []);
+  return { dayNumber, categoryOrder: defaultCategoryOrder(), places };
+}
+
+let userTrips = [];
+let sharedTrips = [];           // رحلات شُوركت معي بالتحديد (sharedWith)
+let tripsLoaded = false;
+let currentTripId = null;       // الرحلة المفتوحة حاليًا بوضع العرض/التعديل داخل My Trips
+let viewingSharedTrip = false;  // الرحلة المفتوحة من "شُوركت معي" — قراءة فقط دائمًا
+let tripViewMode = false;       // false = وضع تعديل، true = وضع عرض نهائي مصقول
+let resolvedTripCache = {};
+let activeTripId = null;        // الرحلة اللي "وضع الإضافة النشط" مفعّل لها حاليًا
+
+async function loadUserTrips(){
+  if (!currentUser){ userTrips = []; sharedTrips = []; tripsLoaded = true; return; }
+  try{
+    const snap = await db.collection('trips').where('ownerId','==',currentUser.uid).get();
+    userTrips = [];
+    snap.forEach(doc => userTrips.push({ id: doc.id, ...doc.data() }));
+  }catch(e){ userTrips = []; }
+  try{
+    const snap2 = await db.collection('trips').where('sharedWith','array-contains',currentUser.uid).get();
+    sharedTrips = [];
+    snap2.forEach(doc => sharedTrips.push({ id: doc.id, ...doc.data() }));
+  }catch(e){ sharedTrips = []; }
+  tripsLoaded = true;
+}
+async function saveTrip(trip){
+  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
+  try{
+    await db.collection('trips').doc(trip.id).set({ ...trip, ownerId: currentUser.uid }, { merge:true });
+  }catch(e){ showToast('Could not save trip'); }
+}
+function generateTripId(){
+  return "trip_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+}
+
+function findPlaceInLinksById(linksObj, subcatId, placeId){
+  const entry = linksObj && linksObj[subcatId];
+  if (!entry || !Array.isArray(entry.places)) return null;
+  return entry.places.find(p => p.id === placeId) || null;
+}
+
+// الحل الموحّد: يجلب بيانات كل مكان بكل فئة بكل يوم بالرحلة، أيًا كان مصدره — يُستدعى فقط لحظة فتح رحلة معيّنة
+async function resolveTripPlaces(trip){
+  let ownerLinks = {};
+  try{
+    const cityDoc = await db.collection('cities').doc(trip.cityId).get();
+    ownerLinks = (cityDoc.exists && cityDoc.data().links) || {};
+  }catch(e){}
+  let myLinks = {};
+  try{
+    const myDoc = await db.collection('userCityLists').doc(trip.ownerId + '_' + trip.cityId).get();
+    myLinks = (myDoc.exists && myDoc.data().categories) || {};
+  }catch(e){}
+
+  const communityUids = new Set();
+  trip.days.forEach(day => TRIP_CATEGORIES.forEach(c => (day.places[c.id]||[]).forEach(ref => {
+    if (ref.sourceType === 'community' && ref.sourceUid) communityUids.add(ref.sourceUid);
+  })));
+  const communityLinksByUid = {};
+  for (const uid of communityUids){
+    try{
+      const d = await db.collection('userCityLists').doc(uid + '_' + trip.cityId).get();
+      communityLinksByUid[uid] = (d.exists && d.data().categories) || {};
+    }catch(e){ communityLinksByUid[uid] = {}; }
+  }
+  function resolveRef(ref){
+    let linksObj;
+    if (ref.sourceType === 'owner') linksObj = ownerLinks;
+    else if (ref.sourceType === 'mylist') linksObj = myLinks;
+    else linksObj = communityLinksByUid[ref.sourceUid] || {};
+    const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
+    return place ? { ...place, _ref: ref, _available: true } : { _available: false, _ref: ref };
+  }
+  return trip.days.map(day => ({
+    dayNumber: day.dayNumber,
+    categoryOrder: day.categoryOrder || defaultCategoryOrder(),
+    places: Object.fromEntries(TRIP_CATEGORIES.map(c => [c.id, (day.places[c.id]||[]).map(resolveRef)]))
+  }));
+}
+
+/* ===== وضع الإضافة النشط — يستبدل التحديد الجماعي القديم بالكامل ===== */
+function activeTripLabel(){
+  const t = userTrips.find(tr => tr.id === activeTripId);
+  if (!t) return '';
+  return t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName;
+}
+function startAddingToTrip(tripId){
+  activeTripId = tripId;
+  closeMyTripsModal();
+  showToast('Now tap any place to add it here');
+  updateActiveTripBanner();
+}
+function stopAddingToTrip(){
+  activeTripId = null;
+  updateActiveTripBanner();
+  render();
+  if (viewingUserUid) renderCommunityModal();
+  if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
+}
+function updateActiveTripBanner(){
+  const bar = document.getElementById('activeTripBar');
+  if (!bar) return;
+  if (activeTripId){
+    bar.style.display = 'flex';
+    document.getElementById('activeTripLabel').textContent = 'Adding to: ' + activeTripLabel();
+  } else {
+    bar.style.display = 'none';
+  }
+  render();
+  if (viewingUserUid) renderCommunityModal();
+  if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
+}
+
+let pendingPlaceRef = null;
+// يُستدعى من زر "➕" على أي بطاقة مكان — يظهر فقط أثناء وضع الإضافة النشط لرحلة معيّنة
+async function addPlaceToTrip(sourceType, cityId, subcatId, placeId, sourceUid){
+  if (!currentUser){ openAuthModal(); return; }
+  if (!activeTripId){ showToast('Open a trip from My Trips first'); return; }
+  const trip = userTrips.find(t => t.id === activeTripId);
+  if (!trip || trip.cityId !== cityId){ showToast('This place is not in the same city as your active trip'); return; }
+  pendingPlaceRef = { sourceType, cityId, subcatId, placeId, sourceUid: sourceUid || null };
+  if (trip.days.length === 1) openCategoryPicker(trip.id, 1);
+  else openDayPicker(trip.id);
+}
+function openDayPicker(tripId){
+  const trip = userTrips.find(t => t.id === tripId);
+  const wrap = document.getElementById('tripPickerBody');
+  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Which day?</p>`;
+  html += trip.days.map(d => `<button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="openCategoryPicker('${tripId}', ${d.dayNumber})">Day ${d.dayNumber}</button>`).join('');
+  wrap.innerHTML = html;
+  document.getElementById('tripPickerBackdrop').classList.add('show');
+}
+function openCategoryPicker(tripId, dayNumber){
+  const wrap = document.getElementById('tripPickerBody');
+  let html = `<p style="font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:10px;">Which category?</p>`;
+  html += TRIP_CATEGORIES.map(c => `<button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="confirmAddPlace('${tripId}', ${dayNumber}, '${c.id}')">${c.icon} ${c.label}</button>`).join('');
+  wrap.innerHTML = html;
+  document.getElementById('tripPickerBackdrop').classList.add('show');
+}
+async function confirmAddPlace(tripId, dayNumber, categoryId){
+  const trip = userTrips.find(t => t.id === tripId);
+  if (!trip || !pendingPlaceRef) return;
+  let day = trip.days.find(d => d.dayNumber === dayNumber);
+  if (!day){ day = emptyDay(dayNumber); trip.days.push(day); }
+  if (!day.places[categoryId]) day.places[categoryId] = [];
+  day.places[categoryId].push({ ...pendingPlaceRef });
+  document.getElementById('tripPickerBackdrop').classList.remove('show');
+  pendingPlaceRef = null;
+  await saveTrip(trip);
+  showToast('Added ✓');
+}
+
+/* ===== My Trips — القائمة + إنشاء رحلة + تفاصيل رحلة ===== */
+async function openMyTripsModal(){
+  if (!currentUser){ openAuthModal(); return; }
+  document.getElementById('myTripsBackdrop').classList.add('show');
+  if (!tripsLoaded) await loadUserTrips();
+  currentTripId = null;
+  viewingSharedTrip = false;
+  renderMyTripsModal();
+}
+function closeMyTripsModal(){
+  document.getElementById('myTripsBackdrop').classList.remove('show');
+  currentTripId = null;
+}
+function renderMyTripsModal(){
+  const wrap = document.getElementById('myTripsBody');
+  if (currentTripId){ renderTripDetail(wrap); return; }
+  let html = '';
+  if (sharedTrips.length){
+    html += `<div style="font-weight:700; font-size:12.5px; margin-bottom:8px;">🔗 Shared with you</div>`;
+    html += sharedTrips.map(t => `
+      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px;" onclick="openSharedTripDetail('${t.id}')">
+        ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
+      </button>`).join('');
+    html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
+  }
+  html += `<div style="font-weight:700; font-size:12.5px; margin-bottom:8px;">🧳 Your Trips</div>`;
+  if (!userTrips.length){
+    html += `<p style="text-align:center; color:var(--ink-soft); font-size:12.5px; padding:10px 0;">No trips yet.</p>`;
+  } else {
+    html += userTrips.map(t => `
+      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;" onclick="openTripDetail('${t.id}')">
+        <span style="font-weight:700;">${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}${t.public ? ' 🌐' : ''}${(t.sharedWith&&t.sharedWith.length) ? ' 🔗' : ''}</span>
+        <span style="color:var(--ink-soft); font-size:10.5px;">${t.days.length} day${t.days.length>1?'s':''}</span>
+      </button>`).join('');
+  }
+  html += `<button type="button" class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="openCreateTripFlow()">➕ Create trip</button>`;
+  wrap.innerHTML = html;
+}
+async function openCreateTripFlow(){
+  const cities = allCities();
+  if (!cities.length){ showToast('No cities available yet'); return; }
+  const cityName = await openInputModal("Which city is this trip for?", "", cities[0].name, cities.map(c => c.name));
+  if (cityName === null) return;
+  const cityObj = cities.find(c => c.name === cityName);
+  if (!cityObj) return;
+  const label = await openInputModal("Trip label (optional)", "e.g. August 2026", "");
+  if (label === null) return;
+  const daysStr = await openInputModal("How many days?", "e.g. 3", "3");
+  if (daysStr === null) return;
+  let numDays = parseInt(daysStr, 10);
+  if (!numDays || numDays < 1) numDays = 1;
+  if (numDays > 30) numDays = 30;
+  const days = [];
+  for (let i = 1; i <= numDays; i++) days.push(emptyDay(i));
+  const trip = { id: generateTripId(), cityId: cityObj.id, cityName: cityObj.name, customLabel: (label||'').trim(), public:false, sharedWith:[], sharedWithNames:{}, days };
+  userTrips.push(trip);
+  await saveTrip(trip);
+  startAddingToTrip(trip.id);
+}
+async function openTripDetail(tripId){
+  currentTripId = tripId;
+  viewingSharedTrip = false;
+  tripViewMode = false;
+  const trip = userTrips.find(t => t.id === tripId);
+  document.getElementById('myTripsBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  resolvedTripCache[tripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+async function openSharedTripDetail(tripId){
+  currentTripId = tripId;
+  viewingSharedTrip = true;
+  tripViewMode = true;
+  const trip = sharedTrips.find(t => t.id === tripId);
+  document.getElementById('myTripsBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  resolvedTripCache[tripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+function backToTripsList(){ currentTripId = null; viewingSharedTrip = false; renderMyTripsModal(); }
+function toggleTripViewMode(){ tripViewMode = !tripViewMode; renderMyTripsModal(); }
+
+async function toggleTripPublic(){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  if (!trip.public && !userListData.nickname){
+    const ok = await chooseNickname();
+    if (!ok) return;
+  }
+  trip.public = !trip.public;
+  await saveTrip(trip);
+  await syncCommunityProfile(); // يضمن ظهور المستخدم بنتائج الاكتشاف حتى لو ما عنده أي مدينة My List عامة إطلاقًا
+  showToast(trip.public ? 'Trip is now public 🌐' : 'Trip is now private');
+  renderMyTripsModal();
+}
+async function shareTripWithSomeone(){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const name = await openInputModal("Share with (username)", "Enter their exact username", "");
+  if (name === null) return;
+  const key = name.trim().toLowerCase();
+  if (!key) return;
+  try{
+    const doc = await db.collection('nicknames').doc(key).get();
+    if (!doc.exists){ showToast('No user found with that username'); return; }
+    const data = doc.data();
+    const targetUid = data.uid;
+    if (targetUid === currentUser.uid){ showToast("You can't share a trip with yourself"); return; }
+    if (!trip.sharedWith) trip.sharedWith = [];
+    if (!trip.sharedWithNames) trip.sharedWithNames = {};
+    if (trip.sharedWith.includes(targetUid)){ showToast('Already shared with this user'); return; }
+    trip.sharedWith.push(targetUid);
+    trip.sharedWithNames[targetUid] = data.nickname || name.trim();
+    await saveTrip(trip);
+    showToast('Shared ✓');
+    renderMyTripsModal();
+  }catch(e){ showToast('Could not verify username'); }
+}
+async function removeTripShare(uid){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip || !trip.sharedWith) return;
+  trip.sharedWith = trip.sharedWith.filter(u => u !== uid);
+  await saveTrip(trip);
+  renderMyTripsModal();
+}
+
+const SOURCE_LABELS = { owner: '📖 App guide', mylist: '📋 My List', community: '👤 Shared list' };
+
+function renderTripDetail(wrap){
+  const sourceList = viewingSharedTrip ? sharedTrips : userTrips;
+  const trip = sourceList.find(t => t.id === currentTripId);
+  if (!trip){ currentTripId = null; renderMyTripsModal(); return; }
+  const resolved = resolvedTripCache[currentTripId] || [];
+  const title = trip.customLabel ? `${trip.cityName} — ${trip.customLabel}` : trip.cityName;
+  const readOnly = viewingSharedTrip || tripViewMode;
+
+  let html = `<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+    <button type="button" class="remove-btn" onclick="backToTripsList()"><i class="fa-solid fa-arrow-right"></i></button>
+    <span style="font-weight:700; flex:1;">${title}</span>
+    ${!viewingSharedTrip ? `<button type="button" class="btn btn-ghost" style="margin:0; padding:6px 12px; font-size:11px;" onclick="toggleTripViewMode()">${tripViewMode ? '✏️ Edit' : '👁️ View'}</button>` : ''}
+  </div>`;
+
+  if (!readOnly){
+    html += `<button type="button" class="btn btn-brass" style="width:100%; margin-bottom:10px;" onclick="startAddingToTrip('${trip.id}')">➕ Add places to this trip</button>`;
+    html += `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--sand,#f5f0e6); border-radius:10px; padding:8px 12px; margin-bottom:8px;">
+      <span style="font-size:11.5px;">🌐 Public (via Community Lists)</span>
+      <button type="button" class="switch-btn small ${trip.public ? 'on' : ''}" onclick="toggleTripPublic()"><span class="knob"></span></button>
+    </div>`;
+    html += `<div style="background:var(--sand,#f5f0e6); border-radius:10px; padding:8px 12px; margin-bottom:12px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <span style="font-size:11.5px;">🔗 Shared with someone</span>
+        <button type="button" class="btn btn-ghost" style="margin:0; padding:4px 10px; font-size:10.5px;" onclick="shareTripWithSomeone()">➕ Add</button>
+      </div>
+      ${(trip.sharedWith && trip.sharedWith.length) ? trip.sharedWith.map(uid => `
+        <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; margin-top:6px;">
+          <span>👤 ${escapeHtml((trip.sharedWithNames && trip.sharedWithNames[uid]) || 'User')}</span>
+          <button type="button" class="remove-btn" style="font-size:10px;" onclick="removeTripShare('${uid}')"><i class="fa-solid fa-xmark"></i></button>
+        </div>`).join('') : ''}
+    </div>`;
+  }
+
+  resolved.forEach((day, dIdx) => {
+    html += `<div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
+      <span style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; font-weight:800; font-size:13px; flex-shrink:0;">${day.dayNumber}</span>
+      <span style="font-weight:800; font-size:15px; letter-spacing:.5px;">DAY ${day.dayNumber}</span>
+      <span style="flex:1; height:2px; background:linear-gradient(to left, var(--line), transparent);"></span>
+    </div>`;
+    const order = day.categoryOrder || defaultCategoryOrder();
+    const visibleCats = order.filter(catId => (day.places[catId]||[]).length > 0);
+    if (!visibleCats.length){
+      html += `<p style="font-size:11.5px; color:var(--ink-soft); padding-right:14px;">No places yet.</p>`;
+    }
+    visibleCats.forEach((catId, catIdx) => {
+      const meta = categoryMeta(catId);
+      const places = day.places[catId];
+      html += `<div style="margin:12px 0 6px; display:flex; align-items:center; gap:8px;">
+        <span style="width:9px; height:9px; border-radius:50%; background:${meta.color}; flex-shrink:0;"></span>
+        <span style="font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:${meta.color};">${meta.icon} ${meta.label}</span>
+        ${!readOnly ? `
+        <button type="button" class="reorder-btn" style="margin-right:auto;" ${catIdx===0?'disabled':''} onclick="moveCategoryOrder(${dIdx}, '${catId}', -1)">▲</button>
+        <button type="button" class="reorder-btn" ${catIdx===visibleCats.length-1?'disabled':''} onclick="moveCategoryOrder(${dIdx}, '${catId}', 1)">▼</button>` : ''}
+      </div>`;
+      places.forEach((p, pIdx) => {
+        if (!p._available){
+          html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px; margin-right:17px;">⚠️ This place is no longer available</div>`;
+          return;
+        }
+        const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
+        const sourceLine = (!readOnly) ? `<div style="font-size:9.5px; color:var(--ink-soft); opacity:.75;">${SOURCE_LABELS[p._ref.sourceType] || ''}</div>` : '';
+        const tripNoteLine = p._ref.tripNote ? `<div style="font-size:11px; color:${meta.color}; font-weight:700; margin-top:3px;">🏷️ ${escapeHtml(p._ref.tripNote)}</div>` : '';
+        html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px; margin-right:17px; border-right:3.5px solid ${meta.color}; box-shadow:0 2px 10px rgba(0,0,0,.06);">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
+            ${!readOnly ? `
+            <button type="button" class="reorder-btn" ${pIdx===0?'disabled':''} onclick="movePlaceInCategory(${dIdx}, '${catId}', ${pIdx}, -1)">▲</button>
+            <button type="button" class="reorder-btn" ${pIdx===places.length-1?'disabled':''} onclick="movePlaceInCategory(${dIdx}, '${catId}', ${pIdx}, 1)">▼</button>
+            <button type="button" class="reorder-btn" onclick="editTripPlaceNote(${dIdx}, '${catId}', ${pIdx})" title="Note for this trip"><i class="fa-solid fa-tag"></i></button>
+            <button type="button" class="remove-btn" onclick="removeTripPlace(${dIdx}, '${catId}', ${pIdx})"><i class="fa-solid fa-trash"></i></button>` : ''}
+          </div>
+          ${areaLine}${sourceLine}${tripNoteLine}
+          ${p.note ? renderNoteHtml(p.note) : ''}
+        </div>`;
+      });
+    });
+  });
+
+  if (!readOnly){
+    html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="addTripDay()">➕ Add day</button>
+    <button type="button" class="remove-btn" style="width:100%; margin-top:14px; color:#b5545a;" onclick="deleteTrip()">🗑️ Delete this trip</button>`;
+  }
+  wrap.innerHTML = html;
+}
+
+async function moveCategoryOrder(dayIdx, catId, dir){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const day = trip.days[dayIdx];
+  const order = day.categoryOrder || defaultCategoryOrder();
+  const visible = order.filter(c => (day.places[c]||[]).length > 0);
+  const i = visible.indexOf(catId);
+  const j = i + dir;
+  if (j < 0 || j >= visible.length) return;
+  const otherCat = visible[j];
+  const iFull = order.indexOf(catId), jFull = order.indexOf(otherCat);
+  [order[iFull], order[jFull]] = [order[jFull], order[iFull]];
+  day.categoryOrder = order;
+  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+async function movePlaceInCategory(dayIdx, catId, placeIdx, dir){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const arr = trip.days[dayIdx].places[catId];
+  const j = placeIdx + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[placeIdx], arr[j]] = [arr[j], arr[placeIdx]];
+  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+async function editTripPlaceNote(dayIdx, catId, placeIdx){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const ref = trip.days[dayIdx].places[catId][placeIdx];
+  const current = ref.tripNote || '';
+  const val = await openInputModal("Note for this trip", "e.g. First choice — closest to hotel", current);
+  if (val === null) return;
+  ref.tripNote = val.trim();
+  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+async function removeTripPlace(dayIdx, catId, placeIdx){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  trip.days[dayIdx].places[catId].splice(placeIdx, 1);
+  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+async function addTripDay(){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip) return;
+  const nextNum = trip.days.length ? Math.max(...trip.days.map(d=>d.dayNumber)) + 1 : 1;
+  trip.days.push(emptyDay(nextNum));
+  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+}
+async function deleteTrip(){
+  if (!confirm('Delete this trip? This cannot be undone.')) return;
+  try{ await db.collection('trips').doc(currentTripId).delete(); }catch(e){}
+  userTrips = userTrips.filter(t => t.id !== currentTripId);
+  delete resolvedTripCache[currentTripId];
+  currentTripId = null;
+  renderMyTripsModal();
+}
+
+/* ===== عرض رحلات مستخدم آخر (Community Lists → تبويب Trips، Public فقط) — قراءة فقط ===== */
+let communityUserTrips = [];
+let viewingCommunityTripId = null;
+
+async function loadCommunityUserTrips(uid){
+  try{
+    const snap = await db.collection('trips').where('ownerId','==',uid).where('public','==',true).get();
+    communityUserTrips = [];
+    snap.forEach(doc => communityUserTrips.push({ id: doc.id, ...doc.data() }));
+  }catch(e){ showDebugError('loadCommunityUserTrips', e); communityUserTrips = []; }
+}
+async function openCommunityTrip(tripId){
+  viewingCommunityTripId = tripId;
+  const trip = communityUserTrips.find(t => t.id === tripId);
+  const wrap = document.getElementById('communityBody');
+  wrap.innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  resolvedTripCache['community_'+tripId] = await resolveTripPlaces(trip);
+  // فتح رحلة مشتركة يُحتسَب كمشاهدة إضافية (نفس أهمية فتح الملف الشخصي نفسه)
+  if (trip && trip.ownerId){
+    db.collection('communityProfiles').doc(trip.ownerId).set({ viewCount: firebase.firestore.FieldValue.increment(1) }, { merge:true }).catch(()=>{});
+    if (viewingUserData && viewingUserData.uid === trip.ownerId) viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1;
+  }
+  renderCommunityModal();
+}
+function backFromCommunityTrip(){ viewingCommunityTripId = null; renderCommunityModal(); }
+
+function renderCommunityTripDetail(wrap){
+  const trip = communityUserTrips.find(t => t.id === viewingCommunityTripId);
+  if (!trip){ viewingCommunityTripId = null; renderCommunityModal(); return; }
+  const resolved = resolvedTripCache['community_'+trip.id] || [];
+  const title = trip.customLabel ? `${trip.cityName} — ${trip.customLabel}` : trip.cityName;
+
+  let html = `<button type="button" class="remove-btn" onclick="backFromCommunityTrip()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-right"></i> Back</button>
+  <h4 style="text-align:center; margin:4px 0 12px; font-family:'Cairo',sans-serif;">${title}</h4>`;
+
+  resolved.forEach(day => {
+    html += `<div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
+      <span style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; font-weight:800; font-size:13px; flex-shrink:0;">${day.dayNumber}</span>
+      <span style="font-weight:800; font-size:15px; letter-spacing:.5px;">DAY ${day.dayNumber}</span>
+      <span style="flex:1; height:2px; background:linear-gradient(to left, var(--line), transparent);"></span>
+    </div>`;
+    const order = day.categoryOrder || defaultCategoryOrder();
+    const visibleCats = order.filter(catId => (day.places[catId]||[]).length > 0);
+    visibleCats.forEach(catId => {
+      const meta = categoryMeta(catId);
+      html += `<div style="margin:12px 0 6px; display:flex; align-items:center; gap:8px;">
+        <span style="width:9px; height:9px; border-radius:50%; background:${meta.color}; flex-shrink:0;"></span>
+        <span style="font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:${meta.color};">${meta.icon} ${meta.label}</span>
+      </div>`;
+      day.places[catId].forEach(p => {
+        if (!p._available){
+          html += `<div class="ticket" style="opacity:.6; padding:8px 12px; margin-bottom:6px; margin-right:17px;">⚠️ This place is no longer available</div>`;
+          return;
+        }
+        const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
+        const tripNoteLine = p._ref.tripNote ? `<div style="font-size:11px; color:${meta.color}; font-weight:700; margin-top:3px;">🏷️ ${escapeHtml(p._ref.tripNote)}</div>` : '';
+        html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px; margin-right:17px; border-right:3.5px solid ${meta.color}; box-shadow:0 2px 10px rgba(0,0,0,.06);">
+          <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
+          ${areaLine}${tripNoteLine}
+          ${p.note ? renderNoteHtml(p.note) : ''}
+        </div>`;
+      });
+    });
+  });
+  wrap.innerHTML = html;
+}
+
+async function openFavoriteStats(){
+  const list = document.getElementById('statsList');
+  list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">Loading...</p>`;
+  document.getElementById('statsBackdrop').classList.add('show');
+  try{
+    const snap = await db.collection('placeFavoriteCounts').orderBy('count', 'desc').limit(30).get();
+    const rows = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (d.count > 0) rows.push(d);
+    });
+    if (!rows.length){
+      list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">No favorites recorded yet</p>`;
+    } else {
+      list.innerHTML = rows.map((d, i) => `
+        <div class="stats-row">
+          <span class="stats-rank">${i+1}</span>
+          <a href="${d.url}" target="_blank" rel="noopener" class="stats-name">${d.name}</a>
+          <span class="stats-count">❤️ ${d.count}</span>
+        </div>`).join('');
+    }
+  }catch(e){
+    list.innerHTML = `<p style="color:#b5545a; font-size:12px; text-align:center;">Could not load statistics</p>`;
+  }
+}
+function closeStatsModal(){
+  document.getElementById('statsBackdrop').classList.remove('show');
+}
+
+function openAuthModal(){
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+  errEl.style.color = '#b5545a';
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('authBackdrop').classList.add('show');
+}
+function closeAuthModal(){
+  document.getElementById('authBackdrop').classList.remove('show');
+}
+
+async function doSignUp(){
+  const nickname = document.getElementById('authNickname').value.trim();
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+  if (!nickname || nickname.length < 3){
+    errEl.textContent = 'Choose a username of at least 3 characters';
+    return;
+  }
+  if (!email || !pass || pass.length < 6){
+    errEl.textContent = 'Enter a valid email and a password of 6+ characters';
+    return;
+  }
+  const key = nickname.toLowerCase();
+  try{
+    const nickDoc = await db.collection('nicknames').doc(key).get();
+    if (nickDoc.exists){
+      errEl.textContent = 'This username is already taken — try another';
+      return;
+    }
+  }catch(e){
+    errEl.textContent = 'Could not verify username — try again';
+    return;
+  }
+  try{
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const newUid = cred.user.uid;
+    // بعد إنشاء الحساب، نحجز اسم المستخدم فورًا كجزء من نفس العملية — نستخدم newUid مباشرة (مضمون)، لا currentUser العام (قد لا يتحدّث فورًا)
+    try{
+      await db.collection('nicknames').doc(key).set({ uid: newUid, nickname });
+      await db.collection('userLists').doc(newUid).set({ nickname }, { merge:true });
+      await db.collection('users').doc(newUid).set({ nickname }, { merge:true });
+    }catch(e){ /* الحساب أُنشئ بنجاح؛ لو فشل حجز الاسم لسبب نادر، يقدر يعيّنه لاحقًا من My List */ }
+    closeAuthModal();
+    showToast('Account created ✓');
+    db.collection('stats').doc('users').set(
+      { count: firebase.firestore.FieldValue.increment(1) }, { merge:true }
+    ).catch(()=>{});
+  }catch(e){
+    errEl.textContent = authErrorMessage(e);
+  }
+}
+// انتظار آمن لحين تحديث currentUser العام (يُستخدم بعد تسجيل الدخول لتفادي أي تسابق زمني قبل استدعاء دوال تعتمد عليه)
+async function waitForCurrentUser(timeoutMs){
+  const start = Date.now();
+  while (!currentUser && Date.now() - start < timeoutMs){
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
+async function doSignIn(){
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+  if (!email || !pass){
+    errEl.textContent = 'Enter email and password';
+    return;
+  }
+  try{
+    const cred = await auth.signInWithEmailAndPassword(email, pass);
+    const uid = cred.user.uid;
+    // تحقق مباشر ومستقل عن وجود اسم مستعار — يشمل الحسابات القديمة (قبل نافذة التسجيل الموحّدة) اللي ما اختارت اسمًا بعد
+    let hasNickname = false;
+    try{
+      const doc = await db.collection('userLists').doc(uid).get();
+      hasNickname = !!(doc.exists && doc.data().nickname);
+    }catch(e){ hasNickname = true; /* فشل فحص شبكي لا يمنع الدخول، تجنبًا لحبس المستخدم بخطأ مؤقت */ }
+    closeAuthModal();
+    if (!hasNickname){
+      showToast('Welcome — please choose a username to continue');
+      await waitForCurrentUser(3000);
+      let ok = false;
+      while (!ok){
+        ok = await chooseNickname();
+      }
+    } else {
+      showToast('Welcome ✓');
+    }
+  }catch(e){
+    errEl.textContent = authErrorMessage(e);
+  }
+}
+function authErrorMessage(e){
+  const code = e && e.code || '';
+  if (code.includes('email-already-in-use')) return 'This email is already registered — try logging in';
+  if (code.includes('invalid-email')) return 'Invalid email format';
+  if (code.includes('wrong-password') || code.includes('user-not-found') || code.includes('invalid-credential')) return 'Incorrect email or password';
+  if (code.includes('weak-password')) return 'Weak password — 6+ characters required';
+  if (code.includes('too-many-requests')) return 'Too many attempts — wait a bit and try again';
+  return 'Something went wrong, try again';
+}
+
+async function doForgotPassword(){
+  const email = document.getElementById('authEmail').value.trim();
+  const errEl = document.getElementById('authError');
+  if (!email){
+    errEl.style.color = '#b5545a';
+    errEl.textContent = 'Enter your email in the field above, then tap "Forgot password?"';
+    return;
+  }
+  errEl.style.color = '#4a5a68';
+  errEl.textContent = 'Sending...';
+  try{
+    await auth.sendPasswordResetEmail(email);
+    errEl.style.color = '#2f7a4d';
+    errEl.textContent = 'Reset link sent to your email ✓ Check your inbox (and spam)';
+  }catch(e){
+    errEl.style.color = '#b5545a';
+    if ((e.code||'').includes('invalid-email')) errEl.textContent = 'Invalid email format';
+    else errEl.textContent = 'Could not send — make sure the email is correct and try again';
+  }
+}
+function doSignOut(){
+  auth.signOut();
+  showToast('Logged out');
+}
+
+function openFavoritesModal(){
+  const list = document.getElementById('favoritesList');
+  if (!favoritePlaces.length){
+    list.innerHTML = `<p style="color:var(--ink-soft); font-size:13px; text-align:center;">No favorite places yet</p>`;
+  } else {
+    list.innerHTML = favoritePlaces.map(f => `
+      <div style="margin-bottom:10px; border:1px solid var(--line); border-radius:10px; padding:9px 11px; background:var(--card);">
+        ${f.city ? `<div style="font-family:'Cairo',sans-serif; font-size:9.5px; font-weight:700; color:var(--brass); text-transform:uppercase; letter-spacing:1px;">${f.city}</div>` : ''}
+        ${f.category ? `<div style="font-weight:600; font-size:12.5px; color:var(--ink); margin-top:2px;">${f.category}</div>` : ''}
+        ${f.area ? `<div class="area-divider" style="font-size:9.5px; margin-top:5px; padding-top:5px;">${f.area}</div>` : ''}
+        <a class="place-link" style="display:block; margin-top:4px; border-bottom:none;" href="${f.url}" target="_blank" rel="noopener">${f.name}</a>
+      </div>`).join('');
+  }
+  document.getElementById('favoritesBackdrop').classList.add('show');
+}
+function closeFavoritesModal(){
+  document.getElementById('favoritesBackdrop').classList.remove('show');
+}
+
+function handleUserButton(){
+  if (currentUser) openFavoritesModal();
+  else openAuthModal();
+}
+
+function updateUserUI(){
+  const icon = document.getElementById('userIcon');
+  const label = document.getElementById('userLabel');
+  const myListBtn = document.getElementById('myListBtn');
+  const myTripsBtn = document.getElementById('myTripsBtn');
+  const promoBanner = document.getElementById('guestPromoBanner');
+  const logoutBtn = document.getElementById('userLogoutBtn');
+  if (!icon || !label) return;
+  if (currentUser){
+    icon.className = 'fa-solid fa-heart';
+    label.textContent = 'Favorites';
+    if (myListBtn) myListBtn.style.display = '';
+    if (myTripsBtn) myTripsBtn.style.display = '';
+    if (promoBanner) promoBanner.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = '';
+  } else {
+    icon.className = 'fa-solid fa-user';
+    label.textContent = 'My Account';
+    if (myListBtn) myListBtn.style.display = 'none';
+    if (myTripsBtn) myTripsBtn.style.display = 'none';
+    if (promoBanner) promoBanner.style.display = 'block';
+    if (logoutBtn) logoutBtn.style.display = 'none';
+  }
+}
+
+/* =========================================================
+   القائمة الشخصية (Personal List) — بيانات كل مستخدم مسجّل، منفصلة تمامًا عن قائمة المالك
+   ========================================================= */
+let userListData = { customCities: [], customCountries: [] };
+let myListCityId = null;   // المدينة اللي المستخدم شغال عليها جوه "My List"
+let myCityListData = null; // بيانات المدينة الحالية بـMy List (المرحلة ١ من إعادة الهيكلة): { public, sharedWith, sharedWithNames, favoriteCount, categories:{} }
+let myCityListLoadedFor = null; // أي cityId مُحمَّل حاليًا بـmyCityListData (لتفادي إعادة تحميل غير ضرورية)
+let currentUserSuspended = false;
+let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
+
+async function loadUserList(){
+  if (!currentUser){ userListData = { customCities: [], customCountries: [], nickname: null }; myListCityId = null; myListCountry = null; currentUserSuspended = false; myCityListData = null; myCityListLoadedFor = null; return; }
+  try{
+    const doc = await db.collection('userLists').doc(currentUser.uid).get();
+    const data = doc.exists ? doc.data() : {};
+    userListData = {
+      customCities: Array.isArray(data.customCities) ? data.customCities : [],
+      customCountries: Array.isArray(data.customCountries) ? data.customCountries : [],
+      nickname: data.nickname || null,
+      viewCount: data.viewCount || 0
+    };
+  }catch(e){ showDebugError('loadUserList', e); userListData = { customCities: [], customCountries: [], nickname: null }; }
+  try{
+    const uDoc = await db.collection('users').doc(currentUser.uid).get();
+    currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
+  }catch(e){ currentUserSuspended = false; }
+}
+
+// معرّف مستند Firestore لبيانات مدينة معيّنة بـMy List الخاصة بالمستخدم الحالي
+function myCityListDocId(cityId){ return currentUser.uid + '_' + cityId; }
+
+// تحميل بيانات مدينة معيّنة بـMy List (المرحلة ١ من إعادة الهيكلة) — مستند مستقل لكل مدينة
+async function loadMyCityList(cityId){
+  if (!currentUser || !cityId){ myCityListData = null; myCityListLoadedFor = null; return; }
+  if (myCityListLoadedFor === cityId && myCityListData) return; // محمَّلة أصلًا، لا داعي لإعادة القراءة
+  try{
+    const doc = await db.collection('userCityLists').doc(myCityListDocId(cityId)).get();
+    const data = doc.exists ? doc.data() : {};
+    myCityListData = {
+      public: data.public === true,
+      sharedWith: Array.isArray(data.sharedWith) ? data.sharedWith : [],
+      sharedWithNames: (data.sharedWithNames && typeof data.sharedWithNames === 'object') ? data.sharedWithNames : {},
+      favoriteCount: data.favoriteCount || 0,
+      categories: (data.categories && typeof data.categories === 'object') ? data.categories : {}
+    };
+    // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة — لهذي المدينة فقط الآن، بدل كل المدن دفعة وحدة
+    if (backfillPlaceIds(myCityListData.categories)){
+      db.collection('userCityLists').doc(myCityListDocId(cityId)).set(
+        { ownerId: currentUser.uid, cityId, categories: myCityListData.categories }, { merge:true }
+      ).catch(()=>{});
+    }
+  }catch(e){
+    showDebugError('loadMyCityList', e);
+    myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, favoriteCount:0, categories:{} };
+  }
+  myCityListLoadedFor = cityId;
+}
+
+// حفظ بيانات المدينة الحالية بـMy List — مستند مستقل، مو الملف الشامل القديم
+async function saveMyCityList(){
+  if (!currentUser || !myListCityId || !myCityListData) return;
+  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
+  // نفس فحص روابط خرائط جوجل الموجود أصلًا، مطبَّق على تصنيفات هذي المدينة فقط
+  let invalidCount = 0;
+  Object.keys(myCityListData.categories).forEach(itemId => {
+    const entry = myCityListData.categories[itemId];
+    const places = entry.places || [];
+    entry.places = places.filter(p => {
+      if (!p.url || !p.url.trim()) return true;
+      if (isGoogleMapsUrl(p.url.trim())) return true;
+      invalidCount++;
+      return false;
+    });
+  });
+  if (invalidCount > 0){
+    showToast(`Only Google Maps links are allowed — removed ${invalidCount} invalid link(s)`);
+  }
+  try{
+    await db.collection('userCityLists').doc(myCityListDocId(myListCityId)).set(
+      { ownerId: currentUser.uid, cityId: myListCityId, nickname: userListData.nickname || null, ...myCityListData },
+      { merge:true }
+    );
+    const hasRealPlace = Object.values(myCityListData.categories).some(entry => (entry.places||[]).some(p => p.url && p.name));
+    if (hasRealPlace){
+      db.collection('users').doc(currentUser.uid).set({ hasMyListActivity: true }, { merge:true }).catch(()=>{});
+    }
+  }catch(e){ showDebugError('saveMyCityList', e); showToast('Could not save your list'); }
+}
+
+// مدن المالك المتاحة للقائمة الشخصية: المنشورة فقط (زي أي زائر بالظبط) — مش أي مدينة لسه Draft
+function myListPublishedOwnerCities(){
+  return allCities().filter(c => cityStatus[c.id] === true);
+}
+// كل المدن المتاحة للمستخدم داخل قائمته الشخصية: مدن المالك المنشورة + مدنه الخاصة هو بس
+function myListAllCities(){
+  return myListPublishedOwnerCities().concat(userListData.customCities || []);
+}
+function myListAllCountries(){
+  const fromCities = myListAllCities().map(c => c.country).filter(Boolean);
+  return [...new Set(fromCities.concat(userListData.customCountries || []))];
+}
+
+function selectMyListCountry(country){
+  myListCountry = country;
+  const firstCity = myListAllCities().find(c => c.country === country);
+  myListCityId = firstCity ? firstCity.id : null;
+  renderMyListModal();
+}
+
+async function addMyListCountry(){
+  const options = WORLD_COUNTRIES.map(c => c.name);
+  const name = await openInputModal("New country (private to your list)", "", "", options);
+  if (!name || !name.trim()) return;
+  const clean = name.trim();
+  if (!Array.isArray(userListData.customCountries)) userListData.customCountries = [];
+  if (!myListAllCountries().includes(clean)) userListData.customCountries.push(clean);
+  const match = WORLD_COUNTRIES.find(c => c.name === clean);
+  if (match) customCountryFlags[clean] = isoFlagEmoji(match.code);
+  myListCountry = clean;
+  myListCityId = null;
+  await saveUserListGeneral();
+  renderMyListModal();
+}
+
+async function addMyListCity(){
+  const name = await openInputModal("New city (private to your list)", "e.g. Milan, Dubai... (English letters only)", "");
+  if (!name || !name.trim()) return;
+  if (!isLatinOnly(name)) { showToast('City name must be in English letters only'); return; }
+  const country = await openInputModal("Country", "e.g. Italy, UAE...", myListCountry || "");
+  if (country === null || !country.trim()){ showToast('Country is required'); return; }
+  const id = "mylist_" + Date.now();
+  if (!Array.isArray(userListData.customCities)) userListData.customCities = [];
+  userListData.customCities.push({ id, name: name.trim(), country: country.trim() });
+  myListCountry = country.trim();
+  myListCityId = id;
+  await saveUserListGeneral();
+  renderMyListModal();
+}
+
+async function removeMyListCity(cityId){
+  const city = (userListData.customCities || []).find(c => c.id === cityId);
+  if (!city) return; // حماية: يسمح فقط بحذف المدن اللي أضافها المستخدم نفسه
+  if (!confirm(`Delete "${city.name}" and any places saved under it? This cannot be undone.`)) return;
+  userListData.customCities = (userListData.customCities || []).filter(c => c.id !== cityId);
+  try{ await db.collection('userCityLists').doc(myCityListDocId(cityId)).delete(); }catch(e){}
+  if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
+  if (myListCityId === cityId){
+    const remaining = myListAllCities().filter(c => c.country === myListCountry);
+    myListCityId = remaining.length ? remaining[0].id : null;
+  }
+  await saveUserListGeneral();
+  await syncCommunityProfile(); // تفادي "بيانات أشباح" لمدينة محذوفة كانت عامة بـcommunityProfiles
+  showToast('City deleted');
+  renderMyListModal();
+}
+
+async function removeMyListCountry(country){
+  if (!(userListData.customCountries || []).includes(country)) return; // حماية: يسمح فقط بحذف الدول اللي أضافها المستخدم نفسه
+  const citiesToRemove = (userListData.customCities || []).filter(c => c.country === country);
+  const msg = citiesToRemove.length
+    ? `Delete "${country}" with its ${citiesToRemove.length} custom ${citiesToRemove.length === 1 ? 'city' : 'cities'} and any saved places? This cannot be undone.`
+    : `Delete "${country}" from your list?`;
+  if (!confirm(msg)) return;
+  userListData.customCountries = (userListData.customCountries || []).filter(c => c !== country);
+  const removeIds = citiesToRemove.map(c => c.id);
+  userListData.customCities = (userListData.customCities || []).filter(c => c.country !== country);
+  for (const id of removeIds){
+    try{ await db.collection('userCityLists').doc(myCityListDocId(id)).delete(); }catch(e){}
+    if (myCityListLoadedFor === id){ myCityListData = null; myCityListLoadedFor = null; }
+  }
+  if (myListCountry === country){
+    const remaining = myListAllCountries();
+    myListCountry = remaining.length ? remaining[0] : null;
+    const firstCity = myListCountry ? myListAllCities().find(c => c.country === myListCountry) : null;
+    myListCityId = firstCity ? firstCity.id : null;
+  }
+  await saveUserListGeneral();
+  await syncCommunityProfile(); // تفادي "بيانات أشباح" لمدن محذوفة كانت عامة بـcommunityProfiles
+  showToast('Country deleted');
+  renderMyListModal();
+}
+
+function userCityLinks(){
+  if (!myListCityId || !myCityListData) return {};
+  return myCityListData.categories;
+}
+function userGetEntry(id){
+  const links = userCityLinks();
+  return links[id] || { active:false, places: [] };
+}
+function userEnsurePlaces(id){
+  const links = userCityLinks();
+  const e = links[id] || { active:false, places: [] };
+  if (!Array.isArray(e.places)) e.places = [];
+  links[id] = e;
+  return e;
+}
+
+// يقبل فقط روابط خرائط جوجل — حماية أساسية من روابط ضارة أو غير مرتبطة بمكان حقيقي
+function isGoogleMapsUrl(url){
+  try{
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./,'');
+    return host === 'google.com' && u.pathname.startsWith('/maps')
+        || host === 'maps.google.com'
+        || host === 'goo.gl'
+        || host === 'maps.app.goo.gl';
+  }catch(e){ return false; }
+}
+
+// حفظ البيانات العامة فقط (اسم مستعار، دول/مدن مخصّصة) — منفصل تمامًا عن بيانات أي مدينة (راجع saveMyCityList)
+async function saveUserListGeneral(){
+  if (!currentUser) return;
+  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
+  try{
+    await db.collection('userLists').doc(currentUser.uid).set(
+      { customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], nickname: userListData.nickname || null },
+      { merge:true }
+    );
+  }catch(e){ showToast('Could not save your list'); }
+}
+
+function toggleUserActive(id, checked){
+  const links = userCityLinks();
+  const e = links[id] || { active:false, places: [] };
+  e.active = checked;
+  links[id] = e;
+  renderMyListModal();
+}
+let myListEditingKeys = new Set(); // مفاتيح "itemId#index" للأماكن اللي حاليًا في وضع تعديل
+
+function addUserPlace(id){
+  const e = userEnsurePlaces(id);
+  e.places.push({ id: generatePlaceId(), name:'', url:'', area:'', note:'' });
+  myListEditingKeys.add(id + '#' + (e.places.length - 1));
+  renderMyListModal();
+}
+function removeUserPlace(id, index){
+  const e = userEnsurePlaces(id);
+  e.places.splice(index, 1);
+  [...myListEditingKeys].forEach(k => { if (k.startsWith(id + '#')) myListEditingKeys.delete(k); });
+  renderMyListModal();
+}
+function toggleMyListPlaceEdit(id, index){
+  const key = id + '#' + index;
+  if (myListEditingKeys.has(key)) myListEditingKeys.delete(key);
+  else myListEditingKeys.add(key);
+  renderMyListModal();
+}
+function updateUserPlaceField(id, index, field, val){
+  const e = userEnsurePlaces(id);
+  if (e.places[index]) e.places[index][field] = val;
+}
+async function chooseNickname(){
+  const current = userListData.nickname || '';
+  const name = await openInputModal("Choose a nickname", "Shown to other users instead of your email", current);
+  if (name === null) return false;
+  const clean = name.trim();
+  if (!clean || clean.length < 3){ showToast('Nickname must be at least 3 characters'); return false; }
+  if (clean === current) return true;
+  const key = clean.toLowerCase();
+  try{
+    const doc = await db.collection('nicknames').doc(key).get();
+    if (doc.exists && doc.data().uid !== currentUser.uid){
+      showToast('This nickname is already taken — try another');
+      return false;
+    }
+    await db.collection('nicknames').doc(key).set({ uid: currentUser.uid, nickname: clean });
+    if (current){
+      const oldKey = current.toLowerCase();
+      if (oldKey !== key){
+        try{
+          const oldDoc = await db.collection('nicknames').doc(oldKey).get();
+          if (oldDoc.exists && oldDoc.data().uid === currentUser.uid){
+            await db.collection('nicknames').doc(oldKey).delete();
+          }
+        }catch(e){}
+      }
+    }
+    userListData.nickname = clean;
+    await saveUserListGeneral();
+    try{ await db.collection('users').doc(currentUser.uid).set({ nickname: clean }, { merge:true }); }catch(e){}
+    // تحديث النسخة المكررة من الاسم بكل مستندات مدن المستخدم (تُستخدَم لاستعلام Community Lists بدون قراءات إضافية)
+    try{
+      const mySnap = await db.collection('userCityLists').where('ownerId','==',currentUser.uid).get();
+      const batch = db.batch();
+      mySnap.forEach(doc => batch.update(doc.ref, { nickname: clean }));
+      await batch.commit();
+    }catch(e){}
+    await syncCommunityProfile();
+    showToast('Nickname saved ✓');
+    return true;
+  }catch(e){
+    showToast('Could not save nickname');
+    return false;
+  }
+}
+
+// يُعاد حسابها وتُكتب بمستند خفيف منفصل (communityProfiles) — يخدم استعلام الاكتشاف بدون تحميل كل تفاصيل الفئات/الأماكن
+async function syncCommunityProfileFor(uid, nickname){
+  try{
+    const citySnap = await db.collection('userCityLists').where('ownerId','==',uid).where('public','==',true).get();
+    const publicCityIds = [];
+    let totalFavoriteCount = 0;
+    citySnap.forEach(doc => {
+      const d = doc.data();
+      publicCityIds.push(d.cityId);
+      totalFavoriteCount += (d.favoriteCount || 0);
+    });
+    // فحص إضافي: رحلات عامة، حتى لو المستخدم ما عنده أي مدينة My List عامة إطلاقًا (سيناريو Add Trip بمفرده)
+    let hasAnyPublicTrip = false;
+    try{
+      const tripSnap = await db.collection('trips').where('ownerId','==',uid).where('public','==',true).limit(1).get();
+      hasAnyPublicTrip = !tripSnap.empty;
+    }catch(e){}
+    const payload = {
+      hasAnyPublicCity: publicCityIds.length > 0,
+      hasAnyPublicContent: publicCityIds.length > 0 || hasAnyPublicTrip, // يحدد فعليًا الظهور بنتائج الاكتشاف
+      publicCityIds,
+      totalFavoriteCount
+    };
+    if (nickname !== undefined) payload.nickname = nickname; // لا نكتب/نمحو الاسم لو ما تم تمريره صراحة (تفادي مسحه بالخطأ)
+    await db.collection('communityProfiles').doc(uid).set(payload, { merge:true });
+  }catch(e){}
+}
+async function syncCommunityProfile(){
+  if (!currentUser) return;
+  await syncCommunityProfileFor(currentUser.uid, userListData.nickname || null);
+}
+
+async function shareMyListWithSomeone(){
+  if (!myCityListData) return;
+  const name = await openInputModal("Share with (username)", "Enter their exact username", "");
+  if (name === null) return;
+  const key = name.trim().toLowerCase();
+  if (!key) return;
+  try{
+    const doc = await db.collection('nicknames').doc(key).get();
+    if (!doc.exists){ showToast('No user found with that username'); return; }
+    const data = doc.data();
+    const targetUid = data.uid;
+    if (targetUid === currentUser.uid){ showToast("You can't share with yourself"); return; }
+    if (!myCityListData.sharedWith) myCityListData.sharedWith = [];
+    if (!myCityListData.sharedWithNames) myCityListData.sharedWithNames = {};
+    if (myCityListData.sharedWith.includes(targetUid)){ showToast('Already shared with this user'); return; }
+    myCityListData.sharedWith.push(targetUid);
+    myCityListData.sharedWithNames[targetUid] = data.nickname || name.trim();
+    await saveMyCityList();
+    showToast('Shared ✓');
+    renderMyListModal();
+  }catch(e){ showToast('Could not verify username'); }
+}
+async function removeMyListShare(uid){
+  if (!myCityListData || !myCityListData.sharedWith) return;
+  myCityListData.sharedWith = myCityListData.sharedWith.filter(u => u !== uid);
+  await saveMyCityList();
+  renderMyListModal();
+}
+
+async function toggleMyListPublic(){
+  if (!myCityListData) return;
+  if (!myCityListData.public){
+    if (!userListData.nickname){
+      const ok = await chooseNickname();
+      if (!ok) return;
+    }
+  }
+  myCityListData.public = !myCityListData.public;
+  document.getElementById('myListPublicToggle').classList.toggle('on', myCityListData.public);
+  await saveMyCityList();
+  await syncCommunityProfile();
+}
+
+async function openMyListModal(){
+  if (!currentUser){ openAuthModal(); return; }
+  if (!myListCityId) myListCityId = currentCityId;
+  if (!myListCountry){
+    const c = myListAllCities().find(c => c.id === myListCityId);
+    myListCountry = c ? c.country : (myListAllCountries()[0] || null);
+  }
+  document.getElementById('myListBackdrop').classList.add('show');
+  document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  await loadMyCityList(myListCityId);
+  renderMyListModal();
+}
+async function closeMyListModal(){
+  document.getElementById('myListBackdrop').classList.remove('show');
+  await saveMyCityList();
+}
+async function selectMyListCity(cityId){
+  if (cityId === myListCityId) return;
+  await saveMyCityList(); // نحفظ أي تعديل معلّق بالمدينة الحالية قبل ما ننتقل
+  myListCityId = cityId;
+  const c = myListAllCities().find(c => c.id === cityId);
+  if (c) myListCountry = c.country;
+  document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  await loadMyCityList(cityId);
+  renderMyListModal();
+}
+
+function renderMyListModal(){
+  if (!document.getElementById('myListSections')) return; // النافذة لسه بحالة "Loading..." — العناصر مش موجودة بالـDOM بعد، تجنّب أي كراش
+  const city = myListAllCities().find(c => c.id === myListCityId);
+  document.getElementById('myListCityName').textContent = city ? city.name : '';
+  document.getElementById('myListPublicToggle').classList.toggle('on', !!(myCityListData && myCityListData.public));
+
+  if (currentUserSuspended){
+    document.getElementById('myListSections').innerHTML =
+      `<div style="background:#fbeceb; border:1.5px dashed #b5545a; border-radius:12px; padding:14px; text-align:center;">
+        <div style="font-weight:700; color:#7a2b30; margin-bottom:4px;">🚫 Account Suspended</div>
+        <div style="font-size:12px; color:#7a2b30;">Your account has been suspended and can no longer add or edit places, or share your list publicly.</div>
+      </div>`;
+    return;
+  }
+
+  const nickRow = document.getElementById('myListNicknameRow');
+  if (myCityListData && myCityListData.public){
+    nickRow.innerHTML = `Public as <b>${userListData.nickname || '—'}</b> · 👁️ ${userListData.viewCount || 0} views · ❤️ ${myCityListData.favoriteCount || 0} favorites for this city
+      <button type="button" class="remove-btn" style="font-size:10.5px; margin-inline-start:6px;" onclick="chooseNickname().then(renderMyListModal)"><i class="fa-solid fa-pen"></i> Edit name</button>`;
+  } else {
+    nickRow.innerHTML = '';
+  }
+
+  const shareRow = document.getElementById('myListShareRow');
+  const shared = (myCityListData && myCityListData.sharedWith) || [];
+  shareRow.innerHTML = `<div style="background:var(--paper-dark); border-radius:10px; padding:8px 10px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+      <span style="font-size:11.5px; color:var(--ink-soft);">🔗 Shared with someone</span>
+      <button type="button" class="remove-btn" style="margin:0; padding:4px 10px; font-size:10.5px;" onclick="shareMyListWithSomeone()">➕ Add</button>
+    </div>
+    ${shared.length ? shared.map(uid => `
+      <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; margin-top:6px;">
+        <span>👤 ${escapeHtml((myCityListData.sharedWithNames && myCityListData.sharedWithNames[uid]) || 'User')}</span>
+        <button type="button" class="remove-btn" style="font-size:10px;" onclick="removeMyListShare('${uid}')"><i class="fa-solid fa-xmark"></i></button>
+      </div>`).join('') : ''}
+  </div>`;
+
+  // صف الدول
+  const countries = myListAllCountries();
+  const countryOptions = countries.map(country => `
+    <option value="${country.replace(/"/g,'&quot;')}" ${country === myListCountry ? 'selected' : ''}>
+      ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
+    </option>`).join('');
+  document.getElementById('myListCountryChips').innerHTML = `
+    <select class="city-tab" style="flex:1; min-width:140px; font-size:11.5px; padding:7px 12px;" onchange="selectMyListCountry(this.value)">
+      ${countryOptions}
+    </select>
+    <button type="button" class="city-tab" style="font-size:11.5px; padding:7px 12px; border-style:dashed; color:var(--brass);" onclick="addMyListCountry()">➕ Add Country</button>
+    ${(userListData.customCountries || []).includes(myListCountry) ? `<button type="button" class="remove-btn" style="font-size:14px;" onclick="removeMyListCountry('${(myListCountry||'').replace(/'/g,"\\'")}')" title="Delete country">🗑️</button>` : ''}
+  `;
+
+  // صف المدن — بس مدن الدولة المختارة + زرار إضافة مدينة جديدة (تحت نفس الدولة)
+  const citiesInCountry = myListAllCities().filter(c => c.country === myListCountry);
+  const cityChips = citiesInCountry.map(c => `
+    <span style="display:inline-flex; align-items:center; gap:4px;">
+      <button type="button" class="city-tab ${c.id === myListCityId ? 'active' : ''}" style="font-size:11.5px; padding:7px 12px;" onclick="selectMyListCity('${c.id}')">
+        ${c.name}${c.id.startsWith('mylist_') ? ' 👤' : ''}
+      </button>
+      ${c.id.startsWith('mylist_') ? `<button type="button" class="remove-btn" style="font-size:14px;" onclick="removeMyListCity('${c.id}')" title="Delete city">🗑️</button>` : ''}
+    </span>`).join('')
+    + `<button type="button" class="city-tab" style="font-size:11.5px; padding:7px 12px; border-style:dashed; color:var(--brass);" onclick="addMyListCity()">➕ Add City</button>`;
+  document.getElementById('myListCityChips').innerHTML = cityChips;
+
+  let html = '';
+  DATA.forEach(section => {
+    const allItems = section.items; // بدون تصنيفات مخصصة — المستخدم مالوش صلاحية إضافة تصنيفات
+    html += `<div style="margin-bottom:14px;">
+      <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; margin-bottom:6px; color:var(--ink);">${sectionDisplay(section).icon} ${sectionDisplay(section).name}${section.ownerOnly ? ` <span style="color:#b5545a; font-weight:700; font-size:10.5px;"><i class="fa-solid fa-lock"></i> Always private — never shared</span>` : ''}</div>`;
+    allItems.forEach(item => {
+      const entry = userGetEntry(item.id);
+      const active = entry.active === true;
+      const places = entry.places || [];
+      html += `<div style="border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:6px; background:var(--card);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="switch-btn small ${active?'on':''}" onclick="toggleUserActive('${item.id}', ${active?'false':'true'})"><span class="knob"></span></button>
+          <span style="font-size:12.5px; font-weight:600;">${displayIcon(item)} ${displayName(item)}</span>
+        </div>`;
+      if (active){
+        places.forEach((p,i) => {
+          const key = item.id + '#' + i;
+          const isComplete = p.name && p.name.trim() && p.url && p.url.trim();
+          const isEditing = myListEditingKeys.has(key) || !isComplete;
+          if (isEditing){
+            html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">
+              <input type="text" class="modal-input" placeholder="Area (optional)" value="${(p.area||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'area', this.value)" style="font-size:12px; padding:6px 8px;">
+              <input type="text" class="modal-input" placeholder="Place name" value="${(p.name||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'name', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px;">
+              <div style="display:flex; gap:6px; margin-top:4px; align-items:center;">
+                <input type="text" class="modal-input" placeholder="Google Maps link" value="${(p.url||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'url', this.value)" style="flex:1; font-size:12px; padding:6px 8px; direction:ltr; text-align:left;">
+                <button type="button" class="remove-btn" onclick="pasteToUserPlaceUrl('${item.id}', ${i}); return false;" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button>
+              </div>
+              <textarea class="modal-input" rows="2" placeholder="Note (optional) — e.g. - Great burger&#10;- Paste a Google Maps link for a nearby café" oninput="updateUserPlaceField('${item.id}', ${i}, 'note', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px; resize:vertical; line-height:1.5;">${escapeHtml(p.note||'')}</textarea>
+              <div style="display:flex; gap:6px; margin-top:4px;">
+                ${isComplete ? `<button type="button" class="add-place-btn" style="flex:1; font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})"><i class="fa-solid fa-check"></i> Done</button>` : ''}
+                <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})"><i class="fa-solid fa-trash"></i> Remove</button>
+              </div>
+            </div>`;
+          } else {
+            html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">`;
+            if (p.area && p.area.trim()) html += `<div style="font-size:10.5px; color:var(--ink-soft); margin-bottom:2px;">📍 ${p.area}</div>`;
+            html += `<div style="display:flex; align-items:center; gap:8px;">
+              <a class="place-link" style="flex:1; font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${p.name} ←</a>
+              ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="font-size:11px; color:var(--brass);" onclick="addPlaceToTrip('mylist', '${myListCityId}', '${item.id}', '${p.id}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
+              <button type="button" class="remove-btn" style="font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+              <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})" title="Remove"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+            if (p.note && p.note.trim()) html += renderNoteHtml(p.note);
+            html += `</div>`;
+          }
+        });
+        html += `<button type="button" class="add-place-btn" style="width:100%; margin-top:6px; font-size:11.5px;" onclick="addUserPlace('${item.id}')"><i class="fa-solid fa-plus"></i> Add place</button>`;
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+  document.getElementById('myListSections').innerHTML = html;
+}
+
+/* =========================================================
+   تصفح قوائم المستخدمين الآخرين (Community Lists)
+   ========================================================= */
+let communityUsers = [];
+let communityTab = 'city';   // 'city' | 'all'
+let communitySort = 'viewed'; // 'viewed' | 'loved' — يُستخدم بس مع تبويب 'all'
+let viewingUserUid = null;
+let viewingUserData = null;
+let communityViewingCityId = null;
+
+async function loadCommunityLists(){
+  try{
+    const snap = await db.collection('communityProfiles').where('hasAnyPublicContent','==',true).get();
+    communityUsers = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (!d.nickname) return;
+      communityUsers.push({
+        uid: doc.id,
+        nickname: d.nickname,
+        publicCityIds: Array.isArray(d.publicCityIds) ? d.publicCityIds : [],
+        totalFavoriteCount: d.totalFavoriteCount || 0,
+        viewCount: d.viewCount || 0
+      });
+    });
+  }catch(e){ communityUsers = []; }
+}
+
+async function openCommunityModal(){
+  document.getElementById('communityBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  document.getElementById('communityBackdrop').classList.add('show');
+  await loadCommunityLists();
+  communityTab = 'city';
+  viewingUserUid = null;
+  renderCommunityModal();
+}
+function closeCommunityModal(){
+  document.getElementById('communityBackdrop').classList.remove('show');
+  viewingUserUid = null;
+}
+function switchCommunityTab(tab){
+  communityTab = tab;
+  viewingUserUid = null;
+  renderCommunityModal();
+}
+function switchCommunitySort(sort){
+  communitySort = sort;
+  renderCommunityModal();
+}
+
+function renderCommunityModal(){
+  const wrap = document.getElementById('communityBody');
+  if (viewingUserUid){ renderCommunityUserList(wrap); return; }
+
+  let usersToShow = communityUsers;
+  let html = `<div style="display:flex; gap:6px; margin-bottom:10px;">
+    <button type="button" class="btn ${communityTab==='city'?'btn-brass':'btn-ghost'}" style="flex:1; margin:0; padding:9px;" onclick="switchCommunityTab('city')">This City</button>
+    <button type="button" class="btn ${communityTab==='all'?'btn-brass':'btn-ghost'}" style="flex:1; margin:0; padding:9px;" onclick="switchCommunityTab('all')">All Users</button>
+  </div>`;
+
+  if (communityTab === 'city'){
+    const cityName = allCities().find(c=>c.id===currentCityId)?.name || '';
+    usersToShow = communityUsers.filter(u => u.publicCityIds.includes(currentCityId));
+    html += `<p style="font-size:11px; color:var(--ink-soft); text-align:center; margin-bottom:8px;">Users with a public list for ${cityName}</p>`;
+  } else {
+    html += `<div style="display:flex; gap:6px; margin-bottom:8px;">
+      <button type="button" class="remove-btn" style="flex:1; font-size:11px; ${communitySort==='viewed'?'color:var(--brass);':''}" onclick="switchCommunitySort('viewed')"><i class="fa-solid fa-eye"></i> Most Viewed</button>
+      <button type="button" class="remove-btn" style="flex:1; font-size:11px; ${communitySort==='loved'?'color:var(--brass);':''}" onclick="switchCommunitySort('loved')"><i class="fa-solid fa-heart"></i> Most Loved</button>
+    </div>`;
+    usersToShow = [...communityUsers].sort((a,b) => communitySort==='loved' ? b.totalFavoriteCount - a.totalFavoriteCount : b.viewCount - a.viewCount);
+  }
+
+  if (!usersToShow.length){
+    html += `<p style="color:var(--ink-soft); font-size:12.5px; text-align:center; padding:10px 0;">No public lists yet</p>`;
+  } else {
+    html += usersToShow.map(u => `
+      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;" onclick="viewCommunityUser('${u.uid}')">
+        <span style="font-weight:700;">${u.nickname}</span>
+        <span style="color:var(--ink-soft); font-size:10.5px;">👁️ ${u.viewCount} · ❤️ ${u.totalFavoriteCount}</span>
+      </button>`).join('');
+  }
+  wrap.innerHTML = html;
+}
+
+let viewingUserCities = []; // تفاصيل المدن العامة الكاملة (فئات/أماكن) — تُحمَّل فقط لحظة فتح ملف شخص معيّن (Lazy)
+
+async function viewCommunityUser(uid){
+  viewingUserUid = uid;
+  viewingUserData = communityUsers.find(u => u.uid === uid);
+  communityViewingCityId = null;
+  viewingCommunityTripId = null;
+  document.getElementById('communityBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  // ✅ يعمل الآن (المرحلة ٣) — الاستثناء الأمني الجديد يسمح بتحديث viewCount لملف عام
+  try{
+    await db.collection('communityProfiles').doc(uid).set({ viewCount: firebase.firestore.FieldValue.increment(1) }, { merge:true });
+    viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1;
+  }catch(e){}
+  // تحميل كسول: فقط تفاصيل مدن هذا المستخدم المفتوح حاليًا، مو كل مستخدمي Community دفعة وحدة
+  viewingUserCities = [];
+  try{
+    const cityDocs = await Promise.all((viewingUserData.publicCityIds||[]).map(cityId =>
+      db.collection('userCityLists').doc(uid + '_' + cityId).get()
+    ));
+    cityDocs.forEach(doc => {
+      if (!doc.exists) return;
+      const d = doc.data();
+      const cityMeta = allCities().find(c => c.id === d.cityId);
+      viewingUserCities.push({
+        id: d.cityId,
+        name: cityMeta ? cityMeta.name : d.cityId,
+        categories: (d.categories && typeof d.categories==='object') ? d.categories : {},
+        favoriteCount: d.favoriteCount || 0
+      });
+    });
+  }catch(e){}
+  await loadCommunityUserTrips(uid);
+  renderCommunityModal();
+}
+function backToCommunityList(){
+  viewingUserUid = null;
+  renderCommunityModal();
+}
+
+function renderCommunityUserList(wrap){
+  if (viewingCommunityTripId){ renderCommunityTripDetail(wrap); return; }
+  const u = viewingUserData;
+  const cities = viewingUserCities;
+
+  if (!communityViewingCityId || !cities.find(c => c.id === communityViewingCityId)){
+    communityViewingCityId = cities[0] ? cities[0].id : null;
+  }
+
+  let html = `<button type="button" class="remove-btn" onclick="backToCommunityList()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-right"></i> Back</button>
+  <h4 style="text-align:center; margin:4px 0 10px; font-family:'Cairo',sans-serif;">${u.nickname}'s List</h4>`;
+
+  if (communityUserTrips.length){
+    html += `<div style="font-weight:700; font-size:12.5px; margin:6px 0 8px;">🧳 Shared Trips</div>`;
+    html += communityUserTrips.map(t => `
+      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px;" onclick="openCommunityTrip('${t.id}')">
+        ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
+      </button>`).join('');
+    html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
+  }
+
+  if (!cities.length && !communityUserTrips.length){
+    html += `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">No cities in this list yet</p>`;
+    wrap.innerHTML = html;
+    return;
+  }
+  if (!cities.length){ wrap.innerHTML = html; return; }
+
+  html += `<div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px;">` +
+    cities.map(c => `<button type="button" class="city-tab ${c.id===communityViewingCityId?'active':''}" style="font-size:11px; padding:6px 10px;" onclick="communityViewingCityId='${c.id}'; renderCommunityModal();">${c.name}</button>`).join('') +
+    `</div>`;
+
+  const cityObj = cities.find(c => c.id === communityViewingCityId);
+  const cityLinks = cityObj ? cityObj.categories : {};
+  let hasAnyPlace = false;
+
+  DATA.forEach(section => {
+    if (section.ownerOnly) return; // استثناء ثابت — أبدًا ما يظهر في قوائم الآخرين
+    let sectionHtml = '';
+    section.items.forEach(item => {
+      const entry = cityLinks[item.id];
+      if (!entry || entry.active !== true || !entry.places || !entry.places.length) return;
+      const validPlaces = entry.places.filter(p => p.url && p.name);
+      if (!validPlaces.length) return;
+      hasAnyPlace = true;
+      sectionHtml += `<div style="font-weight:600; font-size:12px; margin:8px 0 4px;">${displayIcon(item)} ${displayName(item)}</div>`;
+      validPlaces.forEach(p => {
+        const fav = isFavorite(p.url);
+        const safeUrl = p.url.replace(/'/g,"\\'"), safeName = p.name.replace(/'/g,"\\'"), safeCat = displayName(item).replace(/'/g,"\\'");
+        const safeCity = (cityObj ? cityObj.name : '').replace(/'/g,"\\'"), safeArea = (p.area||'').replace(/'/g,"\\'");
+        sectionHtml += `<div style="margin-bottom:8px;">
+          ${p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : ''}
+          <div style="display:flex; align-items:center; gap:6px;">
+            <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
+            <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCat}', '${safeCity}', '${safeArea}', '${u.uid}', '${communityViewingCityId}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
+            ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
+          </div>
+          ${renderNoteHtml(p.note)}
+        </div>`;
+      });
+    });
+    html += sectionHtml;
+  });
+
+  if (!hasAnyPlace) html += `<p style="color:var(--ink-soft); font-size:12px; text-align:center; padding:10px 0;">No active places in this city yet</p>`;
+  wrap.innerHTML = html;
+}
+
+/* =========================================================
+   دليل الاستخدام (Help Guide) — نافذة ثابتة بالعربي/الإنجليزي، أقسام قابلة للطي
+   ========================================================= */
+let helpLang = 'ar';
+let helpOpenIndex = 0; // القسم المفتوح افتراضيًا (الأول)
+
+const HELP_CONTENT = {
+  ar: {
+    title: '📖 كيف يعمل MyPickz',
+    closeLabel: 'إغلاق',
+    sections: [
+      { h: 'ما هو MyPickz؟', b: 'منصة لحفظ جميع أماكنك في مكانٍ واحد، مصنّفة بعدة مستويات من التصنيفات، مع سهولة الوصول المباشر إلى موقعها على خرائط جوجل من خلال رابط المكان. إنه دليل مدينة شخصي — كل مكان هنا مُختار بعناية، سواء من فريق التطبيق، منك أنت، أو من مستخدم آخر شارك قائمته.' },
+      { h: 'لماذا تنشئ حسابًا؟', b: '❤️ احفظ أي مكان في مفضلتك، من أي جزء في التطبيق<br>📝 أنشئ قائمتك الشخصية بأماكنك، في أي مدينة — حتى لو لم تكن مدرجة في التطبيق من قبل فريق العمل<br>🌍 شارك قائمتك بشكل عام (اختياري)، وتصفّح قوائم مستخدمين آخرين' },
+      { h: 'إضافة MyPickz إلى سطح المكتب سواء في جهاز الجوال أو الكمبيوتر', b: '1. افتح الموقع من المتصفح (Safari أو غيره)<br>2. اضغط زر المشاركة (Share) على الجوال، أو قائمة الخيارات على الكمبيوتر<br>3. اختر "Add to Home Screen" (جوال) أو "Create Shortcut" (كمبيوتر)<br>4. الآن يمكنك فتح MyPickz بضغطة واحدة، تمامًا كأي تطبيق آخر' },
+      { h: 'كيف تضيف رابطًا بشكل صحيح', b: '1. افتح المكان في خرائط جوجل\n2. اضغط Share ← Copy\n3. عد إلى هنا واضغط زر اللصق 📋 المجاور لخانة الرابط — تجنّب اللصق اليدوي، فهذه الطريقة أكثر ضمانًا\n4. الروابط المقبولة فقط من خرائط جوجل (google.com/maps، maps.app.goo.gl...)'.replace(/\n/g,'<br>') },
+      { h: 'الاستفادة من خانة اسم المنطقة', b: 'يسهّل تمييز المنطقة التي يقع فيها المكان (مثال: مقهى)، خصوصًا في المدن الكبيرة أو الجزر حيث تجد قائمة طويلة من الأماكن ضمن نفس التصنيف.' },
+      { h: 'الاستفادة من خانة Note', b: 'تجنّب الأوصاف العامة، واكتب ما جعل المكان يستحق الزيارة فعلًا. عبارة مثل <i>"أجمل إطلالة غروب من الجلسة الخارجية"</i> أفيد بكثير من <i>"مكان جميل."</i> تقدر تكتب أكثر من نقطة بأسطر منفصلة، وأي رابط Google Maps تلصقه بالنص (مثلًا لمطعم أو مقهى قريب) يتحول تلقائيًا لرابط قابل للضغط.' },
+      { h: 'من أين تتجمّع مفضلتي؟', b: 'تفضيلاتك ❤️ قد تأتي من ثلاثة مصادر مختلفة، مجتمعة في مكانٍ واحد:<br>• الدليل الرسمي (الذي ينشره فريق التطبيق)<br>• قائمتك الشخصية<br>• أي قائمة عامة شاركها مستخدم آخر' },
+      { h: 'الفرق بين My List و Community Lists', b: '<b>My List</b> = أماكنك الخاصة، وأنت وحدك من يستطيع تعديلها<br><b>Community Lists</b> = تصفّح القوائم العامة لمستخدمين آخرين، وأضِف أماكن منها إلى مفضلتك' },
+      { h: '🔒 شارة "خاص دائمًا"', b: 'بعض التصنيفات (Hospitals & Clinics, Personal, Others) مخصصة لمرجعك الشخصي فقط. لا تظهر لأي شخص آخر مطلقًا، حتى لو كانت قائمتك عامة — ولا يوجد إعداد يمكنه تغيير ذلك.' }
+    ]
+  },
+  en: {
+    title: '📖 How MyPickz Works',
+    closeLabel: 'Close',
+    sections: [
+      { h: 'What is MyPickz?', b: "A platform to save all your places in one spot, organized across multiple levels of categories, with easy direct access to their location on Google Maps through the place link. It's a personal city guide — every place here is hand-picked, by the App Team, by you, or by someone else who shared their list." },
+      { h: 'Why create an account?', b: '❤️ Save any place to your own Favorites, from anywhere in the app<br>📝 Build your own personal list of places, in any city — even ones not yet added to the app by the App Team<br>🌍 Share your list publicly (optional) and browse lists from other users' },
+      { h: 'Adding MyPickz to your Home Screen or Desktop, on mobile or computer', b: '1. Open the site in your browser (Safari or others)<br>2. Tap the Share button on mobile, or the options menu on desktop<br>3. Choose "Add to Home Screen" (mobile) or "Create Shortcut" (desktop)<br>4. Now you can open MyPickz with one tap, like any other app' },
+      { h: 'How to add a link correctly', b: "1. Open the place in Google Maps<br>2. Tap Share → Copy<br>3. Come back here and tap the 📋 paste button next to the link field — don't paste manually, it's more reliable<br>4. Only Google Maps links are accepted (google.com/maps, maps.app.goo.gl...)" },
+      { h: 'Using the Area field', b: "Makes it easier to tell where a place is located (e.g. a café), especially in large cities or islands where you'll find a long list of places under the same category." },
+      { h: 'Using the Note field', b: 'Skip generic descriptions — share what made the place worth it. <i>"Best sunset view from the outdoor seating"</i> is more useful than <i>"nice cafe."</i> You can write more than one point on separate lines, and any Google Maps link you paste in (like a nearby restaurant or café) automatically becomes clickable.' },
+      { h: 'Where does My Favorites come from?', b: 'Your ❤️ can come from three different sources, all in one place:<br>• The official guide (published by the App Team)<br>• Your own personal list<br>• Any public list shared by another user' },
+      { h: 'My List vs. Community Lists — what\'s the difference?', b: '<b>My List</b> = your own places, only you can edit it<br><b>Community Lists</b> = browse other users\' public lists, and favorite places from them' },
+      { h: '🔒 "Always private" badge', b: 'Some categories (Hospitals & Clinics, Personal, Others) are for your own reference only. They\'re never visible to anyone else, even if your list is public — no setting can change that.' }
+    ]
+  }
+};
+
+function setHelpLang(lang){
+  helpLang = lang;
+  document.getElementById('helpLangArBtn').className = 'btn ' + (lang==='ar' ? 'btn-brass' : 'btn-ghost');
+  document.getElementById('helpLangEnBtn').className = 'btn ' + (lang==='en' ? 'btn-brass' : 'btn-ghost');
+  renderHelpModal();
+}
+
+function toggleHelpSection(i){
+  helpOpenIndex = (helpOpenIndex === i) ? -1 : i;
+  renderHelpModal();
+}
+
+function renderHelpModal(){
+  const data = HELP_CONTENT[helpLang];
+  const dir = helpLang === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('helpTitle').textContent = data.title;
+  document.getElementById('helpCloseBtn').textContent = data.closeLabel;
+  const wrap = document.getElementById('helpSections');
+  wrap.style.direction = dir;
+  wrap.style.textAlign = helpLang === 'ar' ? 'right' : 'left';
+  wrap.innerHTML = data.sections.map((s,i) => `
+    <div style="border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden;">
+      <button type="button" onclick="toggleHelpSection(${i})" style="width:100%; text-align:${helpLang==='ar'?'right':'left'}; background:var(--paper-dark); border:none; padding:11px 14px; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <span>${s.h}</span>
+        <span style="font-size:11px; color:var(--brass);">${helpOpenIndex===i ? '▲' : '▼'}</span>
+      </button>
+      ${helpOpenIndex===i ? `<div style="padding:12px 14px; font-size:12.5px; line-height:1.9; color:var(--ink);">${s.b}</div>` : ''}
+    </div>`).join('');
+}
+
+function openHelpModal(){
+  renderHelpModal();
+  document.getElementById('helpLangArBtn').className = 'btn ' + (helpLang==='ar' ? 'btn-brass' : 'btn-ghost');
+  document.getElementById('helpLangEnBtn').className = 'btn ' + (helpLang==='en' ? 'btn-brass' : 'btn-ghost');
+  document.getElementById('helpBackdrop').classList.add('show');
+}
+function closeHelpModal(){
+  document.getElementById('helpBackdrop').classList.remove('show');
+}
+function maybeAutoOpenHelp(){
+  try{
+    if (!localStorage.getItem('mypickz_help_seen')){
+      localStorage.setItem('mypickz_help_seen', '1');
+      openHelpModal();
+    }
+  }catch(e){}
+}
+
+/* =========================================================
+   إدارة المستخدمين (Manage Users) — سجل خفيف لكل مستخدم مسجّل + لوحة للمالك
+   ========================================================= */
+function todayKey(){
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+async function registerUserRecord(){
+  if (!currentUser) return;
+  const today = todayKey();
+  try{
+    const ref = db.collection('users').doc(currentUser.uid);
+    const doc = await ref.get();
+    if (!doc.exists){
+      await ref.set({ email: currentUser.email || '', firstSeen: Date.now(), lastSeen: Date.now(), suspended: false, lastActiveDay: today }, { merge:true });
+      await db.collection('dailyStats').doc(today).set({
+        newSignupsToday: firebase.firestore.FieldValue.increment(1),
+        activeToday: firebase.firestore.FieldValue.increment(1)
+      }, { merge:true });
+    } else {
+      const prevDay = doc.data().lastActiveDay;
+      await ref.set({ lastSeen: Date.now(), lastActiveDay: today }, { merge:true });
+      if (prevDay !== today){ // نتجنب عدّ نفس المستخدم مرتين في نفس اليوم
+        await db.collection('dailyStats').doc(today).set({
+          activeToday: firebase.firestore.FieldValue.increment(1)
+        }, { merge:true });
+      }
+    }
+  }catch(e){ /* صامت — التسجيل تحسين إضافي، مش شرط لعمل التطبيق */ }
+}
+
+let allUsersCache = [];
+
+async function openUsersModal(){
+  document.getElementById('usersSearchInput').value = '';
+  document.getElementById('usersListBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft);">Loading...</p>`;
+  document.getElementById('usersBackdrop').classList.add('show');
+  await loadVisitCount();
+  try{
+    const snap = await db.collection('users').get();
+    allUsersCache = [];
+    snap.forEach(doc => allUsersCache.push({ uid: doc.id, ...doc.data() }));
+  }catch(e){ allUsersCache = []; }
+  await loadCommunityLists(); // نحتاجها دايمًا عشان نعرف مين مفعّل المشاركة العامة، ونستخدمها كمان لتصحيح أسماء قديمة ناقصة
+
+  // إصلاح تلقائي: لو حساب عنده قائمة عامة فعليًا لكن سجله الجديد ناقص الاسم المستعار (اسم اتحدد قبل إضافة هذه الميزة)، نستكمله من بيانات القائمة العامة نفسها
+  communityUsers.forEach(cu => {
+    const u = allUsersCache.find(x => x.uid === cu.uid);
+    if (u && !u.nickname && cu.nickname){
+      u.nickname = cu.nickname;
+      db.collection('users').doc(cu.uid).set({ nickname: cu.nickname }, { merge:true }).catch(()=>{});
+    }
+  });
+
+  renderUsersModal();
+}
+function closeUsersModal(){
+  document.getElementById('usersBackdrop').classList.remove('show');
+}
+
+function renderUsersModal(query){
+  const total = allUsersCache.length;
+  const publicSet = new Set(communityUsers.map(u => u.uid)); // مين مفعّل المشاركة العامة دلوقتي بالتحديد
+  const publicCount = communityUsers.length;
+  const pct = total ? Math.round((publicCount / total) * 100) : 0;
+
+  const now = Date.now();
+  const active7 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 7*24*60*60*1000).length;
+  const active30 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 30*24*60*60*1000).length;
+  const usedMyList = allUsersCache.filter(u => u.hasMyListActivity).length;
+  const usedFavorites = allUsersCache.filter(u => u.hasFavorited).length;
+
+  document.getElementById('usersStatsLine').innerHTML =
+    `👁️ Total visits: <b>${visitCount === null ? '...' : visitCount}</b><br>
+     👥 Total registered: <b>${total}</b> &nbsp;·&nbsp; 🌍 Public sharing: <b>${publicCount}</b> (<b>${pct}%</b>)<br>
+     🟢 Active last 7d: <b>${active7}</b> &nbsp;·&nbsp; Active last 30d: <b>${active30}</b><br>
+     📝 Used My List: <b>${usedMyList}</b> &nbsp;·&nbsp; ❤️ Favorited something: <b>${usedFavorites}</b>
+     <button type="button" class="remove-btn" style="display:block; margin:8px auto 0; font-size:11px;" onclick="generateUsersReport()"><i class="fa-solid fa-file-lines"></i> Generate Report</button>`;
+
+  const q = (query || '').trim().toLowerCase();
+  let list = allUsersCache;
+  if (q){
+    list = list.filter(u =>
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.nickname || '').toLowerCase().includes(q)
+    );
+  }
+  list = [...list].sort((a,b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+
+  const wrap = document.getElementById('usersListBody');
+  if (!list.length){
+    wrap.innerHTML = `<p style="text-align:center; color:var(--ink-soft); padding:10px 0;">No users found</p>`;
+    return;
+  }
+  wrap.innerHTML = list.map(u => {
+    const isPublicNow = publicSet.has(u.uid);
+    return `
+    <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); border-radius:10px; padding:9px 11px; margin-bottom:6px; ${u.suspended ? 'background:#fbeceb;' : ''}">
+      <div style="font-size:11.5px;">
+        <div style="font-weight:700;">${u.nickname || '<span style="color:var(--ink-soft); font-weight:400;">(no nickname yet)</span>'}</div>
+        <div style="color:var(--ink-soft); font-size:10.5px; margin-top:2px;">${u.email || ''}</div>
+        <div style="font-size:10px; font-weight:700; margin-top:2px; color:${isPublicNow ? '#2f7a4d' : 'var(--ink-soft)'};">${isPublicNow ? '🌍 Public now' : '🔒 Not public now'}</div>
+        ${u.suspended ? '<div style="color:#b5545a; font-size:10px; font-weight:700; margin-top:2px;">🚫 Suspended</div>' : ''}
+      </div>
+      <button type="button" class="btn ${u.suspended ? 'btn-ghost' : 'btn-brass'}" style="margin:0; padding:7px 14px; font-size:11px; ${u.suspended ? '' : 'background:#b5545a;'}" onclick="toggleSuspendUser('${u.uid}')">${u.suspended ? 'Unsuspend' : 'Suspend'}</button>
+    </div>`;
+  }).join('');
+}
+
+function generateUsersReport(){
+  const total = allUsersCache.length;
+  const publicSet = new Set(communityUsers.map(u => u.uid));
+  const publicCount = communityUsers.length;
+  const now = Date.now();
+  const active7 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 7*24*60*60*1000).length;
+  const active30 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 30*24*60*60*1000).length;
+  const usedMyList = allUsersCache.filter(u => u.hasMyListActivity).length;
+  const usedFavorites = allUsersCache.filter(u => u.hasFavorited).length;
+  const suspendedCount = allUsersCache.filter(u => u.suspended).length;
+  const pct = (n) => total ? Math.round((n/total)*100) : 0;
+
+  const lines = [
+    `MyPickz — Users Report`,
+    `Generated: ${new Date().toLocaleString()}`,
+    ``,
+    `Total page visits: ${visitCount === null ? 'N/A' : visitCount}`,
+    `Total registered users: ${total}`,
+    `Active in last 7 days: ${active7} (${pct(active7)}%)`,
+    `Active in last 30 days: ${active30} (${pct(active30)}%)`,
+    `Used My List at least once: ${usedMyList} (${pct(usedMyList)}%)`,
+    `Favorited at least one place: ${usedFavorites} (${pct(usedFavorites)}%)`,
+    `Sharing publicly (Community Lists): ${publicCount} (${pct(publicCount)}%)`,
+    `Suspended accounts: ${suspendedCount}`,
+  ];
+  document.getElementById('reportTextArea').value = lines.join('\n');
+  document.getElementById('reportBackdrop').classList.add('show');
+}
+
+async function copyUsersReport(){
+  const text = document.getElementById('reportTextArea').value;
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Report copied ✓');
+  }catch(e){
+    showToast('Could not copy — select and copy manually');
+  }
+}
+
+async function toggleSuspendUser(uid){
+  const u = allUsersCache.find(x => x.uid === uid);
+  if (!u) return;
+  const newVal = !u.suspended;
+  try{
+    await db.collection('users').doc(uid).set({ suspended: newVal }, { merge:true });
+    // الإيقاف/الرفع يطبَّق على كل مدن المستخدم دفعة وحدة (مستند مستقل لكل مدينة بعد إعادة الهيكلة)
+    const citySnap = await db.collection('userCityLists').where('ownerId','==',uid).get();
+    if (!citySnap.empty){
+      const batch = db.batch();
+      citySnap.forEach(doc => {
+        const update = { suspended: newVal };
+        if (newVal) update.public = false; // الإيقاف يخفي المشاركة العامة فورًا لكل مدنه
+        batch.update(doc.ref, update);
+      });
+      await batch.commit();
+    }
+    if (newVal){
+      // إيقاف المستخدم يخفيه فورًا من نتائج الاكتشاف، بغض النظر عن حالة كل مدينة لحالها
+      await db.collection('communityProfiles').doc(uid).set({ hasAnyPublicCity: false, hasAnyPublicContent: false, publicCityIds: [] }, { merge:true }).catch(()=>{});
+    } else {
+      await syncCommunityProfileFor(uid); // رفع الإيقاف: نعيد حساب حالة المشاركة الحقيقية بدل افتراض إعادتها تلقائيًا
+    }
+    // الإيقاف/الرفع يشمل أيضًا كل رحلات المستخدم — حقل suspended منفصل (بنفس نمط userCityLists)، بدون محو Public/sharedWith الفعلية (تُسترجَع تلقائيًا عند رفع الإيقاف)
+    try{
+      const tripSnap = await db.collection('trips').where('ownerId','==',uid).get();
+      if (!tripSnap.empty){
+        const tripBatch = db.batch();
+        tripSnap.forEach(doc => tripBatch.update(doc.ref, { suspended: newVal }));
+        await tripBatch.commit();
+      }
+    }catch(e){}
+    u.suspended = newVal;
+    showToast(newVal ? 'User suspended' : 'User unsuspended');
+    await loadCommunityLists();
+    renderUsersModal(document.getElementById('usersSearchInput').value);
+  }catch(e){ showToast('Could not update user'); }
+}
+
+let expandedSections = {}; // { sectionTitle: true } — القسم مفتوح بالكامل
+let areaFilter = {};       // { sectionTitle: "اسم المنطقة" } — فلتر نشط على مستوى القسم الرئيسي
+
+function sectionAreas(section, items){
+  const set = new Set();
+  items.forEach(item => {
+    getPlaces(item.id).forEach(p => {
+      const a = (p.area || '').trim();
+      if (a) set.add(a);
+    });
+  });
+  return [...set].sort((a,b) => a.localeCompare(b, 'ar'));
+}
+function setAreaFilter(sectionTitle, area){
+  if (area) areaFilter[sectionTitle] = area;
+  else delete areaFilter[sectionTitle];
+  render();
+}
+const COLLAPSE_LIMIT = 6;
+
+function render(){
+  const ownerWarning = document.getElementById('ownerAuthWarning');
+  if (ownerWarning) ownerWarning.style.display = (isOwner && !currentUser) ? 'block' : 'none';
+
+  const wrap = document.getElementById('sections');
+  wrap.innerHTML = '';
+
+  if (editMode) {
+    const published = cityStatus[currentCityId] === true;
+    const statusBar = document.createElement('div');
+    statusBar.className = 'status-card';
+    statusBar.innerHTML = `
+      <button class="status-toggle ${published ? 'published' : ''}" onclick="togglePublish()">
+        <span class="status-dot"></span>
+        <span>${published ? 'Published — visible to visitors' : 'Under development — hidden from visitors'}</span>
+      </button>
+      <div class="status-divider"></div>
+      <div class="status-stat">👁️ ${visitCount === null ? '...' : visitCount} total visits</div>`;
+    wrap.appendChild(statusBar);
+  }
+
+  // شريط تنقل سريع بين الأقسام — يظهر بس لو فيه أكثر من قسم فيه محتوى
+  const visibleSections = DATA.filter(section => {
+    if (!isOwner && section.ownerOnly) return false;
+    if (!editMode && sectionStatus[section.title] === false) return false;
+    const sectionCustom = customItems.filter(c => c.section === section.title);
+    const allItems = section.items.concat(sectionCustom);
+    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id, !section.ownerOnly).active !== false && getPlaces(item.id).length > 0);
+    return visibleItems.length > 0;
+  });
+  if (visibleSections.length > 1) {
+    const nav = document.createElement('div');
+    nav.className = 'quick-nav';
+    nav.innerHTML = visibleSections.map((section) => `
+      <button class="quick-nav-btn" onclick="document.getElementById('sec-${DATA.indexOf(section)}').scrollIntoView({behavior:'smooth', block:'start'})" title="${sectionDisplay(section).name}">
+        ${sectionDisplay(section).icon}
+      </button>`).join('');
+    wrap.appendChild(nav);
+  }
+
+  DATA.forEach((section, sIndex) => {
+    if (!isOwner && section.ownerOnly) return;
+    if (!editMode && sectionStatus[section.title] === false) return;
+    const sectionCustom = customItems.filter(c => c.section === section.title);
+    const allItems = orderedItems(section, section.items.concat(sectionCustom));
+    const visibleItems = editMode ? allItems : allItems.filter(item => getEntry(item.id, !section.ownerOnly).active !== false && getPlaces(item.id).length > 0);
+    if (!editMode && visibleItems.length === 0 && !(section.ownerOnly && isOwner)) return;
+
+    const sd = sectionDisplay(section);
+    const sectionOn = sectionStatus[section.title] !== false;
+    const isExpanded = editMode || expandedSections[section.title] || visibleItems.length <= COLLAPSE_LIMIT;
+    const itemsToShow = isExpanded ? visibleItems : visibleItems.slice(0, COLLAPSE_LIMIT);
+    const currentAreaFilter = (!editMode && areaFilter[section.title]) || '';
+    const displayCount = currentAreaFilter
+      ? itemsToShow.filter(item => getPlaces(item.id).some(p => (p.area||'').trim() === currentAreaFilter)).length
+      : visibleItems.length;
+
+    const sec = document.createElement('div');
+    sec.className = 'section';
+    sec.id = 'sec-' + sIndex;
+    sec.innerHTML = `
+      <div class="section-head">
+        <span class="section-icon">${sd.icon}</span>
+        <h2>${sd.name}</h2><span class="count">${displayCount}</span>
+        ${editMode ? `
+          <button type="button" class="remove-btn" style="font-size:14px;" onclick="editSection('${section.title.replace(/'/g,"\\'")}')" title="Edit section name/icon"><i class="fa-solid fa-pen"></i></button>
+          ${section.ownerOnly
+            ? `<span style="margin-inline-start:auto; font-size:11px; color:#b5545a; font-weight:700; font-family:'Cairo',sans-serif;"><i class="fa-solid fa-lock"></i> Always owner-only</span>`
+            : `<button type="button" class="switch-btn ${sectionOn ? 'on' : ''}" style="margin-inline-start:auto;" onclick="toggleSectionStatus('${section.title.replace(/'/g,"\\'")}')"><span class="knob"></span></button>
+          <span style="font-size:11px; color:var(--ink-soft); font-family:'Cairo',sans-serif;">${sectionOn ? 'Visible to visitors' : 'Hidden from visitors'}</span>`}` : ''}
+      </div>
+      ${section.ownerOnly ? `<div style="font-size:11px; color:var(--ink-soft); margin:-6px 0 10px;">ℹ️ Places here start Off by default in every city — switch any place to Active from Edit mode if it's relevant here.</div>` : ''}
+      ${(() => {
+        const areas = sectionAreas(section, itemsToShow);
+        if (!areas.length) return '';
+        const active = areaFilter[section.title] || '';
+        return `<div class="area-filter-row">
+          <button type="button" class="area-chip ${!active ? 'active' : ''}" onclick="setAreaFilter('${section.title.replace(/'/g,"\\'")}', '')">All</button>
+          ${areas.map(a => `<button type="button" class="area-chip ${active===a ? 'active' : ''}" onclick="setAreaFilter('${section.title.replace(/'/g,"\\'")}', '${a.replace(/'/g,"\\'")}')">📍 ${a}</button>`).join('')}
+        </div>`;
+      })()}
+      <div class="grid">
+        ${itemsToShow.map((item, iIndex) => {
+          const entry = getEntry(item.id, !section.ownerOnly);
+          const filterArea = currentAreaFilter;
+          const places = filterArea ? getPlaces(item.id).filter(p => (p.area||'').trim() === filterArea) : getPlaces(item.id);
+          const active = entry.active !== false;
+          const isCustom = item.id.startsWith('custom_');
+          const icon = displayIcon(item);
+
+          if (editMode) {
+            const placeRows = places.map((p, i) => `
+              <div class="place-row">
+                <input type="text" class="place-area-input" placeholder="Area (optional)"
+                  value="${(p.area||'').replace(/"/g,'&quot;')}"
+                  oninput="updatePlaceArea('${item.id}', ${i}, this.value)">
+                <input type="text" class="place-name-input" placeholder="Place name"
+                  value="${(p.name||'').replace(/"/g,'&quot;')}"
+                  oninput="updatePlaceName('${item.id}', ${i}, this.value)">
+                <input type="text" class="place-url-input" placeholder="Website link"
+                  value="${(p.url||'').replace(/"/g,'&quot;')}"
+                  oninput="updatePlaceUrl('${item.id}', ${i}, this.value)">
+                <button type="button" class="remove-btn" onclick="pasteToPlaceUrl('${item.id}', ${i}); return false;" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button>
+                <button type="button" class="remove-btn" onclick="removePlace('${item.id}', ${i}); return false;" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                <div class="place-note-row">
+                  <button type="button" class="switch-btn small ${p.noteOn !== false ? 'on' : ''}" onclick="togglePlaceNote('${item.id}', ${i}, ${p.noteOn !== false ? 'false' : 'true'})"><span class="knob"></span></button>
+                  <textarea class="place-note-input" rows="2" placeholder="e.g. - Try the special burger&#10;- Paste a Google Maps link for a nearby café"
+                    oninput="updatePlaceNote('${item.id}', ${i}, this.value)">${escapeHtml(p.note||'')}</textarea>
+                </div>
+              </div>`).join('');
+
+            return `
+              <div class="ticket disabled multi-edit" style="${active ? '' : 'opacity:.45'}">
+                <div class="reorder-col">
+                  <button type="button" class="reorder-btn" ${iIndex===0?'disabled':''} onclick="moveItem('${section.title.replace(/'/g,"\\'")}', '${item.id}', -1)">▲</button>
+                  <button type="button" class="reorder-btn" ${iIndex===itemsToShow.length-1?'disabled':''} onclick="moveItem('${section.title.replace(/'/g,"\\'")}', '${item.id}', 1)">▼</button>
+                </div>
+                <input type="text" class="icon-edit" value="${icon.replace(/"/g,'&quot;')}" oninput="updateIcon('${item.id}', this.value)" title="Icon (emoji)">
+                <div style="flex:1">
+                  <input type="text" class="name-edit" value="${displayName(item).replace(/"/g,'&quot;')}" oninput="updateName('${item.id}', this.value)">
+                  <div class="toggle-row">
+                    <button type="button" class="switch-btn ${active ? 'on' : ''}" onclick="toggleActive('${item.id}', ${active ? 'false' : 'true'})"><span class="knob"></span></button>
+                    <span>${active ? 'Active' : 'Off'}</span>
+                    ${isCustom ? `<button type="button" class="remove-btn" onclick="removeCustomItem('${item.id}')"><i class="fa-solid fa-trash"></i> Delete category</button>` : ''}
+                  </div>
+                  <div class="places-edit-list">
+                    ${placeRows}
+                  </div>
+                  <div style="display:flex; gap:6px;">
+                    <button type="button" class="add-place-btn" style="flex:1" onclick="addPlace('${item.id}')"><i class="fa-solid fa-plus"></i> Add place</button>
+                    <button type="button" class="add-place-btn" style="flex:1" onclick="openMapsForCurrentCity()"><i class="fa-solid fa-map-location-dot"></i> Open Maps for ${allCities().find(c=>c.id===currentCityId)?.name || ''}</button>
+                  </div>
+                </div>
+              </div>`;
+          }
+
+          const validPlaces = places.filter(p => p.url).sort((a,b) => {
+            const areaA = (a.area||'').trim(), areaB = (b.area||'').trim();
+            if (areaA !== areaB) return areaA.localeCompare(areaB, 'ar');
+            return (a.name||'').localeCompare(b.name||'', 'ar');
+          });
+
+          if (validPlaces.length >= 1) {
+            let lastArea = null;
+            const rows = validPlaces.map(p => {
+              const area = (p.area||'').trim();
+              let divider = '';
+              if (area && area !== lastArea) {
+                divider = `<div class="area-divider">${area}</div>`;
+                lastArea = area;
+              } else if (!area && lastArea !== '') {
+                lastArea = '';
+              }
+              const pName = (p.name && p.name.trim() ? p.name : 'Place');
+              const fav = isFavorite(p.url);
+              const safeUrl = p.url.replace(/'/g,"\\'");
+              const safeName = pName.replace(/'/g,"\\'");
+              const safeCategory = displayName(item).replace(/'/g,"\\'");
+              const safeCity = (allCities().find(c=>c.id===currentCityId)?.name || '').replace(/'/g,"\\'");
+              const safeArea = area.replace(/'/g,"\\'");
+              return divider + `<div class="place-row-view">
+                  <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
+                  <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}', '${safeCity}', '${safeArea}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
+                  ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('owner', '${currentCityId}', '${item.id}', '${p.id}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
+                </div>` +
+                (p.note && p.note.trim() && p.noteOn !== false ? renderNoteHtml(p.note) : '');
+            }).join('');
+            return `<div class="ticket multi-ticket">
+                      <div class="multi-head"><div class="icon-badge">${icon}</div><div><div class="name">${displayName(item)}</div>${item.desc ? `<div style="font-size:11px; color:var(--ink-soft); font-weight:400;">${item.desc}</div>` : ''}</div></div>
+                      <div class="place-list">${rows}</div>
+                    </div>`;
+          }
+          if (filterArea) return ''; // فلتر منطقة نشط وما فيه مواقع مطابقة — نخفي التصنيف بدل ما نوريه "قريبًا"
+          return `<div class="ticket disabled"><div class="icon-badge">${icon}</div><div class="name">${displayName(item)}</div><div class="missing">Coming soon</div></div>`;
+        }).join('')}
+        ${editMode ? `<button type="button" class="ticket add-ticket" onclick="addCustomItem('${section.title}')"><div class="icon-badge"><i class="fa-solid fa-plus"></i></div><div class="name">Add new category</div></button>` : ''}
+      </div>
+      ${!editMode && visibleItems.length > COLLAPSE_LIMIT ? `
+        <button type="button" class="show-more-btn" onclick="toggleSection('${section.title.replace(/'/g,"\\'")}')">
+          ${isExpanded ? 'Show less ▴' : `Show all (${visibleItems.length}) ▾`}
+        </button>` : ''}`;
+    wrap.appendChild(sec);
+  });
+
+  if (editMode){
+    const saveWrap = document.createElement('div');
+    saveWrap.className = 'toolbar';
+    saveWrap.innerHTML = `<button class="btn btn-brass" onclick="saveAll()"><i class="fa-solid fa-floppy-disk"></i> Save (${allCities().find(c=>c.id===currentCityId)?.name || ''})</button>`;
+    wrap.appendChild(saveWrap);
+  }
+}
+
+/* =========================================================
+   6) نافذة الإدخال العامة، QR، نسخ الرابط
+   ========================================================= */
+function toggleSection(title){
+  expandedSections[title] = !expandedSections[title];
+  render();
+}
+
+let modalResolve = null;
+// وضع select اختياري: مرّر options (مصفوفة نصوص) لعرض قائمة منسدلة بدل حقل نص حر
+function openInputModal(title, placeholder, initialValue, options){
+  return new Promise((resolve) => {
+    modalResolve = resolve;
+    document.getElementById('inputModalTitle').textContent = title;
+    const f = document.getElementById('inputModalField');
+    const s = document.getElementById('inputModalSelect');
+    document.getElementById('inputModalError').textContent = '';
+    if (Array.isArray(options) && options.length){
+      f.style.display = 'none';
+      s.style.display = '';
+      s.innerHTML = options.map(o => `<option value="${o.replace(/"/g,'&quot;')}">${o}</option>`).join('');
+      if (initialValue && options.includes(initialValue)) s.value = initialValue;
+      setTimeout(()=> s.focus(), 50);
+    } else {
+      s.style.display = 'none';
+      f.style.display = '';
+      f.placeholder = placeholder || ''; f.value = initialValue || '';
+      setTimeout(()=> f.focus(), 50);
+    }
+    document.getElementById('inputBackdrop').classList.add('show');
+  });
+}
+function confirmInputModal(){
+  const s = document.getElementById('inputModalSelect');
+  const val = (s.style.display !== 'none') ? s.value : document.getElementById('inputModalField').value;
+  document.getElementById('inputBackdrop').classList.remove('show');
+  if (modalResolve){ modalResolve(val); modalResolve = null; }
+}
+function closeInputModal(){
+  document.getElementById('inputBackdrop').classList.remove('show');
+  if (modalResolve){ modalResolve(null); modalResolve = null; }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2200);
+}
+function copyLink(){
+  navigator.clipboard.writeText(window.location.href).then(()=> showToast('Link copied ✓'))
+    .catch(()=> showToast('Copy the link manually from the address bar'));
+}
+function showQR(){
+  const box = document.getElementById('qrcode'); box.innerHTML = '';
+  try{ new QRCode(box, { text: window.location.href, width:180, height:180, colorDark:'#1c2b3a', colorLight:'#faf6ec' }); }
+  catch(e){ box.innerHTML = '<div style="font-size:12px;color:#4a5a68">Could not generate the code</div>'; }
+  document.getElementById('qrBackdrop').classList.add('show');
+}
+function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show'); }
+
+/* =========================================================
+   7) بدء التشغيل
+   ========================================================= */
+// كل النوافذ (modal-backdrop) كانت بنفس أولوية العرض (z-index) الثابتة، فكانت النافذة الأحدث فتحًا
+// ممكن تظهر تحت نافذة قديمة لسه مفتوحة بمجرد إنها مكتوبة قبلها في الكود. الحل: أي نافذة تتفتح،
+// ترفع أولويتها البصرية تلقائيًا فوق كل حاجة تانية، بغض النظر عن ترتيبها في الكود.
+(function(){
+  let topZ = 100;
+  document.querySelectorAll('.modal-backdrop').forEach(el => {
+    new MutationObserver(muts => {
+      muts.forEach(m => {
+        if (m.attributeName === 'class' && el.classList.contains('show')){
+          topZ += 1;
+          el.style.zIndex = topZ;
+        }
+      });
+    }).observe(el, { attributes: true });
+  });
+})();
+
+(async function init(){
+  await initFirebase();
+  // الطلبات دي مستقلة عن بعض — نشغلها بالتوازي بدل التتابع، يقلل وقت التحميل بشكل ملموس
+  await Promise.all([
+    loadPassword(),
+    loadCustomCities(),
+    loadCustomCountries(),
+    loadCategoryTemplate(),
+    loadAllCityStatus()
+  ]);
+  checkOwnerAccess();
+  if (auth) {
+    auth.onAuthStateChanged(async (user) => {
+      currentUser = user;
+      updateUserUI();
+      const tasks = [loadFavorites(), loadUserList(), registerUserRecord(), loadUserTrips()];
+      if (document.getElementById('ownerControls').style.display !== 'none') {
+        tasks.push(linkOwnerUid());
+      }
+      await Promise.all(tasks);
+      resolveAuthReady();
+      render();
+    });
+  } else {
+    resolveAuthReady(); // ما فيش Firebase أصلًا — منعرقلش أي حاجة
+  }
+  trackVisit(); // لا ننتظرها، ما نأخر تحميل الصفحة
+  await loadCity(pickInitialCity());
+  // نافذة تسجيل مبكرة: تظهر تلقائيًا للزائر غير المسجّل، مع محتوى المدينة ظاهر بالخلفية كسياق تحفيزي
+  authReadyPromise.then(() => {
+    if (!currentUser) {
+      openAuthModal();
+    } else {
+      maybeAutoOpenHelp();
+    }
+  });
+})();
+</script>
+</body>
+</html>
