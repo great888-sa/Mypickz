@@ -1492,15 +1492,28 @@ let tripViewMode = false;       // false = وضع تعديل، true = وضع ع�
 let resolvedTripCache = {};
 let activeTripId = null;        // الرحلة اللي "وضع الإضافة النشط" مفعّل لها حاليًا
 
+// إعادة محاولة تلقائية مرة واحدة لو فشل الاستعلام بسبب "permission-denied" — يحمي من نافذة توقيت نادرة حيث تكون بيانات تسجيل الدخول جاهزة بالواجهة قبل جهوزيتها الكاملة لدى Firestore، خصوصًا فور إعادة فتح جلسة محفوظة
+async function withAuthRetry(fn){
+  try{
+    return await fn();
+  }catch(e){
+    if (e && e.code === 'permission-denied'){
+      await new Promise(r => setTimeout(r, 600));
+      return await fn();
+    }
+    throw e;
+  }
+}
+
 async function loadUserTrips(){
   if (!currentUser){ userTrips = []; sharedTrips = []; tripsLoaded = true; return; }
   try{
-    const snap = await db.collection('trips').where('ownerId','==',currentUser.uid).get();
+    const snap = await withAuthRetry(() => db.collection('trips').where('ownerId','==',currentUser.uid).get());
     userTrips = [];
     snap.forEach(doc => userTrips.push({ id: doc.id, ...doc.data() }));
   }catch(e){ userTrips = []; }
   try{
-    const snap2 = await db.collection('trips').where('sharedWith','array-contains',currentUser.uid).get();
+    const snap2 = await withAuthRetry(() => db.collection('trips').where('sharedWith','array-contains',currentUser.uid).get());
     sharedTrips = [];
     snap2.forEach(doc => sharedTrips.push({ id: doc.id, ...doc.data() }));
   }catch(e){ sharedTrips = []; }
@@ -2202,7 +2215,7 @@ let myListCountry = null;  // الدولة المختارة حاليًا داخ�
 async function loadSharedCityLists(){
   if (!currentUser){ sharedCityLists = []; return; }
   try{
-    const snap = await db.collection('userCityLists').where('sharedWith','array-contains',currentUser.uid).get();
+    const snap = await withAuthRetry(() => db.collection('userCityLists').where('sharedWith','array-contains',currentUser.uid).get());
     sharedCityLists = [];
     snap.forEach(doc => sharedCityLists.push({ docId: doc.id, ...doc.data() }));
   }catch(e){ sharedCityLists = []; }
