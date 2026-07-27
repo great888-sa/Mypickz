@@ -2224,7 +2224,7 @@ async function loadSharedCityLists(){
 async function loadUserList(){
   if (!currentUser){ userListData = { customCities: [], customCountries: [], nickname: null }; myListCityId = null; myListCountry = null; currentUserSuspended = false; myCityListData = null; myCityListLoadedFor = null; return; }
   try{
-    const doc = await db.collection('userLists').doc(currentUser.uid).get();
+    const doc = await withAuthRetry(() => db.collection('userLists').doc(currentUser.uid).get());
     const data = doc.exists ? doc.data() : {};
     userListData = {
       customCities: Array.isArray(data.customCities) ? data.customCities : [],
@@ -2234,7 +2234,7 @@ async function loadUserList(){
     };
   }catch(e){ userListData = { customCities: [], customCountries: [], nickname: null }; }
   try{
-    const uDoc = await db.collection('users').doc(currentUser.uid).get();
+    const uDoc = await withAuthRetry(() => db.collection('users').doc(currentUser.uid).get());
     currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
   }catch(e){ currentUserSuspended = false; }
 }
@@ -2247,7 +2247,7 @@ async function loadMyCityList(cityId){
   if (!currentUser || !cityId){ myCityListData = null; myCityListLoadedFor = null; return; }
   if (myCityListLoadedFor === cityId && myCityListData) return; // محمَّلة أصلًا، لا داعي لإعادة القراءة
   try{
-    const doc = await db.collection('userCityLists').doc(myCityListDocId(cityId)).get();
+    const doc = await withAuthRetry(() => db.collection('userCityLists').doc(myCityListDocId(cityId)).get());
     const data = doc.exists ? doc.data() : {};
     myCityListData = {
       public: data.public === true,
