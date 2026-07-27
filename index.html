@@ -493,7 +493,8 @@
         <button type="button" class="switch-btn" id="myListPublicToggle" onclick="toggleMyListPublic()"><span class="knob"></span></button>
         <span style="font-size:11.5px; color:var(--ink-soft);">Allow other users to view this list</span>
       </div>
-      <div id="myListNicknameRow" style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 14px;"></div>
+      <div id="myListNicknameRow" style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 8px;"></div>
+      <div id="myListShareRow" style="margin:0 0 14px;"></div>
       <div id="myListSections"></div>
       <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="closeMyListModal()">Save & Close</button>
     </div>
@@ -1418,8 +1419,9 @@ function hashUrl(str){
   return 'p' + Math.abs(hash).toString(36);
 }
 
-async function toggleFavorite(url, name, category, city, area, sourceUid){
+async function toggleFavorite(url, name, category, city, area, sourceUid, sourceCityId){
   if (!currentUser){ openAuthModal(); return; }
+  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   const exists = isFavorite(url);
   const docId = hashUrl(url);
   if (exists){
@@ -1439,10 +1441,13 @@ async function toggleFavorite(url, name, category, city, area, sourceUid){
     if (!exists){
       db.collection('users').doc(currentUser.uid).set({ hasFavorited: true }, { merge:true }).catch(()=>{});
     }
-    if (sourceUid && sourceUid !== currentUser.uid){
-      await db.collection('userLists').doc(sourceUid).set({
+    if (sourceUid && sourceCityId && sourceUid !== currentUser.uid){
+      await db.collection('userCityLists').doc(sourceUid + '_' + sourceCityId).set({
         favoriteCount: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
       }, { merge:true });
+      db.collection('communityProfiles').doc(sourceUid).set({
+        totalFavoriteCount: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
+      }, { merge:true }).catch(()=>{});
     }
   }catch(e){ showToast('Could not save favorite'); }
 }
@@ -1501,6 +1506,7 @@ async function loadUserTrips(){
   tripsLoaded = true;
 }
 async function saveTrip(trip){
+  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   try{
     await db.collection('trips').doc(trip.id).set({ ...trip, ownerId: currentUser.uid }, { merge:true });
   }catch(e){ showToast('Could not save trip'); }
@@ -1523,7 +1529,10 @@ async function resolveTripPlaces(trip){
     ownerLinks = (cityDoc.exists && cityDoc.data().links) || {};
   }catch(e){}
   let myLinks = {};
-  if (userListData.cities && userListData.cities[trip.cityId]) myLinks = userListData.cities[trip.cityId];
+  try{
+    const myDoc = await db.collection('userCityLists').doc(trip.ownerId + '_' + trip.cityId).get();
+    myLinks = (myDoc.exists && myDoc.data().categories) || {};
+  }catch(e){}
 
   const communityUids = new Set();
   trip.days.forEach(day => TRIP_CATEGORIES.forEach(c => (day.places[c.id]||[]).forEach(ref => {
@@ -1532,9 +1541,8 @@ async function resolveTripPlaces(trip){
   const communityLinksByUid = {};
   for (const uid of communityUids){
     try{
-      const d = await db.collection('userLists').doc(uid).get();
-      const data = d.exists ? d.data() : {};
-      communityLinksByUid[uid] = (data.cities && data.cities[trip.cityId]) || {};
+      const d = await db.collection('userCityLists').doc(uid + '_' + trip.cityId).get();
+      communityLinksByUid[uid] = (d.exists && d.data().categories) || {};
     }catch(e){ communityLinksByUid[uid] = {}; }
   }
   function resolveRef(ref){
@@ -1713,6 +1721,7 @@ async function toggleTripPublic(){
   }
   trip.public = !trip.public;
   await saveTrip(trip);
+  await syncCommunityProfile(); // يضمن ظهور المستخدم بنتائج الاكتشاف حتى لو ما عنده أي مدينة My List عامة إطلاقًا
   showToast(trip.public ? 'Trip is now public 🌐' : 'Trip is now private');
   renderMyTripsModal();
 }
@@ -1917,6 +1926,11 @@ async function openCommunityTrip(tripId){
   const wrap = document.getElementById('communityBody');
   wrap.innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
   resolvedTripCache['community_'+tripId] = await resolveTripPlaces(trip);
+  // فتح رحلة مشتركة يُحتسَب كمشاهدة إضافية (نفس أهمية فتح الملف الشخصي نفسه)
+  if (trip && trip.ownerId){
+    db.collection('communityProfiles').doc(trip.ownerId).set({ viewCount: firebase.firestore.FieldValue.increment(1) }, { merge:true }).catch(()=>{});
+    if (viewingUserData && viewingUserData.uid === trip.ownerId) viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1;
+  }
   renderCommunityModal();
 }
 function backFromCommunityTrip(){ viewingCommunityTripId = null; renderCommunityModal(); }
@@ -2173,39 +2187,89 @@ function updateUserUI(){
 /* =========================================================
    القائمة الشخصية (Personal List) — بيانات كل مستخدم مسجّل، منفصلة تمامًا عن قائمة المالك
    ========================================================= */
-let userListData = { cities: {}, customCities: [], customCountries: [] };
-let userListPublic = false;
+let userListData = { customCities: [], customCountries: [] };
 let myListCityId = null;   // المدينة اللي المستخدم شغال عليها جوه "My List"
-let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
+let myCityListData = null; // بيانات المدينة الحالية بـMy List (المرحلة ١ من إعادة الهيكلة): { public, sharedWith, sharedWithNames, favoriteCount, categories:{} }
+let myCityListLoadedFor = null; // أي cityId مُحمَّل حاليًا بـmyCityListData (لتفادي إعادة تحميل غير ضرورية)
 let currentUserSuspended = false;
+let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
 
 async function loadUserList(){
-  if (!currentUser){ userListData = { cities: {}, customCities: [], customCountries: [], nickname: null }; userListPublic = false; myListCityId = null; myListCountry = null; currentUserSuspended = false; return; }
+  if (!currentUser){ userListData = { customCities: [], customCountries: [], nickname: null }; myListCityId = null; myListCountry = null; currentUserSuspended = false; myCityListData = null; myCityListLoadedFor = null; return; }
   try{
     const doc = await db.collection('userLists').doc(currentUser.uid).get();
     const data = doc.exists ? doc.data() : {};
     userListData = {
-      cities: (data.cities && typeof data.cities === 'object') ? data.cities : {},
       customCities: Array.isArray(data.customCities) ? data.customCities : [],
       customCountries: Array.isArray(data.customCountries) ? data.customCountries : [],
       nickname: data.nickname || null,
-      viewCount: data.viewCount || 0,
-      favoriteCount: data.favoriteCount || 0
+      viewCount: data.viewCount || 0
     };
-    userListPublic = data.public === true;
-    // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة بكل مدن My List الخاصة بالمستخدم
-    let anyChanged = false;
-    Object.keys(userListData.cities).forEach(cId => {
-      if (backfillPlaceIds(userListData.cities[cId])) anyChanged = true;
-    });
-    if (anyChanged){
-      db.collection('userLists').doc(currentUser.uid).set({ cities: userListData.cities }, { merge:true }).catch(()=>{});
-    }
-  }catch(e){ userListData = { cities: {}, customCities: [], customCountries: [], nickname: null }; userListPublic = false; }
+  }catch(e){ userListData = { customCities: [], customCountries: [], nickname: null }; }
   try{
     const uDoc = await db.collection('users').doc(currentUser.uid).get();
     currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
   }catch(e){ currentUserSuspended = false; }
+}
+
+// معرّف مستند Firestore لبيانات مدينة معيّنة بـMy List الخاصة بالمستخدم الحالي
+function myCityListDocId(cityId){ return currentUser.uid + '_' + cityId; }
+
+// تحميل بيانات مدينة معيّنة بـMy List (المرحلة ١ من إعادة الهيكلة) — مستند مستقل لكل مدينة
+async function loadMyCityList(cityId){
+  if (!currentUser || !cityId){ myCityListData = null; myCityListLoadedFor = null; return; }
+  if (myCityListLoadedFor === cityId && myCityListData) return; // محمَّلة أصلًا، لا داعي لإعادة القراءة
+  try{
+    const doc = await db.collection('userCityLists').doc(myCityListDocId(cityId)).get();
+    const data = doc.exists ? doc.data() : {};
+    myCityListData = {
+      public: data.public === true,
+      sharedWith: Array.isArray(data.sharedWith) ? data.sharedWith : [],
+      sharedWithNames: (data.sharedWithNames && typeof data.sharedWithNames === 'object') ? data.sharedWithNames : {},
+      favoriteCount: data.favoriteCount || 0,
+      categories: (data.categories && typeof data.categories === 'object') ? data.categories : {}
+    };
+    // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة — لهذي المدينة فقط الآن، بدل كل المدن دفعة وحدة
+    if (backfillPlaceIds(myCityListData.categories)){
+      db.collection('userCityLists').doc(myCityListDocId(cityId)).set(
+        { ownerId: currentUser.uid, cityId, categories: myCityListData.categories }, { merge:true }
+      ).catch(()=>{});
+    }
+  }catch(e){
+    myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, favoriteCount:0, categories:{} };
+  }
+  myCityListLoadedFor = cityId;
+}
+
+// حفظ بيانات المدينة الحالية بـMy List — مستند مستقل، مو الملف الشامل القديم
+async function saveMyCityList(){
+  if (!currentUser || !myListCityId || !myCityListData) return;
+  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
+  // نفس فحص روابط خرائط جوجل الموجود أصلًا، مطبَّق على تصنيفات هذي المدينة فقط
+  let invalidCount = 0;
+  Object.keys(myCityListData.categories).forEach(itemId => {
+    const entry = myCityListData.categories[itemId];
+    const places = entry.places || [];
+    entry.places = places.filter(p => {
+      if (!p.url || !p.url.trim()) return true;
+      if (isGoogleMapsUrl(p.url.trim())) return true;
+      invalidCount++;
+      return false;
+    });
+  });
+  if (invalidCount > 0){
+    showToast(`Only Google Maps links are allowed — removed ${invalidCount} invalid link(s)`);
+  }
+  try{
+    await db.collection('userCityLists').doc(myCityListDocId(myListCityId)).set(
+      { ownerId: currentUser.uid, cityId: myListCityId, nickname: userListData.nickname || null, ...myCityListData },
+      { merge:true }
+    );
+    const hasRealPlace = Object.values(myCityListData.categories).some(entry => (entry.places||[]).some(p => p.url && p.name));
+    if (hasRealPlace){
+      db.collection('users').doc(currentUser.uid).set({ hasMyListActivity: true }, { merge:true }).catch(()=>{});
+    }
+  }catch(e){ showToast('Could not save your list'); }
 }
 
 // مدن المالك المتاحة للقائمة الشخصية: المنشورة فقط (زي أي زائر بالظبط) — مش أي مدينة لسه Draft
@@ -2239,7 +2303,7 @@ async function addMyListCountry(){
   if (match) customCountryFlags[clean] = isoFlagEmoji(match.code);
   myListCountry = clean;
   myListCityId = null;
-  await saveUserList();
+  await saveUserListGeneral();
   renderMyListModal();
 }
 
@@ -2254,26 +2318,23 @@ async function addMyListCity(){
   userListData.customCities.push({ id, name: name.trim(), country: country.trim() });
   myListCountry = country.trim();
   myListCityId = id;
-  await saveUserList();
+  await saveUserListGeneral();
   renderMyListModal();
 }
 
 async function removeMyListCity(cityId){
   const city = (userListData.customCities || []).find(c => c.id === cityId);
   if (!city) return; // حماية: يسمح فقط بحذف المدن اللي أضافها المستخدم نفسه
-  const placesCount = (userListData.cities && userListData.cities[cityId] && userListData.cities[cityId].places)
-    ? userListData.cities[cityId].places.length : 0;
-  const msg = placesCount > 0
-    ? `Delete "${city.name}" and the ${placesCount} place(s) saved under it? This cannot be undone.`
-    : `Delete "${city.name}" from your list?`;
-  if (!confirm(msg)) return;
+  if (!confirm(`Delete "${city.name}" and any places saved under it? This cannot be undone.`)) return;
   userListData.customCities = (userListData.customCities || []).filter(c => c.id !== cityId);
-  if (userListData.cities && userListData.cities[cityId]) delete userListData.cities[cityId];
+  try{ await db.collection('userCityLists').doc(myCityListDocId(cityId)).delete(); }catch(e){}
+  if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
   if (myListCityId === cityId){
     const remaining = myListAllCities().filter(c => c.country === myListCountry);
     myListCityId = remaining.length ? remaining[0].id : null;
   }
-  await saveUserList();
+  await saveUserListGeneral();
+  await syncCommunityProfile(); // تفادي "بيانات أشباح" لمدينة محذوفة كانت عامة بـcommunityProfiles
   showToast('City deleted');
   renderMyListModal();
 }
@@ -2281,33 +2342,32 @@ async function removeMyListCity(cityId){
 async function removeMyListCountry(country){
   if (!(userListData.customCountries || []).includes(country)) return; // حماية: يسمح فقط بحذف الدول اللي أضافها المستخدم نفسه
   const citiesToRemove = (userListData.customCities || []).filter(c => c.country === country);
-  const totalPlaces = citiesToRemove.reduce((sum, c) => {
-    const p = userListData.cities && userListData.cities[c.id] && userListData.cities[c.id].places;
-    return sum + (p ? p.length : 0);
-  }, 0);
   const msg = citiesToRemove.length
-    ? `Delete "${country}" with its ${citiesToRemove.length} custom ${citiesToRemove.length === 1 ? 'city' : 'cities'}${totalPlaces > 0 ? ` and ${totalPlaces} saved place(s)` : ''}? This cannot be undone.`
+    ? `Delete "${country}" with its ${citiesToRemove.length} custom ${citiesToRemove.length === 1 ? 'city' : 'cities'} and any saved places? This cannot be undone.`
     : `Delete "${country}" from your list?`;
   if (!confirm(msg)) return;
   userListData.customCountries = (userListData.customCountries || []).filter(c => c !== country);
   const removeIds = citiesToRemove.map(c => c.id);
   userListData.customCities = (userListData.customCities || []).filter(c => c.country !== country);
-  removeIds.forEach(id => { if (userListData.cities && userListData.cities[id]) delete userListData.cities[id]; });
+  for (const id of removeIds){
+    try{ await db.collection('userCityLists').doc(myCityListDocId(id)).delete(); }catch(e){}
+    if (myCityListLoadedFor === id){ myCityListData = null; myCityListLoadedFor = null; }
+  }
   if (myListCountry === country){
     const remaining = myListAllCountries();
     myListCountry = remaining.length ? remaining[0] : null;
     const firstCity = myListCountry ? myListAllCities().find(c => c.country === myListCountry) : null;
     myListCityId = firstCity ? firstCity.id : null;
   }
-  await saveUserList();
+  await saveUserListGeneral();
+  await syncCommunityProfile(); // تفادي "بيانات أشباح" لمدن محذوفة كانت عامة بـcommunityProfiles
   showToast('Country deleted');
   renderMyListModal();
 }
 
 function userCityLinks(){
-  if (!myListCityId) return {};
-  if (!userListData.cities[myListCityId]) userListData.cities[myListCityId] = {};
-  return userListData.cities[myListCityId];
+  if (!myListCityId || !myCityListData) return {};
+  return myCityListData.categories;
 }
 function userGetEntry(id){
   const links = userCityLinks();
@@ -2333,36 +2393,15 @@ function isGoogleMapsUrl(url){
   }catch(e){ return false; }
 }
 
-async function saveUserList(){
+// حفظ البيانات العامة فقط (اسم مستعار، دول/مدن مخصّصة) — منفصل تمامًا عن بيانات أي مدينة (راجع saveMyCityList)
+async function saveUserListGeneral(){
   if (!currentUser) return;
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
-  let invalidCount = 0;
-  Object.keys(userListData.cities).forEach(cityId => {
-    const links = userListData.cities[cityId];
-    Object.keys(links).forEach(itemId => {
-      const places = links[itemId].places || [];
-      links[itemId].places = places.filter(p => {
-        if (!p.url || !p.url.trim()) return true; // لسه بيكتب، ما نمسحوش
-        if (isGoogleMapsUrl(p.url.trim())) return true;
-        invalidCount++;
-        return false;
-      });
-    });
-  });
-  if (invalidCount > 0){
-    showToast(`Only Google Maps links are allowed — removed ${invalidCount} invalid link(s)`);
-  }
   try{
     await db.collection('userLists').doc(currentUser.uid).set(
-      { cities: userListData.cities, customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], nickname: userListData.nickname || null, public: userListPublic },
+      { customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], nickname: userListData.nickname || null },
       { merge:true }
     );
-    const hasRealPlace = Object.values(userListData.cities).some(links =>
-      Object.values(links).some(entry => (entry.places || []).some(p => p.url && p.name))
-    );
-    if (hasRealPlace){
-      db.collection('users').doc(currentUser.uid).set({ hasMyListActivity: true }, { merge:true }).catch(()=>{});
-    }
   }catch(e){ showToast('Could not save your list'); }
 }
 
@@ -2424,8 +2463,16 @@ async function chooseNickname(){
       }
     }
     userListData.nickname = clean;
-    await saveUserList();
+    await saveUserListGeneral();
     try{ await db.collection('users').doc(currentUser.uid).set({ nickname: clean }, { merge:true }); }catch(e){}
+    // تحديث النسخة المكررة من الاسم بكل مستندات مدن المستخدم (تُستخدَم لاستعلام Community Lists بدون قراءات إضافية)
+    try{
+      const mySnap = await db.collection('userCityLists').where('ownerId','==',currentUser.uid).get();
+      const batch = db.batch();
+      mySnap.forEach(doc => batch.update(doc.ref, { nickname: clean }));
+      await batch.commit();
+    }catch(e){}
+    await syncCommunityProfile();
     showToast('Nickname saved ✓');
     return true;
   }catch(e){
@@ -2434,43 +2481,113 @@ async function chooseNickname(){
   }
 }
 
+// يُعاد حسابها وتُكتب بمستند خفيف منفصل (communityProfiles) — يخدم استعلام الاكتشاف بدون تحميل كل تفاصيل الفئات/الأماكن
+async function syncCommunityProfileFor(uid, nickname){
+  try{
+    const citySnap = await db.collection('userCityLists').where('ownerId','==',uid).where('public','==',true).get();
+    const publicCityIds = [];
+    let totalFavoriteCount = 0;
+    citySnap.forEach(doc => {
+      const d = doc.data();
+      publicCityIds.push(d.cityId);
+      totalFavoriteCount += (d.favoriteCount || 0);
+    });
+    // فحص إضافي: رحلات عامة، حتى لو المستخدم ما عنده أي مدينة My List عامة إطلاقًا (سيناريو Add Trip بمفرده)
+    let hasAnyPublicTrip = false;
+    try{
+      const tripSnap = await db.collection('trips').where('ownerId','==',uid).where('public','==',true).limit(1).get();
+      hasAnyPublicTrip = !tripSnap.empty;
+    }catch(e){}
+    const payload = {
+      hasAnyPublicCity: publicCityIds.length > 0,
+      hasAnyPublicContent: publicCityIds.length > 0 || hasAnyPublicTrip, // يحدد فعليًا الظهور بنتائج الاكتشاف
+      publicCityIds,
+      totalFavoriteCount
+    };
+    if (nickname !== undefined) payload.nickname = nickname; // لا نكتب/نمحو الاسم لو ما تم تمريره صراحة (تفادي مسحه بالخطأ)
+    await db.collection('communityProfiles').doc(uid).set(payload, { merge:true });
+  }catch(e){}
+}
+async function syncCommunityProfile(){
+  if (!currentUser) return;
+  await syncCommunityProfileFor(currentUser.uid, userListData.nickname || null);
+}
+
+async function shareMyListWithSomeone(){
+  if (!myCityListData) return;
+  const name = await openInputModal("Share with (username)", "Enter their exact username", "");
+  if (name === null) return;
+  const key = name.trim().toLowerCase();
+  if (!key) return;
+  try{
+    const doc = await db.collection('nicknames').doc(key).get();
+    if (!doc.exists){ showToast('No user found with that username'); return; }
+    const data = doc.data();
+    const targetUid = data.uid;
+    if (targetUid === currentUser.uid){ showToast("You can't share with yourself"); return; }
+    if (!myCityListData.sharedWith) myCityListData.sharedWith = [];
+    if (!myCityListData.sharedWithNames) myCityListData.sharedWithNames = {};
+    if (myCityListData.sharedWith.includes(targetUid)){ showToast('Already shared with this user'); return; }
+    myCityListData.sharedWith.push(targetUid);
+    myCityListData.sharedWithNames[targetUid] = data.nickname || name.trim();
+    await saveMyCityList();
+    showToast('Shared ✓');
+    renderMyListModal();
+  }catch(e){ showToast('Could not verify username'); }
+}
+async function removeMyListShare(uid){
+  if (!myCityListData || !myCityListData.sharedWith) return;
+  myCityListData.sharedWith = myCityListData.sharedWith.filter(u => u !== uid);
+  await saveMyCityList();
+  renderMyListModal();
+}
+
 async function toggleMyListPublic(){
-  if (!userListPublic){
+  if (!myCityListData) return;
+  if (!myCityListData.public){
     if (!userListData.nickname){
       const ok = await chooseNickname();
       if (!ok) return;
     }
   }
-  userListPublic = !userListPublic;
-  document.getElementById('myListPublicToggle').classList.toggle('on', userListPublic);
-  await saveUserList();
+  myCityListData.public = !myCityListData.public;
+  document.getElementById('myListPublicToggle').classList.toggle('on', myCityListData.public);
+  await saveMyCityList();
+  await syncCommunityProfile();
 }
 
-function openMyListModal(){
+async function openMyListModal(){
   if (!currentUser){ openAuthModal(); return; }
   if (!myListCityId) myListCityId = currentCityId;
   if (!myListCountry){
     const c = myListAllCities().find(c => c.id === myListCityId);
     myListCountry = c ? c.country : (myListAllCountries()[0] || null);
   }
-  renderMyListModal();
   document.getElementById('myListBackdrop').classList.add('show');
+  document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  await loadMyCityList(myListCityId);
+  renderMyListModal();
 }
 async function closeMyListModal(){
   document.getElementById('myListBackdrop').classList.remove('show');
-  await saveUserList();
+  await saveMyCityList();
 }
-function selectMyListCity(cityId){
+async function selectMyListCity(cityId){
+  if (cityId === myListCityId) return;
+  await saveMyCityList(); // نحفظ أي تعديل معلّق بالمدينة الحالية قبل ما ننتقل
   myListCityId = cityId;
   const c = myListAllCities().find(c => c.id === cityId);
   if (c) myListCountry = c.country;
+  document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  await loadMyCityList(cityId);
   renderMyListModal();
 }
 
 function renderMyListModal(){
+  if (!document.getElementById('myListSections')) return; // النافذة لسه بحالة "Loading..." — العناصر مش موجودة بالـDOM بعد، تجنّب أي كراش
   const city = myListAllCities().find(c => c.id === myListCityId);
   document.getElementById('myListCityName').textContent = city ? city.name : '';
-  document.getElementById('myListPublicToggle').classList.toggle('on', userListPublic);
+  document.getElementById('myListPublicToggle').classList.toggle('on', !!(myCityListData && myCityListData.public));
 
   if (currentUserSuspended){
     document.getElementById('myListSections').innerHTML =
@@ -2482,12 +2599,26 @@ function renderMyListModal(){
   }
 
   const nickRow = document.getElementById('myListNicknameRow');
-  if (userListPublic){
-    nickRow.innerHTML = `Public as <b>${userListData.nickname || '—'}</b> · 👁️ ${userListData.viewCount || 0} views · ❤️ ${userListData.favoriteCount || 0} favorites
+  if (myCityListData && myCityListData.public){
+    nickRow.innerHTML = `Public as <b>${userListData.nickname || '—'}</b> · 👁️ ${userListData.viewCount || 0} views · ❤️ ${myCityListData.favoriteCount || 0} favorites for this city
       <button type="button" class="remove-btn" style="font-size:10.5px; margin-inline-start:6px;" onclick="chooseNickname().then(renderMyListModal)"><i class="fa-solid fa-pen"></i> Edit name</button>`;
   } else {
     nickRow.innerHTML = '';
   }
+
+  const shareRow = document.getElementById('myListShareRow');
+  const shared = (myCityListData && myCityListData.sharedWith) || [];
+  shareRow.innerHTML = `<div style="background:var(--paper-dark); border-radius:10px; padding:8px 10px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+      <span style="font-size:11.5px; color:var(--ink-soft);">🔗 Shared with someone</span>
+      <button type="button" class="remove-btn" style="margin:0; padding:4px 10px; font-size:10.5px;" onclick="shareMyListWithSomeone()">➕ Add</button>
+    </div>
+    ${shared.length ? shared.map(uid => `
+      <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; margin-top:6px;">
+        <span>👤 ${escapeHtml((myCityListData.sharedWithNames && myCityListData.sharedWithNames[uid]) || 'User')}</span>
+        <button type="button" class="remove-btn" style="font-size:10px;" onclick="removeMyListShare('${uid}')"><i class="fa-solid fa-xmark"></i></button>
+      </div>`).join('') : ''}
+  </div>`;
 
   // صف الدول
   const countries = myListAllCountries();
@@ -2582,18 +2713,17 @@ let communityViewingCityId = null;
 
 async function loadCommunityLists(){
   try{
-    const snap = await db.collection('userLists').where('public','==',true).get();
+    const snap = await db.collection('communityProfiles').where('hasAnyPublicContent','==',true).get();
     communityUsers = [];
     snap.forEach(doc => {
       const d = doc.data();
-      if (!d.nickname || d.suspended) return;
+      if (!d.nickname) return;
       communityUsers.push({
         uid: doc.id,
         nickname: d.nickname,
-        cities: (d.cities && typeof d.cities==='object') ? d.cities : {},
-        customCities: Array.isArray(d.customCities) ? d.customCities : [],
-        viewCount: d.viewCount || 0,
-        favoriteCount: d.favoriteCount || 0
+        publicCityIds: Array.isArray(d.publicCityIds) ? d.publicCityIds : [],
+        totalFavoriteCount: d.totalFavoriteCount || 0,
+        viewCount: d.viewCount || 0
       });
     });
   }catch(e){ communityUsers = []; }
@@ -2633,14 +2763,14 @@ function renderCommunityModal(){
 
   if (communityTab === 'city'){
     const cityName = allCities().find(c=>c.id===currentCityId)?.name || '';
-    usersToShow = communityUsers.filter(u => u.cities[currentCityId] && Object.keys(u.cities[currentCityId]).length);
+    usersToShow = communityUsers.filter(u => u.publicCityIds.includes(currentCityId));
     html += `<p style="font-size:11px; color:var(--ink-soft); text-align:center; margin-bottom:8px;">Users with a public list for ${cityName}</p>`;
   } else {
     html += `<div style="display:flex; gap:6px; margin-bottom:8px;">
       <button type="button" class="remove-btn" style="flex:1; font-size:11px; ${communitySort==='viewed'?'color:var(--brass);':''}" onclick="switchCommunitySort('viewed')"><i class="fa-solid fa-eye"></i> Most Viewed</button>
       <button type="button" class="remove-btn" style="flex:1; font-size:11px; ${communitySort==='loved'?'color:var(--brass);':''}" onclick="switchCommunitySort('loved')"><i class="fa-solid fa-heart"></i> Most Loved</button>
     </div>`;
-    usersToShow = [...communityUsers].sort((a,b) => communitySort==='loved' ? b.favoriteCount - a.favoriteCount : b.viewCount - a.viewCount);
+    usersToShow = [...communityUsers].sort((a,b) => communitySort==='loved' ? b.totalFavoriteCount - a.totalFavoriteCount : b.viewCount - a.viewCount);
   }
 
   if (!usersToShow.length){
@@ -2649,20 +2779,42 @@ function renderCommunityModal(){
     html += usersToShow.map(u => `
       <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;" onclick="viewCommunityUser('${u.uid}')">
         <span style="font-weight:700;">${u.nickname}</span>
-        <span style="color:var(--ink-soft); font-size:10.5px;">👁️ ${u.viewCount} · ❤️ ${u.favoriteCount}</span>
+        <span style="color:var(--ink-soft); font-size:10.5px;">👁️ ${u.viewCount} · ❤️ ${u.totalFavoriteCount}</span>
       </button>`).join('');
   }
   wrap.innerHTML = html;
 }
+
+let viewingUserCities = []; // تفاصيل المدن العامة الكاملة (فئات/أماكن) — تُحمَّل فقط لحظة فتح ملف شخص معيّن (Lazy)
 
 async function viewCommunityUser(uid){
   viewingUserUid = uid;
   viewingUserData = communityUsers.find(u => u.uid === uid);
   communityViewingCityId = null;
   viewingCommunityTripId = null;
+  document.getElementById('communityBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  // ✅ يعمل الآن (المرحلة ٣) — الاستثناء الأمني الجديد يسمح بتحديث viewCount لملف عام
   try{
-    await db.collection('userLists').doc(uid).set({ viewCount: firebase.firestore.FieldValue.increment(1) }, { merge:true });
+    await db.collection('communityProfiles').doc(uid).set({ viewCount: firebase.firestore.FieldValue.increment(1) }, { merge:true });
     viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1;
+  }catch(e){}
+  // تحميل كسول: فقط تفاصيل مدن هذا المستخدم المفتوح حاليًا، مو كل مستخدمي Community دفعة وحدة
+  viewingUserCities = [];
+  try{
+    const cityDocs = await Promise.all((viewingUserData.publicCityIds||[]).map(cityId =>
+      db.collection('userCityLists').doc(uid + '_' + cityId).get()
+    ));
+    cityDocs.forEach(doc => {
+      if (!doc.exists) return;
+      const d = doc.data();
+      const cityMeta = allCities().find(c => c.id === d.cityId);
+      viewingUserCities.push({
+        id: d.cityId,
+        name: cityMeta ? cityMeta.name : d.cityId,
+        categories: (d.categories && typeof d.categories==='object') ? d.categories : {},
+        favoriteCount: d.favoriteCount || 0
+      });
+    });
   }catch(e){}
   await loadCommunityUserTrips(uid);
   renderCommunityModal();
@@ -2675,8 +2827,7 @@ function backToCommunityList(){
 function renderCommunityUserList(wrap){
   if (viewingCommunityTripId){ renderCommunityTripDetail(wrap); return; }
   const u = viewingUserData;
-  const cities = myListPublishedOwnerCities().concat(u.customCities||[])
-    .filter(c => u.cities[c.id] && Object.keys(u.cities[c.id]).length);
+  const cities = viewingUserCities;
 
   if (!communityViewingCityId || !cities.find(c => c.id === communityViewingCityId)){
     communityViewingCityId = cities[0] ? cities[0].id : null;
@@ -2705,8 +2856,8 @@ function renderCommunityUserList(wrap){
     cities.map(c => `<button type="button" class="city-tab ${c.id===communityViewingCityId?'active':''}" style="font-size:11px; padding:6px 10px;" onclick="communityViewingCityId='${c.id}'; renderCommunityModal();">${c.name}</button>`).join('') +
     `</div>`;
 
-  const cityLinks = u.cities[communityViewingCityId] || {};
   const cityObj = cities.find(c => c.id === communityViewingCityId);
+  const cityLinks = cityObj ? cityObj.categories : {};
   let hasAnyPlace = false;
 
   DATA.forEach(section => {
@@ -2727,7 +2878,7 @@ function renderCommunityUserList(wrap){
           ${p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : ''}
           <div style="display:flex; align-items:center; gap:6px;">
             <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
-            <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCat}', '${safeCity}', '${safeArea}', '${u.uid}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
+            <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCat}', '${safeCity}', '${safeArea}', '${u.uid}', '${communityViewingCityId}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
             ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
           </div>
           ${renderNoteHtml(p.note)}
@@ -2982,9 +3133,32 @@ async function toggleSuspendUser(uid){
   const newVal = !u.suspended;
   try{
     await db.collection('users').doc(uid).set({ suspended: newVal }, { merge:true });
-    const listUpdate = { suspended: newVal };
-    if (newVal) listUpdate.public = false; // الإيقاف بيخفي المشاركة العامة فورًا
-    await db.collection('userLists').doc(uid).set(listUpdate, { merge:true });
+    // الإيقاف/الرفع يطبَّق على كل مدن المستخدم دفعة وحدة (مستند مستقل لكل مدينة بعد إعادة الهيكلة)
+    const citySnap = await db.collection('userCityLists').where('ownerId','==',uid).get();
+    if (!citySnap.empty){
+      const batch = db.batch();
+      citySnap.forEach(doc => {
+        const update = { suspended: newVal };
+        if (newVal) update.public = false; // الإيقاف يخفي المشاركة العامة فورًا لكل مدنه
+        batch.update(doc.ref, update);
+      });
+      await batch.commit();
+    }
+    if (newVal){
+      // إيقاف المستخدم يخفيه فورًا من نتائج الاكتشاف، بغض النظر عن حالة كل مدينة لحالها
+      await db.collection('communityProfiles').doc(uid).set({ hasAnyPublicCity: false, hasAnyPublicContent: false, publicCityIds: [] }, { merge:true }).catch(()=>{});
+    } else {
+      await syncCommunityProfileFor(uid); // رفع الإيقاف: نعيد حساب حالة المشاركة الحقيقية بدل افتراض إعادتها تلقائيًا
+    }
+    // الإيقاف/الرفع يشمل أيضًا كل رحلات المستخدم — حقل suspended منفصل (بنفس نمط userCityLists)، بدون محو Public/sharedWith الفعلية (تُسترجَع تلقائيًا عند رفع الإيقاف)
+    try{
+      const tripSnap = await db.collection('trips').where('ownerId','==',uid).get();
+      if (!tripSnap.empty){
+        const tripBatch = db.batch();
+        tripSnap.forEach(doc => tripBatch.update(doc.ref, { suspended: newVal }));
+        await tripBatch.commit();
+      }
+    }catch(e){}
     u.suspended = newVal;
     showToast(newVal ? 'User suspended' : 'User unsuspended');
     await loadCommunityLists();
