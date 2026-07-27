@@ -2312,10 +2312,13 @@ function myListAllCountries(){
   return [...new Set(fromCities.concat(userListData.customCountries || []))];
 }
 
-function selectMyListCountry(country){
+async function selectMyListCountry(country){
+  await saveMyCityList(); // حفظ أي تعديل معلّق بالمدينة الحالية قبل التبديل
   myListCountry = country;
   const firstCity = myListAllCities().find(c => c.country === country);
   myListCityId = firstCity ? firstCity.id : null;
+  document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  await loadMyCityList(myListCityId);
   renderMyListModal();
 }
 
