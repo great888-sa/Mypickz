@@ -1052,7 +1052,9 @@ async function saveCity(){
       { links, published: cityStatus[currentCityId] === true, sectionStatus },
       { merge:true }
     );
+    ownerNoteBackup = {}; // كل الملاحظات أصبحت محفوظة الآن — النسخ القديمة لم تعد ذات صلة
     showToast('Saved ✓');
+    render(); // يخفي أزرار التراجع القديمة فورًا
   }catch(e){
     showToast('Could not save — check Firestore security rules');
   }
@@ -1331,9 +1333,21 @@ function updatePlaceArea(id, index, val){
   const e = ensurePlaces(id);
   if (e.places[index]) e.places[index].area = val;
 }
+let ownerNoteBackup = {}; // نسخة أصلية لكل ملاحظة (id#index) لحظة أول لمسة لها منذ آخر حفظ ناجح — لا يوجد زر "edit" منفصل لخانة الملاحظة بقائمة المالك (تُعدَّل مباشرة دائمًا بوضع Edit العام)
 function updatePlaceNote(id, index, val){
+  const key = id + '#' + index;
   const e = ensurePlaces(id);
-  if (e.places[index]) e.places[index].note = val;
+  if (!e.places[index]) return;
+  if (!(key in ownerNoteBackup)) ownerNoteBackup[key] = e.places[index].note || ''; // نسخة أصلية أول لمسة فقط
+  e.places[index].note = val;
+}
+function revertOwnerNote(id, index){
+  const key = id + '#' + index;
+  if (!(key in ownerNoteBackup)) return;
+  const e = ensurePlaces(id);
+  if (e.places[index]) e.places[index].note = ownerNoteBackup[key];
+  delete ownerNoteBackup[key];
+  render();
 }
 function togglePlaceNote(id, index, checked){
   const e = ensurePlaces(id);
@@ -3427,6 +3441,7 @@ function render(){
                   <button type="button" class="switch-btn small ${p.noteOn !== false ? 'on' : ''}" onclick="togglePlaceNote('${item.id}', ${i}, ${p.noteOn !== false ? 'false' : 'true'})"><span class="knob"></span></button>
                   <textarea class="place-note-input" rows="2" placeholder="e.g. - Try the special burger&#10;- Paste a Google Maps link for a nearby café"
                     oninput="updatePlaceNote('${item.id}', ${i}, this.value)">${escapeHtml(p.note||'')}</textarea>
+                  ${(item.id + '#' + i) in ownerNoteBackup ? `<button type="button" class="remove-btn" style="font-size:11px;" onclick="revertOwnerNote('${item.id}', ${i})" title="Undo note edit"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
                 </div>
               </div>`).join('');
 
