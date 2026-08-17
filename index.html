@@ -1678,7 +1678,14 @@ function renderMyTripsModal(){
         <span style="color:var(--ink-soft); font-size:10.5px;">${t.days.length} day${t.days.length>1?'s':''}</span>
       </button>`).join('');
   }
-  html += `<button type="button" class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="openCreateTripFlow()">➕ Create trip</button>`;
+  if (currentUserSuspended){
+    html += `<div style="border:1.5px dashed #b5545a; background:#fbeceb; border-radius:12px; padding:12px 14px; margin-top:10px; text-align:center;">
+      <div style="font-weight:700; color:#7a2b30; margin-bottom:4px;">🚫 Account Suspended</div>
+      <div style="font-size:12px; color:#7a2b30;">Your account has been suspended and can no longer create trips or add places.</div>
+    </div>`;
+  } else {
+    html += `<button type="button" class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="openCreateTripFlow()">➕ Create trip</button>`;
+  }
   wrap.innerHTML = html;
 }
 async function openCreateTripFlow(){
@@ -1776,14 +1783,17 @@ function renderTripDetail(wrap){
   if (!trip){ currentTripId = null; renderMyTripsModal(); return; }
   const resolved = resolvedTripCache[currentTripId] || [];
   const title = trip.customLabel ? `${trip.cityName} — ${trip.customLabel}` : trip.cityName;
-  const readOnly = viewingSharedTrip || tripViewMode;
+  const readOnly = viewingSharedTrip || tripViewMode || currentUserSuspended; // المُوقَف يُجبَر على View — يخفي كل أزرار التعديل/الحذف/الترتيب دفعة واحدة
 
   let html = `<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
     <button type="button" class="remove-btn" onclick="backToTripsList()"><i class="fa-solid fa-arrow-right"></i></button>
     <span style="font-weight:700; flex:1;">${title}</span>
-    ${!viewingSharedTrip ? `<button type="button" class="btn btn-ghost" style="margin:0; padding:6px 12px; font-size:11px;" onclick="toggleTripViewMode()">${tripViewMode ? '✏️ Edit' : '👁️ View'}</button>` : ''}
+    ${(!viewingSharedTrip && !currentUserSuspended) ? `<button type="button" class="btn btn-ghost" style="margin:0; padding:6px 12px; font-size:11px;" onclick="toggleTripViewMode()">${tripViewMode ? '✏️ Edit' : '👁️ View'}</button>` : ''}
   </div>`;
 
+  if (currentUserSuspended){
+    html += `<div style="border:1.5px dashed #b5545a; background:#fbeceb; border-radius:10px; padding:10px 12px; margin-bottom:10px; text-align:center; font-size:11.5px; color:#7a2b30; font-weight:700;">🚫 Suspended — can't add or edit places</div>`;
+  }
   if (!readOnly){
     html += `<button type="button" class="btn btn-brass" style="width:100%; margin-bottom:10px;" onclick="startAddingToTrip('${trip.id}')">➕ Add places to this trip</button>`;
     html += `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--sand,#f5f0e6); border-radius:10px; padding:8px 12px; margin-bottom:8px;">
@@ -2728,10 +2738,12 @@ function renderMyListModal(){
   }
   const city = myListAllCities().find(c => c.id === myListCityId);
   document.getElementById('myListCityName').textContent = city ? city.name : '';
-  document.getElementById('myListPublicToggle').closest('div').style.display = '';
-  document.getElementById('myListPublicToggle').classList.toggle('on', !!(myCityListData && myCityListData.public));
 
   if (currentUserSuspended){
+    // نهج موحَّد مع My Trips: إخفاء كل ما لا يُسمح به بدل السماح بضغطه ثم رفضه بالحفظ (ملاحظة الدفعة ٣)
+    document.getElementById('myListPublicToggle').closest('div').style.display = 'none'; // زر المشاركة العامة
+    document.getElementById('myListNicknameRow').innerHTML = '';
+    document.getElementById('myListShareRow').innerHTML = '';   // "Shared with someone"
     document.getElementById('myListSections').innerHTML =
       `<div style="background:#fbeceb; border:1.5px dashed #b5545a; border-radius:12px; padding:14px; text-align:center;">
         <div style="font-weight:700; color:#7a2b30; margin-bottom:4px;">🚫 Account Suspended</div>
@@ -2739,6 +2751,8 @@ function renderMyListModal(){
       </div>`;
     return;
   }
+  document.getElementById('myListPublicToggle').closest('div').style.display = '';
+  document.getElementById('myListPublicToggle').classList.toggle('on', !!(myCityListData && myCityListData.public));
 
   const nickRow = document.getElementById('myListNicknameRow');
   if (myCityListData && myCityListData.public){
