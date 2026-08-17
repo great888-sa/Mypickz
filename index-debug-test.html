@@ -1608,6 +1608,11 @@ async function addPlaceToTrip(sourceType, cityId, subcatId, placeId, sourceUid){
   if (trip.days.length === 1) openCategoryPicker(trip.id, 1);
   else openDayPicker(trip.id);
 }
+// إغلاق نافذة "Add to Trip" عبر زر Cancel — كان الزر يستدعي دالة غير موجودة (اكتُشف بتدقيق ما بعد الدفعة ٢، ١٧ أغسطس)
+function closeTripPickerModal(){
+  document.getElementById('tripPickerBackdrop').classList.remove('show');
+  pendingPlaceRef = null;
+}
 function openDayPicker(tripId){
   const trip = userTrips.find(t => t.id === tripId);
   const wrap = document.getElementById('tripPickerBody');
@@ -2109,13 +2114,6 @@ async function enforceNickname(){
   } finally { nicknameFlowActive = false; }
 }
 
-// انتظار آمن لحين تحديث currentUser العام (يُستخدم بعد تسجيل الدخول لتفادي أي تسابق زمني قبل استدعاء دوال تعتمد عليه)
-async function waitForCurrentUser(timeoutMs){
-  const start = Date.now();
-  while (!currentUser && Date.now() - start < timeoutMs){
-    await new Promise(r => setTimeout(r, 50));
-  }
-}
 async function doSignIn(){
   const email = document.getElementById('authEmail').value.trim();
   const pass = document.getElementById('authPassword').value;
@@ -2254,8 +2252,13 @@ async function loadUserList(){
     };
   }catch(e){ userListData = { customCities: [], customCountries: [], nickname: null }; userListLoadFailed = true; }
   try{
-    const uDoc = await withAuthRetry(() => db.collection('users').doc(currentUser.uid).get());
-    currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
+    // v3: الحالة تُقرأ من suspensions/{uid} (وجود المستند = إيقاف). users.suspended احتياط انتقالي حتى نشر v3.
+    const sDoc = await withAuthRetry(() => db.collection('suspensions').doc(currentUser.uid).get());
+    if (sDoc.exists){ currentUserSuspended = true; }
+    else {
+      const uDoc = await withAuthRetry(() => db.collection('users').doc(currentUser.uid).get());
+      currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
+    }
   }catch(e){ currentUserSuspended = false; }
 }
 
@@ -3171,6 +3174,12 @@ async function openUsersModal(){
     const snap = await db.collection('users').get();
     allUsersCache = [];
     snap.forEach(doc => allUsersCache.push({ uid: doc.id, ...doc.data() }));
+    // v3: حالة الإيقاف الفعلية من suspensions (مصدر الحقيقة) — تطغى على الحقل القديم بالمستند
+    try{
+      const susSnap = await db.collection('suspensions').get();
+      const susSet = new Set(); susSnap.forEach(d => susSet.add(d.id));
+      allUsersCache.forEach(u => { u.suspended = susSet.has(u.uid); });
+    }catch(e){ /* لو فشلت (قبل نشر v3 مثلًا) نبقى على الحقل القديم */ }
   }catch(e){ allUsersCache = []; }
   await loadCommunityLists(); // نحتاجها دايمًا عشان نعرف مين مفعّل المشاركة العامة، ونستخدمها كمان لتصحيح أسماء قديمة ناقصة
 
@@ -3282,7 +3291,14 @@ async function toggleSuspendUser(uid){
   if (!u) return;
   const newVal = !u.suspended;
   try{
-    await db.collection('users').doc(uid).set({ suspended: newVal }, { merge:true });
+    // v3 (أ-٢ الدفعة ٣): مصدر الحقيقة صار suspensions/{uid} — وجود المستند = إيقاف. يكتبه المالك حصرًا.
+    // نكتب أيضًا users.suspended مؤقتًا للتوافق مع القواعد الحالية حتى تُنشر v3 (يُزال بالدفعة ٤).
+    if (newVal){
+      await db.collection('suspensions').doc(uid).set({ at: Date.now(), by: currentUser.uid, email: u.email || '' });
+    } else {
+      await db.collection('suspensions').doc(uid).delete();
+    }
+    await db.collection('users').doc(uid).set({ suspended: newVal }, { merge:true }).catch(()=>{});
     // الإيقاف/الرفع يطبَّق على كل مدن المستخدم دفعة وحدة (مستند مستقل لكل مدينة بعد إعادة الهيكلة)
     const citySnap = await db.collection('userCityLists').where('ownerId','==',uid).get();
     if (!citySnap.empty){
@@ -3625,7 +3641,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: A2-batch2-r6 (help guide after sign-up)');
+logTiming('BUILD: A2-batch3-r1 (suspensions collection)');
 logTiming('Script started (t=0 reference)');
 
 (async function init(){
