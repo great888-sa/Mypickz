@@ -1608,6 +1608,11 @@ async function addPlaceToTrip(sourceType, cityId, subcatId, placeId, sourceUid){
   if (trip.days.length === 1) openCategoryPicker(trip.id, 1);
   else openDayPicker(trip.id);
 }
+// إغلاق نافذة "Add to Trip" عبر زر Cancel — كان الزر يستدعي دالة غير موجودة (اكتُشف بتدقيق ما بعد الدفعة ٢، ١٧ أغسطس)
+function closeTripPickerModal(){
+  document.getElementById('tripPickerBackdrop').classList.remove('show');
+  pendingPlaceRef = null;
+}
 function openDayPicker(tripId){
   const trip = userTrips.find(t => t.id === tripId);
   const wrap = document.getElementById('tripPickerBody');
@@ -2023,6 +2028,9 @@ function closeAuthModal(){
   document.getElementById('authBackdrop').classList.remove('show');
 }
 
+let signUpInProgress = false; // يمنع فحص onAuthStateChanged من إظهار نافذة اسم زائفة قبل اكتمال حجز الاسم أثناء التسجيل
+let nicknameFlowActive = false; // يمنع تداخل حلقتي اختيار الاسم
+
 async function doSignUp(){
   const nickname = document.getElementById('authNickname').value.trim();
   const email = document.getElementById('authEmail').value.trim();
@@ -2048,31 +2056,57 @@ async function doSignUp(){
     errEl.textContent = 'Could not verify username — try again';
     return;
   }
+  signUpInProgress = true;
   try{
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
     const newUid = cred.user.uid;
     // بعد إنشاء الحساب، نحجز اسم المستخدم فورًا كجزء من نفس العملية — نستخدم newUid مباشرة (مضمون)، لا currentUser العام (قد لا يتحدّث فورًا)
+    // withAuthRetry: أول كتابة بعد createUser قد تُرفض عابرًا (permission-denied) قبل التقاط Firestore لتوكن الحساب الجديد —
+    // نفس التسابق المعالَج بالقراءات؛ كان هنا بلا حماية وبـcatch صامت ⇒ حسابات تنتهي بلا اسم رغم إدخاله (مكتشَف بالدفعة ٢)
+    let nicknameSaved = false;
     try{
-      await db.collection('nicknames').doc(key).set({ uid: newUid, nickname });
-      await db.collection('userLists').doc(newUid).set({ nickname }, { merge:true });
-      await db.collection('users').doc(newUid).set({ nickname }, { merge:true });
-    }catch(e){ /* الحساب أُنشئ بنجاح؛ لو فشل حجز الاسم لسبب نادر، يقدر يعيّنه لاحقًا من My List */ }
+      await withAuthRetry(() => db.collection('nicknames').doc(key).set({ uid: newUid, nickname }));
+      await withAuthRetry(() => db.collection('userLists').doc(newUid).set({ nickname }, { merge:true }));
+      await withAuthRetry(() => db.collection('users').doc(newUid).set({ nickname }, { merge:true }));
+      userListData.nickname = nickname; // مزامنة الذاكرة المحلية فورًا (loadUserList قد سبقت الكتابة)
+      nicknameSaved = true;
+    }catch(e){
+      console.warn('Nickname reservation failed at sign-up:', e && e.code, e);
+    }
+    signUpInProgress = false;
     closeAuthModal();
-    showToast('Account created ✓');
+    showToast(nicknameSaved ? 'Account created ✓' : 'Account created — please choose a username');
+    if (!nicknameSaved){
+      await enforceNickname(); // شبكة الأمان بنفس الجلسة، لا بعد التحديث — تسبق النبذة حتى لا تتراكب النافذتان
+    }
+    openHelpAfterSignUp();
     db.collection('stats').doc('users').set(
       { count: firebase.firestore.FieldValue.increment(1) }, { merge:true }
     ).catch(()=>{});
   }catch(e){
+    signUpInProgress = false;
     errEl.textContent = authErrorMessage(e);
   }
 }
-// انتظار آمن لحين تحديث currentUser العام (يُستخدم بعد تسجيل الدخول لتفادي أي تسابق زمني قبل استدعاء دوال تعتمد عليه)
-async function waitForCurrentUser(timeoutMs){
-  const start = Date.now();
-  while (!currentUser && Date.now() - start < timeoutMs){
-    await new Promise(r => setTimeout(r, 50));
-  }
+// ===== إلزامية الاسم المستعار ١٠٠٪ (أ-٢ الدفعة ٢) =====
+// المصدر الوحيد للفحص: يُستدعى من onAuthStateChanged بعد تحميل userLists — يغطي تسجيل الدخول واستعادة الجلسة (تحديث الصفحة)
+// معًا، فيسدّ ثغرة "سجّل ← حدّث الصفحة ← دخل بلا اسم". لا يعمل عند فشل الشبكة (يعود تلقائيًا بالتحميل التالي).
+async function enforceNickname(){
+  if (!currentUser) return;
+  if (signUpInProgress) return;      // التسجيل يحجز الاسم بنفسه — لا نافذة زائفة أثناء ذلك
+  if (userListLoadFailed) return;    // تعذّر التحقق شبكيًا — لا نحبس المستخدم بخطأ مؤقت
+  if (userListData.nickname) return;
+  if (nicknameFlowActive) return;
+  nicknameFlowActive = true;
+  try{
+    showToast('Welcome — please choose a username to continue');
+    let ok = false;
+    while (!ok && currentUser){
+      ok = await chooseNickname();
+    }
+  } finally { nicknameFlowActive = false; }
 }
+
 async function doSignIn(){
   const email = document.getElementById('authEmail').value.trim();
   const pass = document.getElementById('authPassword').value;
@@ -2083,25 +2117,10 @@ async function doSignIn(){
     return;
   }
   try{
-    const cred = await auth.signInWithEmailAndPassword(email, pass);
-    const uid = cred.user.uid;
-    // تحقق مباشر ومستقل عن وجود اسم مستعار — يشمل الحسابات القديمة (قبل نافذة التسجيل الموحّدة) اللي ما اختارت اسمًا بعد
-    let hasNickname = false;
-    try{
-      const doc = await db.collection('userLists').doc(uid).get();
-      hasNickname = !!(doc.exists && doc.data().nickname);
-    }catch(e){ hasNickname = true; /* فشل فحص شبكي لا يمنع الدخول، تجنبًا لحبس المستخدم بخطأ مؤقت */ }
+    await auth.signInWithEmailAndPassword(email, pass);
+    // فحص الاسم المستعار لم يعد هنا — صار موحَّدًا في onAuthStateChanged (يغطي الدخول واستعادة الجلسة معًا، أ-٢ الدفعة ٢)
     closeAuthModal();
-    if (!hasNickname){
-      showToast('Welcome — please choose a username to continue');
-      await waitForCurrentUser(3000);
-      let ok = false;
-      while (!ok){
-        ok = await chooseNickname();
-      }
-    } else {
-      showToast('Welcome ✓');
-    }
+    showToast('Welcome ✓');
   }catch(e){
     errEl.textContent = authErrorMessage(e);
   }
@@ -2200,6 +2219,7 @@ let viewingSharedCityListId = null; // معرّف القائمة المشترك�
 let myCityListData = null; // بيانات المدينة الحالية بـMy List (المرحلة ١ من إعادة الهيكلة): { public, sharedWith, sharedWithNames, favoriteCount, categories:{} }
 let myCityListLoadedFor = null; // أي cityId مُحمَّل حاليًا بـmyCityListData (لتفادي إعادة تحميل غير ضرورية)
 let currentUserSuspended = false;
+let userListLoadFailed = false; // true لو فشلت قراءة userLists شبكيًا — يميّز "لا اسم مستعار" عن "تعذّر التحقق" (لا نحبس المستخدم بخطأ مؤقت)
 let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
 
 async function loadSharedCityLists(){
@@ -2213,6 +2233,7 @@ async function loadSharedCityLists(){
 
 async function loadUserList(){
   if (!currentUser){ userListData = { customCities: [], customCountries: [], nickname: null }; myListCityId = null; myListCountry = null; currentUserSuspended = false; myCityListData = null; myCityListLoadedFor = null; return; }
+  userListLoadFailed = false;
   try{
     const doc = await withAuthRetry(() => db.collection('userLists').doc(currentUser.uid).get());
     const data = doc.exists ? doc.data() : {};
@@ -2222,7 +2243,7 @@ async function loadUserList(){
       nickname: data.nickname || null,
       viewCount: data.viewCount || 0
     };
-  }catch(e){ userListData = { customCities: [], customCountries: [], nickname: null }; }
+  }catch(e){ userListData = { customCities: [], customCountries: [], nickname: null }; userListLoadFailed = true; }
   try{
     const uDoc = await withAuthRetry(() => db.collection('users').doc(currentUser.uid).get());
     currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
@@ -3093,13 +3114,10 @@ function openHelpModal(){
 function closeHelpModal(){
   document.getElementById('helpBackdrop').classList.remove('show');
 }
-function maybeAutoOpenHelp(){
-  try{
-    if (!localStorage.getItem('mypickz_help_seen')){
-      localStorage.setItem('mypickz_help_seen', '1');
-      openHelpModal();
-    }
-  }catch(e){}
+// نبذة دليل الاستخدام تُفتح تلقائيًا مرة واحدة: فور إنشاء الحساب الجديد فقط (قرار المالك ١٧ أغسطس).
+// كانت تفتح عند تحميل الصفحة لأي مسجَّل مرة بالجهاز (علم محلي) — أثرها العملي: تظهر بعد التحديث لا بعد التسجيل.
+function openHelpAfterSignUp(){
+  try{ openHelpModal(); }catch(e){}
 }
 
 /* =========================================================
@@ -3599,6 +3617,7 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
       await Promise.all(tasks);
       resolveAuthReady();
       render();
+      enforceNickname(); // لا ننتظرها — تعمل فوق المحتوى الظاهر
     });
   } else {
     resolveAuthReady(); // ما فيش Firebase أصلًا — منعرقلش أي حاجة
@@ -3608,9 +3627,8 @@ function closeQR(){ document.getElementById('qrBackdrop').classList.remove('show
   // نافذة تسجيل مبكرة: تظهر تلقائيًا للزائر غير المسجّل، مع محتوى المدينة ظاهر بالخلفية كسياق تحفيزي
   authReadyPromise.then(() => {
     if (!currentUser) {
-      openAuthModal();
-    } else {
-      maybeAutoOpenHelp();
+      // حارس: لو فتح الزائر النافذة بنفسه وبدأ الكتابة قبل اكتمال التحميل، لا نعيد فتحها (كانت تمسح الإيميل/كلمة السر المُدخَلة)
+      if (!document.getElementById('authBackdrop').classList.contains('show')) openAuthModal();
     }
   });
 })();
