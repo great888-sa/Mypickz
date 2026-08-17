@@ -2059,13 +2059,21 @@ async function doSignUp(){
     // withAuthRetry: أول كتابة بعد createUser قد تُرفض عابرًا (permission-denied) قبل التقاط Firestore لتوكن الحساب الجديد —
     // نفس التسابق المعالَج بالقراءات؛ كان هنا بلا حماية وبـcatch صامت ⇒ حسابات تنتهي بلا اسم رغم إدخاله (مكتشَف بالدفعة ٢)
     let nicknameSaved = false;
+    let step = 'nicknames';
     try{
+      logTiming('[SIGNUP] createUser OK uid=' + newUid.slice(0,6) + ' — writing nickname "' + nickname + '"');
       await withAuthRetry(() => db.collection('nicknames').doc(key).set({ uid: newUid, nickname }));
+      logTiming('[SIGNUP] nicknames write OK'); step = 'userLists';
       await withAuthRetry(() => db.collection('userLists').doc(newUid).set({ nickname }, { merge:true }));
+      logTiming('[SIGNUP] userLists write OK'); step = 'users';
       await withAuthRetry(() => db.collection('users').doc(newUid).set({ nickname }, { merge:true }));
+      logTiming('[SIGNUP] users write OK');
       userListData.nickname = nickname; // مزامنة الذاكرة المحلية فورًا (loadUserList قد سبقت الكتابة)
       nicknameSaved = true;
-    }catch(e){ console.warn('Nickname reservation failed at sign-up:', e && e.code, e); }
+    }catch(e){
+      logTiming('[SIGNUP] ❌ FAILED at ' + step + ': ' + (e && e.code) + ' — ' + (e && e.message));
+      console.warn('Nickname reservation failed at sign-up:', e && e.code, e);
+    }
     signUpInProgress = false;
     closeAuthModal();
     showToast(nicknameSaved ? 'Account created ✓' : 'Account created — please choose a username');
@@ -2083,10 +2091,11 @@ async function doSignUp(){
 // معًا، فيسدّ ثغرة "سجّل ← حدّث الصفحة ← دخل بلا اسم". لا يعمل عند فشل الشبكة (يعود تلقائيًا بالتحميل التالي).
 async function enforceNickname(){
   if (!currentUser) return;
-  if (signUpInProgress) return;      // التسجيل يحجز الاسم بنفسه — لا نافذة زائفة أثناء ذلك
-  if (userListLoadFailed) return;    // تعذّر التحقق شبكيًا — لا نحبس المستخدم بخطأ مؤقت
-  if (userListData.nickname) return;
-  if (nicknameFlowActive) return;
+  if (signUpInProgress){ logTiming('[NICK] skip: signUpInProgress'); return; }      // التسجيل يحجز الاسم بنفسه — لا نافذة زائفة أثناء ذلك
+  if (userListLoadFailed){ logTiming('[NICK] skip: userLists read failed'); return; }    // تعذّر التحقق شبكيًا — لا نحبس المستخدم بخطأ مؤقت
+  if (userListData.nickname){ logTiming('[NICK] ok: nickname="' + userListData.nickname + '"'); return; }
+  if (nicknameFlowActive){ logTiming('[NICK] skip: flow already active'); return; }
+  logTiming('[NICK] ⚠️ no nickname on server → prompting');
   nicknameFlowActive = true;
   try{
     showToast('Welcome — please choose a username to continue');
@@ -3614,7 +3623,9 @@ function logTiming(label){
   line.textContent = `⏱ ${label}: ${elapsed}s`;
   __timingBox.appendChild(line);
 }
-logTiming('BUILD: A2-batch2-r3 (nickname retry + auto-open guard)');
+// نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
+document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
+logTiming('BUILD: A2-batch2-r5 (signup diagnostics)');
 logTiming('Script started (t=0 reference)');
 
 (async function init(){
