@@ -1682,6 +1682,7 @@ function renderMyTripsModal(){
   wrap.innerHTML = html;
 }
 async function openCreateTripFlow(){
+  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } // نفس حاجز My List — بدل بناء رحلة وهمية بالذاكرة ثم رفضها عند الحفظ (ملاحظة ميدانية الدفعة ٣)
   const cities = allCities();
   if (!cities.length){ showToast('No cities available yet'); return; }
   const cityName = await openInputModal("Which city is this trip for?", "", cities[0].name, cities.map(c => c.name));
@@ -2245,8 +2246,13 @@ async function loadUserList(){
     };
   }catch(e){ userListData = { customCities: [], customCountries: [], nickname: null }; userListLoadFailed = true; }
   try{
-    const uDoc = await withAuthRetry(() => db.collection('users').doc(currentUser.uid).get());
-    currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
+    // v3: الحالة تُقرأ من suspensions/{uid} (وجود المستند = إيقاف). users.suspended احتياط انتقالي حتى نشر v3.
+    const sDoc = await withAuthRetry(() => db.collection('suspensions').doc(currentUser.uid).get());
+    if (sDoc.exists){ currentUserSuspended = true; }
+    else {
+      const uDoc = await withAuthRetry(() => db.collection('users').doc(currentUser.uid).get());
+      currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
+    }
   }catch(e){ currentUserSuspended = false; }
 }
 
@@ -3162,6 +3168,12 @@ async function openUsersModal(){
     const snap = await db.collection('users').get();
     allUsersCache = [];
     snap.forEach(doc => allUsersCache.push({ uid: doc.id, ...doc.data() }));
+    // v3: حالة الإيقاف الفعلية من suspensions (مصدر الحقيقة) — تطغى على الحقل القديم بالمستند
+    try{
+      const susSnap = await db.collection('suspensions').get();
+      const susSet = new Set(); susSnap.forEach(d => susSet.add(d.id));
+      allUsersCache.forEach(u => { u.suspended = susSet.has(u.uid); });
+    }catch(e){ /* لو فشلت (قبل نشر v3 مثلًا) نبقى على الحقل القديم */ }
   }catch(e){ allUsersCache = []; }
   await loadCommunityLists(); // نحتاجها دايمًا عشان نعرف مين مفعّل المشاركة العامة، ونستخدمها كمان لتصحيح أسماء قديمة ناقصة
 
@@ -3273,7 +3285,14 @@ async function toggleSuspendUser(uid){
   if (!u) return;
   const newVal = !u.suspended;
   try{
-    await db.collection('users').doc(uid).set({ suspended: newVal }, { merge:true });
+    // v3 (أ-٢ الدفعة ٣): مصدر الحقيقة صار suspensions/{uid} — وجود المستند = إيقاف. يكتبه المالك حصرًا.
+    // نكتب أيضًا users.suspended مؤقتًا للتوافق مع القواعد الحالية حتى تُنشر v3 (يُزال بالدفعة ٤).
+    if (newVal){
+      await db.collection('suspensions').doc(uid).set({ at: Date.now(), by: currentUser.uid, email: u.email || '' });
+    } else {
+      await db.collection('suspensions').doc(uid).delete();
+    }
+    await db.collection('users').doc(uid).set({ suspended: newVal }, { merge:true }).catch(()=>{});
     // الإيقاف/الرفع يطبَّق على كل مدن المستخدم دفعة وحدة (مستند مستقل لكل مدينة بعد إعادة الهيكلة)
     const citySnap = await db.collection('userCityLists').where('ownerId','==',uid).get();
     if (!citySnap.empty){
