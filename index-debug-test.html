@@ -2077,7 +2077,10 @@ async function doSignUp(){
     signUpInProgress = false;
     closeAuthModal();
     showToast(nicknameSaved ? 'Account created ✓' : 'Account created — please choose a username');
-    if (!nicknameSaved) enforceNickname(); // شبكة الأمان بنفس الجلسة، لا بعد التحديث
+    if (!nicknameSaved){
+      await enforceNickname(); // شبكة الأمان بنفس الجلسة، لا بعد التحديث — تسبق النبذة حتى لا تتراكب النافذتان
+    }
+    openHelpAfterSignUp();
     db.collection('stats').doc('users').set(
       { count: firebase.firestore.FieldValue.increment(1) }, { merge:true }
     ).catch(()=>{});
@@ -3120,13 +3123,10 @@ function openHelpModal(){
 function closeHelpModal(){
   document.getElementById('helpBackdrop').classList.remove('show');
 }
-function maybeAutoOpenHelp(){
-  try{
-    if (!localStorage.getItem('mypickz_help_seen')){
-      localStorage.setItem('mypickz_help_seen', '1');
-      openHelpModal();
-    }
-  }catch(e){}
+// نبذة دليل الاستخدام تُفتح تلقائيًا مرة واحدة: فور إنشاء الحساب الجديد فقط (قرار المالك ١٧ أغسطس).
+// كانت تفتح عند تحميل الصفحة لأي مسجَّل مرة بالجهاز (علم محلي) — أثرها العملي: تظهر بعد التحديث لا بعد التسجيل.
+function openHelpAfterSignUp(){
+  try{ openHelpModal(); }catch(e){}
 }
 
 /* =========================================================
@@ -3625,7 +3625,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: A2-batch2-r5 (signup diagnostics)');
+logTiming('BUILD: A2-batch2-r6 (help guide after sign-up)');
 logTiming('Script started (t=0 reference)');
 
 (async function init(){
@@ -3665,8 +3665,6 @@ logTiming('Script started (t=0 reference)');
     if (!currentUser) {
       // حارس: لو فتح الزائر النافذة بنفسه وبدأ الكتابة قبل اكتمال التحميل، لا نعيد فتحها (كانت تمسح الإيميل/كلمة السر المُدخَلة)
       if (!document.getElementById('authBackdrop').classList.contains('show')) openAuthModal();
-    } else {
-      maybeAutoOpenHelp();
     }
   });
 })();
