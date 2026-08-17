@@ -3614,6 +3614,7 @@ function logTiming(label){
   line.textContent = `⏱ ${label}: ${elapsed}s`;
   __timingBox.appendChild(line);
 }
+logTiming('BUILD: A2-batch2-r3 (nickname retry + auto-open guard)');
 logTiming('Script started (t=0 reference)');
 
 (async function init(){
@@ -3651,7 +3652,8 @@ logTiming('Script started (t=0 reference)');
   // نافذة تسجيل مبكرة: تظهر تلقائيًا للزائر غير المسجّل، مع محتوى المدينة ظاهر بالخلفية كسياق تحفيزي
   authReadyPromise.then(() => {
     if (!currentUser) {
-      openAuthModal();
+      // حارس: لو فتح الزائر النافذة بنفسه وبدأ الكتابة قبل اكتمال التحميل، لا نعيد فتحها (كانت تمسح الإيميل/كلمة السر المُدخَلة)
+      if (!document.getElementById('authBackdrop').classList.contains('show')) openAuthModal();
     } else {
       maybeAutoOpenHelp();
     }
