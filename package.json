@@ -1,0 +1,15 @@
+{
+  "name": "mypickz-tests",
+  "private": true,
+  "description": "MyPickz tests - not deployed as assets",
+  "scripts": {
+    "audit": "node tests/audit.js",
+    "runtime": "node tests/runtime.js",
+    "rules": "firebase emulators:exec --only firestore --project demo-mypickz \"node tests/rules-sim.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.0",
+    "firebase-tools": "^14.0.0",
+    "puppeteer-core": "^24.0.0"
+  }
+}
