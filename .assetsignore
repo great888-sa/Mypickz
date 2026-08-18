@@ -11,3 +11,4 @@ workers/
 .gitignore
 README*
 wrangler*.toml
+tests/
