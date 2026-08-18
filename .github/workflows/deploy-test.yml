@@ -15,6 +15,10 @@ jobs:
           node-version: 20
       - name: Run static audit
         run: node tests/audit.js
+      - name: Install puppeteer-core
+        run: npm i --no-save puppeteer-core
+      - name: Run runtime smoke (real Chrome, offline)
+        run: node tests/runtime.js
 
   deploy:
     needs: audit
