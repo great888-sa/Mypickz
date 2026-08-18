@@ -13,12 +13,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install test dependencies
+        run: npm install --no-audit --no-fund
       - name: Run static audit
         run: node tests/audit.js
-      - name: Install puppeteer-core
-        run: npm i --no-save puppeteer-core
       - name: Run runtime smoke (real Chrome, offline)
         run: node tests/runtime.js
+      - name: Run Firestore rules tests (official emulator)
+        run: npx firebase emulators:exec --only firestore --project demo-mypickz "node tests/rules-sim.js"
 
   deploy:
     needs: audit
