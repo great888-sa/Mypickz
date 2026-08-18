@@ -58,6 +58,18 @@ for (const [n, s] of [[PROD, prod], [TEST, test]]) {
   check(!/[?&]key=/.test(code), 'no ?key= access path ' + n);
 }
 
+// ---------- ٣-ب) كل onclick (بالHTML وبالقوالب داخل JS) يشير لدالة معرَّفة ----------
+// فحص ثابت مكمِّل لـruntime.js: يلتقط أيضًا المعالجات المولَّدة داخل قوالب JS التي لا تظهر بالDOM عند التحميل
+for (const [n, s] of [[PROD, prod], [TEST, test]]) {
+  const handlers = new Set();
+  for (const m of s.matchAll(/onclick=\\?["']\s*([A-Za-z_$][\w$]*)\s*\(/g)) handlers.add(m[1]);
+  const defined = new Set();
+  for (const m of s.matchAll(/(?:^|\n)\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) defined.add(m[1]);
+  for (const m of s.matchAll(/(?:^|\n)\s*(?:const|let|var|window\.)\s*([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function|\()/g)) defined.add(m[1]);
+  const missing = [...handlers].filter(h => !defined.has(h));
+  check(missing.length === 0, 'onclick handlers defined (' + handlers.size + ') ' + n, 'missing: ' + missing.join(', '));
+}
+
 // ---------- ٤) Firebase مثبَّت الإصدار ومشروع صحيح ----------
 for (const [n, s] of [[PROD, prod], [TEST, test]]) {
   check(/cdnjs\.cloudflare\.com\/ajax\/libs\/firebase\/\d+\.\d+\.\d+\//.test(s), 'firebase SDK pinned ' + n);
