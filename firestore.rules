@@ -1,0 +1,206 @@
+// firestore rules v3.1 — أ-٢ الدفعة ٣ (١٧ أغسطس ٢٠٢٦): v2 + suspensions/{uid} + توحيد نمط الحذف + isOwner() على قراءة trips/userCityLists
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/settings/app).data.ownerUid == request.auth.uid;
+    }
+    // ⚠️ تُستخدَم على الكتابة فقط — لا تُضاف لأي قاعدة read إطلاقًا (سبب حادثة النقطة ١٥)
+    // v3: علم الإيقاف انتقل من users/{uid}.suspended (يملكه المستخدم ⇒ ثغرة الرفع الذاتي بحذف مستنده)
+    //     إلى suspensions/{uid} (يكتبه المالك حصرًا). وجود المستند = إيقاف. قراءة واحدة بدل اثنتين.
+    function isSuspended() {
+      return exists(/databases/$(database)/documents/suspensions/$(request.auth.uid));
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /cities/{cityId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    // ===== v3: سجل الإيقاف — ملكية المالك حصرًا =====
+    // القراءة مقيَّدة بالمالك وصاحب الشأن (get/exists داخل القواعد لا تخضع لقواعد read، فالتقييد لا يكسر isSuspended)
+    match /suspensions/{uid} {
+      allow read: if isOwner() || (isSignedIn() && request.auth.uid == uid);
+      allow write: if isOwner();
+    }
+
+    // ===== إصلاح ثغرة ٢ =====
+    // ⚠️ لا يُقيَّد بـisSignedIn() إطلاقًا: trackVisit() تُستدعى قبل استعادة جلسة المصادقة
+    //    (سطر ~3660) فيكون request.auth == null حتى للمستخدم المسجَّل — التقييد بالهوية
+    //    يوقف العدّاد صامتًا (الدالة ملفوفة بـcatch فاضي).
+    // الحل: تقييد البنية والسلوك بدل الهوية — زيادة بمقدار ١ فقط على حقل count بمستند visits.
+    match /analytics/{docId} {
+      allow read: if true;
+      allow create: if docId == 'visits'
+        && request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if docId == 'visits'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
+      allow delete: if false;
+    }
+
+    // ===== إصلاح ثغرة ٣ (أ) =====
+    // عدّاد تراكمي قديم — زيادة بمقدار ١ فقط، لا حذف، لا حقول جديدة
+    match /stats/{docId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
+      allow delete: if isOwner();
+    }
+
+    // ===== إصلاح ثغرة ٣ (ب) =====
+    // يكتبه الكود بـ{name, url, count:±1} — نقيّد الحقول والمقدار معًا
+    // + إضافة !isSuspended(): المستخدم المُوقَف لا يؤثر على عدّادات Most Loved
+    match /placeFavoriteCounts/{docId} {
+      allow read: if true;
+      allow create: if isSignedIn() && !isSuspended()
+        && request.resource.data.keys().hasOnly(['name','url','count'])
+        && request.resource.data.count == 1;
+      // الزيادة (+1) تتطلب حسابًا غير مُوقَف؛ الإنقاص (-1) مسموح للمُوقَف أيضًا
+      // (يستطيع سحب إعجابه أو حذف حسابه، لا إضافة إعجاب جديد) — قرار المالك ١٦ أغسطس
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','url','count'])
+        && ((!isSuspended() && request.resource.data.count == resource.data.count + 1)
+            || request.resource.data.count == resource.data.count - 1);
+      allow delete: if isOwner();
+    }
+
+    // v3: توحيد نمط الحذف — إنشاء/تعديل تتطلب غير مُوقَف؛ الحذف يتطلب الملكية فقط (حق حذف البيانات لا يسقط بالإيقاف)
+    match /favorites/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if isSignedIn() && request.auth.uid == userId && !isSuspended();
+      allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
+    }
+
+    match /userLists/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || resource.data.public == true);
+      // v3: الحذف مفصول — نفس المبرر
+      allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
+      allow create, update: if isOwner()
+        || (isSignedIn() && request.auth.uid == userId && !isSuspended())
+        // تقييد المقدار بـ±١ (تدقيق شامل ١٦ أغسطس) — مسار قديم، يبقى محميًا احتياطًا
+        || (isSignedIn() && !isSuspended() && resource.data.public == true &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteCount']) &&
+            (request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) + 1
+             || request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) - 1));
+    }
+
+    // ===== إصلاح ثغرة ٥ (أ) + التعارض المكتشَف =====
+    // ١) إضافة isOwner() لـupdate/delete — كان موثَّقًا كمُصلَح لكنه غير موجود بالمنشور فعليًا،
+    //    وبدونه لا يستطيع المالك كتابة حقل suspended على رحلات المستخدمين (إصلاح النقطة ١٤ معطَّل عمليًا)
+    // ٢) إضافة !isSuspended() على الكتابة فقط — لا على القراءة (تفاديًا لحادثة النقطة ١٥)
+    match /trips/{tripId} {
+      // v3.1: + isOwner() على القراءة — toggleSuspendUser تستعلم عن رحلات المستخدم المُوقَف (where ownerId==uid)
+      //       والاستعلام يُرفض بلا هذا. توسيع للمالك فقط (يقرأ كل شيء بـConsole أصلًا) — ليس تكرارًا للنقطة ١٥.
+      allow read: if isOwner() || (isSignedIn() && (resource.data.ownerId == request.auth.uid
+        || resource.data.public == true
+        || request.auth.uid in resource.data.sharedWith));
+      allow create: if isSignedIn() && !isSuspended()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isOwner()
+        || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid);
+      // ⚠️ delete بلا !isSuspended() عمدًا — حق حذف البيانات لا يسقط بالإيقاف (قرار المالك ١٦ أغسطس).
+      //    أثر جانبي مقبول وموثَّق: المُوقَف يقدر يحذف رحلاته فرادى، لا ضمن حذف الحساب فقط.
+      allow delete: if isOwner()
+        || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+    }
+
+    // ===== إصلاح ثغرة ٥ (ب) =====
+    // نفس المبدأ: isSuspended() على الكتابة حصرًا + إعادة isOwner() للإدارة
+    match /userCityLists/{docId} {
+      // v3.1: + isOwner() على القراءة — نفس مبرر trips (كان سبب "Could not update user" عند الإيقاف)
+      allow read: if isOwner() || (isSignedIn() && (resource.data.ownerId == request.auth.uid
+        || resource.data.public == true
+        || request.auth.uid in resource.data.sharedWith));
+      allow create: if isSignedIn() && !isSuspended()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isOwner()
+        || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid)
+        // ===== إصلاح ثغرة ٣ الموسَّعة (تدقيق شامل ١٦ أغسطس): تقييد المقدار بـ±١ =====
+        // كانت تسمح بأي مقدار (مثل favoriteCount: 999999) ⇒ إفساد ترتيب Community Lists
+        || (isSignedIn() && !isSuspended() && resource.data.public == true &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteCount']) &&
+            (request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) + 1
+             || request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) - 1));
+      // ⚠️ delete بلا !isSuspended() عمدًا — نفس مبرر trips أعلاه
+      allow delete: if isOwner()
+        || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+    }
+
+    match /communityProfiles/{uid} {
+      allow read: if true;
+      allow create: if isOwner() || (isSignedIn() && request.auth.uid == uid);
+      allow delete: if isOwner() || (isSignedIn() && request.auth.uid == uid);
+      allow update: if isOwner()
+        || (isSignedIn() && request.auth.uid == uid)
+        // ===== إصلاح ثغرة ٣ الموسَّعة: تقييد المقدار بـ±١ لكل عدّاد =====
+        // كانت تسمح بأي مقدار ⇒ تضخيم المشاهدات/الإعجابات بلا حد
+        || (isSignedIn() && !isSuspended() && resource.data.hasAnyPublicContent == true &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount','totalFavoriteCount']) &&
+            (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
+             || request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0) + 1) &&
+            (request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0)
+             || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) + 1
+             || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) - 1));
+    }
+
+    // ===== إصلاح ثغرة ٤ =====
+    // الثغرة: القاعدة القديمة تفحص resource.data.uid (القيمة الحالية) فقط، ولا تفحص
+    //         request.resource.data.uid (القيمة الجديدة) — فيقدر أي مستخدم ينشئ اسمًا
+    //         مستعارًا وينسبه لحساب شخص آخر.
+    // الحل: فصل create/update/delete + فحص القيمة الجديدة صراحةً بالحالتين
+    match /nicknames/{nickId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid;
+      allow update: if isSignedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if isOwner()
+        || (isSignedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // ===== إصلاح ثغرة ١ =====
+    // غياب delete تمامًا = منعه تلقائيًا: لا المالك ولا المستخدم نفسه يقدر يحذف حسابًا،
+    // ولو بطلب صريح — فجوة قانونية فعلية (حق حذف البيانات).
+    // ⚠️ هذا يفتح الصلاحية فقط. واجهة "احذف حسابي" والحذف المتتالي عبر المجموعات السبع
+    //    تُنفَّذ بالمرحلة أ-٢ مع سياسة الخصوصية (قرار موثَّق).
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isOwner());
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      // v3: أُزيل شرط "suspended لا يتغير" — الحقل لم يعد مصدر الحقيقة (انتقل إلى suspensions/{uid})،
+      //     وبقاؤه كان سيرفض تحديثات المستخدم لنفسه بعد اختفاء الحقل من المستندات الجديدة
+      allow update: if isOwner() || (isSignedIn() && request.auth.uid == userId);
+      allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
+    }
+
+    // ===== إصلاح ثغرة ٣ (ج) =====
+    // العدّادات اليومية: الحقول محدَّدة، والقيم لا تنقص أبدًا (منع التصفير/التخريب)
+    match /dailyStats/{date} {
+      allow read: if isOwner();
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['newSignupsToday','activeToday']);
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['newSignupsToday','activeToday'])
+        && request.resource.data.get('activeToday', 0) >= resource.data.get('activeToday', 0)
+        && request.resource.data.get('newSignupsToday', 0) >= resource.data.get('newSignupsToday', 0);
+      allow delete: if isOwner();
+    }
+
+  }
+}
