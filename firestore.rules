@@ -1,4 +1,6 @@
-// firestore rules v3.1 — أ-٢ الدفعة ٣ (١٧ أغسطس ٢٠٢٦): v2 + suspensions/{uid} + توحيد نمط الحذف + isOwner() على قراءة trips/userCityLists
+// firestore rules v3.2 — أ-٣ الطبقة ١-ب (١٩ أغسطس ٢٠٢٦): v3.1 + (١) isOwner() على قراءة favorites (اتساق مع users/trips/userCityLists)
+//   + (٢) المُوقَف لا يعدّل users/{uid} ولا ينشئ/يعدّل nicknames (الحذف يبقى — حق حذف البيانات لا يسقط بالإيقاف)
+//   المصدر السابق v3.1: أ-٢ الدفعة ٣ (١٧ أغسطس ٢٠٢٦): v2 + suspensions/{uid} + توحيد نمط الحذف + isOwner() على قراءة trips/userCityLists
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -82,7 +84,8 @@ service cloud.firestore {
 
     // v3: توحيد نمط الحذف — إنشاء/تعديل تتطلب غير مُوقَف؛ الحذف يتطلب الملكية فقط (حق حذف البيانات لا يسقط بالإيقاف)
     match /favorites/{userId} {
-      allow read: if isSignedIn() && request.auth.uid == userId;
+      // v3.2: + isOwner() على القراءة — اتساقًا مع users/trips/userCityLists (لم يكن للاختلاف سبب تصميمي)
+      allow read: if isOwner() || (isSignedIn() && request.auth.uid == userId);
       allow create, update: if isSignedIn() && request.auth.uid == userId && !isSuspended();
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
     }
@@ -166,9 +169,10 @@ service cloud.firestore {
     // الحل: فصل create/update/delete + فحص القيمة الجديدة صراحةً بالحالتين
     match /nicknames/{nickId} {
       allow read: if true;
-      allow create: if isSignedIn()
+      // v3.2: + !isSuspended() على الإنشاء/التعديل — المُوقَف لا يغيّر اسمه المستعار (قرار المالك ١٩ أغسطس)
+      allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.uid == request.auth.uid;
-      allow update: if isSignedIn()
+      allow update: if isSignedIn() && !isSuspended()
         && resource.data.uid == request.auth.uid
         && request.resource.data.uid == request.auth.uid;
       allow delete: if isOwner()
@@ -185,7 +189,8 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.auth.uid == userId;
       // v3: أُزيل شرط "suspended لا يتغير" — الحقل لم يعد مصدر الحقيقة (انتقل إلى suspensions/{uid})،
       //     وبقاؤه كان سيرفض تحديثات المستخدم لنفسه بعد اختفاء الحقل من المستندات الجديدة
-      allow update: if isOwner() || (isSignedIn() && request.auth.uid == userId);
+      // v3.2: + !isSuspended() على تعديل المستخدم لنفسه — المُوقَف لا يعدّل بياناته (قرار المالك ١٩ أغسطس)؛ الحذف يبقى
+      allow update: if isOwner() || (isSignedIn() && request.auth.uid == userId && !isSuspended());
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
     }
 
