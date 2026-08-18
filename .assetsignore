@@ -1,4 +1,7 @@
 node_modules/
+.wrangler/
+package.json
+package-lock.json
 *.md
 *.txt
 mypickz-*-prototype.html
@@ -7,3 +10,4 @@ workers/
 .git/
 .gitignore
 README*
+wrangler*.toml
