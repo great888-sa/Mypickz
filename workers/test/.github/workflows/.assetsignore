@@ -1,0 +1,8 @@
+*.md
+*.txt
+mypickz-*-prototype.html
+workers/
+.github/
+.git/
+.gitignore
+README*
