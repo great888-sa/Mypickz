@@ -1,4 +1,8 @@
-// firestore rules v3.2 — أ-٣ الطبقة ١-ب (١٩ أغسطس ٢٠٢٦): v3.1 + (١) isOwner() على قراءة favorites (اتساق مع users/trips/userCityLists)
+// firestore rules v3.3 — أ-٣ الطبقة ٣ "قاعدة القياس" (١٩ أغسطس ٢٠٢٦): v3.2 + ثلاث طبقات قياس مجهول الهوية:
+//   (ج) analytics/errors_*  (ب) analytics/events_* · sources_* · hours_* · sessions_*  (أ) stats_lists · stats_trips · stats_places · stats_curators · stats_cards
+//   الكتابة مجمَّعة بلا مصادقة بنمط visits (حقول من قائمة مغلقة، زيادة ١..٥٠ لكل حقل — الثواني ١..٧٢٠٠، لا إنقاص، لا حذف) — الحارس الجذري App Check (الطبقة ٤)
+//   القراءة: (ب)(ج) للمالك فقط · (أ) لصاحب الكيان + المالك · لا حقل هوية بأي مستند · كل الأسماء محجوزة الآن (لا نشرة جديدة عند تفعيل وظائف ج-١أ/ب-١)
+// v3.2 — أ-٣ الطبقة ١-ب (١٩ أغسطس ٢٠٢٦): v3.1 + (١) isOwner() على قراءة favorites (اتساق مع users/trips/userCityLists)
 //   + (٢) المُوقَف لا يعدّل users/{uid} ولا ينشئ/يعدّل nicknames (الحذف يبقى — حق حذف البيانات لا يسقط بالإيقاف)
 //   المصدر السابق v3.1: أ-٢ الدفعة ٣ (١٧ أغسطس ٢٠٢٦): v2 + suspensions/{uid} + توحيد نمط الحذف + isOwner() على قراءة trips/userCityLists
 rules_version = '2';
@@ -41,14 +45,221 @@ service cloud.firestore {
     //    (سطر ~3660) فيكون request.auth == null حتى للمستخدم المسجَّل — التقييد بالهوية
     //    يوقف العدّاد صامتًا (الدالة ملفوفة بـcatch فاضي).
     // الحل: تقييد البنية والسلوك بدل الهوية — زيادة بمقدار ١ فقط على حقل count بمستند visits.
+    // ===== v3.3 (أ-٣ الطبقة ٣): مصيدة الأخطاء + سجل الأحداث المجهول =====
+    // errors_{YYYY-MM-DD}: عدّادات بنوع الخطأ فقط (لا رسائل، لا بيانات شخصية).
+    // events_{YYYY-MM-DD}__{city}__{category}: عدّادات أحداث مجهولة الهوية (المدينة حقيقية أو 'all'، الفئة ≤ ٤٠ حرفًا أو 'all').
+    // الكتابة بلا مصادقة (كـvisits) لأن الزائر غير المسجَّل يولّد أحداثًا أيضًا؛ الحارس الجذري هو App Check (الطبقة ٤).
+    // القراءة للمالك فقط (قرار المالك ١٩ أغسطس) — أرقام صحة المشروع وحجمه بيانات داخلية. visits يبقى عامًّا (يُعرض أصلًا).
+    // الأحداث العشرون محجوزة كاملة الآن حتى لا تُعاد نشرة عند تفعيل وظائفها لاحقًا (ج-١أ: share_card, curator_*, signup_*, visit_source).
+    function isErrorsDoc(id) { return id.matches('errors_[0-9]{4}-[0-9]{2}-[0-9]{2}'); }
+    function isEventsDoc(id) { return id.matches('events_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}__[a-z0-9_-]{1,40}'); }
+    function isSourcesDoc(id) { return id.matches('sources_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
+    function isHoursDoc(id) { return id.matches('hours_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
+    function isSessionsDoc(id) { return id.matches('sessions_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
+    function isOwnerOnlyAnalytics(id) { return isErrorsDoc(id) || isEventsDoc(id) || isSourcesDoc(id) || isHoursDoc(id) || isSessionsDoc(id); }
+    function cityOk(id) {
+      return id.split('__')[1] == 'all'
+        || exists(/databases/$(database)/documents/cities/$(id.split('__')[1]));
+    }
+    // إنشاء: كل حقل موجود عدد صحيح بين ١ و٥٠. تحديث: كل حقل متأثر زاد بين ١ و٥٠ (بلا إنقاص، بلا حذف حقول، بلا حقول غريبة).
+    function bumpC(k) {
+      return !(k in request.resource.data)
+        || (request.resource.data[k] is int && request.resource.data[k] >= 1 && request.resource.data[k] <= 50);
+    }
+    function bumpU(k) {
+      return !(k in request.resource.data.diff(resource.data).affectedKeys())
+        || (request.resource.data[k] is int
+            && request.resource.data[k] - resource.data.get(k, 0) >= 1
+            && request.resource.data[k] - resource.data.get(k, 0) <= 50);
+    }
+    // الثواني (مجموع مدة الجلسات): حد أعلى ٧٢٠٠ لكل كتابة
+    function bumpCBig(k) {
+      return !(k in request.resource.data)
+        || (request.resource.data[k] is int && request.resource.data[k] >= 1 && request.resource.data[k] <= 7200);
+    }
+    function bumpUBig(k) {
+      return !(k in request.resource.data.diff(resource.data).affectedKeys())
+        || (request.resource.data[k] is int
+            && request.resource.data[k] - resource.data.get(k, 0) >= 1
+            && request.resource.data[k] - resource.data.get(k, 0) <= 7200);
+    }
+    function errorKeysOk() {
+      return request.resource.data.keys().hasOnly(['TypeError', 'ReferenceError', 'SyntaxError', 'NetworkError', 'UnhandledRejection', 'Other', 'total']) && request.resource.data.keys().size() >= 1;
+    }
+    function eventKeysOk() {
+      return request.resource.data.keys().hasOnly(['visit_source', 'signup_start', 'signup_done', 'place_open', 'favorites_open', 'favorite_add', 'mylist_open', 'mylist_save', 'trip_open', 'trip_save', 'community_open', 'share_link', 'share_card', 'curator_view', 'curator_contact', 'curator_follow', 'session_depth', 'reserved_1', 'reserved_2', 'reserved_3'])
+        && request.resource.data.keys().size() >= 1;
+    }
+    function errorsCreateOk() {
+      return errorKeysOk()
+        && bumpC('TypeError')
+        && bumpC('ReferenceError')
+        && bumpC('SyntaxError')
+        && bumpC('NetworkError')
+        && bumpC('UnhandledRejection')
+        && bumpC('Other')
+        && bumpC('total');
+    }
+    function errorsUpdateOk() {
+      return errorKeysOk()
+        && request.resource.data.diff(resource.data).affectedKeys().size() >= 1
+        && bumpU('TypeError')
+        && bumpU('ReferenceError')
+        && bumpU('SyntaxError')
+        && bumpU('NetworkError')
+        && bumpU('UnhandledRejection')
+        && bumpU('Other')
+        && bumpU('total');
+    }
+    function eventsCreateOk() {
+      return eventKeysOk()
+        && bumpC('visit_source')
+        && bumpC('signup_start')
+        && bumpC('signup_done')
+        && bumpC('place_open')
+        && bumpC('favorites_open')
+        && bumpC('favorite_add')
+        && bumpC('mylist_open')
+        && bumpC('mylist_save')
+        && bumpC('trip_open')
+        && bumpC('trip_save')
+        && bumpC('community_open')
+        && bumpC('share_link')
+        && bumpC('share_card')
+        && bumpC('curator_view')
+        && bumpC('curator_contact')
+        && bumpC('curator_follow')
+        && bumpC('session_depth')
+        && bumpC('reserved_1')
+        && bumpC('reserved_2')
+        && bumpC('reserved_3');
+    }
+    function eventsUpdateOk() {
+      return eventKeysOk()
+        && request.resource.data.diff(resource.data).affectedKeys().size() >= 1
+        && bumpU('visit_source')
+        && bumpU('signup_start')
+        && bumpU('signup_done')
+        && bumpU('place_open')
+        && bumpU('favorites_open')
+        && bumpU('favorite_add')
+        && bumpU('mylist_open')
+        && bumpU('mylist_save')
+        && bumpU('trip_open')
+        && bumpU('trip_save')
+        && bumpU('community_open')
+        && bumpU('share_link')
+        && bumpU('share_card')
+        && bumpU('curator_view')
+        && bumpU('curator_contact')
+        && bumpU('curator_follow')
+        && bumpU('session_depth')
+        && bumpU('reserved_1')
+        && bumpU('reserved_2')
+        && bumpU('reserved_3');
+    }
+
+    function sourcesKeysOk() { return request.resource.data.keys().hasOnly(['src_app', 'src_ulist', 'src_trip', 'src_community', 'src_curator', 'ref_ig', 'ref_tt', 'ref_sc', 'ref_card', 'ref_qr', 'ref_link', 'ref_direct']) && request.resource.data.keys().size() >= 1; }
+    function sourcesCreateOk() { return sourcesKeysOk() && bumpC('src_app')
+        && bumpC('src_ulist')
+        && bumpC('src_trip')
+        && bumpC('src_community')
+        && bumpC('src_curator')
+        && bumpC('ref_ig')
+        && bumpC('ref_tt')
+        && bumpC('ref_sc')
+        && bumpC('ref_card')
+        && bumpC('ref_qr')
+        && bumpC('ref_link')
+        && bumpC('ref_direct'); }
+    function sourcesUpdateOk() { return sourcesKeysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('src_app')
+        && bumpU('src_ulist')
+        && bumpU('src_trip')
+        && bumpU('src_community')
+        && bumpU('src_curator')
+        && bumpU('ref_ig')
+        && bumpU('ref_tt')
+        && bumpU('ref_sc')
+        && bumpU('ref_card')
+        && bumpU('ref_qr')
+        && bumpU('ref_link')
+        && bumpU('ref_direct'); }
+    function hoursKeysOk() { return request.resource.data.keys().hasOnly(['h00', 'h01', 'h02', 'h03', 'h04', 'h05', 'h06', 'h07', 'h08', 'h09', 'h10', 'h11', 'h12', 'h13', 'h14', 'h15', 'h16', 'h17', 'h18', 'h19', 'h20', 'h21', 'h22', 'h23']) && request.resource.data.keys().size() >= 1; }
+    function hoursCreateOk() { return hoursKeysOk() && bumpC('h00')
+        && bumpC('h01')
+        && bumpC('h02')
+        && bumpC('h03')
+        && bumpC('h04')
+        && bumpC('h05')
+        && bumpC('h06')
+        && bumpC('h07')
+        && bumpC('h08')
+        && bumpC('h09')
+        && bumpC('h10')
+        && bumpC('h11')
+        && bumpC('h12')
+        && bumpC('h13')
+        && bumpC('h14')
+        && bumpC('h15')
+        && bumpC('h16')
+        && bumpC('h17')
+        && bumpC('h18')
+        && bumpC('h19')
+        && bumpC('h20')
+        && bumpC('h21')
+        && bumpC('h22')
+        && bumpC('h23'); }
+    function hoursUpdateOk() { return hoursKeysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('h00')
+        && bumpU('h01')
+        && bumpU('h02')
+        && bumpU('h03')
+        && bumpU('h04')
+        && bumpU('h05')
+        && bumpU('h06')
+        && bumpU('h07')
+        && bumpU('h08')
+        && bumpU('h09')
+        && bumpU('h10')
+        && bumpU('h11')
+        && bumpU('h12')
+        && bumpU('h13')
+        && bumpU('h14')
+        && bumpU('h15')
+        && bumpU('h16')
+        && bumpU('h17')
+        && bumpU('h18')
+        && bumpU('h19')
+        && bumpU('h20')
+        && bumpU('h21')
+        && bumpU('h22')
+        && bumpU('h23'); }
+    function sessionsKeysOk() { return request.resource.data.keys().hasOnly(['count', 'seconds', 'depth']) && request.resource.data.keys().size() >= 1; }
+    function sessionsCreateOk() { return sessionsKeysOk() && bumpC('count') && bumpCBig('seconds') && bumpC('depth'); }
+    function sessionsUpdateOk() { return sessionsKeysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('count') && bumpUBig('seconds') && bumpU('depth'); }
+    // المدينة بمعرّفات المستندات اليومية: حقيقية أو 'all'
+    function cityOk2(id) {
+      return id.split('__')[1] == 'all'
+        || exists(/databases/$(database)/documents/cities/$(id.split('__')[1]));
+    }
+
     match /analytics/{docId} {
-      allow read: if true;
-      allow create: if docId == 'visits'
-        && request.resource.data.keys().hasOnly(['count'])
-        && request.resource.data.count == 1;
-      allow update: if docId == 'visits'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
-        && request.resource.data.count == resource.data.count + 1;
+      allow read: if !isOwnerOnlyAnalytics(docId) || isOwner();
+      allow create: if (docId == 'visits'
+          && request.resource.data.keys().hasOnly(['count'])
+          && request.resource.data.count == 1)
+        || (isErrorsDoc(docId) && errorsCreateOk())
+        || (isEventsDoc(docId) && cityOk(docId) && eventsCreateOk())
+        || (isSourcesDoc(docId) && cityOk2(docId) && sourcesCreateOk())
+        || (isHoursDoc(docId) && cityOk2(docId) && hoursCreateOk())
+        || (isSessionsDoc(docId) && cityOk2(docId) && sessionsCreateOk());
+      allow update: if (docId == 'visits'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+          && request.resource.data.count == resource.data.count + 1)
+        || (isErrorsDoc(docId) && errorsUpdateOk())
+        || (isEventsDoc(docId) && cityOk(docId) && eventsUpdateOk())
+        || (isSourcesDoc(docId) && cityOk2(docId) && sourcesUpdateOk())
+        || (isHoursDoc(docId) && cityOk2(docId) && hoursUpdateOk())
+        || (isSessionsDoc(docId) && cityOk2(docId) && sessionsUpdateOk());
       allow delete: if false;
     }
 
@@ -204,6 +415,131 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['newSignupsToday','activeToday'])
         && request.resource.data.get('activeToday', 0) >= resource.data.get('activeToday', 0)
         && request.resource.data.get('newSignupsToday', 0) >= resource.data.get('newSignupsToday', 0);
+      allow delete: if isOwner();
+    }
+
+
+    // ===== v3.3 (أ) عدّادات الكيانات — stats_lists =====
+    // معرّف القائمة (userCityLists) أو معرّف القائمة__يوم · القراءة لصاحب القائمة + المالك · الإنشاء فقط لقائمة موجودة فعلًا
+    match /stats_lists/{docId} {
+      function keysOk() { return request.resource.data.keys().hasOnly(['open_ulist', 'open_community', 'open_curator', 'open_trip', 'open_direct', 'open_total', 'save_from', 'copy_from', 'place_open_total']) && request.resource.data.keys().size() >= 1; }
+      function createOk() { return keysOk() && bumpC('open_ulist')
+        && bumpC('open_community')
+        && bumpC('open_curator')
+        && bumpC('open_trip')
+        && bumpC('open_direct')
+        && bumpC('open_total')
+        && bumpC('save_from')
+        && bumpC('copy_from')
+        && bumpC('place_open_total'); }
+      function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('open_ulist')
+        && bumpU('open_community')
+        && bumpU('open_curator')
+        && bumpU('open_trip')
+        && bumpU('open_direct')
+        && bumpU('open_total')
+        && bumpU('save_from')
+        && bumpU('copy_from')
+        && bumpU('place_open_total'); }
+      allow read: if isOwner() || (isSignedIn() && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && get(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])).data.ownerId == request.auth.uid);
+      allow create: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && createOk();
+      allow update: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && updateOk();
+      allow delete: if isOwner();
+    }
+    // ===== v3.3 (أ) عدّادات الكيانات — stats_trips =====
+    // معرّف الرحلة (trips) أو معرّف الرحلة__يوم · القراءة لصاحب الرحلة + المالك
+    match /stats_trips/{docId} {
+      function keysOk() { return request.resource.data.keys().hasOnly(['view_shared', 'view_community', 'view_curator', 'view_direct', 'view_total', 'copy', 'interested']) && request.resource.data.keys().size() >= 1; }
+      function createOk() { return keysOk() && bumpC('view_shared')
+        && bumpC('view_community')
+        && bumpC('view_curator')
+        && bumpC('view_direct')
+        && bumpC('view_total')
+        && bumpC('copy')
+        && bumpC('interested'); }
+      function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('view_shared')
+        && bumpU('view_community')
+        && bumpU('view_curator')
+        && bumpU('view_direct')
+        && bumpU('view_total')
+        && bumpU('copy')
+        && bumpU('interested'); }
+      allow read: if isOwner() || (isSignedIn() && exists(/databases/$(database)/documents/trips/$(docId.split('__')[0])) && get(/databases/$(database)/documents/trips/$(docId.split('__')[0])).data.ownerId == request.auth.uid);
+      allow create: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && exists(/databases/$(database)/documents/trips/$(docId.split('__')[0])) && createOk();
+      allow update: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && exists(/databases/$(database)/documents/trips/$(docId.split('__')[0])) && updateOk();
+      allow delete: if isOwner();
+    }
+    // ===== v3.3 (أ) عدّادات الكيانات — stats_places =====
+    // معرّف القائمة__بصمة الرابط (١٦ خانة سداسية تُحسب بالمتصفح — لا رابط نصًّا) · مدى الحياة فقط · القراءة لصاحب القائمة + المالك · تُرحَّل إلى معرّف المكان بب-١
+    match /stats_places/{docId} {
+      function keysOk() { return request.resource.data.keys().hasOnly(['open_app', 'open_ulist', 'open_trip', 'open_community', 'open_curator', 'open_total', 'save_from', 'trip_add']) && request.resource.data.keys().size() >= 1; }
+      function createOk() { return keysOk() && bumpC('open_app')
+        && bumpC('open_ulist')
+        && bumpC('open_trip')
+        && bumpC('open_community')
+        && bumpC('open_curator')
+        && bumpC('open_total')
+        && bumpC('save_from')
+        && bumpC('trip_add'); }
+      function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('open_app')
+        && bumpU('open_ulist')
+        && bumpU('open_trip')
+        && bumpU('open_community')
+        && bumpU('open_curator')
+        && bumpU('open_total')
+        && bumpU('save_from')
+        && bumpU('trip_add'); }
+      allow read: if isOwner() || (isSignedIn() && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && get(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])).data.ownerId == request.auth.uid);
+      allow create: if docId.matches('[A-Za-z0-9_-]{1,60}__[a-f0-9]{16}') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && createOk();
+      allow update: if docId.matches('[A-Za-z0-9_-]{1,60}__[a-f0-9]{16}') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && updateOk();
+      allow delete: if isOwner();
+    }
+    // ===== v3.3 (أ) عدّادات الكيانات — stats_curators =====
+    // معرّف المنسِّق (uid) أو uid__يوم · القراءة للمنسِّق نفسه + المالك · وظائفها تُبنى بج-١أ (صفحة المنسِّق، روابط الحملات) — محجوزة الآن
+    match /stats_curators/{docId} {
+      function keysOk() { return request.resource.data.keys().hasOnly(['page_view', 'contact_click', 'follow', 'ref_ig', 'ref_tt', 'ref_sc', 'ref_card', 'ref_qr', 'ref_link', 'ref_direct']) && request.resource.data.keys().size() >= 1; }
+      function createOk() { return keysOk() && bumpC('page_view')
+        && bumpC('contact_click')
+        && bumpC('follow')
+        && bumpC('ref_ig')
+        && bumpC('ref_tt')
+        && bumpC('ref_sc')
+        && bumpC('ref_card')
+        && bumpC('ref_qr')
+        && bumpC('ref_link')
+        && bumpC('ref_direct'); }
+      function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('page_view')
+        && bumpU('contact_click')
+        && bumpU('follow')
+        && bumpU('ref_ig')
+        && bumpU('ref_tt')
+        && bumpU('ref_sc')
+        && bumpU('ref_card')
+        && bumpU('ref_qr')
+        && bumpU('ref_link')
+        && bumpU('ref_direct'); }
+      allow read: if isOwner() || (isSignedIn() && docId.split('__')[0] == request.auth.uid);
+      allow create: if docId.matches('[A-Za-z0-9]{20,40}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && createOk();
+      allow update: if docId.matches('[A-Za-z0-9]{20,40}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && updateOk();
+      allow delete: if isOwner();
+    }
+    // ===== v3.3 (أ) عدّادات الكيانات — stats_cards =====
+    // uid الصانع__معرّف البطاقة (الملكية بالمعرّف لا بحقل يُكتب) · العدّادات يزيدها أي زائر · القراءة لصانعها + المالك · تُبنى بج-١أ (بطاقة المشاركة) — محجوزة الآن
+    match /stats_cards/{docId} {
+      function keysOk() { return request.resource.data.keys().hasOnly(['view_ig', 'view_tt', 'view_sc', 'view_other', 'view_total']) && request.resource.data.keys().size() >= 1; }
+      function createOk() { return keysOk() && bumpC('view_ig')
+        && bumpC('view_tt')
+        && bumpC('view_sc')
+        && bumpC('view_other')
+        && bumpC('view_total'); }
+      function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('view_ig')
+        && bumpU('view_tt')
+        && bumpU('view_sc')
+        && bumpU('view_other')
+        && bumpU('view_total'); }
+      allow read: if isOwner() || (isSignedIn() && docId.split('__')[0] == request.auth.uid);
+      allow create: if docId.matches('[A-Za-z0-9]{20,40}__[A-Za-z0-9_-]{4,40}') && createOk();
+      allow update: if docId.matches('[A-Za-z0-9]{20,40}__[A-Za-z0-9_-]{4,40}') && updateOk();
       allow delete: if isOwner();
     }
 
