@@ -1,0 +1,29 @@
+# MyPickz — workers/pulse/wrangler.toml
+# أ-٣ الطبقة ٢ "النبضة": Worker مستقل — فحص حي كل ساعة + KV + بريد + /status
+name = "mypickz-pulse"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+workers_dev = false
+
+# نقطة الحالة على نطاق فرعي مملوك (شهادة تلقائية)
+routes = [
+  { pattern = "pulse.mypickz.app", custom_domain = true }
+]
+
+# كل ساعة على رأسها (UTC) — ١ من ٣ مشغّلات مجانية لكل Worker
+[triggers]
+crons = ["0 * * * *"]
+
+# مخزن الأثر — كتابة واحدة لكل جولة (حد المجاني ١٠٠٠/يوم)
+[[kv_namespaces]]
+binding = "PULSE_KV"
+id = "d829f52881724229937b6ae79db1fb2c"
+
+# ربط الإرسال — لوجهة موثَّقة بالحساب (مجاني بكل الخطط)
+[[send_email]]
+name = "EMAIL"
+destination_address = "mypickz.app@gmail.com"
+
+# عنوان التنبيه يُقرأ من متغيّر البيئة (ليس سرًّا تقنيًا، لكن لا يُوضع بالكود)
+[vars]
+ALERT_TO = "mypickz.app@gmail.com"
