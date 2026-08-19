@@ -1,3 +1,6 @@
+// firestore rules v3.3.1 — أ-٣ الطبقة ٣ (١٩ أغسطس ٢٠٢٦): v3.3 + (١) stats_places يقبل أماكن دليل المالك بمعرّف owner_{city}__{hash} (مدينة حقيقية، القراءة للمالك فقط حتى لو زُوِّر userCityLists/owner_*)
+//   + (٢) أحداث الاستيراد (ب-١) محجوزة الآن: import_run · import_place · import_suggest_kept · import_suggest_changed · reserved_1 = نشر عام (toggle public) · reserved_2/3 احتياط
+//   + (٣) العناوين الشخصية (خاصة دائمًا — لا كيان ولا بصمة ولا مدينة): personal_open · personal_save · personal_place_open بالتجميع اليومي فقط بمدينة all
 // firestore rules v3.3 — أ-٣ الطبقة ٣ "قاعدة القياس" (١٩ أغسطس ٢٠٢٦): v3.2 + ثلاث طبقات قياس مجهول الهوية:
 //   (ج) analytics/errors_*  (ب) analytics/events_* · sources_* · hours_* · sessions_*  (أ) stats_lists · stats_trips · stats_places · stats_curators · stats_cards
 //   الكتابة مجمَّعة بلا مصادقة بنمط visits (حقول من قائمة مغلقة، زيادة ١..٥٠ لكل حقل — الثواني ١..٧٢٠٠، لا إنقاص، لا حذف) — الحارس الجذري App Check (الطبقة ٤)
@@ -50,7 +53,7 @@ service cloud.firestore {
     // events_{YYYY-MM-DD}__{city}__{category}: عدّادات أحداث مجهولة الهوية (المدينة حقيقية أو 'all'، الفئة ≤ ٤٠ حرفًا أو 'all').
     // الكتابة بلا مصادقة (كـvisits) لأن الزائر غير المسجَّل يولّد أحداثًا أيضًا؛ الحارس الجذري هو App Check (الطبقة ٤).
     // القراءة للمالك فقط (قرار المالك ١٩ أغسطس) — أرقام صحة المشروع وحجمه بيانات داخلية. visits يبقى عامًّا (يُعرض أصلًا).
-    // الأحداث العشرون محجوزة كاملة الآن حتى لا تُعاد نشرة عند تفعيل وظائفها لاحقًا (ج-١أ: share_card, curator_*, signup_*, visit_source).
+    // الأحداث محجوزة كاملة الآن حتى لا تُعاد نشرة عند تفعيل وظائفها لاحقًا (ج-١أ: share_card, curator_*, signup_*, visit_source · ب-١: import_*) · reserved_1 = نشر عام.
     function isErrorsDoc(id) { return id.matches('errors_[0-9]{4}-[0-9]{2}-[0-9]{2}'); }
     function isEventsDoc(id) { return id.matches('events_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}__[a-z0-9_-]{1,40}'); }
     function isSourcesDoc(id) { return id.matches('sources_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
@@ -87,7 +90,7 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly(['TypeError', 'ReferenceError', 'SyntaxError', 'NetworkError', 'UnhandledRejection', 'Other', 'total']) && request.resource.data.keys().size() >= 1;
     }
     function eventKeysOk() {
-      return request.resource.data.keys().hasOnly(['visit_source', 'signup_start', 'signup_done', 'place_open', 'favorites_open', 'favorite_add', 'mylist_open', 'mylist_save', 'trip_open', 'trip_save', 'community_open', 'share_link', 'share_card', 'curator_view', 'curator_contact', 'curator_follow', 'session_depth', 'reserved_1', 'reserved_2', 'reserved_3'])
+      return request.resource.data.keys().hasOnly(['visit_source', 'signup_start', 'signup_done', 'place_open', 'favorites_open', 'favorite_add', 'mylist_open', 'mylist_save', 'trip_open', 'trip_save', 'community_open', 'share_link', 'share_card', 'curator_view', 'curator_contact', 'curator_follow', 'session_depth', 'import_run', 'import_place', 'import_suggest_kept', 'import_suggest_changed', 'personal_open', 'personal_save', 'personal_place_open', 'reserved_1', 'reserved_2', 'reserved_3'])
         && request.resource.data.keys().size() >= 1;
     }
     function errorsCreateOk() {
@@ -130,6 +133,13 @@ service cloud.firestore {
         && bumpC('curator_contact')
         && bumpC('curator_follow')
         && bumpC('session_depth')
+        && bumpC('import_run')
+        && bumpC('import_place')
+        && bumpC('import_suggest_kept')
+        && bumpC('import_suggest_changed')
+        && bumpC('personal_open')
+        && bumpC('personal_save')
+        && bumpC('personal_place_open')
         && bumpC('reserved_1')
         && bumpC('reserved_2')
         && bumpC('reserved_3');
@@ -154,6 +164,13 @@ service cloud.firestore {
         && bumpU('curator_contact')
         && bumpU('curator_follow')
         && bumpU('session_depth')
+        && bumpU('import_run')
+        && bumpU('import_place')
+        && bumpU('import_suggest_kept')
+        && bumpU('import_suggest_changed')
+        && bumpU('personal_open')
+        && bumpU('personal_save')
+        && bumpU('personal_place_open')
         && bumpU('reserved_1')
         && bumpU('reserved_2')
         && bumpU('reserved_3');
@@ -471,6 +488,7 @@ service cloud.firestore {
     }
     // ===== v3.3 (أ) عدّادات الكيانات — stats_places =====
     // معرّف القائمة__بصمة الرابط (١٦ خانة سداسية تُحسب بالمتصفح — لا رابط نصًّا) · مدى الحياة فقط · القراءة لصاحب القائمة + المالك · تُرحَّل إلى معرّف المكان بب-١
+    // v3.3.1: + أماكن دليل المالك بمعرّف owner_{city}__{hash} — المدينة يجب أن تكون حقيقية (cities)، لا مستند userCityLists؛ قراءتها للمالك (isOwner بقاعدة القراءة)
     match /stats_places/{docId} {
       function keysOk() { return request.resource.data.keys().hasOnly(['open_app', 'open_ulist', 'open_trip', 'open_community', 'open_curator', 'open_total', 'save_from', 'trip_add']) && request.resource.data.keys().size() >= 1; }
       function createOk() { return keysOk() && bumpC('open_app')
@@ -489,9 +507,18 @@ service cloud.firestore {
         && bumpU('open_total')
         && bumpU('save_from')
         && bumpU('trip_add'); }
-      allow read: if isOwner() || (isSignedIn() && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && get(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])).data.ownerId == request.auth.uid);
-      allow create: if docId.matches('[A-Za-z0-9_-]{1,60}__[a-f0-9]{16}') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && createOk();
-      allow update: if docId.matches('[A-Za-z0-9_-]{1,60}__[a-f0-9]{16}') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && updateOk();
+      // v3.3.1: المعرّفات owner_* يقرؤها المالك فقط — ولو أنشأ مستخدم مستند userCityLists باسم owner_{city} (معرّفات userCityLists غير مقيَّدة بالقواعد القديمة) فلا يكسب قراءتها
+      allow read: if isOwner() || (isSignedIn() && !docId.matches('owner_.*') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && get(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])).data.ownerId == request.auth.uid);
+      function ownerPlaceOk() {
+        return docId.matches('owner_[a-z0-9_-]{1,40}__[a-f0-9]{16}')
+          && exists(/databases/$(database)/documents/cities/$(docId.split('__')[0].split('owner_')[1]));
+      }
+      function userPlaceOk() {
+        return docId.matches('[A-Za-z0-9_-]{1,60}__[a-f0-9]{16}')
+          && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0]));
+      }
+      allow create: if (ownerPlaceOk() || userPlaceOk()) && createOk();
+      allow update: if (ownerPlaceOk() || userPlaceOk()) && updateOk();
       allow delete: if isOwner();
     }
     // ===== v3.3 (أ) عدّادات الكيانات — stats_curators =====
