@@ -19,11 +19,6 @@ crons = ["0 * * * *"]
 binding = "PULSE_KV"
 id = "d829f52881724229937b6ae79db1fb2c"
 
-# ربط الإرسال — لوجهة موثَّقة بالحساب (مجاني بكل الخطط)
+# ربط الإرسال — الوجهة تحقَن وقت النشر من GitHub Secrets (ALERT_TO) — لا بريد بالمستودع
 [[send_email]]
 name = "EMAIL"
-destination_address = "mypickz.app@gmail.com"
-
-# عنوان التنبيه يُقرأ من متغيّر البيئة (ليس سرًّا تقنيًا، لكن لا يُوضع بالكود)
-[vars]
-ALERT_TO = "mypickz.app@gmail.com"
