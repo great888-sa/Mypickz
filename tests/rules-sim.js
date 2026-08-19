@@ -1,5 +1,5 @@
 // MyPickz — tests/rules-sim.js
-// يختبر firestore.rules (v3.2) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// يختبر firestore.rules (v3.3) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
 // يُشغَّل بـ: npx firebase emulators:exec --only firestore --project demo-mypickz "node tests/rules-sim.js"
 // كل حالة تُطبع بسطر PASS/FAIL. أي FAIL ⇒ رمز خروج ١ ⇒ الناشر يتوقف.
 'use strict';
@@ -122,6 +122,113 @@ const no = (label, f) => expect(false, label, f);
   await env.withSecurityRulesDisabled(async (c) => c.firestore().doc('analytics/visits').delete());
   await no('analytics create {count:5}', () => guest.doc('analytics/visits').set({ count: 5 }));
   await no('analytics create extra field', () => guest.doc('analytics/visits').set({ count: 1, x: 1 }));
+
+  // ================= ٤-ب) v3.3: analytics/errors_* =================
+  const ED = 'analytics/errors_2026-08-19';
+  await ok('errors create {TypeError:1,total:1} guest', () => guest.doc(ED).set({ TypeError: 1, total: 1 }));
+  await no('errors create with message field', () => guest.doc('analytics/errors_2026-08-20').set({ TypeError: 1, message: 'x' }));
+  await no('errors create value 60 (>50)', () => guest.doc('analytics/errors_2026-08-21').set({ TypeError: 60 }));
+  await no('errors create value 0', () => guest.doc('analytics/errors_2026-08-22').set({ TypeError: 0 }));
+  await no('errors create string value', () => guest.doc('analytics/errors_2026-08-23').set({ TypeError: 'many' }));
+  await no('errors create bad id', () => guest.doc('analytics/errors_today').set({ TypeError: 1 }));
+  await ok('errors update +1 two keys guest', () => guest.doc(ED).update({ TypeError: 2, total: 2 }));
+  await ok('errors update +50 user', () => a.doc(ED).update({ Other: 50, total: 52 }));
+  await no('errors update +51', () => guest.doc(ED).update({ TypeError: 53 }));
+  await no('errors update decrease', () => guest.doc(ED).update({ TypeError: 1 }));
+  await no('errors update unknown key', () => guest.doc(ED).update({ hack: 1 }));
+  await no('errors read guest (owner-only)', () => guest.doc(ED).get());
+  await no('errors read user (owner-only)', () => a.doc(ED).get());
+  await ok('errors read owner', () => owner.doc(ED).get());
+  await no('errors delete owner', () => owner.doc(ED).delete());
+  await ok('visits still public read after v3.3', () => guest.doc('analytics/visits').get());
+
+  // ================= ٤-ج) v3.3: analytics/events_* =================
+  const EV = 'analytics/events_2026-08-19__paris__cafes';
+  await ok('events create {place_open:3} guest (real city)', () => guest.doc(EV).set({ place_open: 3 }));
+  await no('events create unknown city', () => guest.doc('analytics/events_2026-08-19__nowhere__cafes').set({ place_open: 1 }));
+  await ok('events create city all / category all', () => guest.doc('analytics/events_2026-08-19__all__all').set({ visit_source: 1, signup_start: 1 }));
+  await ok('events create reserved future key (share_card, curator_view)', () => guest.doc('analytics/events_2026-08-19__paris__all').set({ share_card: 1, curator_view: 2 }));
+  await no('events create unknown key', () => guest.doc('analytics/events_2026-08-19__paris__bars').set({ hack: 1 }));
+  await no('events create uppercase city (bad id)', () => guest.doc('analytics/events_2026-08-19__Paris__cafes').set({ place_open: 1 }));
+  await no('events create with uid field', () => guest.doc('analytics/events_2026-08-19__paris__hotels').set({ place_open: 1, uid: 'x' }));
+  await ok('events update +50 user', () => a.doc(EV).update({ place_open: 53 }));
+  await no('events update +51', () => guest.doc(EV).update({ place_open: 104 }));
+  await no('events update decrease', () => guest.doc(EV).update({ place_open: 1 }));
+  await ok('events update add second key +1', () => guest.doc(EV).update({ favorite_add: 1 }));
+  await no('events read user (owner-only)', () => a.doc(EV).get());
+  await ok('events read owner', () => owner.doc(EV).get());
+  await no('events delete owner', () => owner.doc(EV).delete());
+
+  // ================= ٤-د) v3.3: sources_* / hours_* / sessions_* =================
+  await ok('sources create guest (real city)', () => guest.doc('analytics/sources_2026-08-19__paris').set({ src_app: 3, ref_ig: 1 }));
+  await no('sources create unknown key', () => guest.doc('analytics/sources_2026-08-19__all').set({ src_x: 1 }));
+  await no('sources create unknown city', () => guest.doc('analytics/sources_2026-08-19__nowhere').set({ src_app: 1 }));
+  await ok('sources update +1', () => guest.doc('analytics/sources_2026-08-19__paris').update({ ref_card: 1 }));
+  await no('sources read user', () => a.doc('analytics/sources_2026-08-19__paris').get());
+  await ok('sources read owner', () => owner.doc('analytics/sources_2026-08-19__paris').get());
+  await ok('hours create guest', () => guest.doc('analytics/hours_2026-08-19__paris').set({ h14: 5, h15: 2 }));
+  await no('hours create key h24', () => guest.doc('analytics/hours_2026-08-19__all').set({ h24: 1 }));
+  await ok('hours update +1', () => guest.doc('analytics/hours_2026-08-19__paris').update({ h14: 6 }));
+  await no('hours read user', () => a.doc('analytics/hours_2026-08-19__paris').get());
+  await ok('sessions create guest', () => guest.doc('analytics/sessions_2026-08-19__paris').set({ count: 1, seconds: 600, depth: 4 }));
+  await no('sessions create seconds 9000 (>7200)', () => guest.doc('analytics/sessions_2026-08-19__all').set({ count: 1, seconds: 9000 }));
+  await ok('sessions create seconds 7200 (max)', () => guest.doc('analytics/sessions_2026-08-19__all').set({ count: 1, seconds: 7200 }));
+  await no('sessions create count 60 (>50)', () => guest.doc('analytics/sessions_2026-08-20__all').set({ count: 60 }));
+  await no('sessions create extra field', () => guest.doc('analytics/sessions_2026-08-20__paris').set({ count: 1, uid: 'x' }));
+  await ok('sessions update +seconds', () => guest.doc('analytics/sessions_2026-08-19__paris').update({ count: 2, seconds: 900 }));
+  await no('sessions read user', () => a.doc('analytics/sessions_2026-08-19__paris').get());
+  await ok('sessions read owner', () => owner.doc('analytics/sessions_2026-08-19__paris').get());
+
+  // ================= ٤-هـ) v3.3: stats_lists =================
+  await ok('stats_lists create guest (existing list cA)', () => guest.doc('stats_lists/cA').set({ open_community: 1, open_total: 1 }));
+  await no('stats_lists create unknown list', () => guest.doc('stats_lists/zzz').set({ open_total: 1 }));
+  await ok('stats_lists create daily doc', () => guest.doc('stats_lists/cA__2026-08-19').set({ open_community: 1, open_total: 1 }));
+  await no('stats_lists create unknown key', () => guest.doc('stats_lists/cBpub').set({ hack: 1 }));
+  await ok('stats_lists update +1', () => guest.doc('stats_lists/cA').update({ open_total: 2, save_from: 1 }));
+  await no('stats_lists update +51', () => guest.doc('stats_lists/cA').update({ open_total: 53 }));
+  await no('stats_lists update decrease', () => guest.doc('stats_lists/cA').update({ open_total: 1 }));
+  await ok('stats_lists read by list owner (A)', () => a.doc('stats_lists/cA').get());
+  await ok('stats_lists read daily by list owner (A)', () => a.doc('stats_lists/cA__2026-08-19').get());
+  await no('stats_lists read by other user (B)', () => b.doc('stats_lists/cA').get());
+  await no('stats_lists read guest', () => guest.doc('stats_lists/cA').get());
+  await ok('stats_lists read app owner', () => owner.doc('stats_lists/cA').get());
+  await no('stats_lists delete by list owner', () => a.doc('stats_lists/cA__2026-08-19').delete());
+  await ok('stats_lists delete app owner', () => owner.doc('stats_lists/cA__2026-08-19').delete());
+
+  // ================= ٤-و) v3.3: stats_trips =================
+  await ok('stats_trips create guest (existing trip tA)', () => guest.doc('stats_trips/tA').set({ view_shared: 1, view_total: 1 }));
+  await no('stats_trips create unknown trip', () => guest.doc('stats_trips/nope').set({ view_total: 1 }));
+  await ok('stats_trips update copy +1', () => guest.doc('stats_trips/tA').update({ copy: 1 }));
+  await ok('stats_trips read by trip owner (A)', () => a.doc('stats_trips/tA').get());
+  await no('stats_trips read by other (B)', () => b.doc('stats_trips/tA').get());
+  await ok('stats_trips read app owner', () => owner.doc('stats_trips/tA').get());
+
+  // ================= ٤-ز) v3.3: stats_places =================
+  await ok('stats_places create guest (list cA + 16-hex hash)', () => guest.doc('stats_places/cA__0123456789abcdef').set({ open_community: 2, open_total: 2 }));
+  await no('stats_places create short hash', () => guest.doc('stats_places/cA__abc').set({ open_total: 1 }));
+  await no('stats_places create unknown list', () => guest.doc('stats_places/zzz__0123456789abcdef').set({ open_total: 1 }));
+  await no('stats_places create unknown key', () => guest.doc('stats_places/cA__fedcba9876543210').set({ url: 'x' }));
+  await ok('stats_places update save_from +1', () => guest.doc('stats_places/cA__0123456789abcdef').update({ save_from: 1 }));
+  await ok('stats_places read by list owner (A)', () => a.doc('stats_places/cA__0123456789abcdef').get());
+  await no('stats_places read by other (B)', () => b.doc('stats_places/cA__0123456789abcdef').get());
+  await no('stats_places read guest', () => guest.doc('stats_places/cA__0123456789abcdef').get());
+
+  // ================= ٤-ح) v3.3: stats_curators / stats_cards (reserved for ج-١أ) =================
+  const CUR = 'abcdefghijklmnopqrstuvwxyz12';            // uid واقعي (٢٨ حرفًا)
+  const cur = env.authenticatedContext(CUR).firestore();
+  await ok('stats_curators create guest (uid-shaped id)', () => guest.doc('stats_curators/' + CUR).set({ page_view: 1, ref_ig: 1 }));
+  await no('stats_curators create short id', () => guest.doc('stats_curators/userA').set({ page_view: 1 }));
+  await ok('stats_curators create daily', () => guest.doc('stats_curators/' + CUR + '__2026-08-19').set({ contact_click: 1 }));
+  await no('stats_curators create unknown key', () => guest.doc('stats_curators/' + CUR).set({ followers_list: 1 }));
+  await ok('stats_curators read by curator', () => cur.doc('stats_curators/' + CUR).get());
+  await no('stats_curators read by other user', () => a.doc('stats_curators/' + CUR).get());
+  await ok('stats_curators read app owner', () => owner.doc('stats_curators/' + CUR).get());
+  await ok('stats_cards create guest (uid__cardId)', () => guest.doc('stats_cards/' + CUR + '__card_0001').set({ view_ig: 1, view_total: 1 }));
+  await no('stats_cards create bad id', () => guest.doc('stats_cards/card1').set({ view_total: 1 }));
+  await ok('stats_cards update +1', () => guest.doc('stats_cards/' + CUR + '__card_0001').update({ view_total: 2, view_tt: 1 }));
+  await ok('stats_cards read by card owner', () => cur.doc('stats_cards/' + CUR + '__card_0001').get());
+  await no('stats_cards read by other', () => a.doc('stats_cards/' + CUR + '__card_0001').get());
+  await ok('stats_cards read app owner', () => owner.doc('stats_cards/' + CUR + '__card_0001').get());
 
   // ================= ٥) stats =================
   await ok('stats read guest', () => guest.doc('stats/users').get());
