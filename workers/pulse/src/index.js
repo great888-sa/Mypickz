@@ -15,7 +15,7 @@ const TARGETS = [
     must: ['function initFirebase', 'function loadCity', 'function openAuthModal', 'projectId: "mypickz-6f809"', 'BUILD:']
   }
 ];
-const MIN_BYTES = 999999999; // TEMP: force failure to test email path — يُعاد إلى 100000 بعد الاختبار
+const MIN_BYTES = 100000;
 const ATTEMPTS = 2;            // إعادة محاولة داخلية واحدة قبل الحكم بالفشل (تفادي الإنذار الزائف)
 const RETRY_DELAY_MS = 10000;
 const KV_KEY = 'pulse:last';
