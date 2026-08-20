@@ -397,6 +397,26 @@ const no = (label, f) => expect(false, label, f);
   await no('dailyStats delete user', () => a.doc(`dailyStats/${TODAY}`).delete());
   await ok('dailyStats delete owner', () => owner.doc('dailyStats/2026-08-19').delete());
 
+  // ================= ١٥) A3-L3-r1: أشكال كتابة وحدة mpTrack =================
+  // الوحدة تكتب دفعة batch واحدة (set + merge) قد تمس مستندات تجميع متعددة بالدورة الواحدة —
+  // ورفض مستند واحد بالقواعد يُسقط الدفعة كاملة، لذا تُختبر الدفعة نفسها لا المستند المفرد فقط.
+  // (حالة "personal بمدينة حقيقية" قيدُ كودٍ لا قواعد — القواعد تجيزها بنيويًا؛ تُفحص ببند Personal بقائمة الاختبار الميداني.)
+  await ok('mp batch: events(multi-field)+hours+sessions in one commit', () => {
+    const btch = guest.batch();
+    btch.set(guest.doc('analytics/events_2026-08-19__paris__mp15'), { place_open: 3, mylist_open: 1 }, { merge: true });
+    btch.set(guest.doc('analytics/hours_2026-08-19__all'), { h09: 2 }, { merge: true });
+    btch.set(guest.doc('analytics/sessions_2026-08-21__paris'), { count: 1, seconds: 60, depth: 2 }, { merge: true });
+    return btch.commit();
+  });
+  await no('mp batch: one bad field sinks the whole commit', () => {
+    const btch = guest.batch();
+    btch.set(guest.doc('analytics/events_2026-08-19__paris__mp15b'), { place_open: 1 }, { merge: true });
+    btch.set(guest.doc('analytics/hours_2026-08-21__all'), { hack: 1 }, { merge: true });
+    return btch.commit();
+  });
+  await no('mp create: per-field delta 51 rejected', () => guest.doc('analytics/events_2026-08-19__paris__mp15c').set({ place_open: 51 }, { merge: true }));
+  await no('mp update: decrease rejected on mp doc', () => guest.doc('analytics/events_2026-08-19__paris__mp15').update({ place_open: 2 }));
+
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail === 0 ? 0 : 1);
