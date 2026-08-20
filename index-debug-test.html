@@ -542,6 +542,7 @@
    0) عرض أي خطأ مباشرة على الصفحة (للتشخيص)
    ========================================================= */
 window.onerror = function(msg, url, line, col, error){
+  try{ mpTrack.trapError(mpTrack.classify(msg, error)); }catch(_){}
   console.warn('Background script warning (non-critical):', msg);
   return false;
 };
@@ -903,6 +904,197 @@ async function trackVisit(){
     );
   }catch(e){ /* صامت — ما نزعج الزائر لو فشل */ }
 }
+
+
+/* =========================================================
+   0.7) mpTrack — وحدة القياس الميداني (أ-٣ الطبقة ٣-أ · A3-L3-r1)
+   تجميع بالذاكرة ← دفعة واحدة كل ٦٠ث + عند الإخفاء/pagehide.
+   القيود من قواعد v3.3.1 حرفيًا: زيادة ١..٥٠ لكل حقل (seconds ≤٧٢٠٠)،
+   معرّفات lowercase، المدينة الحقيقية تُتحقق محليًا وإلا 'all'.
+   الميزانية: تباطؤ بعد ١٥ كتابة · مقعد محجوز لإغلاق الجلسة · سقف صلب ٣٠.
+   كل فشل صامت دائمًا ولا يُسجَّل بمصيدة الأخطاء (منع التضخيم الذاتي).
+   ========================================================= */
+const mpTrack = (function(){
+  const FLUSH_MS = 60000, SLOW_AFTER = 15, HARD_CAP = 30, ERR_CAP = 20;
+  const buf = new Map();
+  let writesUsed = 0, errUsed = 0, slowFactor = 1, timer = null, busy = false;
+  let sessStart = Date.now(), sessDepth = 0, closed = false;
+  let diag = null; /* يُسند بنسخة الاختبار فقط (أسفل الملف) */
+  const dayStr = function(){ const d = new Date(), p = function(n){ return String(n).padStart(2,'0'); };
+    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()); };
+  const cityOkId = function(){ const id = String(typeof currentCityId !== 'undefined' ? currentCityId : '');
+    return /^[a-z0-9_-]{1,40}$/.test(id) ? id : 'all'; };
+  const catSlug = function(s){ const v = String(s || 'all').toLowerCase().replace(/[^a-z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40); return v || 'all'; };
+  function add(path, field, n){
+    try{
+      let f = buf.get(path); if (!f){ f = {}; buf.set(path, f); }
+      f[field] = (f[field] || 0) + (n || 1);
+      schedule();
+    }catch(_){}
+  }
+  function schedule(){
+    if (timer) return;
+    timer = setTimeout(function(){ timer = null; flush(false); }, FLUSH_MS * slowFactor);
+  }
+  async function flush(isFinal){
+    if (busy) return; busy = true;
+    try{
+      if (db && buf.size > 0){
+        const maxAllowed = isFinal ? HARD_CAP : (HARD_CAP - 1); /* مقعد محجوز */
+        let room = maxAllowed - writesUsed;
+        if (room > 0){
+          const batch = db.batch(); const written = [];
+          for (const entry of buf){
+            if (room <= 0) break;
+            const path = entry[0], fields = entry[1];
+            const portions = {}, inc = {}; let any = false;
+            for (const k in fields){
+              const cap = (k === 'seconds') ? 7200 : 50;
+              const portion = Math.min(fields[k], cap);
+              if (portion >= 1){ portions[k] = portion; inc[k] = firebase.firestore.FieldValue.increment(portion); any = true; }
+            }
+            if (!any){ buf.delete(path); continue; }
+            const seg = path.split('/');
+            batch.set(db.collection(seg[0]).doc(seg[1]), inc, { merge: true });
+            written.push([path, portions]); room--;
+          }
+          if (written.length > 0){
+            await batch.commit();
+            writesUsed += written.length;
+            for (const w of written){
+              const f = buf.get(w[0]); if (!f) continue;
+              for (const k in w[1]){ f[k] -= w[1][k]; if (f[k] <= 0) delete f[k]; }
+              if (Object.keys(f).length === 0) buf.delete(w[0]);
+            }
+            if (writesUsed >= SLOW_AFTER && slowFactor < 32) slowFactor *= 2; /* تباطؤ تدريجي */
+            if (diag) diag('[MP] flushed ' + written.length + ' doc(s) — session total ' + writesUsed + (slowFactor > 1 ? ' (slow x' + slowFactor + ')' : ''));
+          }
+        }
+      }
+    }catch(_){ /* صامت دائمًا */ }
+    busy = false;
+    if (buf.size > 0) schedule();
+  }
+  function hit(event, opts){
+    try{
+      opts = opts || {};
+      const personal = !!opts.personal;
+      const city = personal ? 'all' : (opts.city || cityOkId());
+      const cat = personal ? 'all' : catSlug(opts.cat);
+      add('analytics/events_' + dayStr() + '__' + city + '__' + cat, event, 1);
+      if (!personal){
+        add('analytics/hours_' + dayStr() + '__' + city, 'h' + String(new Date().getHours()).padStart(2,'0'), 1);
+        if (opts.depth) sessDepth++;
+      }
+    }catch(_){}
+  }
+  function statsList(listId, field){
+    try{
+      if (!/^[A-Za-z0-9_-]{1,60}$/.test(String(listId))) return;
+      add('stats_lists/' + listId, field, 1);
+      if (field.indexOf('open_') === 0 && field !== 'open_total') add('stats_lists/' + listId, 'open_total', 1);
+    }catch(_){}
+  }
+  function statsTrip(tripId, field){
+    try{
+      if (!/^[A-Za-z0-9_-]{1,60}$/.test(String(tripId))) return;
+      add('stats_trips/' + tripId, field, 1);
+      if (field.indexOf('view_') === 0 && field !== 'view_total') add('stats_trips/' + tripId, 'view_total', 1);
+    }catch(_){}
+  }
+  const shaCache = {};
+  async function sha16(url){
+    try{
+      if (shaCache[url]) return shaCache[url];
+      const bytes = new TextEncoder().encode(String(url));
+      const h = await crypto.subtle.digest('SHA-256', bytes);
+      const hex = Array.from(new Uint8Array(h)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('').slice(0,16);
+      shaCache[url] = hex; return hex;
+    }catch(_){ return null; }
+  }
+  async function statsPlaceOwner(url, srcField){
+    try{
+      const city = cityOkId(); if (city === 'all') return;
+      const hex = await sha16(url); if (!hex) return;
+      const id = 'owner_' + city + '__' + hex;
+      add('stats_places/' + id, srcField, 1);
+      if (srcField.indexOf('open_') === 0 && srcField !== 'open_total') add('stats_places/' + id, 'open_total', 1);
+    }catch(_){}
+  }
+  async function statsPlaceList(listId, url, field){
+    try{
+      if (!/^[A-Za-z0-9_-]{1,60}$/.test(String(listId))) return;
+      const hex = await sha16(url); if (!hex) return;
+      const id = listId + '__' + hex;
+      add('stats_places/' + id, field, 1);
+      if (field.indexOf('open_') === 0 && field !== 'open_total') add('stats_places/' + id, 'open_total', 1);
+    }catch(_){}
+  }
+  function trapError(kind){
+    try{
+      if (errUsed >= ERR_CAP) return; errUsed++;
+      const p = 'analytics/errors_' + dayStr();
+      add(p, kind, 1); add(p, 'total', 1);
+    }catch(_){}
+  }
+  function classify(msg, error){
+    const name = (error && error.name) || '';
+    const m = String(msg || '');
+    if (name === 'TypeError' || /TypeError/.test(m)) return 'TypeError';
+    if (name === 'ReferenceError' || /ReferenceError/.test(m)) return 'ReferenceError';
+    if (name === 'SyntaxError' || /SyntaxError/.test(m)) return 'SyntaxError';
+    if (/network|fetch|Failed to load|ERR_/i.test(m)) return 'NetworkError';
+    return 'Other';
+  }
+  function captureSource(){
+    try{
+      const q = new URLSearchParams(location.search);
+      const srcParam = (q.get('src') || '').toLowerCase();
+      const refParam = (q.get('ref') || '').toLowerCase();
+      const SRC = { app:'src_app', ulist:'src_ulist', trip:'src_trip', community:'src_community', curator:'src_curator' };
+      const REF = { ig:'ref_ig', tt:'ref_tt', sc:'ref_sc', card:'ref_card', qr:'ref_qr', link:'ref_link' };
+      const p = 'analytics/sources_' + dayStr() + '__' + cityOkId();
+      if (SRC[srcParam]) add(p, SRC[srcParam], 1);
+      if (REF[refParam]) add(p, REF[refParam], 1);
+      else if (!SRC[srcParam]) add(p, 'ref_direct', 1);
+      hit('visit_source');
+    }catch(_){}
+  }
+  function closeSession(){
+    try{
+      if (closed) return;
+      const secs = Math.min(7200, Math.max(1, Math.round((Date.now() - sessStart) / 1000)));
+      const p = 'analytics/sessions_' + dayStr() + '__' + cityOkId();
+      add(p, 'count', 1); add(p, 'seconds', secs);
+      if (sessDepth > 0) add(p, 'depth', Math.min(50, sessDepth));
+      closed = true;
+      flush(true);
+    }catch(_){}
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'hidden') closeSession();
+    else { closed = false; sessStart = Date.now(); sessDepth = 0; }
+  });
+  window.addEventListener('pagehide', closeSession);
+  window.addEventListener('unhandledrejection', function(){ trapError('UnhandledRejection'); });
+  document.addEventListener('click', function(ev){
+    try{
+      const a = ev.target && ev.target.closest ? ev.target.closest('a.place-link') : null;
+      if (!a) return;
+      const d = a.dataset || {};
+      if (d.mppersonal === '1'){ hit('personal_place_open', { personal: true }); return; }
+      hit('place_open', { cat: d.mpcat, city: d.mpcity });
+      const srcName = (d.mpsrc && /^(app|ulist|trip|community|curator)$/.test(d.mpsrc)) ? d.mpsrc : 'app';
+      if (d.mpowner === '1') statsPlaceOwner(a.getAttribute('href') || '', 'open_' + srcName);
+    }catch(_){}
+  }, true);
+  return {
+    hit: hit, statsList: statsList, statsTrip: statsTrip, statsPlaceList: statsPlaceList,
+    trapError: trapError, classify: classify, captureSource: captureSource, closeSession: closeSession,
+    set _diag(fn){ diag = fn; },
+    get _stats(){ return { writesUsed: writesUsed, errUsed: errUsed, buffered: buf.size, slowFactor: slowFactor }; }
+  };
+})();
 
 let visitCount = null;
 
@@ -1432,6 +1624,11 @@ async function toggleFavorite(url, name, category, city, area, sourceUid, source
     favoritePlaces = favoritePlaces.filter(f => f.url !== url);
   } else {
     favoritePlaces.push({ url, name: name || 'Place', category: category || '', city: city || '', area: area || '' });
+    mpTrack.hit('favorite_add');
+    if (sourceUid && sourceCityId){
+      mpTrack.statsList(sourceUid + '_' + sourceCityId, 'save_from');
+      mpTrack.statsPlaceList(sourceUid + '_' + sourceCityId, url, 'save_from');
+    }
   }
   render();
   if (viewingUserUid) renderCommunityModal();
@@ -1523,6 +1720,7 @@ async function loadUserTrips(){
   tripsLoaded = true;
 }
 async function saveTrip(trip){
+  mpTrack.hit('trip_save');
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   try{
     await db.collection('trips').doc(trip.id).set({ ...trip, ownerId: currentUser.uid }, { merge:true });
@@ -1656,6 +1854,7 @@ async function confirmAddPlace(tripId, dayNumber, categoryId){
 
 /* ===== My Trips — القائمة + إنشاء رحلة + تفاصيل رحلة ===== */
 async function openMyTripsModal(){
+  mpTrack.hit('trip_open', { depth: 1 });
   if (!currentUser){ openAuthModal(); return; }
   document.getElementById('myTripsBackdrop').classList.add('show');
   if (!tripsLoaded) await loadUserTrips();
@@ -1733,6 +1932,7 @@ async function openTripDetail(tripId){
   renderMyTripsModal();
 }
 async function openSharedTripDetail(tripId){
+  mpTrack.statsTrip(tripId, 'view_shared');
   currentTripId = tripId;
   viewingSharedTrip = true;
   tripViewMode = true;
@@ -1752,12 +1952,14 @@ async function toggleTripPublic(){
     if (!ok) return;
   }
   trip.public = !trip.public;
+  if (trip.public) mpTrack.hit('reserved_1');
   await saveTrip(trip);
   await syncCommunityProfile(); // يضمن ظهور المستخدم بنتائج الاكتشاف حتى لو ما عنده أي مدينة My List عامة إطلاقًا
   showToast(trip.public ? 'Trip is now public 🌐' : 'Trip is now private');
   renderMyTripsModal();
 }
 async function shareTripWithSomeone(){
+  mpTrack.hit('share_link');
   const trip = userTrips.find(t => t.id === currentTripId);
   if (!trip) return;
   const name = await openInputModal("Share with (username)", "Enter their exact username", "");
@@ -1857,7 +2059,7 @@ function renderTripDetail(wrap){
         const tripNoteLine = p._ref.tripNote ? `<div style="font-size:11px; color:${meta.color}; font-weight:700; margin-top:3px;">🏷️ ${escapeHtml(p._ref.tripNote)}</div>` : '';
         html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px; margin-right:17px; border-right:3.5px solid ${meta.color}; box-shadow:0 2px 10px rgba(0,0,0,.06);">
           <div style="display:flex; align-items:center; gap:6px;">
-            <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
+            <a class="place-link" data-mpsrc="trip" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
             ${!readOnly ? `
             <button type="button" class="reorder-btn" ${pIdx===0?'disabled':''} onclick="movePlaceInCategory(${dIdx}, '${catId}', ${pIdx}, -1)">▲</button>
             <button type="button" class="reorder-btn" ${pIdx===places.length-1?'disabled':''} onclick="movePlaceInCategory(${dIdx}, '${catId}', ${pIdx}, 1)">▼</button>
@@ -1956,6 +2158,7 @@ async function loadCommunityUserTrips(uid){
   }catch(e){ communityUserTrips = []; }
 }
 async function openCommunityTrip(tripId){
+  mpTrack.statsTrip(tripId, 'view_community');
   viewingCommunityTripId = tripId;
   const trip = communityUserTrips.find(t => t.id === tripId);
   const wrap = document.getElementById('communityBody');
@@ -2001,7 +2204,7 @@ function renderCommunityTripDetail(wrap){
         const areaLine = p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : '';
         const tripNoteLine = p._ref.tripNote ? `<div style="font-size:11px; color:${meta.color}; font-weight:700; margin-top:3px;">🏷️ ${escapeHtml(p._ref.tripNote)}</div>` : '';
         html += `<div class="ticket" style="padding:10px 14px; margin-bottom:8px; margin-right:17px; border-right:3.5px solid ${meta.color}; box-shadow:0 2px 10px rgba(0,0,0,.06);">
-          <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
+          <a class="place-link" data-mpsrc="trip" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')}</a>
           ${areaLine}${tripNoteLine}
           ${p.note ? renderNoteHtml(p.note) : ''}
         </div>`;
@@ -2056,6 +2259,7 @@ let signUpInProgress = false; // يمنع فحص onAuthStateChanged من إظه�
 let nicknameFlowActive = false; // يمنع تداخل حلقتي اختيار الاسم
 
 async function doSignUp(){
+  mpTrack.hit('signup_start');
   const nickname = document.getElementById('authNickname').value.trim();
   const email = document.getElementById('authEmail').value.trim();
   const pass = document.getElementById('authPassword').value;
@@ -2109,6 +2313,7 @@ async function doSignUp(){
     if (!nicknameSaved){
       await enforceNickname(); // شبكة الأمان بنفس الجلسة، لا بعد التحديث — تسبق النبذة حتى لا تتراكب النافذتان
     }
+  mpTrack.hit('signup_done');
     openHelpAfterSignUp();
     db.collection('stats').doc('users').set(
       { count: firebase.firestore.FieldValue.increment(1) }, { merge:true }
@@ -2192,6 +2397,7 @@ function doSignOut(){
 }
 
 function openFavoritesModal(){
+  mpTrack.hit('favorites_open', { depth: 1 });
   const list = document.getElementById('favoritesList');
   if (!favoritePlaces.length){
     list.innerHTML = `<p style="color:var(--ink-soft); font-size:13px; text-align:center;">No favorite places yet</p>`;
@@ -2201,7 +2407,7 @@ function openFavoritesModal(){
         ${f.city ? `<div style="font-family:'Cairo',sans-serif; font-size:9.5px; font-weight:700; color:var(--brass); text-transform:uppercase; letter-spacing:1px;">${f.city}</div>` : ''}
         ${f.category ? `<div style="font-weight:600; font-size:12.5px; color:var(--ink); margin-top:2px;">${f.category}</div>` : ''}
         ${f.area ? `<div class="area-divider" style="font-size:9.5px; margin-top:5px; padding-top:5px;">${f.area}</div>` : ''}
-        <a class="place-link" style="display:block; margin-top:4px; border-bottom:none;" href="${f.url}" target="_blank" rel="noopener">${f.name}</a>
+        <a class="place-link" data-mpsrc="app" data-mpcity="all" style="display:block; margin-top:4px; border-bottom:none;" href="${f.url}" target="_blank" rel="noopener">${f.name}</a>
       </div>`).join('');
   }
   document.getElementById('favoritesBackdrop').classList.add('show');
@@ -2472,6 +2678,7 @@ function isGoogleMapsUrl(url){
 
 // حفظ البيانات العامة فقط (اسم مستعار، دول/مدن مخصّصة) — منفصل تمامًا عن بيانات أي مدينة (راجع saveMyCityList)
 async function saveUserListGeneral(){
+  mpTrack.hit('mylist_save');
   if (!currentUser) return;
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   try{
@@ -2617,6 +2824,7 @@ async function syncCommunityProfile(){
 }
 
 async function shareMyListWithSomeone(){
+  mpTrack.hit('share_link');
   if (!myCityListData) return;
   const name = await openInputModal("Share with (username)", "Enter their exact username", "");
   if (name === null) return;
@@ -2654,12 +2862,14 @@ async function toggleMyListPublic(){
     }
   }
   myCityListData.public = !myCityListData.public;
+  if (myCityListData.public) mpTrack.hit('reserved_1');
   document.getElementById('myListPublicToggle').classList.toggle('on', myCityListData.public);
   await saveMyCityList();
   await syncCommunityProfile();
 }
 
 async function openMyListModal(){
+  mpTrack.hit('mylist_open', { depth: 1 });
   if (!currentUser){ openAuthModal(); return; }
   if (!myListCityId) myListCityId = currentCityId;
   if (!myListCountry){
@@ -2687,6 +2897,7 @@ async function selectMyListCity(cityId){
 }
 
 async function openSharedCityList(docId){
+  mpTrack.statsList(docId, 'open_ulist');
   viewingSharedCityListId = docId;
   document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
   renderMyListModal();
@@ -2726,7 +2937,7 @@ function renderSharedCityListDetail(){
       entry.places.forEach(p => {
         html += `<div style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--line);">
           ${p.area ? `<div style="font-size:10.5px; color:var(--ink-soft);">📍 ${escapeHtml(p.area)}</div>` : ''}
-          <a class="place-link" style="font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')} ←</a>
+          <a class="place-link" data-mpsrc="ulist" style="font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')} ←</a>
           ${p.note ? renderNoteHtml(p.note) : ''}
         </div>`;
       });
@@ -2861,7 +3072,7 @@ function renderMyListModal(){
             html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">`;
             if (p.area && p.area.trim()) html += `<div style="font-size:10.5px; color:var(--ink-soft); margin-bottom:2px;">📍 ${p.area}</div>`;
             html += `<div style="display:flex; align-items:center; gap:8px;">
-              <a class="place-link" style="flex:1; font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${p.name} ←</a>
+              <a class="place-link" data-mpsrc="app" data-mpcat="${item.id||''}" data-mppersonal="${(item.id&&item.id.indexOf('personal_')===0)?1:0}" style="flex:1; font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${p.name} ←</a>
               ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="font-size:11px; color:var(--brass);" onclick="addPlaceToTrip('mylist', '${myListCityId}', '${item.id}', '${p.id}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})" title="Edit"><i class="fa-solid fa-pen"></i></button>
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})" title="Remove"><i class="fa-solid fa-trash"></i></button>
@@ -2908,6 +3119,7 @@ async function loadCommunityLists(){
 }
 
 async function openCommunityModal(){
+  mpTrack.hit('community_open', { depth: 1 });
   document.getElementById('communityBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
   document.getElementById('communityBackdrop').classList.add('show');
   await loadCommunityLists();
@@ -3057,7 +3269,7 @@ function renderCommunityUserList(wrap){
         sectionHtml += `<div style="margin-bottom:8px;">
           ${p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : ''}
           <div style="display:flex; align-items:center; gap:6px;">
-            <a class="place-link" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
+            <a class="place-link" data-mpsrc="community" data-mpcat="${item.id||''}" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
             <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCat}', '${safeCity}', '${safeArea}', '${u.uid}', '${communityViewingCityId}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
             ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
           </div>
@@ -3240,6 +3452,8 @@ async function openSystemStatusModal(){
   body.innerHTML = '<div style="text-align:center; color:var(--ink-soft);">Loading pulse…</div>';
   document.getElementById('systemStatusBackdrop').classList.add('show');
   body.innerHTML = await renderPulseCard();
+  body.innerHTML += await renderMpErrorsCard();
+  body.innerHTML += await renderMpEventsCard();
 }
 function closeSystemStatusModal(){
   document.getElementById('systemStatusBackdrop').classList.remove('show');
@@ -3270,6 +3484,40 @@ async function renderPulseCard(){
   if (age > PULSE_STALE_MS) return card('🔴', 'Pulse: no check for ' + pulseAgo(age).replace(' ago', ''), ['Monitor may be down — last record ' + pulseAgo(age)].concat(details));
   if (data.ok) return card('🟢', 'Pulse: OK — last check ' + pulseAgo(age), details);
   return card('🔴', 'Pulse: FAILED — last check ' + pulseAgo(age), details);
+}
+
+
+/* ===== أ-٣ الطبقة ٣-أ: بطاقتا القياس بنافذة System Status (قراءة عند الفتح فقط، للمالك) ===== */
+function mpCardHtml(dot, title, cardLines){
+  return `<div style="border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; margin-top:10px; background:var(--card); font-size:12.5px;">
+      <div style="font-weight:700;">${dot} ${escapeHtml(title)}</div>
+      ${cardLines.map(l => `<div style="color:var(--ink-soft); font-size:11.5px; direction:ltr; text-align:left;">${escapeHtml(l)}</div>`).join('')}
+    </div>`;
+}
+async function renderMpErrorsCard(){
+  try{
+    const d0 = new Date(), pd = n => String(n).padStart(2,'0');
+    const id = 'errors_' + d0.getFullYear() + '-' + pd(d0.getMonth()+1) + '-' + pd(d0.getDate());
+    const doc = await db.collection('analytics').doc(id).get();
+    const d = doc.exists ? doc.data() : null;
+    const total = d ? (d.total || 0) : 0;
+    const rows = d ? ['TypeError','ReferenceError','SyntaxError','NetworkError','UnhandledRejection','Other'].filter(k => d[k]).map(k => k + ': ' + d[k]) : [];
+    const dot = total === 0 ? '🟢' : (total < 10 ? '🟡' : '🔴');
+    return mpCardHtml(dot, 'Field errors today: ' + total, rows.length ? rows : ['No errors recorded today.']);
+  }catch(e){ return mpCardHtml('⚪', 'Field errors: unavailable', ['Could not read analytics/errors.']); }
+}
+async function renderMpEventsCard(){
+  try{
+    const d0 = new Date(), pd = n => String(n).padStart(2,'0');
+    const prefix = 'events_' + d0.getFullYear() + '-' + pd(d0.getMonth()+1) + '-' + pd(d0.getDate()) + '__';
+    const snap = await db.collection('analytics')
+      .orderBy(firebase.firestore.FieldPath.documentId())
+      .startAt(prefix).endAt(prefix + '\uf8ff').limit(50).get();
+    const sums = {};
+    snap.forEach(doc => { const d = doc.data(); for (const k in d){ if (typeof d[k] === 'number') sums[k] = (sums[k] || 0) + d[k]; } });
+    const top = Object.keys(sums).sort((a,b) => sums[b] - sums[a]).slice(0,6).map(k => k + ': ' + sums[k]);
+    return mpCardHtml(top.length ? '🟢' : '⚪', 'Events today (' + snap.size + ' doc' + (snap.size === 1 ? '' : 's') + ')', top.length ? top : ['No events recorded yet today.']);
+  }catch(e){ return mpCardHtml('⚪', 'Events: unavailable', ['Could not read analytics/events.']); }
 }
 
 function renderUsersModal(query){
@@ -3585,7 +3833,7 @@ function render(){
               const safeCity = (allCities().find(c=>c.id===currentCityId)?.name || '').replace(/'/g,"\\'");
               const safeArea = area.replace(/'/g,"\\'");
               return divider + `<div class="place-row-view">
-                  <a class="place-link" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
+                  <a class="place-link" data-mpsrc="app" data-mpowner="1" data-mpcat="${item.id||''}" data-mppersonal="${(item.id&&item.id.indexOf('personal_')===0)?1:0}" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
                   <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}', '${safeCity}', '${safeArea}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
                   ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('owner', '${currentCityId}', '${item.id}', '${p.id}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
                 </div>` +
@@ -3665,10 +3913,12 @@ function showToast(msg){
   setTimeout(()=> t.classList.remove('show'), 2200);
 }
 function copyLink(){
+  mpTrack.hit('share_link');
   navigator.clipboard.writeText(window.location.href).then(()=> showToast('Link copied ✓'))
     .catch(()=> showToast('Copy the link manually from the address bar'));
 }
 function showQR(){
+  mpTrack.hit('share_link');
   const box = document.getElementById('qrcode'); box.innerHTML = '';
   try{ new QRCode(box, { text: window.location.href, width:180, height:180, colorDark:'#1c2b3a', colorLight:'#faf6ec' }); }
   catch(e){ box.innerHTML = '<div style="font-size:12px;color:#4a5a68">Could not generate the code</div>'; }
@@ -3715,7 +3965,8 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: A3-L2-r1 (System Status card — pulse)');
+logTiming('BUILD: A3-L3-r1 (mpTrack — measurement layer 3-a)');
+mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
 (async function init(){
@@ -3748,6 +3999,7 @@ logTiming('Script started (t=0 reference)');
     resolveAuthReady(); // ما فيش Firebase أصلًا — منعرقلش أي حاجة
   }
   trackVisit(); // لا ننتظرها، ما نأخر تحميل الصفحة
+  mpTrack.captureSource();
   await loadCity(pickInitialCity());
   logTiming('City content visible to user (main screen ready)');
   // نافذة تسجيل مبكرة: تظهر تلقائيًا للزائر غير المسجّل، مع محتوى المدينة ظاهر بالخلفية كسياق تحفيزي
