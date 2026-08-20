@@ -113,6 +113,47 @@ check(/node_modules/.test(ai), '.assetsignore excludes node_modules');
 check(/tests\/?/.test(ai), '.assetsignore excludes tests/', 'add a line: tests/');
 check(!fs.existsSync(path.join(ROOT, 'CNAME')), 'no CNAME (GitHub Pages leftover)');
 
+// ---------- ٧) A3-L3-r1: حارس نقاط حقن mpTrack ----------
+// يحمي نقاط القياس من السقوط الصامت عند أي إعادة هيكلة (خصوصًا تقسيم الملف بج-١أ).
+// نسخة الاختبار تُفحص دائمًا؛ الإنتاج يُفحص فقط بعد ترقيته لطبقة القياس (وجود وحدة mpTrack به).
+const MP_EXPECTED = [
+  ["const mpTrack = (function(){", 1],
+  ["mpTrack.hit('mylist_open'", 1],
+  ["mpTrack.hit('mylist_save')", 1],
+  ["mpTrack.hit('trip_open'", 1],
+  ["mpTrack.hit('trip_save')", 1],
+  ["mpTrack.hit('favorites_open'", 1],
+  ["mpTrack.hit('community_open'", 1],
+  ["mpTrack.hit('share_link')", 4],
+  ["mpTrack.hit('favorite_add')", 1],
+  ["mpTrack.hit('signup_start')", 1],
+  ["mpTrack.hit('signup_done')", 1],
+  ["mpTrack.hit('reserved_1')", 2],
+  ["mpTrack.statsList(docId, 'open_ulist')", 1],
+  ["mpTrack.statsTrip(tripId, 'view_shared')", 1],
+  ["mpTrack.statsTrip(tripId, 'view_community')", 1],
+  ["mpTrack.captureSource();", 1],
+  ["mpTrack.trapError(mpTrack.classify", 1],
+  ["window.addEventListener('unhandledrejection'", 1],
+  ['data-mpsrc=', 7],
+  ['data-mppersonal=', 2],
+  ['data-mpowner="1"', 1]
+];
+function countOcc(haystack, needle){ return haystack.split(needle).length - 1; }
+function mpGuard(label, content){
+  for (const [needle, expected] of MP_EXPECTED) {
+    const c = countOcc(content, needle);
+    check(c === expected, 'mpTrack ' + label + ': ' + needle.slice(0, 44) + ' = ' + expected, 'found ' + c);
+  }
+}
+mpGuard(TEST, test);
+if (countOcc(prod, 'const mpTrack') > 0) {
+  mpGuard(PROD, prod);
+  check(!/mpTrack\._diag/.test(prod), 'prod has no mpTrack diagnostics hook (_diag)');
+} else {
+  console.log('INFO  prod not yet promoted to A3-L3 (no mpTrack) — mp guard applied to test only');
+}
+
 finish();
 
 function finish(){
