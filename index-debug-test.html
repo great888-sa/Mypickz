@@ -607,15 +607,12 @@ async function initFirebase(){
 
     // ===== أ-٤ الطبقة ٤: App Check — reCAPTCHA v3 =====
     // وضع مراقبة (بلا فرض) — الفرض بعد تأكيد الأرقام بلوحة App Check
-    if (typeof firebase.appCheck === 'function') {
-      const appCheck = firebase.appCheck();
-      appCheck.activate(
-        new firebase.appCheck.ReCaptchaV3Provider('6Lc_4pEtAAAAKq_1dasCQWQUG8aZHZq3qYHm8xd'),
-        true // isTokenAutoRefreshEnabled
-      );
-      console.log('[AC] App Check: reCAPTCHA v3 activated (monitoring mode)');
-    } else {
-      console.warn('[AC] App Check SDK not loaded yet');
+    // الصيغة المضمونة بـcompat: site key مباشرة (Firebase يتولى reCAPTCHA داخليًا)
+    try {
+      firebase.appCheck().activate('6Lc_4pEtAAAAKq_1dasCQWQUG8aZHZq3qYHm8xd', true);
+      console.log('[AC] App Check: reCAPTCHA v3 activated OK (monitoring mode)');
+    } catch(e) {
+      console.warn('[AC] App Check activate failed:', e.message);
     }
 
     db = firebase.firestore();
@@ -3981,7 +3978,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: A4-r1 (App Check — reCAPTCHA v3 init)');
+logTiming('BUILD: A4-r2 (App Check — simplified activate)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
