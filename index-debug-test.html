@@ -572,7 +572,9 @@ async function loadScriptWithRetry(src, attempts){
 async function loadFirebaseSDK(){
   const base = "https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/";
   await Promise.all([
+    loadScriptWithRetry('https://www.google.com/recaptcha/api.js?render=6Lc_4pEtAAAAKq_1dasCQWQUG8aZHZq3qYHm8xd', 3),
     loadScriptWithRetry(base + "firebase-app-compat.min.js", 3),
+    loadScriptWithRetry(base + "firebase-app-check-compat.min.js", 3),
     loadScriptWithRetry(base + "firebase-firestore-compat.min.js", 3),
     loadScriptWithRetry(base + "firebase-auth-compat.min.js", 3)
   ]);
@@ -602,6 +604,20 @@ async function initFirebase(){
       throw new Error('Scripts loaded but the firebase object is missing (possibly a browser extension conflict).');
     }
     firebase.initializeApp(firebaseConfig);
+
+    // ===== أ-٤ الطبقة ٤: App Check — reCAPTCHA v3 =====
+    // وضع مراقبة (بلا فرض) — الفرض بعد تأكيد الأرقام بلوحة App Check
+    if (typeof firebase.appCheck === 'function') {
+      const appCheck = firebase.appCheck();
+      appCheck.activate(
+        new firebase.appCheck.ReCaptchaV3Provider('6Lc_4pEtAAAAKq_1dasCQWQUG8aZHZq3qYHm8xd'),
+        true // isTokenAutoRefreshEnabled
+      );
+      console.log('[AC] App Check: reCAPTCHA v3 activated (monitoring mode)');
+    } else {
+      console.warn('[AC] App Check SDK not loaded yet');
+    }
+
     db = firebase.firestore();
     auth = firebase.auth();
   }catch(e){
@@ -3965,7 +3981,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: A3-L3-r2 (mpTrack — ownerOnly sections privacy)');
+logTiming('BUILD: A4-r1 (App Check — reCAPTCHA v3 init)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
