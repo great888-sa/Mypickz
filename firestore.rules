@@ -1,3 +1,10 @@
+// firestore rules v3.4 — قرارات الأعلام (٢١ أغسطس ٢٠٢٦، اعتمدها المالك عبر الشرط الحاجب — المصفوفة M4): v3.3.1 + أربعة تضييقات:
+//   (M-P3) placeFavoriteCounts: الاسم والرابط يتجمدان بعد الإنشاء — التحديث لحقل count حصرًا (±١)؛ التصحيح لمالك التطبيق (فرع isOwner جديد بالتحديث)
+//   (M-P4) placeFavoriteCounts: الإنشاء بالحقول الثلاثة كاملة (hasAll) — لا بطاقات ناقصة
+//   (M-P5) communityProfiles: المُوقَف لا ينشئ/يعدّل ملفه المجتمعي (القراءة والحذف باقيان — حق الانسحاب)
+//   (M-P7) dailyStats: الإنشاء بقيم بداية ٠..١ لكل حقل — لا بذر بأرقام ضخمة أو سالبة
+//   المُقر بلا تغيير (M-P1/P2/P6): القياس والعدّادات المجهولة لا تُحجب بالإيقاف · المالك يدير ولا ينتحل
+//   الامتحان: tests/rules-sim.js — ٣١٣ حالة (تُنشر بنفس commit هذا الملف إلزامًا)
 // firestore rules v3.3.1 — أ-٣ الطبقة ٣ (١٩ أغسطس ٢٠٢٦): v3.3 + (١) stats_places يقبل أماكن دليل المالك بمعرّف owner_{city}__{hash} (مدينة حقيقية، القراءة للمالك فقط حتى لو زُوِّر userCityLists/owner_*)
 //   + (٢) أحداث الاستيراد (ب-١) محجوزة الآن: import_run · import_place · import_suggest_kept · import_suggest_changed · reserved_1 = نشر عام (toggle public) · reserved_2/3 احتياط
 //   + (٣) العناوين الشخصية (خاصة دائمًا — لا كيان ولا بصمة ولا مدينة): personal_open · personal_save · personal_place_open بالتجميع اليومي فقط بمدينة all
@@ -298,15 +305,20 @@ service cloud.firestore {
     // + إضافة !isSuspended(): المستخدم المُوقَف لا يؤثر على عدّادات Most Loved
     match /placeFavoriteCounts/{docId} {
       allow read: if true;
+      // v3.4 (M-P4): الإنشاء بالحقول الثلاثة كاملة إلزامًا — لا بطاقات ناقصة (hasAll + hasOnly)
       allow create: if isSignedIn() && !isSuspended()
+        && request.resource.data.keys().hasAll(['name','url','count'])
         && request.resource.data.keys().hasOnly(['name','url','count'])
         && request.resource.data.count == 1;
+      // v3.4 (M-P3): الاسم والرابط يتجمدان بعد الإنشاء — التحديث يمس حقل العدّاد حصرًا؛
+      //   تصحيحهما لمالك التطبيق وحده (فرع isOwner). يغلق إعادة التسمية واختطاف الرابط.
       // الزيادة (+1) تتطلب حسابًا غير مُوقَف؛ الإنقاص (-1) مسموح للمُوقَف أيضًا
       // (يستطيع سحب إعجابه أو حذف حسابه، لا إضافة إعجاب جديد) — قرار المالك ١٦ أغسطس
-      allow update: if isSignedIn()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','url','count'])
-        && ((!isSuspended() && request.resource.data.count == resource.data.count + 1)
-            || request.resource.data.count == resource.data.count - 1);
+      allow update: if isOwner()
+        || (isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+          && ((!isSuspended() && request.resource.data.count == resource.data.count + 1)
+              || request.resource.data.count == resource.data.count - 1));
       allow delete: if isOwner();
     }
 
@@ -375,10 +387,12 @@ service cloud.firestore {
 
     match /communityProfiles/{uid} {
       allow read: if true;
-      allow create: if isOwner() || (isSignedIn() && request.auth.uid == uid);
+      // v3.4 (M-P5): المُوقَف لا ينشئ ولا يعدّل ملفه المجتمعي (أسوة بحسابه واسمه المستعار — اتساق v3.2)؛
+      //   القراءة والحذف يبقيان له (حق الانسحاب الكامل لا يسقط بالإيقاف)
+      allow create: if isOwner() || (isSignedIn() && request.auth.uid == uid && !isSuspended());
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == uid);
       allow update: if isOwner()
-        || (isSignedIn() && request.auth.uid == uid)
+        || (isSignedIn() && request.auth.uid == uid && !isSuspended())
         // ===== إصلاح ثغرة ٣ الموسَّعة: تقييد المقدار بـ±١ لكل عدّاد =====
         // كانت تسمح بأي مقدار ⇒ تضخيم المشاهدات/الإعجابات بلا حد
         || (isSignedIn() && !isSuspended() && resource.data.hasAnyPublicContent == true &&
@@ -426,8 +440,13 @@ service cloud.firestore {
     // العدّادات اليومية: الحقول محدَّدة، والقيم لا تنقص أبدًا (منع التصفير/التخريب)
     match /dailyStats/{date} {
       allow read: if isOwner();
+      // v3.4 (M-P7): قيم البداية ٠ أو ١ حصرًا لكل حقل (تعميم نمط visits) — يمنع بذر يوم بأرقام ضخمة/سالبة
       allow create: if isSignedIn()
-        && request.resource.data.keys().hasOnly(['newSignupsToday','activeToday']);
+        && request.resource.data.keys().hasOnly(['newSignupsToday','activeToday'])
+        && request.resource.data.get('newSignupsToday', 0) >= 0
+        && request.resource.data.get('newSignupsToday', 0) <= 1
+        && request.resource.data.get('activeToday', 0) >= 0
+        && request.resource.data.get('activeToday', 0) <= 1;
       allow update: if isSignedIn()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['newSignupsToday','activeToday'])
         && request.resource.data.get('activeToday', 0) >= resource.data.get('activeToday', 0)
