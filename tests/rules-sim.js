@@ -417,6 +417,91 @@ const no = (label, f) => expect(false, label, f);
   await no('mp create: per-field delta 51 rejected', () => guest.doc('analytics/events_2026-08-19__paris__mp15c').set({ place_open: 51 }, { merge: true }));
   await no('mp update: decrease rejected on mp doc', () => guest.doc('analytics/events_2026-08-19__paris__mp15').update({ place_open: 2 }));
 
+
+  // ================= ١٦) M3: إغلاق التغطية — الشبكة والحواف والأعلام التصميمية =================
+  // مصدر الحالات: تشريح النص الحرفي v3.3.1 بندًا بندًا ضد فهرس M2 (٢١ أغسطس).
+  // الحالات الموسومة [PIN] تثبّت سلوكًا قائمًا بالنص يحتاج قرار مالك لاحقًا — أي تغيير يمر بالشرط الحاجب (المصفوفة أولًا).
+  await env.withSecurityRulesDisabled(async (c) => {
+    const db = c.firestore();
+    // إعادة بذر ما حذفته المجموعات السابقة (لاختبارات "الموقوف يقرأ محتواه" وغيرها)
+    await db.doc(`favorites/${S}`).set({ places: [] });
+    await db.doc(`userLists/${S}`).set({ public: false, nickname: 's', favoriteCount: 0 });
+    await db.doc('trips/tS').set({ ownerId: S, public: false, sharedWith: [], name: 'S private' });
+    await db.doc('userCityLists/cS').set({ ownerId: S, public: false, sharedWith: [], favoriteCount: 0 });
+    await db.doc(`users/${S}`).set({ email: 's@x', nickname: 's' });
+    await db.doc(`communityProfiles/${S}`).set({ hasAnyPublicContent: false, viewCount: 0, totalFavoriteCount: 0 });
+    await db.doc(`communityProfiles/${B}`).set({ hasAnyPublicContent: true, viewCount: 5, totalFavoriteCount: 2 });
+    await db.doc('analytics/visits').delete(); // لاختبار حافة الإنشاء الفارغ ثم إعادة البذر
+  });
+
+  // --- settings / cities / suspensions: إكمال شبكة العمليات ---
+  await ok('cities create new doc by owner', () => owner.doc('cities/rome').set({ name: 'Rome', published: false }));
+  await no('cities delete by user', () => a.doc('cities/rome').delete());
+  await ok('cities delete by owner', () => owner.doc('cities/rome').delete());
+  await no('suspensions write guest', () => guest.doc(`suspensions/${B}`).set({ at: 1 }));
+
+  // --- analytics/visits: حواف البنية ---
+  await no('visits create EMPTY object {} (hasOnly-empty edge)', () => guest.doc('analytics/visits').set({}));
+  await env.withSecurityRulesDisabled(async (c) => c.firestore().doc('analytics/visits').set({ count: 1 }));
+  await no('visits update count as string', () => guest.doc('analytics/visits').update({ count: '2' }));
+  await no('visits delete by user', () => a.doc('analytics/visits').delete());
+
+  // --- errors/events family: حواف مشتركة ---
+  await no('errors create EMPTY object {} (size>=1 edge)', () => guest.doc('analytics/errors_2026-08-25').set({}));
+  await no('errors update no-op same values (affectedKeys>=1 edge)', () => guest.doc(ED).set({ TypeError: 2 }, { merge: true }));
+  await no('events create category over 40 chars', () => guest.doc('analytics/events_2026-08-19__paris__' + 'x'.repeat(41)).set({ place_open: 1 }));
+  await no('events create malformed id (missing category segment)', () => guest.doc('analytics/events_2026-08-19__paris').set({ place_open: 1 }));
+  await ok('[PIN] events update +1 by SUSPENDED (measurement never blocked by suspension)', () => s.doc(EV).update({ favorite_add: 2 }));
+
+  // --- sources/hours/sessions ---
+  await ok('hours read owner', () => owner.doc('analytics/hours_2026-08-19__paris').get());
+
+  // --- stats (٥): شبكة + علم ---
+  await no('stats update by guest', () => guest.doc('stats/users').update({ count: 6 }));
+  await ok('[PIN] stats create by SUSPENDED (no suspension check on stats)', () => s.doc('stats/new2').set({ count: 1 }));
+
+  // --- placeFavoriteCounts: شبكة + علمان ---
+  await no('pfc update by guest', () => guest.doc('placeFavoriteCounts/p1').update({ count: 3 }));
+  await ok('[PIN] pfc update renames place (name change allowed with count +1)', () => a.doc('placeFavoriteCounts/p1').update({ name: 'Renamed', count: 3 }));
+  await ok('[PIN] pfc create with count only (partial fields accepted)', () => a.doc('placeFavoriteCounts/p9').set({ count: 1 }));
+
+  // --- favorites ---
+  await ok('favorites read own by suspended', () => s.doc(`favorites/${S}`).get());
+  await no('favorites write guest', () => guest.doc('favorites/ghost').set({ places: [] }));
+
+  // --- userLists ---
+  await ok('userLists read own by suspended', () => s.doc(`userLists/${S}`).get());
+  await ok('userLists favoriteCount -1 on public by other', () => a.doc(`userLists/${B}`).update({ favoriteCount: 3 }));
+
+  // --- trips ---
+  await ok('trips read own by suspended', () => s.doc('trips/tS').get());
+  await no('[PIN] trips create by APP OWNER for other user (no isOwner on create)', () => owner.doc('trips/tOwn').set({ ownerId: B, public: false, sharedWith: [] }));
+
+  // --- userCityLists ---
+  await ok('ucl read own by suspended', () => s.doc('userCityLists/cS').get());
+  await no('[PIN] ucl create by APP OWNER for other user (no isOwner on create)', () => owner.doc('userCityLists/cOwn').set({ ownerId: B, public: false, sharedWith: [] }));
+
+  // --- communityProfiles: شبكة + العلم الأبرز ---
+  await no('cp viewCount +1 by guest', () => guest.doc(`communityProfiles/${B}`).update({ viewCount: 6 }));
+  await no('cp viewCount decrease -1', () => a.doc(`communityProfiles/${B}`).update({ viewCount: 4 }));
+  await ok('[PIN] cp update OWN profile by SUSPENDED (ownership branch lacks suspension check)', () => s.doc(`communityProfiles/${S}`).update({ hasAnyPublicContent: false }));
+
+  // --- nicknames ---
+  await no('[PIN] nicknames update by APP OWNER on other (no isOwner on update; delete only)', () => owner.doc('nicknames/nick_b').update({ nickname: 'B2' }));
+
+  // --- users ---
+  await ok('users read own by suspended', () => s.doc(`users/${S}`).get());
+
+  // --- dailyStats: شبكة + علم ---
+  await no('dailyStats read guest', () => guest.doc(`dailyStats/${TODAY}`).get());
+  await ok('[PIN] dailyStats create with large initial values (no value bound on create)', () => a.doc('dailyStats/2026-08-25').set({ newSignupsToday: 999, activeToday: 999 }));
+
+  // --- بنود delete المستقلة ببقية كتل stats_* ---
+  await ok('stats_trips delete app owner', () => owner.doc('stats_trips/tA').delete());
+  await no('stats_places delete by list owner', () => a.doc('stats_places/cA__0123456789abcdef').delete());
+  await ok('stats_curators delete app owner', () => owner.doc('stats_curators/' + CUR).delete());
+  await no('stats_cards delete by other user', () => a.doc('stats_cards/' + CUR + '__card_0001').delete());
+
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail === 0 ? 0 : 1);
