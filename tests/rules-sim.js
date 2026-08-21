@@ -420,7 +420,7 @@ const no = (label, f) => expect(false, label, f);
 
   // ================= ١٦) M3: إغلاق التغطية — الشبكة والحواف والأعلام التصميمية =================
   // مصدر الحالات: تشريح النص الحرفي v3.3.1 بندًا بندًا ضد فهرس M2 (٢١ أغسطس).
-  // الحالات الموسومة [PIN] تثبّت سلوكًا قائمًا بالنص يحتاج قرار مالك لاحقًا — أي تغيير يمر بالشرط الحاجب (المصفوفة أولًا).
+  // قرارات الأعلام حُسمت (المالك ٢١ أغسطس عبر الشرط الحاجب): [ACK] = سلوك أُقرّ رسميًا · P3/P4/P5/P7 CLOSED = تضييقات v3.4 (تُنشر بنفس commit هذا الملف).
   await env.withSecurityRulesDisabled(async (c) => {
     const db = c.firestore();
     // إعادة بذر ما حذفته المجموعات السابقة (لاختبارات "الموقوف يقرأ محتواه" وغيرها)
@@ -451,19 +451,19 @@ const no = (label, f) => expect(false, label, f);
   await no('errors update no-op same values (affectedKeys>=1 edge)', () => guest.doc(ED).set({ TypeError: 2 }, { merge: true }));
   await no('events create category over 40 chars', () => guest.doc('analytics/events_2026-08-19__paris__' + 'x'.repeat(41)).set({ place_open: 1 }));
   await no('events create malformed id (missing category segment)', () => guest.doc('analytics/events_2026-08-19__paris').set({ place_open: 1 }));
-  await ok('[PIN] events update +1 by SUSPENDED (measurement never blocked by suspension)', () => s.doc(EV).update({ favorite_add: 2 }));
+  await ok('[ACK P1] events update +1 by suspended (measurement anonymous by design — owner-approved)', () => s.doc(EV).update({ favorite_add: 2 }));
 
   // --- sources/hours/sessions ---
   await ok('hours read owner', () => owner.doc('analytics/hours_2026-08-19__paris').get());
 
   // --- stats (٥): شبكة + علم ---
   await no('stats update by guest', () => guest.doc('stats/users').update({ count: 6 }));
-  await ok('[PIN] stats create by SUSPENDED (no suspension check on stats)', () => s.doc('stats/new2').set({ count: 1 }));
+  await ok('[ACK P2] stats create by suspended (anonymous counters uniform policy — owner-approved)', () => s.doc('stats/new2').set({ count: 1 }));
 
   // --- placeFavoriteCounts: شبكة + علمان ---
   await no('pfc update by guest', () => guest.doc('placeFavoriteCounts/p1').update({ count: 3 }));
-  await ok('[PIN] pfc update renames place (name change allowed with count +1)', () => a.doc('placeFavoriteCounts/p1').update({ name: 'Renamed', count: 3 }));
-  await ok('[PIN] pfc create with count only (partial fields accepted)', () => a.doc('placeFavoriteCounts/p9').set({ count: 1 }));
+  await no('pfc P3 CLOSED: rename attempt (name+count) rejected — name/url frozen after create', () => a.doc('placeFavoriteCounts/p1').update({ name: 'Renamed', count: 3 }));
+  await no('pfc P4 CLOSED: partial create (count only) rejected — all three fields required', () => a.doc('placeFavoriteCounts/p9').set({ count: 1 }));
 
   // --- favorites ---
   await ok('favorites read own by suspended', () => s.doc(`favorites/${S}`).get());
@@ -475,32 +475,41 @@ const no = (label, f) => expect(false, label, f);
 
   // --- trips ---
   await ok('trips read own by suspended', () => s.doc('trips/tS').get());
-  await no('[PIN] trips create by APP OWNER for other user (no isOwner on create)', () => owner.doc('trips/tOwn').set({ ownerId: B, public: false, sharedWith: [] }));
+  await no('[ACK P6] trips create by APP OWNER for other user (owner manages, never impersonates)', () => owner.doc('trips/tOwn').set({ ownerId: B, public: false, sharedWith: [] }));
 
   // --- userCityLists ---
   await ok('ucl read own by suspended', () => s.doc('userCityLists/cS').get());
-  await no('[PIN] ucl create by APP OWNER for other user (no isOwner on create)', () => owner.doc('userCityLists/cOwn').set({ ownerId: B, public: false, sharedWith: [] }));
+  await no('[ACK P6] ucl create by APP OWNER for other user (owner manages, never impersonates)', () => owner.doc('userCityLists/cOwn').set({ ownerId: B, public: false, sharedWith: [] }));
 
   // --- communityProfiles: شبكة + العلم الأبرز ---
   await no('cp viewCount +1 by guest', () => guest.doc(`communityProfiles/${B}`).update({ viewCount: 6 }));
   await no('cp viewCount decrease -1', () => a.doc(`communityProfiles/${B}`).update({ viewCount: 4 }));
-  await ok('[PIN] cp update OWN profile by SUSPENDED (ownership branch lacks suspension check)', () => s.doc(`communityProfiles/${S}`).update({ hasAnyPublicContent: false }));
+  await no('cp P5 CLOSED: suspended cannot update own community profile', () => s.doc(`communityProfiles/${S}`).update({ hasAnyPublicContent: false }));
 
   // --- nicknames ---
-  await no('[PIN] nicknames update by APP OWNER on other (no isOwner on update; delete only)', () => owner.doc('nicknames/nick_b').update({ nickname: 'B2' }));
+  await no('[ACK P6] nicknames update by APP OWNER on other (delete-only power — owner-approved)', () => owner.doc('nicknames/nick_b').update({ nickname: 'B2' }));
 
   // --- users ---
   await ok('users read own by suspended', () => s.doc(`users/${S}`).get());
 
   // --- dailyStats: شبكة + علم ---
   await no('dailyStats read guest', () => guest.doc(`dailyStats/${TODAY}`).get());
-  await ok('[PIN] dailyStats create with large initial values (no value bound on create)', () => a.doc('dailyStats/2026-08-25').set({ newSignupsToday: 999, activeToday: 999 }));
+  await no('dailyStats P7 CLOSED: seeding large initial values rejected (create bounded 0..1)', () => a.doc('dailyStats/2026-08-25').set({ newSignupsToday: 999, activeToday: 999 }));
 
   // --- بنود delete المستقلة ببقية كتل stats_* ---
   await ok('stats_trips delete app owner', () => owner.doc('stats_trips/tA').delete());
   await no('stats_places delete by list owner', () => a.doc('stats_places/cA__0123456789abcdef').delete());
   await ok('stats_curators delete app owner', () => owner.doc('stats_curators/' + CUR).delete());
   await no('stats_cards delete by other user', () => a.doc('stats_cards/' + CUR + '__card_0001').delete());
+
+
+  // ================= ١٧) v3.4: أشقاء قرارات الأعلام (اعتمدها المالك ٢١ أغسطس عبر الشرط الحاجب) =================
+  await no('pfc P3: url change rejected (link hijack closed)', () => a.doc('placeFavoriteCounts/p1').update({ url: 'https://evil.example', count: 3 }));
+  await ok('cp read own by suspended (withdrawal rights intact)', () => s.doc(`communityProfiles/${S}`).get());
+  await ok('cp delete own by suspended (withdrawal rights intact)', () => s.doc(`communityProfiles/${S}`).delete());
+  await no('cp P5: suspended cannot CREATE own community profile', () => s.doc(`communityProfiles/${S}`).set({ hasAnyPublicContent: false }));
+  await ok('dailyStats create with initial values 1 allowed', () => a.doc('dailyStats/2026-08-26').set({ newSignupsToday: 1, activeToday: 1 }));
+  await no('dailyStats P7: negative initial value rejected', () => a.doc('dailyStats/2026-08-27').set({ activeToday: -5 }));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
