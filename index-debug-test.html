@@ -576,6 +576,9 @@ async function loadFirebaseSDK(){
     loadScriptWithRetry(base + "firebase-firestore-compat.min.js", 3),
     loadScriptWithRetry(base + "firebase-auth-compat.min.js", 3)
   ]);
+  // أ-٣ الطبقة ٤: App Check — مستقلة عن الثلاث الأساسية: فشلها لا يُسقط التطبيق (وضع المراقبة لا يرفض شيئًا)
+  try{ await loadScriptWithRetry(base + "firebase-app-check-compat.min.js", 3); }
+  catch(_){ /* صامت — يعمل التطبيق بلا شهادة */ }
 }
 
 /* =========================================================
@@ -591,6 +594,8 @@ const firebaseConfig = {
   messagingSenderId: "134744574180",
   appId: "1:134744574180:web:bd6370482b3548913e04f1"
 };
+// أ-٣ الطبقة ٤: مفتاح reCAPTCHA Enterprise (معرِّف عام كـapiKey، لا سرّ — المبدأ ٨) · يحرسه audit.js بالملفين
+const MP_APPCHECK_KEY = "6Lery5EtAAAAANS-ab4HgjY76F8aLlY_V8SJWsXC";
 
 let db = null;
 let auth = null;
@@ -603,9 +608,17 @@ async function initFirebase(){
     }
     firebase.initializeApp(firebaseConfig);
 
-    // ===== أ-٤ الطبقة ٤: App Check — reCAPTCHA v3 =====
-    // وضع مراقبة (بلا فرض) — الفرض بعد تأكيد الأرقام بلوحة App Check
-    // الصيغة المضمونة بـcompat: site key مباشرة (Firebase يتولى reCAPTCHA داخليًا)
+    // ===== أ-٣ الطبقة ٤: App Check — وضع مراقبة (الإنفاذ من لوحة Firebase بشرطين: verified≈١٠٠٪ + Blaze) =====
+    // TTL = يوم واحد وApp risk = 0.5 يُضبطان باللوحة لا هنا. الفشل صامت دائمًا ولا يُسجَّل بمصيدة الأخطاء.
+    try{
+      if (firebase.appCheck){
+        firebase.appCheck().activate(
+          new firebase.appCheck.ReCaptchaEnterpriseProvider(MP_APPCHECK_KEY),
+          true /* تجديد تلقائي للشهادة */
+        );
+        if (typeof logTiming === 'function') logTiming('App Check activated (Enterprise, monitor mode)');
+      }
+    }catch(_){ /* صامت */ }
     db = firebase.firestore();
     auth = firebase.auth();
   }catch(e){
@@ -3969,7 +3982,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: A3-L3-r2 (mpTrack — ownerOnly sections privacy)');
+logTiming('BUILD: A3-L4-r1 (App Check — reCAPTCHA Enterprise, monitor mode)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
