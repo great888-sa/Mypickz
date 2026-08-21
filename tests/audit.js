@@ -154,6 +154,32 @@ if (countOcc(prod, 'const mpTrack') > 0) {
   console.log('INFO  prod not yet promoted to A3-L3 (no mpTrack) — mp guard applied to test only');
 }
 
+// ---------- ٨) A3-L4-r1: حارس App Check (reCAPTCHA Enterprise — وضع المراقبة) ----------
+// يمنع السقوط الصامت للتفعيل (ملفوف بحماية أخطاء عمدًا)، وانزياح المفتاح بين الملفين، والعودة للمزوّد القديم.
+// نسخة الاختبار تُفحص دائمًا؛ الإنتاج فقط بعد ترقيته (وجود التفعيل به). رمز التصحيح ممنوع بالملفين دائمًا.
+const AC_KEY_LINE = 'const MP_APPCHECK_KEY = "6Lery5EtAAAAANS-ab4HgjY76F8aLlY_V8SJWsXC";';
+const AC_EXPECTED = [
+  ['firebase-app-check-compat.min.js', 1],
+  [AC_KEY_LINE, 1],
+  ['new firebase.appCheck.ReCaptchaEnterpriseProvider(MP_APPCHECK_KEY)', 1],
+  ['firebase.appCheck().activate(', 1],
+  ['ReCaptchaV3Provider', 0]
+];
+function acGuard(label, content){
+  for (const [needle, expected] of AC_EXPECTED) {
+    const c = countOcc(content, needle);
+    check(c === expected, 'appCheck ' + label + ': ' + needle.slice(0, 44) + ' = ' + expected, 'found ' + c);
+  }
+}
+for (const [n, s] of [[PROD, prod], [TEST, test]])
+  check(!/FIREBASE_APPCHECK_DEBUG_TOKEN/.test(s), 'no App Check debug token ' + n);
+acGuard(TEST, test);
+if (countOcc(prod, 'firebase.appCheck().activate(') > 0) {
+  acGuard(PROD, prod);
+} else {
+  console.log('INFO  prod not yet promoted to A3-L4 (no App Check) — ac guard applied to test only');
+}
+
 finish();
 
 function finish(){
