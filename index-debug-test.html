@@ -572,9 +572,8 @@ async function loadScriptWithRetry(src, attempts){
 async function loadFirebaseSDK(){
   const base = "https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/";
   await Promise.all([
-    loadScriptWithRetry('https://www.google.com/recaptcha/api.js?render=6Lc_4pEtAAAAKq_1dasCQWQUG8aZHZq3qYHm8xd', 3),
+    loadScriptWithRetry('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js', 3),
     loadScriptWithRetry(base + "firebase-app-compat.min.js", 3),
-    loadScriptWithRetry(base + "firebase-app-check-compat.min.js", 3),
     loadScriptWithRetry(base + "firebase-firestore-compat.min.js", 3),
     loadScriptWithRetry(base + "firebase-auth-compat.min.js", 3)
   ]);
@@ -3978,7 +3977,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: A4-r2 (App Check — simplified activate)');
+logTiming('BUILD: A4-r3 (App Check — gstatic CDN fix)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
