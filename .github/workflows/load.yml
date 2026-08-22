@@ -1,0 +1,44 @@
+# MyPickz — قياس الكلفة المبرمَج (يدوي فقط — لا يعمل مع الدفعات)
+name: load-cost-measurement
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "s1 visitor-to-gate | s2 minimal | s3 curiosity | s4 curiosity+revisits | s5 concurrency(10)"
+        required: true
+        default: "s2"
+        type: choice
+        options: [s1, s2, s3, s4, s5]
+      sessions:
+        description: "sessions (max 25)"
+        required: true
+        default: "20"
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install --no-save puppeteer-core@23
+      - name: run scenario
+        env:
+          LT_SCENARIO: ${{ github.event.inputs.scenario }}
+          LT_SESSIONS: ${{ github.event.inputs.sessions }}
+          LT_ACCOUNTS: ${{ secrets.LT_ACCOUNTS }}
+          CHROME_PATH: /usr/bin/google-chrome
+        run: node tests/load.js | tee load-output.txt
+      - name: summary
+        run: |
+          echo "## Load cost measurement — ${{ github.event.inputs.scenario }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E "^SUMMARY|^DETAILS" load-output.txt >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: load-output-${{ github.event.inputs.scenario }}
+          path: load-output.txt
