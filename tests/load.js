@@ -55,14 +55,14 @@ async function login(page, acc){
     document.getElementById('authPassword').value = p;
   }, acc.email, acc.pass);
   await page.evaluate(() => doSignIn());
-  const ok = await waitFor(page, () => !!(firebase.auth().currentUser), 15000);
+  const ok = await waitFor(page, () => !!(firebase.auth().currentUser) && typeof currentUser !== 'undefined' && !!currentUser, 15000); // متغير الصفحة لا حالة المصادقة فقط
   if (!ok) throw new Error('auth-failed');
   await sleep(4000); // استعادة القوائم والرحلات وفحص الاسم
   return page.evaluate(() => (firebase.auth().currentUser || {}).email || null);
 }
 
 async function modalOpen(page, id){
-  return page.evaluate(id => { const el = document.getElementById(id); return !!(el && getComputedStyle(el).display !== 'none' && el.offsetParent !== null); }, id);
+  return page.evaluate(id => { const el = document.getElementById(id); return !!(el && el.classList.contains('show')); }, id); // النوافذ ثابتة الموضع: offsetParent دائمًا null
 }
 
 async function clickPlaces(page, n){
