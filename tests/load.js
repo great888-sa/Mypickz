@@ -42,6 +42,7 @@ async function openPage(browser){
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + (e && e.message || e)));
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text().slice(0, 160)); });
+  page.on('response', r => { try { if (r.status() >= 400) errors.push('http ' + r.status() + ' ' + r.url().replace(/[?#].*$/, '').slice(0, 120)); } catch(_){} });
   await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 45000 });
   // المحتوى خلف البوابة محمَّل حين تتوفر قاعدة البيانات والمدينة الحالية
   await waitFor(page, () => typeof db !== 'undefined' && db && typeof currentCityId === 'string', 20000);
@@ -57,6 +58,11 @@ async function login(page, acc){
   const ok = await waitFor(page, () => !!(firebase.auth().currentUser), 15000);
   if (!ok) throw new Error('auth-failed');
   await sleep(4000); // استعادة القوائم والرحلات وفحص الاسم
+  return page.evaluate(() => (firebase.auth().currentUser || {}).email || null);
+}
+
+async function modalOpen(page, id){
+  return page.evaluate(id => { const el = document.getElementById(id); return !!(el && getComputedStyle(el).display !== 'none' && el.offsetParent !== null); }, id);
 }
 
 async function clickPlaces(page, n){
@@ -86,7 +92,9 @@ async function s1(page){            // زائر حتى البوابة
 async function s2(page, acc){       // الجلسة المتكررة الدنيا
   await login(page, acc);
   await page.evaluate(() => openMyListModal()); await sleep(2500);
+  page.__checks = { mylist: await modalOpen(page, 'myListBackdrop') };
   await page.evaluate(() => openMyTripsModal()); await sleep(2500);
+  page.__checks.trips = await modalOpen(page, 'myTripsBackdrop');
   await page.evaluate(() => { const b = document.querySelector('#myTripsBody button[onclick^="openTripDetail"]'); if (b) b.click(); });
   await sleep(2500);
 }
@@ -125,7 +133,7 @@ async function runOne(browser, i, acc){
     st = await stats(page);
   }catch(e){ err = e && e.message || String(e); }
   try { await ctx.close(); } catch(_){}
-  return { i, writes: st ? st.writesUsed : null, buffered: st ? st.buffered : null, err, pageErrors: errors.slice(0, 3) };
+  return { i, writes: st ? st.writesUsed : null, buffered: st ? st.buffered : null, err, checks: page.__checks || null, pageErrors: errors.slice(0, 4) };
 }
 
 (async () => {
