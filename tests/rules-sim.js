@@ -1,5 +1,7 @@
 // MyPickz — tests/rules-sim.js
-// يختبر firestore.rules (v3.3) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// يختبر firestore.rules (v3.5) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// v3.5 (٢٤ أغسطس ٢٠٢٦ — الشرط الحاجب): + القسم ١٨ (تقييد معرّف userCityLists عند الإنشاء) — ٣١٩ حالة،
+//   وتحديث معرّف حالة الإنشاء الذاتي بالقسم ١٠ للصيغة الشرعية uid_cityId (الكود يكتبها هكذا أصلًا).
 // يُشغَّل بـ: npx firebase emulators:exec --only firestore --project demo-mypickz "node tests/rules-sim.js"
 // كل حالة تُطبع بسطر PASS/FAIL. أي FAIL ⇒ رمز خروج ١ ⇒ الناشر يتوقف.
 'use strict';
@@ -325,7 +327,7 @@ const no = (label, f) => expect(false, label, f);
   await no('ucl read private of other', () => a.doc('userCityLists/cBpriv').get());
   await ok('ucl read owner', () => owner.doc('userCityLists/cBpriv').get());
   await ok('ucl owner query by ownerId (suspend flow)', () => owner.collection('userCityLists').where('ownerId', '==', S).get());
-  await ok('ucl create own', () => a.doc('userCityLists/cA2').set({ ownerId: A, public: false, sharedWith: [] }));
+  await ok('ucl create own (v3.5: conforming id uid_cityId)', () => a.doc(`userCityLists/${A}_paris2`).set({ ownerId: A, public: false, sharedWith: [] }));
   await no('ucl create with other ownerId', () => a.doc('userCityLists/cX').set({ ownerId: B, public: false, sharedWith: [] }));
   await no('ucl create suspended', () => s.doc('userCityLists/cS2').set({ ownerId: S, public: false, sharedWith: [] }));
   await ok('ucl update own', () => a.doc('userCityLists/cA').update({ x: 1 }));
@@ -337,7 +339,7 @@ const no = (label, f) => expect(false, label, f);
   await no('ucl favoriteCount by suspended', () => s.doc('userCityLists/cBpub').update({ favoriteCount: 3 }));
   await ok('ucl delete own by suspended', () => s.doc('userCityLists/cS').delete());
   await no('ucl delete other', () => b.doc('userCityLists/cA').delete());
-  await ok('ucl delete owner', () => owner.doc('userCityLists/cA2').delete());
+  await ok('ucl delete owner', () => owner.doc(`userCityLists/${A}_paris2`).delete());
 
   // ================= ١١) communityProfiles =================
   await ok('cp read guest', () => guest.doc(`communityProfiles/${B}`).get());
@@ -510,6 +512,16 @@ const no = (label, f) => expect(false, label, f);
   await no('cp P5: suspended cannot CREATE own community profile', () => s.doc(`communityProfiles/${S}`).set({ hasAnyPublicContent: false }));
   await ok('dailyStats create with initial values 1 allowed', () => a.doc('dailyStats/2026-08-26').set({ newSignupsToday: 1, activeToday: 1 }));
   await no('dailyStats P7: negative initial value rejected', () => a.doc('dailyStats/2026-08-27').set({ activeToday: -5 }));
+
+  // ================= ١٨) v3.5: تقييد معرّف userCityLists عند الإنشاء (الشرط الحاجب — ٢٤ أغسطس ٢٠٢٦) =================
+  // القاعدة: docId.split('_')[0] == request.auth.uid — الكود الشرعي يكتب uid_cityId أصلًا (myCityListDocId)،
+  // ومعرّفات المصادقة لا تحوي شرطة سفلية. إنشاء فقط — القائم لا يُمس (حالة الانحدار أدناه).
+  await ok('v3.5 ucl create conforming id uid_city', () => a.doc(`userCityLists/${A}_riyadh`).set({ ownerId: A, public: false, sharedWith: [] }));
+  await no('v3.5 ucl create with OTHER user prefix', () => a.doc(`userCityLists/${B}_paris9`).set({ ownerId: A, public: false, sharedWith: [] }));
+  await no('v3.5 ucl create with owner_ spoof prefix', () => a.doc('userCityLists/owner_rome9').set({ ownerId: A, public: false, sharedWith: [] }));
+  await no('v3.5 ucl create with no-underscore id', () => a.doc('userCityLists/paris9').set({ ownerId: A, public: false, sharedWith: [] }));
+  await ok('v3.5 REGRESSION: legacy bad-id doc still updatable by its owner', () => b.doc('userCityLists/cBpub').update({ note: 1 }));
+  await no('v3.5 ucl create suspended with conforming id', () => s.doc(`userCityLists/${S}_paris9`).set({ ownerId: S, public: false, sharedWith: [] }));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
