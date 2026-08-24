@@ -1,3 +1,7 @@
+// firestore rules v3.5 — المحطة ٢ / الشرط الحاجب (٢٤ أغسطس ٢٠٢٦، وقّعه المالك): v3.4 + تقييد معرّف userCityLists عند الإنشاء
+//   (docId يبدأ بمعرّف منشئه: split('_')[0] == uid — الكود يكتبه uid_cityId أصلًا: الدالة myCityListDocId) — يغلق انتحال البادئة owner_ من الجذر
+//   (كان مدافَعًا عنه عند القراءة فقط بـv3.3.1)؛ إنشاء فقط — المستندات القائمة لا تُمس. الامتحان: ٣١٩ حالة (٣١٣ + ٣١٤..٣١٩) بنفس الكوميت
+//   قرارا سلوك موقَّعان بلا تغيير قواعد: بقاء سجل الإيقاف بعد الحذف الذاتي (+سطر إفصاح بالسياسة) · إنقاص عدّادات المفضلة بمسار الحذف
 // firestore rules v3.4 — قرارات الأعلام (٢١ أغسطس ٢٠٢٦، اعتمدها المالك عبر الشرط الحاجب — المصفوفة M4): v3.3.1 + أربعة تضييقات:
 //   (M-P3) placeFavoriteCounts: الاسم والرابط يتجمدان بعد الإنشاء — التحديث لحقل count حصرًا (±١)؛ التصحيح لمالك التطبيق (فرع isOwner جديد بالتحديث)
 //   (M-P4) placeFavoriteCounts: الإنشاء بالحقول الثلاثة كاملة (hasAll) — لا بطاقات ناقصة
@@ -370,8 +374,11 @@ service cloud.firestore {
       allow read: if isOwner() || (isSignedIn() && (resource.data.ownerId == request.auth.uid
         || resource.data.public == true
         || request.auth.uid in resource.data.sharedWith));
+      // v3.5: المعرّف يبدأ بمعرّف منشئه إلزامًا (uid لا يحوي شرطة سفلية — أول مقطع قبل '_' هو المنشئ حصرًا)
+      //   يغلق انتحال owner_ وأي بادئة غير ذاتية عند المنشأ؛ إنشاء فقط — القائم لا يُمس
       allow create: if isSignedIn() && !isSuspended()
-        && request.resource.data.ownerId == request.auth.uid;
+        && request.resource.data.ownerId == request.auth.uid
+        && docId.split('_')[0] == request.auth.uid;
       allow update: if isOwner()
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid)
         // ===== إصلاح ثغرة ٣ الموسَّعة (تدقيق شامل ١٦ أغسطس): تقييد المقدار بـ±١ =====
