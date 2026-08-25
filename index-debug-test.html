@@ -1113,6 +1113,53 @@ const mpTrack = (function(){
   };
 })();
 
+/* =========================================================
+   0.8) mpData — نواة طبقة العزل · تأسيس ٢٥ أغسطس ٢٠٢٦
+   كل نداء منصة جديد يمر من هنا؛ لا نوع من أنواع المزوّد يخرج من الوحدة.
+   النطاق الآن: المفضلة وعدّاداتها (هجرة انتهازية لـtoggleFavorite) — يتسع بدفعة ٢/أ.
+   الوحدة لا تعرف الواجهة ولا تعرض رسائل؛ الأخطاء تُرمى للمستدعي كما هي.
+   ========================================================= */
+const mpData = (function(){
+  const inc = function(n){ return firebase.firestore.FieldValue.increment(n); };
+  const col = function(name){ return db.collection(name); };
+  return {
+    favorites: {
+      save: function(uid, items){
+        return col('favorites').doc(uid).set({ items: items }, { merge: true });
+      }
+    },
+    placeCounts: {
+      // تحديث العدّاد وحده أولًا (يجتاز تجميد الاسم والرابط بقواعد ٣٫٤+)؛
+      // وعند غياب المستند: إنشاؤه بالحقول الثلاثة كاملة، وللزيادة فقط.
+      bump: async function(docId, name, url, delta){
+        const ref = col('placeFavoriteCounts').doc(docId);
+        try{
+          await ref.update({ count: inc(delta) });
+        }catch(e){
+          if (!(e && e.code === 'not-found') || delta <= 0) throw e;
+          await ref.set({ name: name, url: url, count: 1 });
+        }
+      }
+    },
+    users: {
+      flag: function(uid, field){
+        const d = {}; d[field] = true;
+        return col('users').doc(uid).set(d, { merge: true });
+      }
+    },
+    lists: {
+      bumpFavorite: function(ownerUid, cityId, delta){
+        return col('userCityLists').doc(ownerUid + '_' + cityId).set({ favoriteCount: inc(delta) }, { merge: true });
+      }
+    },
+    profiles: {
+      bumpFavorite: function(ownerUid, delta){
+        return col('communityProfiles').doc(ownerUid).set({ totalFavoriteCount: inc(delta) }, { merge: true });
+      }
+    }
+  };
+})();
+
 let visitCount = null;
 
 /* عرض ملاحظة المكان — بتضيف "More/Less" تلقائيًا لو النص طويل، وتعرضه كامل من غير أي زر لو قصير */
@@ -1649,23 +1696,17 @@ async function toggleFavorite(url, name, category, city, area, sourceUid, source
   }
   render();
   if (viewingUserUid) renderCommunityModal();
+  // ٢٥ أغسطس ٢٠٢٦: كل نداءات المنصة عبر mpData (هجرة انتهازية — القاعدة الثانية لطبقة العزل)؛ السلوك والترتيب كما كانا حرفيًا
+  const delta = exists ? -1 : 1;
   try{
-    await db.collection('favorites').doc(currentUser.uid).set({ items: favoritePlaces }, { merge:true });
-    await db.collection('placeFavoriteCounts').doc(docId).set({
-      name: name || 'Place',
-      url: url,
-      count: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
-    }, { merge:true });
+    await mpData.favorites.save(currentUser.uid, favoritePlaces);
+    await mpData.placeCounts.bump(docId, name || 'Place', url, delta);
     if (!exists){
-      db.collection('users').doc(currentUser.uid).set({ hasFavorited: true }, { merge:true }).catch(()=>{});
+      mpData.users.flag(currentUser.uid, 'hasFavorited').catch(()=>{});
     }
     if (sourceUid && sourceCityId && sourceUid !== currentUser.uid){
-      await db.collection('userCityLists').doc(sourceUid + '_' + sourceCityId).set({
-        favoriteCount: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
-      }, { merge:true });
-      db.collection('communityProfiles').doc(sourceUid).set({
-        totalFavoriteCount: firebase.firestore.FieldValue.increment(exists ? -1 : 1)
-      }, { merge:true }).catch(()=>{});
+      await mpData.lists.bumpFavorite(sourceUid, sourceCityId, delta);
+      mpData.profiles.bumpFavorite(sourceUid, delta).catch(()=>{});
     }
   }catch(e){ showToast('Could not save favorite'); }
 }
@@ -3982,7 +4023,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: A3-L4-r1 (App Check — reCAPTCHA Enterprise, monitor mode)');
+logTiming('BUILD: M2-DAL-r1 (mpData nucleus + placeCounts fix)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
