@@ -1,3 +1,10 @@
+// firestore rules v3.6 — المحطة ٢ / الشرط الحاجب (٢٥ أغسطس ٢٠٢٦، أقرّ المالك سطور المصفوفة الثلاثة): v3.5 + ثلاثة قرارات:
+//   (١٢) العدّادات العامة لا تنزل تحت الصفر: النقص بواحد مشروط بنتيجة ≥ ٠ — userLists/userCityLists.favoriteCount · communityProfiles.totalFavoriteCount · placeFavoriteCounts.count
+//   (٣-ب) فصل الفئات الخاصة: مجموعة جديدة userPrivatePlaces/{uid}_{cityId} — القراءة والإنشاء والتعديل لصاحبها فقط (لا للمالك)، الحذف له وللمالك، الموقوف يقرأ ويحذف فقط؛
+//        ومستندات userCityLists لا تقبل مفاتيح الفئات الخاصة السبعة عند الإنشاء، ولا إضافتها عند التعديل (الموروث يبقى حتى يرحّله الكود بأول حفظ) — الخصوصية على مستوى المستند
+//   (١) محتوى الموقوف المُشارَك بالاسم: يُحتجز بالكود (sharedWith → sharedWithHeld عند الإيقاف، ويُستعاد عند الرفع) — بلا تغيير قواعد؛ الامتحان يوثّق السلوك
+//   ترتيب النشر: هذه القواعد أولًا باللوحة (الوصفة ك) — آمنة على الكود القائم — ثم دفعة الكود (الاحتجاز · تقسيم الحفظ · أرضية العدّادات بالنواة) التي تحتاج المجموعة الجديدة
+//   الامتحان: tests/rules-sim.js — ٣٤٣ حالة (٣١٩ + ٢٤) بنفس الكوميت
 // firestore rules v3.5 — المحطة ٢ / الشرط الحاجب (٢٤ أغسطس ٢٠٢٦، وقّعه المالك): v3.4 + تقييد معرّف userCityLists عند الإنشاء
 //   (docId يبدأ بمعرّف منشئه: split('_')[0] == uid — الكود يكتبه uid_cityId أصلًا: الدالة myCityListDocId) — يغلق انتحال البادئة owner_ من الجذر
 //   (كان مدافَعًا عنه عند القراءة فقط بـv3.3.1)؛ إنشاء فقط — المستندات القائمة لا تُمس. الامتحان: ٣١٩ حالة (٣١٣ + ٣١٤..٣١٩) بنفس الكوميت
@@ -318,11 +325,12 @@ service cloud.firestore {
       //   تصحيحهما لمالك التطبيق وحده (فرع isOwner). يغلق إعادة التسمية واختطاف الرابط.
       // الزيادة (+1) تتطلب حسابًا غير مُوقَف؛ الإنقاص (-1) مسموح للمُوقَف أيضًا
       // (يستطيع سحب إعجابه أو حذف حسابه، لا إضافة إعجاب جديد) — قرار المالك ١٦ أغسطس
+      // v3.6 (١٢): النقص لا ينزل تحت الصفر
       allow update: if isOwner()
         || (isSignedIn()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
           && ((!isSuspended() && request.resource.data.count == resource.data.count + 1)
-              || request.resource.data.count == resource.data.count - 1));
+              || (request.resource.data.count == resource.data.count - 1 && request.resource.data.count >= 0)));
       allow delete: if isOwner();
     }
 
@@ -340,9 +348,10 @@ service cloud.firestore {
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
       allow create, update: if isOwner()
         || (isSignedIn() && request.auth.uid == userId && !isSuspended())
-        // تقييد المقدار بـ±١ (تدقيق شامل ١٦ أغسطس) — مسار قديم، يبقى محميًا احتياطًا
+        // تقييد المقدار بـ±١ (تدقيق شامل ١٦ أغسطس) — مسار قديم، يبقى محميًا احتياطًا · v3.6 (١٢): النتيجة ≥ ٠
         || (isSignedIn() && !isSuspended() && resource.data.public == true &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteCount']) &&
+            request.resource.data.favoriteCount >= 0 &&
             (request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) + 1
              || request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) - 1));
     }
@@ -376,17 +385,32 @@ service cloud.firestore {
         || request.auth.uid in resource.data.sharedWith));
       // v3.5: المعرّف يبدأ بمعرّف منشئه إلزامًا (uid لا يحوي شرطة سفلية — أول مقطع قبل '_' هو المنشئ حصرًا)
       //   يغلق انتحال owner_ وأي بادئة غير ذاتية عند المنشأ؛ إنشاء فقط — القائم لا يُمس
+      // v3.6 (٣-ب): مفاتيح الفئات الخاصة السبعة لا تدخل مستند قائمة قابل للنشر — مكانها userPrivatePlaces.
+      //   تُفحص عند الإنشاء دائمًا؛ وعند التعديل تُرفض المفاتيح المضافة فقط (الموروث يبقى حتى يرحّله الكود بأول حفظ) — عدّادات القوائم القائمة لا تتأثر.
+      //   المفاتيح المخصصة داخل الأقسام الخاصة يحكمها الكود (لا تكرار بالقواعد — لا وسيلة لفحص بادئة عبر المفاتيح).
+      function noPrivateKeys() {
+        return !request.resource.data.get('categories', {}).keys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others']);
+      }
+      // عند التعديل: يُرفض ما يُضاف من مفاتيح خاصة فقط (addedKeys) — الموروث بالقوائم القائمة يبقى حتى يرحّله الكود بأول حفظ،
+      //   فتكون هذه القواعد آمنة على الكود القائم وتُنشر قبل دفعة الكود لا بعدها.
+      function privateKeysOkOnUpdate() {
+        return !('categories' in request.resource.data.diff(resource.data).affectedKeys())
+          || !('categories' in request.resource.data)
+          || !request.resource.data.categories.diff(resource.data.get('categories', {})).addedKeys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others']);
+      }
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.ownerId == request.auth.uid
-        && docId.split('_')[0] == request.auth.uid;
-      allow update: if isOwner()
+        && docId.split('_')[0] == request.auth.uid
+        && noPrivateKeys();
+      allow update: if privateKeysOkOnUpdate() && (isOwner()
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid)
-        // ===== إصلاح ثغرة ٣ الموسَّعة (تدقيق شامل ١٦ أغسطس): تقييد المقدار بـ±١ =====
+        // ===== إصلاح ثغرة ٣ الموسَّعة (تدقيق شامل ١٦ أغسطس): تقييد المقدار بـ±١ · v3.6 (١٢): النتيجة ≥ ٠ =====
         // كانت تسمح بأي مقدار (مثل favoriteCount: 999999) ⇒ إفساد ترتيب Community Lists
         || (isSignedIn() && !isSuspended() && resource.data.public == true &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteCount']) &&
+            request.resource.data.favoriteCount >= 0 &&
             (request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) + 1
-             || request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) - 1));
+             || request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) - 1)));
       // ⚠️ delete بلا !isSuspended() عمدًا — نفس مبرر trips أعلاه
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
@@ -406,9 +430,22 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount','totalFavoriteCount']) &&
             (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
              || request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0) + 1) &&
+            request.resource.data.get('totalFavoriteCount', 0) >= 0 &&
             (request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0)
              || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) + 1
              || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) - 1));
+    }
+
+    // ===== v3.6 (٣-ب): الفئات الخاصة — مجموعة مستقلة، الخصوصية على مستوى المستند =====
+    // userPrivatePlaces/{uid}_{cityId}: الفئات الخاصة (مستشفيات وعيادات · شخصي · أخرى · العناوين الشخصية) لصاحبها وحده.
+    // لا علم public ولا sharedWith أصلًا. مالك التطبيق: حذف فقط (حذف الحساب والإساءة) — لا قراءة ولا تعديل (وعد السياسة).
+    // الموقوف: قراءة وحذف (حق الانسحاب) — لا إنشاء ولا تعديل. الملكية بالمعرّف لا بحقل يُكتب.
+    match /userPrivatePlaces/{docId} {
+      function isMine() { return isSignedIn() && docId.split('_')[0] == request.auth.uid; }
+      allow read: if isMine();
+      allow create: if isMine() && !isSuspended();
+      allow update: if isMine() && !isSuspended();
+      allow delete: if isOwner() || isMine();
     }
 
     // ===== إصلاح ثغرة ٤ =====
