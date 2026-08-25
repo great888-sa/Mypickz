@@ -1136,7 +1136,11 @@ const mpData = (function(){
         try{
           await ref.update({ count: inc(delta) });
         }catch(e){
-          if (!(e && e.code === 'not-found') || delta <= 0) throw e;
+          // المنصة تقيّم القواعد قبل فحص الوجود: تحديث مستند غائب يُرفض صلاحيةً (permission-denied) لا "غير موجود".
+          // لذلك نتحقق بقراءة واحدة على مسار الفشل فقط؛ غائب + زيادة ⇒ إنشاء كامل، وإلا يُرمى الخطأ الأصلي.
+          if (delta <= 0) throw e;
+          const snap = await ref.get();
+          if (snap.exists) throw e;
           await ref.set({ name: name, url: url, count: 1 });
         }
       }
@@ -4023,7 +4027,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: M2-DAL-r1 (mpData nucleus + placeCounts fix)');
+logTiming('BUILD: M2-DAL-r2 (mpData nucleus + placeCounts create-on-miss)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
