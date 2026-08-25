@@ -1,5 +1,7 @@
 // MyPickz — tests/rules-sim.js
-// يختبر firestore.rules (v3.5) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// يختبر firestore.rules (v3.6) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// v3.6 (٢٥ أغسطس ٢٠٢٦ — الشرط الحاجب، ثلاثة قرارات): + القسم ١٩ — ٣٤٣ حالة (٣١٩ + ٢٤):
+//   (١٢) العدّادات لا تنزل تحت الصفر · (٣-ب) userPrivatePlaces + منع مفاتيح الفئات الخاصة بقوائم المدن · (١) احتجاز المشاركة بالاسم (توثيق سلوك بلا تغيير قواعد)
 // v3.5 (٢٤ أغسطس ٢٠٢٦ — الشرط الحاجب): + القسم ١٨ (تقييد معرّف userCityLists عند الإنشاء) — ٣١٩ حالة،
 //   وتحديث معرّف حالة الإنشاء الذاتي بالقسم ١٠ للصيغة الشرعية uid_cityId (الكود يكتبها هكذا أصلًا).
 // يُشغَّل بـ: npx firebase emulators:exec --only firestore --project demo-mypickz "node tests/rules-sim.js"
@@ -522,6 +524,55 @@ const no = (label, f) => expect(false, label, f);
   await no('v3.5 ucl create with no-underscore id', () => a.doc('userCityLists/paris9').set({ ownerId: A, public: false, sharedWith: [] }));
   await ok('v3.5 REGRESSION: legacy bad-id doc still updatable by its owner', () => b.doc('userCityLists/cBpub').update({ note: 1 }));
   await no('v3.5 ucl create suspended with conforming id', () => s.doc(`userCityLists/${S}_paris9`).set({ ownerId: S, public: false, sharedWith: [] }));
+
+  // ================= ١٩) v3.6: القرارات الثلاثة (الشرط الحاجب — ٢٥ أغسطس ٢٠٢٦، أقرّها المالك سطورًا بالمصفوفة) =================
+  await env.withSecurityRulesDisabled(async (c) => {
+    const db = c.firestore();
+    // (١٢) عدّادات عند الصفر
+    await db.doc('placeFavoriteCounts/p0').set({ name: 'Zero', url: 'https://maps.app.goo.gl/z', count: 0 });
+    await db.doc(`communityProfiles/${B}`).set({ hasAnyPublicContent: true, viewCount: 5, totalFavoriteCount: 0 });
+    await db.doc('userCityLists/cBpub').set({ ownerId: B, public: true, sharedWith: [], favoriteCount: 0 });
+    await db.doc(`userLists/${B}`).set({ public: true, nickname: 'b', favoriteCount: 0 });
+    // (٣-ب) الفئات الخاصة
+    await db.doc(`userPrivatePlaces/${A}_paris`).set({ categories: { personal_home: { active: true, places: [] } } });
+    await db.doc(`userPrivatePlaces/${S}_paris`).set({ categories: { others: { active: true, places: [] } } });
+    await db.doc('userCityLists/cA').set({ ownerId: A, public: false, sharedWith: [], favoriteCount: 0, categories: { cafes: { active: true, places: [] } } });
+    await db.doc('userCityLists/cLegacy').set({ ownerId: A, public: true, sharedWith: [], favoriteCount: 0, categories: { cafes: { places: [] }, personal_home: { places: ['old'] } } });
+    // (١) الاحتجاز — حالة ما بعد الإيقاف كما يكتبها الكود
+    await db.doc('trips/tHeld').set({ ownerId: S, public: false, sharedWith: [], sharedWithHeld: [A], name: 'held' });
+    await db.doc('userCityLists/cHeld').set({ ownerId: S, public: false, sharedWith: [], sharedWithHeld: [A], favoriteCount: 0 });
+  });
+
+  // --- (١٢) لا نزول تحت الصفر ---
+  await no('v3.6 (12) pfc count 0 -> -1 denied', () => a.doc('placeFavoriteCounts/p0').update({ count: -1 }));
+  await no('v3.6 (12) cp totalFavoriteCount 0 -> -1 denied', () => a.doc(`communityProfiles/${B}`).update({ totalFavoriteCount: -1 }));
+  await no('v3.6 (12) ucl favoriteCount 0 -> -1 denied', () => a.doc('userCityLists/cBpub').update({ favoriteCount: -1 }));
+  await no('v3.6 (12) userLists favoriteCount 0 -> -1 denied', () => a.doc(`userLists/${B}`).update({ favoriteCount: -1 }));
+  await ok('v3.6 (12) ucl favoriteCount 0 -> +1 still allowed', () => a.doc('userCityLists/cBpub').update({ favoriteCount: 1 }));
+
+  // --- (٣-ب) userPrivatePlaces ---
+  await ok('v3.6 (3b) upp read self allow', () => a.doc(`userPrivatePlaces/${A}_paris`).get());
+  await no('v3.6 (3b) upp read other deny', () => b.doc(`userPrivatePlaces/${A}_paris`).get());
+  await no('v3.6 (3b) upp read APP OWNER deny (policy promise)', () => owner.doc(`userPrivatePlaces/${A}_paris`).get());
+  await no('v3.6 (3b) upp read guest deny', () => guest.doc(`userPrivatePlaces/${A}_paris`).get());
+  await ok('v3.6 (3b) upp create self conforming id allow', () => a.doc(`userPrivatePlaces/${A}_rome`).set({ categories: {} }));
+  await no('v3.6 (3b) upp create with OTHER prefix deny', () => a.doc(`userPrivatePlaces/${B}_rome`).set({ categories: {} }));
+  await no('v3.6 (3b) upp create suspended deny', () => s.doc(`userPrivatePlaces/${S}_rome`).set({ categories: {} }));
+  await ok('v3.6 (3b) upp update self allow', () => a.doc(`userPrivatePlaces/${A}_paris`).update({ x: 1 }));
+  await no('v3.6 (3b) upp update suspended deny', () => s.doc(`userPrivatePlaces/${S}_paris`).update({ x: 1 }));
+  await ok('v3.6 (3b) upp delete self by suspended allow (withdrawal)', () => s.doc(`userPrivatePlaces/${S}_paris`).delete());
+  await ok('v3.6 (3b) upp delete app owner allow', () => owner.doc(`userPrivatePlaces/${A}_rome`).delete());
+  await no('v3.6 (3b) ucl create with private category key deny', () => a.doc(`userCityLists/${A}_rome`).set({ ownerId: A, public: false, sharedWith: [], categories: { personal_home: { places: [] } } }));
+  await no('v3.6 (3b) ucl update adding private category key deny', () => a.doc('userCityLists/cA').update({ categories: { cafes: { active: true, places: [] }, hospitals_clinics: { places: [] } } }));
+  await ok('v3.6 (3b) ucl update public categories only allow', () => a.doc('userCityLists/cA').update({ categories: { cafes: { active: true, places: [] }, bakery: { places: [] } } }));
+  await ok('v3.6 (3b) LEGACY doc with inherited private key: changing it still allowed (safe before code batch)', () => a.doc('userCityLists/cLegacy').update({ categories: { cafes: { places: [] }, personal_home: { places: ['old', 'new'] } } }));
+  await ok('v3.6 (3b) LEGACY doc: removing the private key (migration write) allowed', () => a.doc('userCityLists/cLegacy').update({ categories: { cafes: { places: [] } } }));
+
+  // --- (١) الاحتجاز: القواعد القائمة تكفي — الامتحان يوثّق السلوك ---
+  await no('v3.6 (1) trip held-share: recipient denied while owner suspended', () => a.doc('trips/tHeld').get());
+  await env.withSecurityRulesDisabled(async (c) => c.firestore().doc('trips/tHeld').update({ sharedWith: [A], sharedWithHeld: [] }));
+  await ok('v3.6 (1) trip held-share: recipient allowed after restore', () => a.doc('trips/tHeld').get());
+  await no('v3.6 (1) ucl held-share: recipient denied while owner suspended', () => a.doc('userCityLists/cHeld').get());
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
