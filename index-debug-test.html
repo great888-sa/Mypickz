@@ -334,7 +334,7 @@
   .dr-item .soon{ font-size:10.5px; color:var(--brass); }
   .dr-sub{ font-size:11.5px; color:var(--ink-soft); padding:4px 12px 0; }
   /* خ١-ب: البوابة (المشهد ١) · الوجهة الافتراضية (المشهد ٥) · كلمة السر (٩) · الحذف (١٠) */
-  .gate-eyebrow{ font-family:'Cairo',sans-serif; font-weight:900; letter-spacing:2px; font-size:11px; color:var(--brass); text-transform:uppercase; }
+  .gate-eyebrow{ font-family:'Cairo',sans-serif; font-weight:900; letter-spacing:.5px; font-size:26px; color:var(--ink); line-height:1.1; margin-bottom:6px; }
   .homecards{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .hcard{ background:#fff; border:1.5px solid var(--line); border-radius:14px; padding:12px 8px; cursor:pointer; text-align:center; font-family:'Cairo',sans-serif; }
   .hcard.on{ border-color:var(--brass); background:rgba(165,117,31,.08); }
@@ -483,8 +483,8 @@
   <div class="modal-backdrop" id="authBackdrop">
     <div class="modal">
       <div id="authGateView" style="text-align:center;">
-        <div class="gate-eyebrow">MyPickz</div>
-        <h3 style="margin-top:2px;">Welcome 👋</h3>
+        <div class="gate-eyebrow">MyPickz 🗺️</div>
+        <h3 style="margin-top:2px; font-size:16px; color:var(--ink-soft);">Welcome 👋</h3>
         <p style="color:var(--ink-soft); font-size:13px; margin:0 0 14px;">Your places, your trips — all in one spot.</p>
         <button class="btn btn-brass" style="width:100%;" onclick="openAuthModal('signin')">Sign In</button>
         <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="openAuthModal('signup')">Create Account</button>
@@ -502,8 +502,8 @@
       <button type="button" id="forgotPasswordLink" onclick="doForgotPassword()" style="background:none; border:none; padding:0; margin-top:8px; font-family:'Cairo',sans-serif; font-size:11.5px; font-weight:700; color:var(--brass); cursor:pointer;">Forgot password?</button>
       <div id="authError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
-        <button class="btn btn-brass" style="flex:1" onclick="doSignIn()">Log In</button>
-        <button class="btn btn-ghost" style="flex:1" onclick="doSignUp()">New Account</button>
+        <button class="btn btn-brass" id="authLoginBtn" style="flex:1" onclick="doSignIn()">Log In</button>
+        <button class="btn btn-brass" id="authSignupBtn" style="flex:1; display:none;" onclick="doSignUp()">Create Account</button>
       </div>
       <button type="button" class="btn btn-ghost" style="width:100%; margin-top:10px;" disabled title="Available when Google sign-in arrives">Continue with Google <span class="soon-tag">Soon</span></button>
       <p id="authVerifyHint" style="display:none; font-size:10.5px; color:var(--ink-soft); margin-top:8px;">We'll email you a verification link after sign-up.</p>
@@ -2614,6 +2614,8 @@ function openAuthModal(mode){
   document.getElementById('authTitle').textContent = signup ? '✨ Create your account' : '👤 Welcome back';
   document.getElementById('authSubtitle').textContent = signup ? 'Pick a username, then your email and a password (8+ characters)' : 'Sign in to your account';
   document.getElementById('authNickname').style.display = signup ? '' : 'none';
+  document.getElementById('authLoginBtn').style.display = signup ? 'none' : '';
+  document.getElementById('authSignupBtn').style.display = signup ? '' : 'none';
   document.getElementById('authGateView').style.display = 'none';
   document.getElementById('authFormView').style.display = '';
   document.getElementById('authBackdrop').classList.add('show');
@@ -4519,7 +4521,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k1b-r2 (gate as a view inside the auth modal — runtime guard contract kept)');
+logTiming('BUILD: M2-FRAME-k1b-r3 (gate wordmark in ink · one action button per mode)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
