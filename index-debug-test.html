@@ -90,7 +90,7 @@
   .btn-ghost{ background:transparent; color:var(--ink); border:1.5px solid var(--line); }
 
   .quick-nav{
-    position:sticky; top:0; z-index:20;
+    position:sticky; top:52px; z-index:20; /* خ١: تحت الشريط العلوي الثابت */
     max-width:760px; margin:0 auto 18px; padding:10px 20px;
     background:rgba(239,231,214,0.92); backdrop-filter:blur(6px);
     display:flex; gap:8px; overflow-x:auto; border-bottom:1px solid var(--line);
@@ -325,7 +325,8 @@
   .mp-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif; }
   .mp-empty .big{ font-size:34px; margin-bottom:8px; }
   /* الدرج — نافذة الحساب المبنية تصير جزأه الأعلى (المشهد ٧) */
-  #accountBackdrop .modal{ position:fixed; top:0; right:0; bottom:0; max-width:340px; width:86%; border-radius:0 0 0 18px; overflow-y:auto; max-height:none; text-align:left; direction:ltr; }
+  #accountBackdrop{ z-index:950; }
+  #accountBackdrop .modal{ position:fixed; top:0; right:0; bottom:0; max-width:340px; width:86%; border-radius:0 0 0 18px; overflow-y:auto; max-height:none; text-align:left; direction:ltr; padding-top:18px; }
   .dr-head{ font-family:'Cairo',sans-serif; font-weight:800; font-size:11px; color:var(--ink-soft); letter-spacing:.5px; text-transform:uppercase; margin:14px 0 6px; }
   .dr-item{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:10px 12px; margin-top:6px; border:1.5px solid var(--line); border-radius:12px; background:#fff; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; text-align:left; direction:ltr; text-decoration:none; }
   .dr-item:disabled{ opacity:.55; cursor:default; }
@@ -2590,7 +2591,7 @@ async function enforceNickname(){
   if (!currentUser) return;
   if (signUpInProgress){ logTiming('[NICK] skip: signUpInProgress'); return; }      // التسجيل يحجز الاسم بنفسه — لا نافذة زائفة أثناء ذلك
   if (userListLoadFailed){ logTiming('[NICK] skip: userLists read failed'); return; }    // تعذّر التحقق شبكيًا — لا نحبس المستخدم بخطأ مؤقت
-  if (userListData.nickname){ logTiming('[NICK] ok: nickname="' + userListData.nickname + '"'); return; }
+  if (userListData.nickname){ logTiming('[NICK] ok: nickname="' + userListData.nickname + '"'); updateUserUI(); return; } // خ١: الشارة تُملأ بعد وصول الاسم
   if (nicknameFlowActive){ logTiming('[NICK] skip: flow already active'); return; }
   logTiming('[NICK] ⚠️ no nickname on server → prompting');
   nicknameFlowActive = true;
@@ -2600,7 +2601,7 @@ async function enforceNickname(){
     while (!ok && currentUser){
       ok = await chooseNickname();
     }
-  } finally { nicknameFlowActive = false; }
+  } finally { nicknameFlowActive = false; updateUserUI(); } // خ١: الشارة بعد اختيار الاسم
 }
 
 async function doSignIn(){
@@ -4334,7 +4335,19 @@ function logTiming(label){
   console.log(`[TIMING] ${label}: ${elapsed}s`);
   if (!__timingBox){
     __timingBox = document.createElement('div');
-    __timingBox.style.cssText = 'position:fixed; bottom:0; left:0; right:0; z-index:99998; background:#2a3f4f; color:#9fe8a0; padding:10px 14px; font-size:11px; font-family:monospace; direction:ltr; text-align:left; max-height:35vh; overflow-y:auto; box-shadow:0 -4px 12px rgba(0,0,0,.3);';
+    // خ١: اللوحة فوق الشريط الخمسي (٦٤) لا فوقه؛ وتُطوى بنقرة على شريطها إلى سطر واحد حتى يظهر ما تحتها
+    __timingBox.style.cssText = 'position:fixed; bottom:64px; left:0; right:0; z-index:899; background:#2a3f4f; color:#9fe8a0; padding:6px 14px 8px; font-size:11px; font-family:monospace; direction:ltr; text-align:left; max-height:30vh; overflow-y:auto; box-shadow:0 -4px 12px rgba(0,0,0,.3); transition:max-height .2s;';
+    const bar = document.createElement('div');
+    bar.textContent = '▼ TIMING — tap to collapse/expand';
+    bar.style.cssText = 'cursor:pointer; font-weight:700; color:#fff; margin-bottom:4px; user-select:none;';
+    bar.onclick = () => {
+      const collapsed = __timingBox.getAttribute('data-collapsed') === '1';
+      __timingBox.setAttribute('data-collapsed', collapsed ? '0' : '1');
+      __timingBox.style.maxHeight = collapsed ? '30vh' : '26px';
+      __timingBox.style.overflowY = collapsed ? 'auto' : 'hidden';
+      bar.textContent = (collapsed ? '▼' : '▲') + ' TIMING — tap to collapse/expand';
+    };
+    __timingBox.appendChild(bar);
     document.body.appendChild(__timingBox);
   }
   const line = document.createElement('div');
@@ -4342,8 +4355,8 @@ function logTiming(label){
   __timingBox.appendChild(line);
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
-document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: M2-FRAME-k1a (topbar · five tabs · hosted Trips/Community · drawer · policy door)');
+document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
+logTiming('BUILD: M2-FRAME-k1a-r3 (r2 fixes + collapsible timing panel above the tab bar)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
