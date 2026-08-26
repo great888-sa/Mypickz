@@ -308,12 +308,12 @@
   .modal-topbar .btn{ margin-top:0; padding:9px 12px; font-size:12.5px; }
   /* ===== خ١ (٢٧ أغسطس ٢٠٢٦) — الإطار: الشريط العلوي · الشريط الخمسي · الوجهات · الدرج (النموذج المعلَّم: المشاهد ٦ و٧) ===== */
   body{ padding-top:52px; padding-bottom:64px; }
-  .mp-topbar{ position:fixed; top:0; left:0; right:0; height:52px; z-index:900; background:var(--paper); border-bottom:1px solid var(--line);
+  .mp-topbar{ position:fixed; top:0; left:0; right:0; height:52px; z-index:700; background:var(--paper); border-bottom:1px solid var(--line);
               display:flex; align-items:center; justify-content:space-between; padding:0 12px; direction:ltr; }
   .mp-burger{ background:none; border:1.5px solid var(--line); border-radius:10px; width:38px; height:38px; font-size:18px; cursor:pointer; color:var(--ink); }
   .mp-idchip{ display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:4px 12px 4px 4px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:800; font-size:12.5px; color:var(--ink); }
   .mp-idchip .mini-av{ width:30px; height:30px; font-size:12px; }
-  .mp-tabbar{ position:fixed; bottom:0; left:0; right:0; height:64px; z-index:900; background:var(--card); border-top:1px solid var(--line);
+  .mp-tabbar{ position:fixed; bottom:0; left:0; right:0; height:64px; z-index:700; background:var(--card); border-top:1px solid var(--line);
               display:flex; direction:ltr; }
   .mp-tab{ flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; color:var(--ink-soft); font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; }
   .mp-tab .ti{ font-size:20px; line-height:1; }
@@ -325,7 +325,8 @@
   .mp-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif; }
   .mp-empty .big{ font-size:34px; margin-bottom:8px; }
   /* الدرج — نافذة الحساب المبنية تصير جزأه الأعلى (المشهد ٧) */
-  #accountBackdrop{ z-index:950; }
+  #accountBackdrop{ z-index:1200 !important; }
+  #accountBackdrop.show{ display:block; }
   #accountBackdrop .modal{ position:fixed; top:0; right:0; bottom:0; max-width:340px; width:86%; border-radius:0 0 0 18px; overflow-y:auto; max-height:none; text-align:left; direction:ltr; padding-top:18px; }
   .dr-head{ font-family:'Cairo',sans-serif; font-weight:800; font-size:11px; color:var(--ink-soft); letter-spacing:.5px; text-transform:uppercase; margin:14px 0 6px; }
   .dr-item{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:10px 12px; margin-top:6px; border:1.5px solid var(--line); border-radius:12px; background:#fff; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; text-align:left; direction:ltr; text-decoration:none; }
@@ -4356,7 +4357,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k1a-r3 (r2 fixes + collapsible timing panel above the tab bar)');
+logTiming('BUILD: M2-FRAME-k1a-r4 (drawer stacking above the fixed bars)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
