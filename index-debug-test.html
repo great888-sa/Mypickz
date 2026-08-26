@@ -333,6 +333,19 @@
   .dr-item:disabled{ opacity:.55; cursor:default; }
   .dr-item .soon{ font-size:10.5px; color:var(--brass); }
   .dr-sub{ font-size:11.5px; color:var(--ink-soft); padding:4px 12px 0; }
+  /* خ١-ب: البوابة (المشهد ١) · الوجهة الافتراضية (المشهد ٥) · كلمة السر (٩) · الحذف (١٠) */
+  .gate-eyebrow{ font-family:'Cairo',sans-serif; font-weight:900; letter-spacing:2px; font-size:11px; color:var(--brass); text-transform:uppercase; }
+  .homecards{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .hcard{ background:#fff; border:1.5px solid var(--line); border-radius:14px; padding:12px 8px; cursor:pointer; text-align:center; font-family:'Cairo',sans-serif; }
+  .hcard.on{ border-color:var(--brass); background:rgba(165,117,31,.08); }
+  .hcard .hi{ font-size:22px; } .hcard .hn{ font-weight:800; font-size:13px; color:var(--ink); margin-top:2px; } .hcard .hd{ font-size:10.5px; color:var(--ink-soft); }
+  .steps{ display:flex; justify-content:center; gap:8px; margin-bottom:10px; }
+  .stepdot{ width:8px; height:8px; border-radius:50%; background:var(--line); } .stepdot.on{ background:#b5545a; }
+  .receipt{ background:var(--paper-dark); border-radius:12px; padding:8px 12px; margin:8px 0; direction:ltr; text-align:left; }
+  .receipt ul{ list-style:none; margin:0; padding:0; } .receipt li{ display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0; border-bottom:1px dashed var(--line); } .receipt li:last-child{ border:none; }
+  .warnline{ display:flex; gap:6px; font-size:11.5px; color:#8b1e1e; background:#fdecea; border:1px solid #e3b3b6; border-radius:10px; padding:8px 10px; margin:8px 0; text-align:left; direction:ltr; }
+  .btn-danger{ background:#b5545a; color:#fff; }
+  .soon-tag{ display:inline-block; font-size:10.5px; color:var(--brass); border:1px solid var(--brass); border-radius:999px; padding:1px 8px; margin-left:6px; vertical-align:middle; }
   #qrcode{ display:flex; justify-content:center; margin:12px 0; }
   .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper);
           padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:9999; }
@@ -351,7 +364,7 @@
     <button type="button" class="mp-idchip" id="accountChipBtn" onclick="openAccountModal()" style="display:none;">
       <span class="mini-av" id="accountChipAv" style="background:var(--ink);">··</span><span id="accountChipLabel">Account</span>
     </button>
-    <button type="button" class="mp-idchip" id="guestChipBtn" onclick="openAuthModal()"><span class="mini-av" style="background:var(--ink-soft);">👤</span><span>Sign in</span></button>
+    <button type="button" class="mp-idchip" id="guestChipBtn" onclick="openGate()"><span class="mini-av" style="background:var(--ink-soft);">👤</span><span>Sign in</span></button>
   </div>
 
   <!-- خ١: الوجهة ١ — الأماكن: الشاشة الحالية كما هي (اختيار الدولة والمدينة · التصنيفات · الدليل · قائمتي · المفضلة) -->
@@ -466,10 +479,22 @@
     </div>
   </div>
 
+  <!-- خ١-ب: البوابة الإلزامية (المشهد ١) — زران منفصلان؛ رابط السياسة باب مغلق حتى ٢/هـ -->
+  <div class="modal-backdrop" id="gateBackdrop">
+    <div class="modal" style="text-align:center;">
+      <div class="gate-eyebrow">MyPickz</div>
+      <h3 style="margin-top:2px;">Welcome 👋</h3>
+      <p style="color:var(--ink-soft); font-size:13px; margin:0 0 14px;">Your places, your trips — all in one spot.</p>
+      <button class="btn btn-brass" style="width:100%;" onclick="openAuthModal('signin')">Sign In</button>
+      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="openAuthModal('signup')">Create Account</button>
+      <div id="gatePolicyLink" style="display:none; margin-top:12px;"><button type="button" class="btn btn-ghost" style="border:none; font-size:11.5px; padding:4px 8px;" onclick="openPolicyModal('policy')">Privacy Policy</button></div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="authBackdrop">
     <div class="modal">
-      <h3>👤 My Account</h3>
-      <p style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">Sign up to save favorites, build your own list, plan trips, and share them with others</p>
+      <h3 id="authTitle">👤 Welcome back</h3>
+      <p id="authSubtitle" style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">Sign in to your account</p>
       <input type="text" id="authNickname" class="modal-input" placeholder="Username (shown to other users)" autocomplete="nickname" autocapitalize="off" spellcheck="false">
       <input type="email" id="authEmail" class="modal-input" placeholder="Email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" style="direction:ltr; text-align:left; margin-top:8px;">
       <div class="pw-wrap" style="margin-top:8px;">
@@ -482,7 +507,72 @@
         <button class="btn btn-brass" style="flex:1" onclick="doSignIn()">Log In</button>
         <button class="btn btn-ghost" style="flex:1" onclick="doSignUp()">New Account</button>
       </div>
+      <button type="button" class="btn btn-ghost" style="width:100%; margin-top:10px;" disabled title="Available when Google sign-in arrives">Continue with Google <span class="soon-tag">Soon</span></button>
+      <p id="authVerifyHint" style="display:none; font-size:10.5px; color:var(--ink-soft); margin-top:8px;">We'll email you a verification link after sign-up.</p>
       <p style="font-size:10.5px; color:var(--ink-soft); margin-top:10px;">Sign up or log in to continue exploring</p>
+    </div>
+  </div>
+
+  <!-- خ١-ب: اختيار الوجهة الافتراضية (المشهد ٥) — مرة واحدة بعد النبذة؛ وتغييرها من التفضيلات بالدرج -->
+  <div class="modal-backdrop" id="homeBackdrop">
+    <div class="modal" style="direction:ltr; text-align:left;">
+      <h3 style="text-align:center;">Choose your home 🏠</h3>
+      <p style="text-align:center; color:var(--ink-soft); font-size:12px; margin:0 0 12px;">MyPickz will open here every time. You can change it later in My Account.</p>
+      <div class="homecards" id="homeCards">
+        <button type="button" class="hcard on" data-home="Places" onclick="pickHome(this)"><div class="hi">📍</div><div class="hn">Places</div><div class="hd">Browse hand-picked places</div></button>
+        <button type="button" class="hcard" data-home="Trips" onclick="pickHome(this)"><div class="hi">🧳</div><div class="hn">Trips</div><div class="hd">Plan &amp; organize trips</div></button>
+        <button type="button" class="hcard" data-home="Community" onclick="pickHome(this)"><div class="hi">🌍</div><div class="hn">Community</div><div class="hd">Explore everyone's lists</div></button>
+        <button type="button" class="hcard" data-home="Curators" onclick="pickHome(this)"><div class="hi">⭐</div><div class="hn">Curators</div><div class="hd">Follow trusted curators</div></button>
+        <button type="button" class="hcard" data-home="Addresses" style="grid-column:1/3" onclick="pickHome(this)"><div class="hi">🔒</div><div class="hn">Personal Addresses</div><div class="hd">Always private — never shared</div></button>
+      </div>
+      <button class="btn btn-brass" style="width:100%; margin-top:12px;" onclick="saveHome()">Continue</button>
+    </div>
+  </div>
+
+  <!-- خ١-ب: تغيير كلمة المرور (المشهد ٩) — مبنية معطَّلة حتى ٢/ب -->
+  <div class="modal-backdrop" id="pwBackdrop">
+    <div class="modal" style="text-align:left; direction:ltr;">
+      <h3 style="text-align:center;">Change Password 🔑 <span class="soon-tag">Soon</span></h3>
+      <label style="font-size:11.5px; color:var(--ink-soft);">New password</label>
+      <div class="pw-wrap"><input type="password" id="pwNew" class="modal-input" placeholder="At least 8 characters" autocomplete="new-password" disabled><button type="button" class="pw-eye" onclick="togglePasswordVisibility('pwNew', this)">👁</button></div>
+      <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Confirm new password</label>
+      <div class="pw-wrap"><input type="password" id="pwConfirm" class="modal-input" placeholder="Repeat it" autocomplete="new-password" disabled><button type="button" class="pw-eye" onclick="togglePasswordVisibility('pwConfirm', this)">👁</button></div>
+      <button class="btn btn-brass" style="width:100%; margin-top:12px;" disabled>Save New Password</button>
+      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeModalById('pwBackdrop')">Close</button>
+    </div>
+  </div>
+
+  <!-- خ١-ب: حذف الحساب — المشاهد الثلاثة (١٠) مبنية معطَّلة حتى ٢/د -->
+  <div class="modal-backdrop" id="delBackdrop">
+    <div class="modal" style="text-align:center;">
+      <div class="steps"><span class="stepdot on" id="delDot1"></span><span class="stepdot" id="delDot2"></span><span class="stepdot" id="delDot3"></span></div>
+      <div id="delStep1">
+        <h3>Delete Account 🗑 <span class="soon-tag">Soon</span></h3>
+        <p style="font-size:13px; color:var(--ink-soft); margin:0 0 10px;">This will permanently delete your account and <b>all</b> your data. This cannot be undone.</p>
+        <div class="receipt"><ul>
+          <li><span>📝 My List places</span><b id="delCntPlaces">—</b></li>
+          <li><span>🧳 Trips</span><b id="delCntTrips">—</b></li>
+          <li><span>❤️ Favorites</span><b id="delCntFav">—</b></li>
+          <li><span>🌍 Community profile</span><b>1</b></li>
+          <li><span>🏷 Nickname</span><b>freed</b></li>
+        </ul></div>
+        <div class="warnline">⚠️ <span>Trips <b>shared with other people</b> will be deleted for everyone.</span></div>
+        <button class="btn btn-danger" style="width:100%;" onclick="delStep(2)">I understand — continue</button>
+        <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeModalById('delBackdrop')">Cancel</button>
+      </div>
+      <div id="delStep2" style="display:none;">
+        <h3>Final confirmation</h3>
+        <p style="font-size:13px; color:var(--ink-soft); margin:0 0 10px;">Type <b>DELETE</b> to confirm permanent deletion.</p>
+        <input id="delWord" class="modal-input" oninput="checkDelWord()" placeholder="Type DELETE" style="text-align:center; letter-spacing:2px; direction:ltr;">
+        <button class="btn btn-danger" id="delGo" style="width:100%; margin-top:10px;" disabled>Delete my account forever <span class="soon-tag" style="color:#fff; border-color:#fff;">Soon</span></button>
+        <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="delStep(1)">Back</button>
+      </div>
+      <div id="delStep3" style="display:none;">
+        <div style="font-size:40px;">🕊</div>
+        <h3>Account deleted</h3>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.7; margin:0 0 12px;">Your account and all your data were permanently deleted.<br>Your nickname is now free for anyone to use.<br>Thank you for trying MyPickz.</p>
+        <button class="btn btn-ghost" style="width:100%;" onclick="delStep(1)">Back to preview</button>
+      </div>
     </div>
   </div>
 
@@ -496,11 +586,11 @@
           <div class="acc-mail" id="accountEmail">—</div>
         </div>
       </div>
-      <button type="button" class="acc-item" disabled title="Coming in the next update"><span>🔑 Change password</span><span class="soon">Soon</span></button>
+      <button type="button" class="acc-item" onclick="closeAccountModal(); openModalById('pwBackdrop');"><span>🔑 Change password</span><span class="soon">Soon · preview</span></button>
       <button type="button" class="acc-item" disabled title="Coming in the next update"><span>✉️ Resend verification</span><span class="soon">Soon</span></button>
-      <button type="button" class="acc-item" disabled title="Coming in the next update"><span>⚙️ Preferences — default destination</span><span class="soon">Soon</span></button>
+      <button type="button" class="acc-item" onclick="closeAccountModal(); openHomeChooser(true);"><span>⚙️ Preferences — default destination</span><span id="prefHomeLabel" style="font-size:11px; color:var(--ink-soft);"></span></button>
       <button type="button" class="acc-item" onclick="closeAccountModal(); doSignOut();"><span>🚪 Log Out</span><span></span></button>
-      <button type="button" class="acc-item danger" disabled title="Coming in the next update"><span>🗑 Delete Account — permanent</span><span class="soon">Soon</span></button>
+      <button type="button" class="acc-item danger" onclick="closeAccountModal(); openDeletePreview();"><span>🗑 Delete Account — permanent</span><span class="soon">Soon · preview</span></button>
 
       <div class="dr-head">Tools</div>
       <button type="button" class="dr-item" onclick="closeAccountModal(); copyLink();"><span>🔗 Copy Link</span><span></span></button>
@@ -1265,6 +1355,9 @@ const mpData = (function(){
           await ref.set({ name: name, url: url, count: 1 });
         }
       }
+    },
+    userLists: {
+      merge: function(uid, data){ return col('userLists').doc(uid).set(data, { merge: true }); }
     },
     users: {
       flag: function(uid, field){
@@ -2505,22 +2598,83 @@ function closeStatsModal(){
   document.getElementById('statsBackdrop').classList.remove('show');
 }
 
-function openAuthModal(){
+// خ١-ب: البوابة (المشهد ١) تسبق نافذة الدخول/التسجيل (المشهد ٢) — النافذة موحَّدة (قرار المالك: الاسم داخلها)، والعنوان بحسب الزر
+function openGate(){ document.getElementById('gateBackdrop').classList.add('show'); }
+function closeGate(){ document.getElementById('gateBackdrop').classList.remove('show'); }
+function openAuthModal(mode){
   const errEl = document.getElementById('authError');
   errEl.textContent = '';
   errEl.style.color = '#b5545a';
   document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
+  const signup = mode === 'signup';
+  document.getElementById('authTitle').textContent = signup ? '✨ Create your account' : '👤 Welcome back';
+  document.getElementById('authSubtitle').textContent = signup ? 'Pick a username, then your email and a password (8+ characters)' : 'Sign in to your account';
+  document.getElementById('authNickname').style.display = signup ? '' : 'none';
+  closeGate();
   document.getElementById('authBackdrop').classList.add('show');
+  setTimeout(() => document.getElementById(signup ? 'authNickname' : 'authEmail').focus(), 50);
 }
 function closeAuthModal(){
   document.getElementById('authBackdrop').classList.remove('show');
+  if (!currentUser) openGate(); // البوابة إلزامية: إغلاق النافذة بلا دخول يعيد البوابة
 }
+function openModalById(id){ document.getElementById(id).classList.add('show'); }
+function closeModalById(id){ document.getElementById(id).classList.remove('show'); }
+
+// خ١-ب: الوجهة الافتراضية (المشهد ٥) — تُحفظ بمستند المستخدم، والتطبيق يفتح عليها
+const HOME_TABS = ['Places','Trips','Community','Curators','Addresses'];
+let pendingHome = 'Places';
+function openHomeChooser(fromPrefs){
+  const cur = (userListData && HOME_TABS.includes(userListData.defaultTab)) ? userListData.defaultTab : 'Places';
+  pendingHome = cur;
+  document.querySelectorAll('#homeCards .hcard').forEach(b => b.classList.toggle('on', b.getAttribute('data-home') === cur));
+  document.getElementById('homeBackdrop').classList.add('show');
+}
+function pickHome(btn){
+  pendingHome = btn.getAttribute('data-home');
+  document.querySelectorAll('#homeCards .hcard').forEach(b => b.classList.toggle('on', b === btn));
+}
+async function saveHome(){
+  closeModalById('homeBackdrop');
+  if (!currentUser) return;
+  userListData.defaultTab = pendingHome;
+  try{ await mpData.userLists.merge(currentUser.uid, { defaultTab: pendingHome }); }catch(e){}
+  const lbl = document.getElementById('prefHomeLabel'); if (lbl) lbl.textContent = pendingHome;
+  switchTab(pendingHome);
+  showToast('Home saved ✓');
+}
+// النبذة (المشهد ٤): مرة واحدة بالعمر — العلم بمستند المستخدم؛ بعدها اختيار الوجهة إن لم تُختر
+async function runOnboardingIfNeeded(){
+  if (!currentUser || !userListData) return;
+  if (userListData.guideSeen !== true){
+    openHelpModal();
+    try{ await mpData.userLists.merge(currentUser.uid, { guideSeen: true }); userListData.guideSeen = true; }catch(e){}
+    const hb = document.getElementById('helpBackdrop');
+    await new Promise(res => { const t = setInterval(() => { if (!hb.classList.contains('show')){ clearInterval(t); res(); } }, 300); });
+  }
+  if (!HOME_TABS.includes(userListData.defaultTab)) openHomeChooser(false);
+  else switchTab(userListData.defaultTab);
+}
+// خ١-ب: معاينة شاشات ٩ و١٠ (معطَّلة حتى ٢/ب و٢/د)
+function openDeletePreview(){
+  document.getElementById('delCntPlaces').textContent = Object.values((myCityListData && myCityListData.categories) || {}).reduce((a, c) => a + ((c.places || []).length), 0) || '—';
+  document.getElementById('delCntTrips').textContent = (typeof userTrips !== 'undefined' && userTrips) ? userTrips.length : '—';
+  document.getElementById('delCntFav').textContent = (typeof favoritePlaces !== 'undefined' && favoritePlaces) ? favoritePlaces.length : '—';
+  delStep(1); openModalById('delBackdrop');
+}
+function delStep(n){
+  [1,2,3].forEach(i => { document.getElementById('delStep' + i).style.display = (i === n) ? '' : 'none'; document.getElementById('delDot' + i).classList.toggle('on', i <= n); });
+  if (n === 2){ const w = document.getElementById('delWord'); w.value = ''; setTimeout(() => w.focus(), 50); }
+}
+function checkDelWord(){ /* ٢/د: يُفعَّل الزر عند مطابقة الكلمة — الآن معاينة فقط (الزر يبقى معطَّلًا) */ }
 
 let signUpInProgress = false; // يمنع فحص onAuthStateChanged من إظهار نافذة اسم زائفة قبل اكتمال حجز الاسم أثناء التسجيل
 let nicknameFlowActive = false; // يمنع تداخل حلقتي اختيار الاسم
 
 async function doSignUp(){
+  // خ١-ب: بوضع الدخول حقل الاسم مخفي — أول ضغطة على "New Account" تبدّل النافذة لوضع التسجيل بدل أن تفشل
+  if (document.getElementById('authNickname').style.display === 'none'){ openAuthModal('signup'); return; }
   mpTrack.hit('signup_start');
   const nickname = document.getElementById('authNickname').value.trim();
   const email = document.getElementById('authEmail').value.trim();
@@ -2592,7 +2746,7 @@ async function enforceNickname(){
   if (!currentUser) return;
   if (signUpInProgress){ logTiming('[NICK] skip: signUpInProgress'); return; }      // التسجيل يحجز الاسم بنفسه — لا نافذة زائفة أثناء ذلك
   if (userListLoadFailed){ logTiming('[NICK] skip: userLists read failed'); return; }    // تعذّر التحقق شبكيًا — لا نحبس المستخدم بخطأ مؤقت
-  if (userListData.nickname){ logTiming('[NICK] ok: nickname="' + userListData.nickname + '"'); updateUserUI(); return; } // خ١: الشارة تُملأ بعد وصول الاسم
+  if (userListData.nickname){ logTiming('[NICK] ok: nickname="' + userListData.nickname + '"'); updateUserUI(); if (!signUpInProgress) runOnboardingIfNeeded(); return; } // خ١: الشارة بعد الاسم · خ١-ب: النبذة والوجهة مرة واحدة
   if (nicknameFlowActive){ logTiming('[NICK] skip: flow already active'); return; }
   logTiming('[NICK] ⚠️ no nickname on server → prompting');
   nicknameFlowActive = true;
@@ -2702,6 +2856,7 @@ function updateUserUI(){
   const chipBtn = document.getElementById('accountChipBtn');
   if (!icon || !label) return;
   if (currentUser){
+    closeGate();
     icon.className = 'fa-solid fa-heart';
     label.textContent = 'Favorites';
     if (myListBtn) myListBtn.style.display = '';
@@ -2783,6 +2938,7 @@ function openAccountModal(){
   document.getElementById('accountName').textContent = nick || '—';
   document.getElementById('accountEmail').textContent = currentUser.email || '—';
   const dro = document.getElementById('drawerOwner'); if (dro) dro.style.display = isOwner ? '' : 'none';
+  const lbl = document.getElementById('prefHomeLabel'); if (lbl) lbl.textContent = (userListData && userListData.defaultTab) || 'Places';
   document.getElementById('accountBackdrop').classList.add('show');
 }
 function closeAccountModal(){
@@ -2863,7 +3019,9 @@ async function loadUserList(){
       customCities: Array.isArray(data.customCities) ? data.customCities : [],
       customCountries: Array.isArray(data.customCountries) ? data.customCountries : [],
       nickname: data.nickname || null,
-      viewCount: data.viewCount || 0
+      viewCount: data.viewCount || 0,
+      guideSeen: data.guideSeen === true,      // خ١-ب: النبذة شوهدت
+      defaultTab: data.defaultTab || null       // خ١-ب: الوجهة الافتراضية
     };
   }catch(e){ userListData = { customCities: [], customCountries: [], nickname: null }; userListLoadFailed = true; }
   try{
@@ -3770,7 +3928,7 @@ function closeHelpModal(){
 // نبذة دليل الاستخدام تُفتح تلقائيًا مرة واحدة: فور إنشاء الحساب الجديد فقط (قرار المالك ١٧ أغسطس).
 // كانت تفتح عند تحميل الصفحة لأي مسجَّل مرة بالجهاز (علم محلي) — أثرها العملي: تظهر بعد التحديث لا بعد التسجيل.
 function openHelpAfterSignUp(){
-  try{ openHelpModal(); }catch(e){}
+  try{ runOnboardingIfNeeded(); }catch(e){}
 }
 
 /* =========================================================
@@ -4357,7 +4515,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k1a-r4 (drawer stacking above the fixed bars)');
+logTiming('BUILD: M2-FRAME-k1b (gate · auth modes · guide once · default destination · password & delete previews)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
@@ -4398,7 +4556,7 @@ logTiming('Script started (t=0 reference)');
   authReadyPromise.then(() => {
     if (!currentUser) {
       // حارس: لو فتح الزائر النافذة بنفسه وبدأ الكتابة قبل اكتمال التحميل، لا نعيد فتحها (كانت تمسح الإيميل/كلمة السر المُدخَلة)
-      if (!document.getElementById('authBackdrop').classList.contains('show')) openAuthModal();
+      if (!document.getElementById('authBackdrop').classList.contains('show')) openGate(); // خ١-ب: البوابة (المشهد ١)
     }
   });
 })();
