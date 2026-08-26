@@ -180,11 +180,11 @@ if (countOcc(prod, 'firebase.appCheck().activate(') > 0) {
   console.log('INFO  prod not yet promoted to A3-L4 (no App Check) — ac guard applied to test only');
 }
 
-// ---------- ٩) M2-DAL-r1: حارس طبقة العزل — خط أساس مجمَّد للنداءات المباشرة ----------
+// ---------- ٩) M2-DAL: حارس طبقة العزل — خط أساس مجمَّد للنداءات المباشرة، سقف لكل ملف ----------
 // يعدّ نداءات المنصة المباشرة خارج الوحدتين المعزولتين (mpTrack · mpData). زيادة عن السقف = لا نشر.
-// خط الأساس: ٢١ أغسطس ٢٠٢٦ = ٨٢ (التأسيس، قياس آلي) · ٢٥ أغسطس ٢٠٢٦ = ٧٧ (هجرة toggleFavorite إلى mpData).
-// السقف يُخفَّض فقط عند كل هجرة ولا يُرفع أبدًا. الملف الذي لا يحوي mpData بعد يُفحص بالسقف القديم (الإنتاج قبل ترقيته).
-const DAL_MAX_WITH_MPDATA = 77;
+// خط الأساس: ٢١ أغسطس ٢٠٢٦ = ٨٢ (التأسيس) · ٢٥ أغسطس = ٧٧ (toggleFavorite) · ٢٦ أغسطس = ٦٢ (toggleSuspendUser · loadMyCityList · saveMyCityList · resolveTripPlaces).
+// سقف مستقل لكل ملف لأن نسخة الاختبار تسبق الإنتاج بدفعة (الاختبار أولًا): يُخفَّض سقف الإنتاج عند ترقيته. السقف يُخفَّض فقط ولا يُرفع أبدًا.
+const DAL_MAX = { [TEST]: 62, [PROD]: 77 };
 const DAL_MAX_LEGACY = 82;
 function sliceModule(s, startNeedle){
   const a = s.indexOf(startNeedle); if (a < 0) return '';
@@ -198,11 +198,12 @@ function countDirect(content){
 }
 for (const [n, s] of [[PROD, prod], [TEST, test]]) {
   const hasDal = countOcc(s, 'const mpData = (function(){') === 1;
-  const max = hasDal ? DAL_MAX_WITH_MPDATA : DAL_MAX_LEGACY;
+  const max = hasDal ? DAL_MAX[n] : DAL_MAX_LEGACY;
   const direct = countDirect(s);
   check(direct <= max, 'direct platform calls outside DAL ' + n + ' = ' + direct + ' (max ' + max + ')');
   console.log('INFO  ' + n + (hasDal ? ' has mpData' : ' legacy (no mpData yet)') + ' — direct calls outside DAL = ' + direct);
 }
+check(DAL_MAX[PROD] >= DAL_MAX[TEST], 'DAL caps consistent (prod cap never below test cap before promotion)');
 
 finish();
 
