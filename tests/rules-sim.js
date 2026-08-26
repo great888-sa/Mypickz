@@ -1,5 +1,6 @@
 // MyPickz — tests/rules-sim.js
-// يختبر firestore.rules (v3.6) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// يختبر firestore.rules (v3.7) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// v3.7 (٢٦ أغسطس ٢٠٢٦ — دفعة الإطار خ٣): + القسم ٢٠ — ٣٩٠ حالة (٣٤٣ + ٤٧): المتابعة · حقول الملف والفجوات ١٥–١٨ · تفضيل الرحلات
 // v3.6 (٢٥ أغسطس ٢٠٢٦ — الشرط الحاجب، ثلاثة قرارات): + القسم ١٩ — ٣٤٣ حالة (٣١٩ + ٢٤):
 //   (١٢) العدّادات لا تنزل تحت الصفر · (٣-ب) userPrivatePlaces + منع مفاتيح الفئات الخاصة بقوائم المدن · (١) احتجاز المشاركة بالاسم (توثيق سلوك بلا تغيير قواعد)
 // v3.5 (٢٤ أغسطس ٢٠٢٦ — الشرط الحاجب): + القسم ١٨ (تقييد معرّف userCityLists عند الإنشاء) — ٣١٩ حالة،
@@ -573,6 +574,79 @@ const no = (label, f) => expect(false, label, f);
   await env.withSecurityRulesDisabled(async (c) => c.firestore().doc('trips/tHeld').update({ sharedWith: [A], sharedWithHeld: [] }));
   await ok('v3.6 (1) trip held-share: recipient allowed after restore', () => a.doc('trips/tHeld').get());
   await no('v3.6 (1) ucl held-share: recipient denied while owner suspended', () => a.doc('userCityLists/cHeld').get());
+
+  // ================= ٢٠) v3.7: المتابعة · حقول الملف المجتمعي والفجوة ١٥ · تفضيل الرحلات (٢٦ أغسطس ٢٠٢٦) =================
+  const C = 'curatorC';   // منتقٍ (ملف عام)
+  const c = env.authenticatedContext(C).firestore();
+  await env.withSecurityRulesDisabled(async (x) => {
+    const db = x.firestore();
+    await db.doc(`communityProfiles/${C}`).set({ hasAnyPublicContent: true, viewCount: 3, totalFavoriteCount: 1, followerCount: 0 });
+    await db.doc(`communityProfiles/${A}`).set({ hasAnyPublicContent: true, viewCount: 2, totalFavoriteCount: 0, followerCount: 0 });
+    await db.doc(`follows/${B}_${C}`).set({ followerUid: B, curatorUid: C, at: 1 });
+    await db.doc(`follows/${S}_${C}`).set({ followerUid: S, curatorUid: C, at: 1 });
+    await db.doc('trips/tCpub').set({ ownerId: C, public: true, sharedWith: [], name: 'C public', favoriteCount: 0 });
+    await db.doc('trips/tCpriv').set({ ownerId: C, public: false, sharedWith: [], name: 'C private', favoriteCount: 0 });
+  });
+
+  // --- (١) المتابعة ---
+  await ok('v3.7 follow create self allow', () => a.doc(`follows/${A}_${C}`).set({ followerUid: A, curatorUid: C, at: 1 }));
+  await no('v3.7 follow create with OTHER prefix deny', () => a.doc(`follows/${B}_${A}`).set({ followerUid: A, curatorUid: A, at: 1 }));
+  await no('v3.7 follow create self-follow deny', () => a.doc(`follows/${A}_${A}`).set({ followerUid: A, curatorUid: A, at: 1 }));
+  await no('v3.7 follow create suspended deny', () => s.doc(`follows/${S}_${A}`).set({ followerUid: S, curatorUid: A, at: 1 }));
+  await no('v3.7 follow create curatorUid mismatch deny', () => a.doc(`follows/${A}_${B}`).set({ followerUid: A, curatorUid: C, at: 1 }));
+  await no('v3.7 follow create followerUid mismatch deny', () => a.doc(`follows/${A}_${B}`).set({ followerUid: B, curatorUid: B, at: 1 }));
+  await no('v3.7 follow create extra field deny', () => a.doc(`follows/${A}_${B}`).set({ followerUid: A, curatorUid: B, email: 'x' }));
+  await ok('v3.7 follow read own (follower) allow', () => a.doc(`follows/${A}_${C}`).get());
+  await ok('v3.7 follow read by CURATOR allow (invariant 10: relation visible to both sides)', () => c.doc(`follows/${A}_${C}`).get());
+  await no('v3.7 follow read by other user deny', () => b.doc(`follows/${A}_${C}`).get());
+  await no('v3.7 follow read guest deny', () => guest.doc(`follows/${A}_${C}`).get());
+  await ok('v3.7 follow read app owner allow', () => owner.doc(`follows/${A}_${C}`).get());
+  await ok('v3.7 follow query my followers (curator) allow', () => c.collection('follows').where('curatorUid', '==', C).get());
+  await ok('v3.7 follow query who I follow (follower) allow', () => a.collection('follows').where('followerUid', '==', A).get());
+  await no('v3.7 follow query followers of OTHER curator deny', () => a.collection('follows').where('curatorUid', '==', C).get());
+  await no('v3.7 follow update deny (even by follower)', () => a.doc(`follows/${A}_${C}`).update({ at: 2 }));
+  await no('v3.7 follow delete by curator deny', () => c.doc(`follows/${A}_${C}`).delete());
+  await ok('v3.7 follow delete own by suspended allow (withdrawal)', () => s.doc(`follows/${S}_${C}`).delete());
+  await ok('v3.7 follow delete app owner allow', () => owner.doc(`follows/${B}_${C}`).delete());
+
+  // --- (٢)(٣) الملف المجتمعي: عدّاد المتابعين · الشارة · الحقول · الفجوة ١٥ ---
+  await ok('v3.7 cp followerCount +1 by other allow', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 1 }));
+  await no('v3.7 cp followerCount +2 deny', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 3 }));
+  await no('v3.7 cp followerCount 1 -> -1 deny (floor)', () => a.doc(`communityProfiles/${C}`).update({ followerCount: -1 }));
+  await no('v3.7 cp SELF bump viewCount deny (gap 15 closed)', () => c.doc(`communityProfiles/${C}`).update({ viewCount: 999 }));
+  await no('v3.7 cp SELF bump followerCount deny (gap 15)', () => c.doc(`communityProfiles/${C}`).update({ followerCount: 999 }));
+  await no('v3.7 cp SELF set verified deny', () => c.doc(`communityProfiles/${C}`).update({ verified: true }));
+  await no('v3.7 cp SELF create with verified deny', () => env.authenticatedContext('newV').firestore().doc('communityProfiles/newV').set({ hasAnyPublicContent: false, verified: true }));
+  await ok('v3.7 cp OWNER set verified allow', () => owner.doc(`communityProfiles/${C}`).update({ verified: true }));
+  await ok('v3.7 cp self set bio/displayName/contactUrl/showFollowerCount allow', () => c.doc(`communityProfiles/${C}`).update({ bio: 'Food and coffee in Riyadh', displayName: 'Khalid', contactUrl: 'https://instagram.com/khalid', showFollowerCount: true }));
+  await no('v3.7 cp self bio over 200 chars deny', () => c.doc(`communityProfiles/${C}`).update({ bio: 'x'.repeat(201) }));
+  await no('v3.7 cp self contactUrl not https deny', () => c.doc(`communityProfiles/${C}`).update({ contactUrl: 'http://evil.example' }));
+  await ok('v3.7 cp self totalFavoriteCount recompute still allowed (documented exception — syncCommunityProfile)', () => c.doc(`communityProfiles/${C}`).update({ totalFavoriteCount: 4 }));
+
+  // --- (٤) تفضيل الرحلات ---
+  await ok('v3.7 trip favoriteCount +1 on public by other allow', () => a.doc('trips/tCpub').update({ favoriteCount: 1 }));
+  await no('v3.7 trip favoriteCount +1 on PRIVATE trip deny', () => a.doc('trips/tCpriv').update({ favoriteCount: 1 }));
+  await no('v3.7 trip favoriteCount +2 deny', () => a.doc('trips/tCpub').update({ favoriteCount: 3 }));
+  await no('v3.7 trip favoriteCount 1 -> -1 deny (floor)', () => a.doc('trips/tCpub').update({ favoriteCount: -1 }));
+  await no('v3.7 trip favoriteCount by suspended deny', () => s.doc('trips/tCpub').update({ favoriteCount: 2 }));
+
+  // --- (٥) الفجوة ١٦: صاحب المحتوى لا يضخّم عدّاد محتواه ---
+  await no('v3.7 gap16 ucl OWNER bumps own favoriteCount deny', () => b.doc('userCityLists/cBpub').update({ favoriteCount: 99 }));
+  await ok('v3.7 gap16 ucl owner save with UNCHANGED favoriteCount allow (merge same value)', () => b.doc('userCityLists/cBpub').set({ favoriteCount: 1, note: 2 }, { merge: true }));
+  await no('v3.7 gap16 ucl create with favoriteCount 5 deny', () => a.doc(`userCityLists/${A}_milan`).set({ ownerId: A, public: false, sharedWith: [], favoriteCount: 5 }));
+  await ok('v3.7 gap16 ucl create with favoriteCount 0 allow', () => a.doc(`userCityLists/${A}_milan`).set({ ownerId: A, public: false, sharedWith: [], favoriteCount: 0 }));
+  await no('v3.7 gap16 trip OWNER bumps own favoriteCount deny', () => c.doc('trips/tCpub').update({ favoriteCount: 50 }));
+  await no('v3.7 gap16 trip create with favoriteCount 5 deny', () => a.doc('trips/tA5').set({ ownerId: A, public: true, sharedWith: [], favoriteCount: 5 }));
+  await no('v3.7 gap16 userLists SELF sets favoriteCount deny', () => b.doc(`userLists/${B}`).update({ favoriteCount: 77 }));
+
+  // --- (٦) الفجوة ١٧: عدّاد المتابعين مربوط بالعلاقة ---
+  await no('v3.7 gap17 followerCount +1 by user WITHOUT follow doc deny', () => b.doc(`communityProfiles/${C}`).update({ followerCount: 2 }));
+  await no('v3.7 gap17 followerCount -1 by follower WHILE follow doc exists deny', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 0 }));
+  await env.withSecurityRulesDisabled(async (x) => x.firestore().doc(`follows/${A}_${C}`).delete());
+  await ok('v3.7 gap17 followerCount -1 after unfollow (doc absent) allow', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 0 }));
+
+  // --- (٧) الفجوة ١٨: لا متابعة لمعرّف بلا ملف ---
+  await no('v3.7 gap18 follow create to uid without communityProfile deny', () => a.doc(`follows/${A}_nobody123`).set({ followerUid: A, curatorUid: 'nobody123', at: 1 }));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
