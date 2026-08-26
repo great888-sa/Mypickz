@@ -479,20 +479,18 @@
     </div>
   </div>
 
-  <!-- خ١-ب: البوابة الإلزامية (المشهد ١) — زران منفصلان؛ رابط السياسة باب مغلق حتى ٢/هـ -->
-  <div class="modal-backdrop" id="gateBackdrop">
-    <div class="modal" style="text-align:center;">
-      <div class="gate-eyebrow">MyPickz</div>
-      <h3 style="margin-top:2px;">Welcome 👋</h3>
-      <p style="color:var(--ink-soft); font-size:13px; margin:0 0 14px;">Your places, your trips — all in one spot.</p>
-      <button class="btn btn-brass" style="width:100%;" onclick="openAuthModal('signin')">Sign In</button>
-      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="openAuthModal('signup')">Create Account</button>
-      <div id="gatePolicyLink" style="display:none; margin-top:12px;"><button type="button" class="btn btn-ghost" style="border:none; font-size:11.5px; padding:4px 8px;" onclick="openPolicyModal('policy')">Privacy Policy</button></div>
-    </div>
-  </div>
-
+  <!-- خ١-ب: البوابة (المشهد ١) والنافذة (المشهد ٢) مشهدان داخل العنصر نفسه — يحفظ عقد حارس التشغيل (authBackdrop يُفتح للزائر) -->
   <div class="modal-backdrop" id="authBackdrop">
     <div class="modal">
+      <div id="authGateView" style="text-align:center;">
+        <div class="gate-eyebrow">MyPickz</div>
+        <h3 style="margin-top:2px;">Welcome 👋</h3>
+        <p style="color:var(--ink-soft); font-size:13px; margin:0 0 14px;">Your places, your trips — all in one spot.</p>
+        <button class="btn btn-brass" style="width:100%;" onclick="openAuthModal('signin')">Sign In</button>
+        <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="openAuthModal('signup')">Create Account</button>
+        <div id="gatePolicyLink" style="display:none; margin-top:12px;"><button type="button" class="btn btn-ghost" style="border:none; font-size:11.5px; padding:4px 8px;" onclick="openPolicyModal('policy')">Privacy Policy</button></div>
+      </div>
+      <div id="authFormView" style="display:none;">
       <h3 id="authTitle">👤 Welcome back</h3>
       <p id="authSubtitle" style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">Sign in to your account</p>
       <input type="text" id="authNickname" class="modal-input" placeholder="Username (shown to other users)" autocomplete="nickname" autocapitalize="off" spellcheck="false">
@@ -509,7 +507,8 @@
       </div>
       <button type="button" class="btn btn-ghost" style="width:100%; margin-top:10px;" disabled title="Available when Google sign-in arrives">Continue with Google <span class="soon-tag">Soon</span></button>
       <p id="authVerifyHint" style="display:none; font-size:10.5px; color:var(--ink-soft); margin-top:8px;">We'll email you a verification link after sign-up.</p>
-      <p style="font-size:10.5px; color:var(--ink-soft); margin-top:10px;">Sign up or log in to continue exploring</p>
+      <button type="button" class="btn btn-ghost" style="width:100%; margin-top:8px; border:none; font-size:11.5px;" onclick="openGate()">← Back</button>
+      </div>
     </div>
   </div>
 
@@ -2599,8 +2598,12 @@ function closeStatsModal(){
 }
 
 // خ١-ب: البوابة (المشهد ١) تسبق نافذة الدخول/التسجيل (المشهد ٢) — النافذة موحَّدة (قرار المالك: الاسم داخلها)، والعنوان بحسب الزر
-function openGate(){ document.getElementById('gateBackdrop').classList.add('show'); }
-function closeGate(){ document.getElementById('gateBackdrop').classList.remove('show'); }
+function openGate(){
+  document.getElementById('authGateView').style.display = '';
+  document.getElementById('authFormView').style.display = 'none';
+  document.getElementById('authBackdrop').classList.add('show');
+}
+function closeGate(){ document.getElementById('authBackdrop').classList.remove('show'); }
 function openAuthModal(mode){
   const errEl = document.getElementById('authError');
   errEl.textContent = '';
@@ -2611,13 +2614,14 @@ function openAuthModal(mode){
   document.getElementById('authTitle').textContent = signup ? '✨ Create your account' : '👤 Welcome back';
   document.getElementById('authSubtitle').textContent = signup ? 'Pick a username, then your email and a password (8+ characters)' : 'Sign in to your account';
   document.getElementById('authNickname').style.display = signup ? '' : 'none';
-  closeGate();
+  document.getElementById('authGateView').style.display = 'none';
+  document.getElementById('authFormView').style.display = '';
   document.getElementById('authBackdrop').classList.add('show');
   setTimeout(() => document.getElementById(signup ? 'authNickname' : 'authEmail').focus(), 50);
 }
 function closeAuthModal(){
+  if (!currentUser){ openGate(); return; } // البوابة إلزامية: إغلاق النموذج بلا دخول يعيد مشهد البوابة
   document.getElementById('authBackdrop').classList.remove('show');
-  if (!currentUser) openGate(); // البوابة إلزامية: إغلاق النافذة بلا دخول يعيد البوابة
 }
 function openModalById(id){ document.getElementById(id).classList.add('show'); }
 function closeModalById(id){ document.getElementById(id).classList.remove('show'); }
@@ -4515,7 +4519,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k1b (gate · auth modes · guide once · default destination · password & delete previews)');
+logTiming('BUILD: M2-FRAME-k1b-r2 (gate as a view inside the auth modal — runtime guard contract kept)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
