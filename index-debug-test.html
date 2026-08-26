@@ -904,6 +904,20 @@ let sectionStatus = {};  // (لكل مدينة) { sectionTitle: true/false } —
 
 // ===== قالب التصنيفات — مشترك بين كل المدن (تعديله بأي مدينة ينعكس على الجميع) =====
 let customItems = [];      // [{id, section, icon, name}] — تصنيفات فرعية مضافة يدويًا
+
+// ٢٦ أغسطس ٢٠٢٦ — القرار ٣-ب: التصنيف "خاص" إذا كان تحت قسم خاص بالقالب، أو تصنيفًا مخصصًا أُضيف تحت قسم خاص.
+// القواعد تحرس المفاتيح السبعة المعرَّفة؛ المخصصة يحرسها هذا السطر (قيد كود موثَّق بالمصفوفة M4.11).
+function isPrivateCategoryId(id){
+  if (!id) return false;
+  if (DATA.some(s => s.ownerOnly && s.items.some(i => i.id === id))) return true;
+  const c = customItems.find(x => x.id === id);
+  return !!(c && DATA.some(s => s.ownerOnly && s.title === c.section));
+}
+function splitCategories(cats){
+  const pub = {}, priv = {};
+  Object.keys(cats || {}).forEach(k => { (isPrivateCategoryId(k) ? priv : pub)[k] = cats[k]; });
+  return { pub, priv };
+}
 let sectionOverrides = {}; // { sectionTitle: {name, icon} } — تخصيص اسم/أيقونة القسم الرئيسي
 let itemOrder = {};        // { sectionTitle: [itemId, itemId, ...] } — ترتيب التصنيفات الفرعية
 let itemOverrides = {};    // { itemId: {name, icon} } — تخصيص اسم/أيقونة تصنيف فرعي
@@ -1121,7 +1135,10 @@ const mpTrack = (function(){
    ========================================================= */
 const mpData = (function(){
   const inc = function(n){ return firebase.firestore.FieldValue.increment(n); };
+  const del = function(){ return firebase.firestore.FieldValue.delete(); };
   const col = function(name){ return db.collection(name); };
+  // القرار ١٢: رفض النقص عند الصفر (الأرضية بالقواعد ٣٫٦) يُبتلع — السحب تم والعدّاد صفر؛ غيره يُرمى
+  const swallowFloor = function(e, delta){ if (delta < 0 && e && e.code === 'permission-denied') return; throw e; };
   return {
     favorites: {
       save: function(uid, items){
@@ -1137,8 +1154,8 @@ const mpData = (function(){
           await ref.update({ count: inc(delta) });
         }catch(e){
           // المنصة تقيّم القواعد قبل فحص الوجود: تحديث مستند غائب يُرفض صلاحيةً (permission-denied) لا "غير موجود".
-          // لذلك نتحقق بقراءة واحدة على مسار الفشل فقط؛ غائب + زيادة ⇒ إنشاء كامل، وإلا يُرمى الخطأ الأصلي.
-          if (delta <= 0) throw e;
+          // لذلك نتحقق بقراءة واحدة على مسار الفشل فقط؛ غائب + زيادة ⇒ إنشاء كامل، وإلا يُرمى الخطأ الأصلي (أو يُبتلع إن كان أرضية).
+          if (delta <= 0) return swallowFloor(e, delta);
           const snap = await ref.get();
           if (snap.exists) throw e;
           await ref.set({ name: name, url: url, count: 1 });
@@ -1149,17 +1166,79 @@ const mpData = (function(){
       flag: function(uid, field){
         const d = {}; d[field] = true;
         return col('users').doc(uid).set(d, { merge: true });
-      }
+      },
+      merge: function(uid, data){ return col('users').doc(uid).set(data, { merge: true }); }
     },
     lists: {
       bumpFavorite: function(ownerUid, cityId, delta){
-        return col('userCityLists').doc(ownerUid + '_' + cityId).set({ favoriteCount: inc(delta) }, { merge: true });
+        return col('userCityLists').doc(ownerUid + '_' + cityId).set({ favoriteCount: inc(delta) }, { merge: true }).catch(e => swallowFloor(e, delta));
       }
     },
     profiles: {
       bumpFavorite: function(ownerUid, delta){
-        return col('communityProfiles').doc(ownerUid).set({ totalFavoriteCount: inc(delta) }, { merge: true });
+        return col('communityProfiles').doc(ownerUid).set({ totalFavoriteCount: inc(delta) }, { merge: true }).catch(e => swallowFloor(e, delta));
+      },
+      merge: function(uid, data){ return col('communityProfiles').doc(uid).set(data, { merge: true }); }
+    },
+    // v3.6 (القرار ٣-ب): المجموعة الخاصة — قراءتها وكتابتها لصاحبها وحده
+    privatePlaces: {
+      get: async function(uid, cityId){
+        const d = await col('userPrivatePlaces').doc(uid + '_' + cityId).get();
+        return d.exists ? (d.data().categories || {}) : {};
+      },
+      save: function(uid, cityId, categories){
+        return col('userPrivatePlaces').doc(uid + '_' + cityId).set({ categories: categories, updatedAt: Date.now() }, { merge: true });
       }
+    },
+    cityLists: {
+      get: async function(uid, cityId){
+        const d = await col('userCityLists').doc(uid + '_' + cityId).get();
+        return d.exists ? d.data() : null;
+      },
+      save: function(uid, cityId, data){
+        return col('userCityLists').doc(uid + '_' + cityId).set(data, { merge: true });
+      },
+      // ترحيل: حذف مفاتيح خاصة موروثة من مستند القائمة بمسار منقوط (القواعد تجيز الحذف — الإضافة وحدها تُرفض)
+      removeKeys: function(uid, cityId, keys){
+        const u = {}; keys.forEach(k => { u['categories.' + k] = del(); });
+        return col('userCityLists').doc(uid + '_' + cityId).update(u);
+      },
+      byOwner: function(uid){ return col('userCityLists').where('ownerId', '==', uid).get(); }
+    },
+    cities: {
+      links: async function(cityId){
+        const d = await col('cities').doc(cityId).get();
+        return (d.exists && d.data().links) || {};
+      }
+    },
+    trips: {
+      byOwner: function(uid){ return col('trips').where('ownerId', '==', uid).get(); }
+    },
+    suspensions: {
+      set: function(uid, data){ return col('suspensions').doc(uid).set(data); },
+      remove: function(uid){ return col('suspensions').doc(uid).delete(); }
+    },
+    // القرار ١ (٢٦ أغسطس): الإيقاف احتجاز كامل (العام + المشاركة بالاسم)، والرفع استعادة كاملة — البوابة البشرية هي قرار الرفع
+    holdOrRestore: async function(snap, hold){
+      if (snap.empty) return;
+      const batch = db.batch();
+      snap.forEach(doc => {
+        const d = doc.data();
+        const u = { suspended: hold };
+        if (hold){
+          u.sharedWithHeld = Array.isArray(d.sharedWith) ? d.sharedWith : [];
+          u.sharedWith = [];
+          u.publicHeld = d.public === true;
+          u.public = false;
+        } else {
+          u.sharedWith = Array.isArray(d.sharedWithHeld) ? d.sharedWithHeld : (Array.isArray(d.sharedWith) ? d.sharedWith : []);
+          u.sharedWithHeld = del();
+          u.public = d.publicHeld === true;
+          u.publicHeld = del();
+        }
+        batch.update(doc.ref, u);
+      });
+      await batch.commit();
     }
   };
 })();
@@ -1801,14 +1880,15 @@ function findPlaceInLinksById(linksObj, subcatId, placeId){
 // الحل الموحّد: يجلب بيانات كل مكان بكل فئة بكل يوم بالرحلة، أيًا كان مصدره — يُستدعى فقط لحظة فتح رحلة معيّنة
 async function resolveTripPlaces(trip){
   let ownerLinks = {};
-  try{
-    const cityDoc = await db.collection('cities').doc(trip.cityId).get();
-    ownerLinks = (cityDoc.exists && cityDoc.data().links) || {};
-  }catch(e){}
+  try{ ownerLinks = await mpData.cities.links(trip.cityId); }catch(e){}
   let myLinks = {};
   try{
-    const myDoc = await db.collection('userCityLists').doc(trip.ownerId + '_' + trip.cityId).get();
-    myLinks = (myDoc.exists && myDoc.data().categories) || {};
+    const myDoc = await mpData.cityLists.get(trip.ownerId, trip.cityId);
+    myLinks = Object.assign({}, (myDoc && myDoc.categories) || {});
+    // ٢٦ أغسطس (٣-ب): الأماكن الخاصة تُحل لصاحب الرحلة وحده من مستنده الخاص؛ لغيره تبقى "غير متاحة"
+    if (currentUser && trip.ownerId === currentUser.uid){
+      try{ Object.assign(myLinks, await mpData.privatePlaces.get(currentUser.uid, trip.cityId)); }catch(e){}
+    }
   }catch(e){}
 
   const communityUids = new Set();
@@ -1818,8 +1898,8 @@ async function resolveTripPlaces(trip){
   const communityLinksByUid = {};
   for (const uid of communityUids){
     try{
-      const d = await db.collection('userCityLists').doc(uid + '_' + trip.cityId).get();
-      communityLinksByUid[uid] = (d.exists && d.data().categories) || {};
+      const d = await mpData.cityLists.get(uid, trip.cityId);
+      communityLinksByUid[uid] = (d && d.categories) || {};
     }catch(e){ communityLinksByUid[uid] = {}; }
   }
   function resolveRef(ref){
@@ -2562,20 +2642,35 @@ async function loadMyCityList(cityId){
   if (!currentUser || !cityId){ myCityListData = null; myCityListLoadedFor = null; return; }
   if (myCityListLoadedFor === cityId && myCityListData) return; // محمَّلة أصلًا، لا داعي لإعادة القراءة
   try{
-    const doc = await withAuthRetry(() => db.collection('userCityLists').doc(myCityListDocId(cityId)).get());
-    const data = doc.exists ? doc.data() : {};
+    const data = (await withAuthRetry(() => mpData.cityLists.get(currentUser.uid, cityId))) || {};
+    let priv = {};
+    try{ priv = await mpData.privatePlaces.get(currentUser.uid, cityId); }catch(e){ priv = {}; }
+    const raw = (data.categories && typeof data.categories === 'object') ? data.categories : {};
+    // ٢٦ أغسطس (٣-ب) — ترحيل مرة واحدة: مفاتيح خاصة موروثة داخل مستند القائمة ⇒ تُنقل للمستند الخاص وتُحذف من القائمة
+    // (يُتخطى للموقوف — القواعد ترفض كتابته؛ يبقى الدمج بالذاكرة فقط)
+    const split = splitCategories(raw);
+    const legacyKeys = Object.keys(split.priv);
+    if (legacyKeys.length){
+      priv = { ...split.priv, ...priv };
+      if (!currentUserSuspended){
+        try{
+          await mpData.privatePlaces.save(currentUser.uid, cityId, priv);
+          await mpData.cityLists.removeKeys(currentUser.uid, cityId, legacyKeys);
+        }catch(e){}
+      }
+    }
     myCityListData = {
       public: data.public === true,
       sharedWith: Array.isArray(data.sharedWith) ? data.sharedWith : [],
       sharedWithNames: (data.sharedWithNames && typeof data.sharedWithNames === 'object') ? data.sharedWithNames : {},
       favoriteCount: data.favoriteCount || 0,
-      categories: (data.categories && typeof data.categories === 'object') ? data.categories : {}
+      categories: { ...split.pub, ...priv }
     };
-    // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة — لهذي المدينة فقط الآن، بدل كل المدن دفعة وحدة
-    if (backfillPlaceIds(myCityListData.categories)){
-      db.collection('userCityLists').doc(myCityListDocId(cityId)).set(
-        { ownerId: currentUser.uid, cityId, categories: myCityListData.categories }, { merge:true }
-      ).catch(()=>{});
+    // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة — لهذي المدينة فقط
+    if (backfillPlaceIds(myCityListData.categories) && !currentUserSuspended){
+      const s2 = splitCategories(myCityListData.categories);
+      mpData.cityLists.save(currentUser.uid, cityId, { ownerId: currentUser.uid, cityId, categories: s2.pub }).catch(()=>{});
+      if (Object.keys(s2.priv).length) mpData.privatePlaces.save(currentUser.uid, cityId, s2.priv).catch(()=>{});
     }
   }catch(e){
     myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, favoriteCount:0, categories:{} };
@@ -2603,14 +2698,14 @@ async function saveMyCityList(){
     showToast(`Only Google Maps links are allowed — removed ${invalidCount} invalid link(s)`);
   }
   try{
-    await db.collection('userCityLists').doc(myCityListDocId(myListCityId)).set(
-      { ownerId: currentUser.uid, cityId: myListCityId, nickname: userListData.nickname || null, ...myCityListData },
-      { merge:true }
-    );
+    // ٢٦ أغسطس (٣-ب): الفئات الخاصة لا تدخل مستند القائمة أبدًا — مستندان: القائمة (عام/مشارَك) والخاص (لصاحبه وحده)
+    const { pub, priv } = splitCategories(myCityListData.categories);
+    const { categories, ...meta } = myCityListData;
+    await mpData.cityLists.save(currentUser.uid, myListCityId,
+      { ownerId: currentUser.uid, cityId: myListCityId, nickname: userListData.nickname || null, ...meta, categories: pub });
+    if (Object.keys(priv).length) await mpData.privatePlaces.save(currentUser.uid, myListCityId, priv);
     const hasRealPlace = Object.values(myCityListData.categories).some(entry => (entry.places||[]).some(p => p.url && p.name));
-    if (hasRealPlace){
-      db.collection('users').doc(currentUser.uid).set({ hasMyListActivity: true }, { merge:true }).catch(()=>{});
-    }
+    if (hasRealPlace) mpData.users.flag(currentUser.uid, 'hasMyListActivity').catch(()=>{});
   }catch(e){ showToast('Could not save your list'); }
 }
 
@@ -3135,7 +3230,7 @@ function renderMyListModal(){
             if (p.area && p.area.trim()) html += `<div style="font-size:10.5px; color:var(--ink-soft); margin-bottom:2px;">📍 ${p.area}</div>`;
             html += `<div style="display:flex; align-items:center; gap:8px;">
               <a class="place-link" data-mpsrc="app" data-mpcat="${item.id||''}" data-mppersonal="${(section.ownerOnly || (item.id&&item.id.indexOf('personal_')===0))?1:0}" style="flex:1; font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${p.name} ←</a>
-              ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="font-size:11px; color:var(--brass);" onclick="addPlaceToTrip('mylist', '${myListCityId}', '${item.id}', '${p.id}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
+              ${(activeTripId && p.id && !isPrivateCategoryId(item.id)) ? `<button type="button" class="remove-btn" style="font-size:11px; color:var(--brass);" onclick="addPlaceToTrip('mylist', '${myListCityId}', '${item.id}', '${p.id}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})" title="Edit"><i class="fa-solid fa-pen"></i></button>
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})" title="Remove"><i class="fa-solid fa-trash"></i></button>
             </div>`;
@@ -3675,40 +3770,19 @@ async function toggleSuspendUser(uid){
   if (!u) return;
   const newVal = !u.suspended;
   try{
-    // v3 (أ-٢ الدفعة ٣): مصدر الحقيقة صار suspensions/{uid} — وجود المستند = إيقاف. يكتبه المالك حصرًا.
-    // نكتب أيضًا users.suspended مؤقتًا للتوافق مع القواعد الحالية حتى تُنشر v3 (يُزال بالدفعة ٤).
+    // v3: مصدر الحقيقة suspensions/{uid} — وجود المستند = إيقاف. users.suspended كتابة انتقالية (تُزال بدفعة ٢/ز).
+    if (newVal) await mpData.suspensions.set(uid, { at: Date.now(), by: currentUser.uid, email: u.email || '' });
+    else await mpData.suspensions.remove(uid);
+    await mpData.users.merge(uid, { suspended: newVal }).catch(()=>{});
+    // ٢٦ أغسطس (القرار ١): الإيقاف يحتجز العام والمشاركة بالاسم على كل قوائم المستخدم ورحلاته، والرفع يستعيدهما كما كانا —
+    // لا محو ولا فعل يدوي؛ البوابة البشرية هي قرار الرفع (المالك يراجع المحتوى قبله — وصفة الإيقاف بدليل التشغيل)
+    await mpData.holdOrRestore(await mpData.cityLists.byOwner(uid), newVal);
+    try{ await mpData.holdOrRestore(await mpData.trips.byOwner(uid), newVal); }catch(e){}
     if (newVal){
-      await db.collection('suspensions').doc(uid).set({ at: Date.now(), by: currentUser.uid, email: u.email || '' });
+      await mpData.profiles.merge(uid, { hasAnyPublicCity: false, hasAnyPublicContent: false, publicCityIds: [] }).catch(()=>{});
     } else {
-      await db.collection('suspensions').doc(uid).delete();
+      await syncCommunityProfileFor(uid); // الرفع: نعيد حساب حالة الظهور الحقيقية بعد الاستعادة
     }
-    await db.collection('users').doc(uid).set({ suspended: newVal }, { merge:true }).catch(()=>{});
-    // الإيقاف/الرفع يطبَّق على كل مدن المستخدم دفعة وحدة (مستند مستقل لكل مدينة بعد إعادة الهيكلة)
-    const citySnap = await db.collection('userCityLists').where('ownerId','==',uid).get();
-    if (!citySnap.empty){
-      const batch = db.batch();
-      citySnap.forEach(doc => {
-        const update = { suspended: newVal };
-        if (newVal) update.public = false; // الإيقاف يخفي المشاركة العامة فورًا لكل مدنه
-        batch.update(doc.ref, update);
-      });
-      await batch.commit();
-    }
-    if (newVal){
-      // إيقاف المستخدم يخفيه فورًا من نتائج الاكتشاف، بغض النظر عن حالة كل مدينة لحالها
-      await db.collection('communityProfiles').doc(uid).set({ hasAnyPublicCity: false, hasAnyPublicContent: false, publicCityIds: [] }, { merge:true }).catch(()=>{});
-    } else {
-      await syncCommunityProfileFor(uid); // رفع الإيقاف: نعيد حساب حالة المشاركة الحقيقية بدل افتراض إعادتها تلقائيًا
-    }
-    // الإيقاف/الرفع يشمل أيضًا كل رحلات المستخدم — حقل suspended منفصل (بنفس نمط userCityLists)، بدون محو Public/sharedWith الفعلية (تُسترجَع تلقائيًا عند رفع الإيقاف)
-    try{
-      const tripSnap = await db.collection('trips').where('ownerId','==',uid).get();
-      if (!tripSnap.empty){
-        const tripBatch = db.batch();
-        tripSnap.forEach(doc => tripBatch.update(doc.ref, { suspended: newVal }));
-        await tripBatch.commit();
-      }
-    }catch(e){}
     u.suspended = newVal;
     showToast(newVal ? 'User suspended' : 'User unsuspended');
     await loadCommunityLists();
@@ -3756,7 +3830,7 @@ function render(){
 
   // شريط تنقل سريع بين الأقسام — يظهر بس لو فيه أكثر من قسم فيه محتوى
   const visibleSections = DATA.filter(section => {
-    if (!isOwner && section.ownerOnly) return false;
+    if (section.ownerOnly) return false; // ٢٦ أغسطس (الاكتشاف ١٣): الأقسام الخاصة ليست جزءًا من الدليل — الدليل محتوى عام بطبيعته
     if (!editMode && sectionStatus[section.title] === false) return false;
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = section.items.concat(sectionCustom);
@@ -3774,7 +3848,7 @@ function render(){
   }
 
   DATA.forEach((section, sIndex) => {
-    if (!isOwner && section.ownerOnly) return;
+    if (section.ownerOnly) return; // ٢٦ أغسطس (الاكتشاف ١٣): الأقسام الخاصة ليست جزءًا من الدليل
     if (!editMode && sectionStatus[section.title] === false) return;
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = orderedItems(section, section.items.concat(sectionCustom));
@@ -4027,7 +4101,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: M2-DAL-r2 (mpData nucleus + placeCounts create-on-miss)');
+logTiming('BUILD: M2-DAL-r3 (hold/restore · private split · floors · catalog private sections removed)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
