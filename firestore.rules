@@ -1,3 +1,11 @@
+// firestore rules v3.7 — دفعة الإطار خ٣ (٢٦ أغسطس ٢٠٢٦، أقرّ المالك السطور): v3.6 + أربعة قرارات:
+//   (١) المتابعة: مجموعة follows/{followerUid}_{curatorUid} — الإنشاء والحذف للمتابِع، القراءة لطرفيها (المتابِع والمنتقي بالهوية العلنية) + المالك، لا تعديل. الثابت ١٠.
+//   (٢) الملف المجتمعي: verified للمالك حصرًا · followerCount ±١ بأرضية من الآخرين · bio/contactUrl/displayName/showFollowerCount لصاحبه بحدود
+//   (٣) الفجوة ١٥: التعديل الذاتي لا يمس viewCount ولا followerCount ولا verified (totalFavoriteCount استثناء موثَّق: يعيد صاحبه حسابه من قوائمه — syncCommunityProfile)
+//   (٤) تفضيل الرحلات (بديل "مهتم"): trips.favoriteCount ±١ بأرضية على الرحلات العامة من مسجَّل غير موقوف
+//   (٥) الفجوة ١٦ (قائمة منذ ٣٫١): صاحب القائمة/الرحلة لا يكتب favoriteCount ذاتيًا (تعديل) ويبدأ بصفر (إنشاء) — قوائم المدن · قوائم المستخدمين · الرحلات
+//   (٦) الفجوة ١٧: عدّاد المتابعين مربوط بالعلاقة — الزيادة بوجود مستند المتابعة للطالب والنقص بغيابه · (٧) الفجوة ١٨: لا متابعة لمعرّف بلا ملف مجتمعي
+//   الامتحان: tests/rules-sim.js — ٣٩٠ حالة (٣٤٣ + ٤٧) بنفس الكوميت · آمنة على الكود القائم (حفظ قائمتي يرسل favoriteCount غير متغيّر) ⇒ تُنشر قبل خ٤
 // firestore rules v3.6 — المحطة ٢ / الشرط الحاجب (٢٥ أغسطس ٢٠٢٦، أقرّ المالك سطور المصفوفة الثلاثة): v3.5 + ثلاثة قرارات:
 //   (١٢) العدّادات العامة لا تنزل تحت الصفر: النقص بواحد مشروط بنتيجة ≥ ٠ — userLists/userCityLists.favoriteCount · communityProfiles.totalFavoriteCount · placeFavoriteCounts.count
 //   (٣-ب) فصل الفئات الخاصة: مجموعة جديدة userPrivatePlaces/{uid}_{cityId} — القراءة والإنشاء والتعديل لصاحبها فقط (لا للمالك)، الحذف له وللمالك، الموقوف يقرأ ويحذف فقط؛
@@ -346,8 +354,10 @@ service cloud.firestore {
       allow read: if isSignedIn() && (request.auth.uid == userId || resource.data.public == true);
       // v3: الحذف مفصول — نفس المبرر
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
+      // v3.7 (الفجوة ١٦): صاحب القائمة لا يكتب favoriteCount ذاتيًا — إنشاء بصفر/غائب، وتعديل لا يمسه
       allow create, update: if isOwner()
-        || (isSignedIn() && request.auth.uid == userId && !isSuspended())
+        || (isSignedIn() && request.auth.uid == userId && !isSuspended()
+            && request.resource.data.get('favoriteCount', 0) == (resource == null ? 0 : resource.data.get('favoriteCount', 0)))
         // تقييد المقدار بـ±١ (تدقيق شامل ١٦ أغسطس) — مسار قديم، يبقى محميًا احتياطًا · v3.6 (١٢): النتيجة ≥ ٠
         || (isSignedIn() && !isSuspended() && resource.data.public == true &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteCount']) &&
@@ -367,9 +377,18 @@ service cloud.firestore {
         || resource.data.public == true
         || request.auth.uid in resource.data.sharedWith));
       allow create: if isSignedIn() && !isSuspended()
-        && request.resource.data.ownerId == request.auth.uid;
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.get('favoriteCount', 0) == 0;
+      // v3.7 (الفجوة ١٦): صاحب الرحلة لا يمس favoriteCount
       allow update: if isOwner()
-        || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid);
+        || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
+            && !('favoriteCount' in request.resource.data.diff(resource.data).affectedKeys()))
+        // v3.7 (٤): تفضيل الرحلة العامة من الآخرين — العدّاد وحده ±١ بأرضية صفر (نمط قوائم المدن)
+        || (isSignedIn() && !isSuspended() && resource.data.public == true &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteCount']) &&
+            request.resource.data.favoriteCount >= 0 &&
+            (request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) + 1
+             || request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) - 1));
       // ⚠️ delete بلا !isSuspended() عمدًا — حق حذف البيانات لا يسقط بالإيقاف (قرار المالك ١٦ أغسطس).
       //    أثر جانبي مقبول وموثَّق: المُوقَف يقدر يحذف رحلاته فرادى، لا ضمن حذف الحساب فقط.
       allow delete: if isOwner()
@@ -401,9 +420,12 @@ service cloud.firestore {
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.ownerId == request.auth.uid
         && docId.split('_')[0] == request.auth.uid
-        && noPrivateKeys();
+        && noPrivateKeys()
+        && request.resource.data.get('favoriteCount', 0) == 0;
+      // v3.7 (الفجوة ١٦): التعديل الذاتي لا يمس favoriteCount (الحفظ يرسله غير متغيّر — لا يُحتسب متأثرًا)
       allow update: if privateKeysOkOnUpdate() && (isOwner()
-        || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid)
+        || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
+            && !('favoriteCount' in request.resource.data.diff(resource.data).affectedKeys()))
         // ===== إصلاح ثغرة ٣ الموسَّعة (تدقيق شامل ١٦ أغسطس): تقييد المقدار بـ±١ · v3.6 (١٢): النتيجة ≥ ٠ =====
         // كانت تسمح بأي مقدار (مثل favoriteCount: 999999) ⇒ إفساد ترتيب Community Lists
         || (isSignedIn() && !isSuspended() && resource.data.public == true &&
@@ -418,22 +440,64 @@ service cloud.firestore {
 
     match /communityProfiles/{uid} {
       allow read: if true;
+      // v3.7: حقول الملف — حدودها
+      function profileFieldsOk() {
+        return (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 200))
+          && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 40))
+          && (!('contactUrl' in request.resource.data) || (request.resource.data.contactUrl is string && request.resource.data.contactUrl.matches('https://.*') && request.resource.data.contactUrl.size() <= 300))
+          && (!('showFollowerCount' in request.resource.data) || request.resource.data.showFollowerCount is bool);
+      }
+      // v3.7 (الفجوة ١٥): صاحب الملف لا يكتب المشاهدات ولا المتابعين ولا الشارة — لا عند الإنشاء ولا عند التعديل
+      function selfProtectedKeysAbsentOnCreate() {
+        return !request.resource.data.keys().hasAny(['verified', 'followerCount', 'viewCount']);
+      }
+      function selfProtectedKeysUntouched() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verified', 'followerCount', 'viewCount']);
+      }
       // v3.4 (M-P5): المُوقَف لا ينشئ ولا يعدّل ملفه المجتمعي (أسوة بحسابه واسمه المستعار — اتساق v3.2)؛
       //   القراءة والحذف يبقيان له (حق الانسحاب الكامل لا يسقط بالإيقاف)
-      allow create: if isOwner() || (isSignedIn() && request.auth.uid == uid && !isSuspended());
+      allow create: if isOwner()
+        || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysAbsentOnCreate() && profileFieldsOk());
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == uid);
       allow update: if isOwner()
-        || (isSignedIn() && request.auth.uid == uid && !isSuspended())
-        // ===== إصلاح ثغرة ٣ الموسَّعة: تقييد المقدار بـ±١ لكل عدّاد =====
-        // كانت تسمح بأي مقدار ⇒ تضخيم المشاهدات/الإعجابات بلا حد
+        // التعديل الذاتي: الحقول الوصفية وحالة الظهور و totalFavoriteCount (مشتق يعيد صاحبه حسابه من قوائمه — استثناء موثَّق)
+        || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysUntouched() && profileFieldsOk())
+        // ===== إصلاح ثغرة ٣ الموسَّعة: تقييد المقدار بـ±١ لكل عدّاد — من الآخرين على ملف له محتوى عام =====
+        // v3.7: + followerCount ±١ بأرضية صفر · v3.6 (١٢): الإجمالي بأرضية صفر
         || (isSignedIn() && !isSuspended() && resource.data.hasAnyPublicContent == true &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount','totalFavoriteCount']) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount','totalFavoriteCount','followerCount']) &&
             (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
              || request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0) + 1) &&
             request.resource.data.get('totalFavoriteCount', 0) >= 0 &&
             (request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0)
              || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) + 1
-             || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) - 1));
+             || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) - 1) &&
+            request.resource.data.get('followerCount', 0) >= 0 &&
+            // v3.7 (الفجوة ١٧): العدّاد مربوط بالعلاقة — الزيادة بوجود مستند متابعة الطالب، والنقص بغيابه
+            (request.resource.data.get('followerCount', 0) == resource.data.get('followerCount', 0)
+             || (request.resource.data.get('followerCount', 0) == resource.data.get('followerCount', 0) + 1
+                 && exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + uid)))
+             || (request.resource.data.get('followerCount', 0) == resource.data.get('followerCount', 0) - 1
+                 && !exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + uid)))));
+    }
+
+    // ===== v3.7 (١): المتابعة — الثابت ١٠: العلاقة مرئية لطرفيها بالهوية العلنية، لا بيانات خاصة لأي طرف =====
+    // follows/{followerUid}_{curatorUid}: الملكية بالمعرّف؛ الحقلان يطابقان المعرّف؛ لا متابعة للذات؛ لا تعديل أبدًا.
+    match /follows/{docId} {
+      function followerOfDoc() { return docId.split('_')[0]; }
+      function curatorOfDoc() { return docId.split('_')[1]; }
+      allow read: if isOwner() || (isSignedIn() && (resource.data.followerUid == request.auth.uid || resource.data.curatorUid == request.auth.uid));
+      allow create: if isSignedIn() && !isSuspended()
+        && followerOfDoc() == request.auth.uid
+        && request.resource.data.keys().hasOnly(['followerUid', 'curatorUid', 'at'])
+        && request.resource.data.keys().hasAll(['followerUid', 'curatorUid'])
+        && request.resource.data.followerUid == request.auth.uid
+        && request.resource.data.curatorUid == curatorOfDoc()
+        && request.resource.data.curatorUid != request.auth.uid
+        // v3.7 (الفجوة ١٨): لا متابعة لمعرّف بلا ملف مجتمعي
+        && exists(/databases/$(database)/documents/communityProfiles/$(curatorOfDoc()));
+      allow update: if false;
+      allow delete: if isOwner() || (isSignedIn() && resource.data.followerUid == request.auth.uid);
     }
 
     // ===== v3.6 (٣-ب): الفئات الخاصة — مجموعة مستقلة، الخصوصية على مستوى المستند =====
