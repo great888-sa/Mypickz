@@ -291,6 +291,46 @@
   .modal{ background:var(--card); border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; }
   .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 12px; }
   .modal-input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px; }
+  /* ٢/أ (٢٦ أغسطس ٢٠٢٦) — شارة الهوية بالشريط، نافذة الحساب، تأكيد الهوية، عين الإظهار، الشريط اللاصق للنوافذ الطويلة */
+  .mini-av{ display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; color:#fff; font-family:'Cairo',sans-serif; font-weight:900; font-size:13px; letter-spacing:.5px; }
+  .acc-head{ display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--paper-dark); border-radius:12px; margin-bottom:12px; text-align:left; direction:ltr; }
+  .acc-head .mini-av{ width:44px; height:44px; font-size:16px; }
+  .acc-name{ font-family:'Cairo',sans-serif; font-weight:800; font-size:14px; color:var(--ink); }
+  .acc-mail{ font-size:11.5px; color:var(--ink-soft); direction:ltr; }
+  .acc-item{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:11px 12px; margin-top:8px; border:1.5px solid var(--line); border-radius:12px; background:#fff; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; text-align:left; direction:ltr; }
+  .acc-item:disabled{ opacity:.55; cursor:default; }
+  .acc-item .soon{ font-size:10.5px; color:var(--brass); font-weight:700; }
+  .acc-item.danger{ border-color:#e3b3b6; color:#b5545a; }
+  .pw-wrap{ position:relative; }
+  .pw-wrap .modal-input{ padding-right:40px; }
+  .pw-eye{ position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; font-size:15px; cursor:pointer; color:var(--ink-soft); padding:4px; }
+  .modal-topbar{ position:sticky; top:-1px; z-index:3; background:var(--card); padding:2px 0 8px; margin-bottom:8px; border-bottom:1px dashed var(--line); display:flex; gap:8px; }
+  .modal-topbar .btn{ margin-top:0; padding:9px 12px; font-size:12.5px; }
+  /* ===== خ١ (٢٧ أغسطس ٢٠٢٦) — الإطار: الشريط العلوي · الشريط الخمسي · الوجهات · الدرج (النموذج المعلَّم: المشاهد ٦ و٧) ===== */
+  body{ padding-top:52px; padding-bottom:64px; }
+  .mp-topbar{ position:fixed; top:0; left:0; right:0; height:52px; z-index:900; background:var(--paper); border-bottom:1px solid var(--line);
+              display:flex; align-items:center; justify-content:space-between; padding:0 12px; direction:ltr; }
+  .mp-burger{ background:none; border:1.5px solid var(--line); border-radius:10px; width:38px; height:38px; font-size:18px; cursor:pointer; color:var(--ink); }
+  .mp-idchip{ display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:4px 12px 4px 4px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:800; font-size:12.5px; color:var(--ink); }
+  .mp-idchip .mini-av{ width:30px; height:30px; font-size:12px; }
+  .mp-tabbar{ position:fixed; bottom:0; left:0; right:0; height:64px; z-index:900; background:var(--card); border-top:1px solid var(--line);
+              display:flex; direction:ltr; }
+  .mp-tab{ flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; color:var(--ink-soft); font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; }
+  .mp-tab .ti{ font-size:20px; line-height:1; }
+  .mp-tab.on{ color:var(--ink); } .mp-tab.on .ti{ transform:translateY(-1px); }
+  .mp-tab.on::after{ content:''; width:26px; height:3px; border-radius:3px; background:var(--brass); margin-top:1px; }
+  .mp-screen{ display:none; } .mp-screen.on{ display:block; }
+  .mp-hosted{ max-width:760px; margin:14px auto 0; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:16px; text-align:right; }
+  .mp-hosted h3{ text-align:center; margin-top:0; }
+  .mp-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif; }
+  .mp-empty .big{ font-size:34px; margin-bottom:8px; }
+  /* الدرج — نافذة الحساب المبنية تصير جزأه الأعلى (المشهد ٧) */
+  #accountBackdrop .modal{ position:fixed; top:0; right:0; bottom:0; max-width:340px; width:86%; border-radius:0 0 0 18px; overflow-y:auto; max-height:none; text-align:left; direction:ltr; }
+  .dr-head{ font-family:'Cairo',sans-serif; font-weight:800; font-size:11px; color:var(--ink-soft); letter-spacing:.5px; text-transform:uppercase; margin:14px 0 6px; }
+  .dr-item{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:10px 12px; margin-top:6px; border:1.5px solid var(--line); border-radius:12px; background:#fff; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; text-align:left; direction:ltr; text-decoration:none; }
+  .dr-item:disabled{ opacity:.55; cursor:default; }
+  .dr-item .soon{ font-size:10.5px; color:var(--brass); }
+  .dr-sub{ font-size:11.5px; color:var(--ink-soft); padding:4px 12px 0; }
   #qrcode{ display:flex; justify-content:center; margin:12px 0; }
   .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper);
           padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:9999; }
@@ -303,6 +343,17 @@
 </head>
 <body>
 
+  <!-- خ١: الشريط العلوي — القائمة + شارة الهوية (المشهد ٦) -->
+  <div class="mp-topbar" id="mpTopbar">
+    <button type="button" class="mp-burger" onclick="openAccountModal()" aria-label="Menu">☰</button>
+    <button type="button" class="mp-idchip" id="accountChipBtn" onclick="openAccountModal()" style="display:none;">
+      <span class="mini-av" id="accountChipAv" style="background:var(--ink);">··</span><span id="accountChipLabel">Account</span>
+    </button>
+    <button type="button" class="mp-idchip" id="guestChipBtn" onclick="openAuthModal()"><span class="mini-av" style="background:var(--ink-soft);">👤</span><span>Sign in</span></button>
+  </div>
+
+  <!-- خ١: الوجهة ١ — الأماكن: الشاشة الحالية كما هي (اختيار الدولة والمدينة · التصنيفات · الدليل · قائمتي · المفضلة) -->
+  <div class="mp-screen on" id="screenPlaces">
   <div class="cover">
     <h1>🗺️ MyPickz</h1>
   </div>
@@ -313,42 +364,16 @@
   <div class="city-tabs" id="cityTabs"></div>
 
   <div class="action-bar">
-    <button class="action-btn" onclick="openHelpModal()">
-      <span class="action-icon brass"><i class="fa-solid fa-circle-info"></i></span>
-      <span class="action-label" id="helpBtnLabel">دليل الاستخدام</span>
-    </button>
-    <a class="action-btn" href="mailto:mypickz.app@gmail.com?subject=MyPickz%20Feedback" style="text-decoration:none;">
-      <span class="action-icon ink"><i class="fa-solid fa-envelope"></i></span>
-      <span class="action-label">Contact Us</span>
-    </a>
-    <button class="action-btn" onclick="copyLink()">
-      <span class="action-icon ink"><i class="fa-solid fa-link"></i></span>
-      <span class="action-label">Copy Link</span>
-    </button>
-    <button class="action-btn" onclick="showQR()">
-      <span class="action-icon brass"><i class="fa-solid fa-qrcode"></i></span>
-      <span class="action-label">QR</span>
-    </button>
+    <!-- خ١: الأدوات (الدليل · تواصل · نسخ الرابط · الرمز) انتقلت إلى الدرج؛ المجتمع والرحلات إلى الشريط الخمسي؛ الشارة إلى الشريط العلوي -->
     <button class="action-btn" id="userActionBtn" onclick="handleUserButton()">
       <span class="action-icon ink"><i class="fa-solid fa-user" id="userIcon"></i></span>
       <span class="action-label" id="userLabel">My Account</span>
-    </button>
-    <button class="action-btn" id="userLogoutBtn" onclick="doSignOut()" style="display:none;">
-      <span class="action-icon" style="background:#b5545a; color:#fff;"><i class="fa-solid fa-right-from-bracket"></i></span>
-      <span class="action-label">Log Out</span>
     </button>
     <button class="action-btn" id="myListBtn" onclick="openMyListModal()" style="display:none;">
       <span class="action-icon brass"><i class="fa-solid fa-list-check"></i></span>
       <span class="action-label">My List</span>
     </button>
-    <button class="action-btn" id="myTripsBtn" onclick="openMyTripsModal()" style="display:none;">
-      <span class="action-icon brass"><i class="fa-solid fa-suitcase-rolling"></i></span>
-      <span class="action-label">My Trips</span>
-    </button>
-    <button class="action-btn" onclick="openCommunityModal()">
-      <span class="action-icon ink"><i class="fa-solid fa-users"></i></span>
-      <span class="action-label">Community Lists</span>
-    </button>
+    <span id="myTripsBtn" style="display:none;"></span>
     <span id="ownerControls" style="display:none;">
       <button class="action-btn" onclick="requestEditAccess()">
         <span class="action-icon ink" id="editIcon"><i class="fa-solid fa-pen"></i></span>
@@ -357,14 +382,6 @@
       <button class="action-btn" onclick="openFavoriteStats()">
         <span class="action-icon brass"><i class="fa-solid fa-chart-simple"></i></span>
         <span class="action-label">Most Loved</span>
-      </button>
-      <button class="action-btn" onclick="openUsersModal()">
-        <span class="action-icon ink"><i class="fa-solid fa-user-group"></i></span>
-        <span class="action-label">Manage Users</span>
-      </button>
-      <button class="action-btn" onclick="openSystemStatusModal()">
-        <span class="action-icon brass"><i class="fa-solid fa-heart-pulse"></i></span>
-        <span class="action-label">System Status</span>
       </button>
       <button class="action-btn" onclick="toggleOwnerTools()">
         <span class="action-icon" style="background:#b5545a; color:#fff;"><i class="fa-solid fa-eye-slash"></i></span>
@@ -391,6 +408,26 @@
 
   <div class="footer-note" id="footerNote" style="display:none;">
     Links are managed via Google Maps sharing settings (View only recommended). Owner tools are available only when signed in with the owner account.
+  </div>
+
+  </div><!-- /screenPlaces -->
+
+  <!-- خ١: الوجهة ٢ — الرحلات: جسم نافذة "رحلاتي" يُنقل إلى هنا عند أول فتح (الاستضافة بنقل العنصر) -->
+  <div class="mp-screen" id="screenTrips"><div class="mp-hosted"><h3>🧳 My Trips</h3><div id="tripsHost"></div></div></div>
+  <!-- خ١: الوجهة ٣ — المنتقون: مكان محجوز حتى خ٤ -->
+  <div class="mp-screen" id="screenCurators"><div class="mp-empty"><div class="big">⭐</div>Curators are coming soon.<br><span style="font-size:11px;">Follow trusted people and save their picks.</span></div></div>
+  <!-- خ١: الوجهة ٤ — المجتمع: جسم نافذة المجتمع يُنقل إلى هنا -->
+  <div class="mp-screen" id="screenCommunity"><div class="mp-hosted"><h3>🌍 Community Lists</h3><p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 12px;">Browse public lists shared by other users.</p><div id="communityHost"></div></div></div>
+  <!-- خ١: الوجهة ٥ — العناوين الشخصية: تُبنى كاملة بخ٢ -->
+  <div class="mp-screen" id="screenAddresses"><div class="mp-empty"><div class="big">🔒</div>Personal addresses live here soon.<br><span style="font-size:11px;">Always private — never shared.</span></div></div>
+
+  <!-- خ١: الشريط الخمسي (المشهد ٦) -->
+  <div class="mp-tabbar" id="mpTabbar">
+    <button type="button" class="mp-tab on" data-tab="Places" onclick="switchTab('Places')"><span class="ti">📍</span><span>Places</span></button>
+    <button type="button" class="mp-tab" data-tab="Trips" onclick="switchTab('Trips')"><span class="ti">🧳</span><span>Trips</span></button>
+    <button type="button" class="mp-tab" data-tab="Curators" onclick="switchTab('Curators')"><span class="ti">⭐</span><span>Curators</span></button>
+    <button type="button" class="mp-tab" data-tab="Community" onclick="switchTab('Community')"><span class="ti">🌍</span><span>Community</span></button>
+    <button type="button" class="mp-tab" data-tab="Addresses" onclick="switchTab('Addresses')"><span class="ti">🔒</span><span>Addresses</span></button>
   </div>
 
   <div id="activeTripBar" style="display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:500; background:var(--ink); color:#fff; border-radius:30px; padding:10px 18px; box-shadow:0 6px 24px rgba(0,0,0,.3); align-items:center; gap:12px; max-width:90vw;">
@@ -431,9 +468,12 @@
     <div class="modal">
       <h3>👤 My Account</h3>
       <p style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">Sign up to save favorites, build your own list, plan trips, and share them with others</p>
-      <input type="text" id="authNickname" class="modal-input" placeholder="Username (shown to other users)">
-      <input type="email" id="authEmail" class="modal-input" placeholder="Email" style="direction:ltr; text-align:left; margin-top:8px;">
-      <input type="password" id="authPassword" class="modal-input" placeholder="Password (6+ characters)" style="direction:ltr; text-align:left; margin-top:8px;">
+      <input type="text" id="authNickname" class="modal-input" placeholder="Username (shown to other users)" autocomplete="nickname" autocapitalize="off" spellcheck="false">
+      <input type="email" id="authEmail" class="modal-input" placeholder="Email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" style="direction:ltr; text-align:left; margin-top:8px;">
+      <div class="pw-wrap" style="margin-top:8px;">
+        <input type="password" id="authPassword" class="modal-input" placeholder="Password (8+ characters for new accounts)" autocomplete="current-password" style="direction:ltr; text-align:left; margin-top:0;">
+        <button type="button" class="pw-eye" onclick="togglePasswordVisibility('authPassword', this)" aria-label="Show password">👁</button>
+      </div>
       <button type="button" id="forgotPasswordLink" onclick="doForgotPassword()" style="background:none; border:none; padding:0; margin-top:8px; font-family:'Cairo',sans-serif; font-size:11.5px; font-weight:700; color:var(--brass); cursor:pointer;">Forgot password?</button>
       <div id="authError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
@@ -441,6 +481,66 @@
         <button class="btn btn-ghost" style="flex:1" onclick="doSignUp()">New Account</button>
       </div>
       <p style="font-size:10.5px; color:var(--ink-soft); margin-top:10px;">Sign up or log in to continue exploring</p>
+    </div>
+  </div>
+
+  <!-- خ١: الدرج (المشهد ٧) — الجزء الأعلى: نافذة الحساب المبنية بـ٢/أ (كما هي) · الأدوات · قسم المالك · السياسات (باب مغلق: المالك فقط) -->
+  <div class="modal-backdrop" id="accountBackdrop" onclick="closeAccountModalOnBackdrop(event)">
+    <div class="modal">
+      <div class="acc-head">
+        <span class="mini-av" id="accountAv">··</span>
+        <div>
+          <div class="acc-name" id="accountName">—</div>
+          <div class="acc-mail" id="accountEmail">—</div>
+        </div>
+      </div>
+      <button type="button" class="acc-item" disabled title="Coming in the next update"><span>🔑 Change password</span><span class="soon">Soon</span></button>
+      <button type="button" class="acc-item" disabled title="Coming in the next update"><span>✉️ Resend verification</span><span class="soon">Soon</span></button>
+      <button type="button" class="acc-item" disabled title="Coming in the next update"><span>⚙️ Preferences — default destination</span><span class="soon">Soon</span></button>
+      <button type="button" class="acc-item" onclick="closeAccountModal(); doSignOut();"><span>🚪 Log Out</span><span></span></button>
+      <button type="button" class="acc-item danger" disabled title="Coming in the next update"><span>🗑 Delete Account — permanent</span><span class="soon">Soon</span></button>
+
+      <div class="dr-head">Tools</div>
+      <button type="button" class="dr-item" onclick="closeAccountModal(); copyLink();"><span>🔗 Copy Link</span><span></span></button>
+      <button type="button" class="dr-item" onclick="closeAccountModal(); showQR();"><span>🀄 QR</span><span></span></button>
+      <a class="dr-item" href="mailto:mypickz.app@gmail.com?subject=MyPickz%20Feedback"><span>✉️ Contact Us</span><span></span></a>
+      <button type="button" class="dr-item" onclick="closeAccountModal(); openHelpModal();"><span>📖 <span id="helpBtnLabel">Guide</span></span><span></span></button>
+
+      <div id="drawerOwner" style="display:none;">
+        <div class="dr-head">Owner</div>
+        <button type="button" class="dr-item" onclick="closeAccountModal(); openUsersModal();"><span>👥 Manage Users</span><span></span></button>
+        <button type="button" class="dr-item" onclick="closeAccountModal(); openSystemStatusModal();"><span>🩺 System Status</span><span></span></button>
+        <div class="dr-head">Policies <span class="soon" style="font-size:10px; color:var(--brass);">owner preview — hidden until ٢/هـ</span></div>
+        <button type="button" class="dr-item" onclick="closeAccountModal(); openPolicyModal('policy');"><span>📄 Privacy &amp; Terms</span><span></span></button>
+        <button type="button" class="dr-item" onclick="closeAccountModal(); openPolicyModal('rules');"><span>📏 Content Rules</span><span></span></button>
+      </div>
+
+      <button class="btn btn-ghost" style="width:100%; margin-top:16px;" onclick="closeAccountModal()">Close</button>
+    </div>
+  </div>
+
+  <!-- خ١: شاشة السياسة والضوابط — مبنية بنصها، بابها مغلق (المالك يراها من الدرج) — المشهد ١١ -->
+  <div class="modal-backdrop" id="policyBackdrop">
+    <div class="modal" style="max-width:460px; max-height:86vh; overflow-y:auto; text-align:left; direction:ltr;">
+      <div class="modal-topbar"><button class="btn btn-ghost" style="flex:1" onclick="closePolicyModal()">Close</button></div>
+      <div id="policyBody"></div>
+    </div>
+  </div>
+
+  <!-- ٢/أ: تأكيد الهوية — المشهد ٨ بالنموذج الحاكم، بمسارين من اليوم الأول (المسار الثاني خامل حتى ٢/و). لا يستدعيه أحد قبل ٢/ب و٢/د -->
+  <div class="modal-backdrop" id="reauthBackdrop">
+    <div class="modal" style="max-width:380px;">
+      <h3>🔒 Confirm it's you</h3>
+      <p style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">For your security, confirm your identity before this action.</p>
+      <div class="pw-wrap">
+        <input type="password" id="reauthPassword" class="modal-input" placeholder="Current password" autocomplete="current-password" style="direction:ltr; text-align:left;">
+        <button type="button" class="pw-eye" onclick="togglePasswordVisibility('reauthPassword', this)" aria-label="Show password">👁</button>
+      </div>
+      <div id="reauthError" style="color:#b5545a; font-size:12px; min-height:16px; margin-top:6px;"></div>
+      <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="doReauthContinue()">Continue</button>
+      <p style="font-size:11px; color:var(--ink-soft); margin:12px 0 4px;">Google account?</p>
+      <button type="button" class="btn btn-ghost" style="width:100%;" disabled title="Available when Google sign-in arrives">Confirm with Google</button>
+      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeReauthModal(false)">Cancel</button>
     </div>
   </div>
 
@@ -455,6 +555,7 @@
 
   <div class="modal-backdrop" id="usersBackdrop">
     <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <div class="modal-topbar"><button class="btn btn-ghost" style="flex:1" onclick="closeUsersModal()">Close</button></div>
       <h3 style="text-align:center;">👥 Manage Users</h3>
       <div id="usersStatsLine" style="font-size:12px; color:var(--ink-soft); text-align:center; margin:0 0 12px; line-height:1.8;"></div>
       <input type="text" id="usersSearchInput" class="modal-input" placeholder="Search by nickname or email..." oninput="renderUsersModal(this.value)" style="margin-bottom:12px;">
@@ -495,6 +596,7 @@
 
   <div class="modal-backdrop" id="myListBackdrop">
     <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+      <div class="modal-topbar"><button class="btn btn-brass" style="flex:1" onclick="closeMyListModal()">Save &amp; Close</button></div>
       <h3 style="text-align:center;">📝 My List — <span id="myListCityName"></span></h3>
       <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 10px;">Add your own places under any category below. Only Google Maps links are accepted.</p>
       <div id="myListSharedRow" style="margin:0 0 10px;"></div>
@@ -1179,6 +1281,21 @@ const mpData = (function(){
         return col('communityProfiles').doc(ownerUid).set({ totalFavoriteCount: inc(delta) }, { merge: true }).catch(e => swallowFloor(e, delta));
       },
       merge: function(uid, data){ return col('communityProfiles').doc(uid).set(data, { merge: true }); }
+    },
+    // ٢/أ (٢٦ أغسطس): المصادقة عبر النواة — لا نداء مصادقة مباشرًا خارجها (الحارس يعدّها بسقف صفر)
+    auth: {
+      signIn: function(email, pass){ return auth.signInWithEmailAndPassword(email, pass); },
+      signUp: function(email, pass){ return auth.createUserWithEmailAndPassword(email, pass); },
+      sendReset: function(email){ return auth.sendPasswordResetEmail(email); },
+      signOut: function(){ return auth.signOut(); },
+      onChange: function(cb){ return auth.onAuthStateChanged(cb); },
+      // تأكيد الهوية بكلمة السر (المسار الأول) — المسار الثاني (المزوّد) يُضاف بـ٢/و
+      reauthWithPassword: function(pass){
+        const u = auth.currentUser;
+        if (!u || !u.email) return Promise.reject(new Error('no-user'));
+        const cred = firebase.auth.EmailAuthProvider.credential(u.email, pass);
+        return u.reauthenticateWithCredential(cred);
+      }
     },
     // v3.6 (القرار ٣-ب): المجموعة الخاصة — قراءتها وكتابتها لصاحبها وحده
     privatePlaces: {
@@ -1998,7 +2115,7 @@ async function confirmAddPlace(tripId, dayNumber, categoryId){
 async function openMyTripsModal(){
   mpTrack.hit('trip_open', { depth: 1 });
   if (!currentUser){ openAuthModal(); return; }
-  document.getElementById('myTripsBackdrop').classList.add('show');
+  showBackdropUnlessHosted('myTripsBackdrop', 'Trips'); // خ١
   if (!tripsLoaded) await loadUserTrips();
   currentTripId = null;
   viewingSharedTrip = false;
@@ -2007,6 +2124,7 @@ async function openMyTripsModal(){
 function closeMyTripsModal(){
   document.getElementById('myTripsBackdrop').classList.remove('show');
   currentTripId = null;
+  if (HOSTED.Trips && currentTab === 'Trips') renderMyTripsModal(); // خ١: بالوجهة "الإغلاق" = العودة لقائمة الرحلات
 }
 function renderMyTripsModal(){
   const wrap = document.getElementById('myTripsBody');
@@ -2411,8 +2529,8 @@ async function doSignUp(){
     errEl.textContent = 'Choose a username of at least 3 characters';
     return;
   }
-  if (!email || !pass || pass.length < 6){
-    errEl.textContent = 'Enter a valid email and a password of 6+ characters';
+  if (!email || !pass || pass.length < 8){
+    errEl.textContent = 'Enter a valid email and a password of 8+ characters';
     return;
   }
   const key = nickname.toLowerCase();
@@ -2428,7 +2546,7 @@ async function doSignUp(){
   }
   signUpInProgress = true;
   try{
-    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const cred = await mpData.auth.signUp(email, pass);
     const newUid = cred.user.uid;
     // بعد إنشاء الحساب، نحجز اسم المستخدم فورًا كجزء من نفس العملية — نستخدم newUid مباشرة (مضمون)، لا currentUser العام (قد لا يتحدّث فورًا)
     // withAuthRetry: أول كتابة بعد createUser قد تُرفض عابرًا (permission-denied) قبل التقاط Firestore لتوكن الحساب الجديد —
@@ -2495,7 +2613,7 @@ async function doSignIn(){
     return;
   }
   try{
-    await auth.signInWithEmailAndPassword(email, pass);
+    await mpData.auth.signIn(email, pass);
     // فحص الاسم المستعار لم يعد هنا — صار موحَّدًا في onAuthStateChanged (يغطي الدخول واستعادة الجلسة معًا، أ-٢ الدفعة ٢)
     closeAuthModal();
     showToast('Welcome ✓');
@@ -2524,7 +2642,7 @@ async function doForgotPassword(){
   errEl.style.color = '#4a5a68';
   errEl.textContent = 'Sending...';
   try{
-    await auth.sendPasswordResetEmail(email);
+    await mpData.auth.sendReset(email);
     errEl.style.color = '#2f7a4d';
     errEl.textContent = 'Reset link sent to your email ✓ Check your inbox (and spam)';
   }catch(e){
@@ -2534,7 +2652,7 @@ async function doForgotPassword(){
   }
 }
 function doSignOut(){
-  auth.signOut();
+  mpData.auth.signOut();
   showToast('Logged out');
 }
 
@@ -2563,13 +2681,23 @@ function handleUserButton(){
   else openAuthModal();
 }
 
+// ٢/أ: لون حتمي مشتق من الاسم المستعار — الشارة نفسها بكل مكان (الشريط، نافذة الحساب، ولاحقًا ترويسة "حسابي")
+const AV_COLORS = ['#3d5a80','#6b4e71','#2f7a4d','#a5751f','#8b1e1e','#1c2b3a','#4a6d7c','#7a4f00'];
+function avatarColor(name){
+  let h = 0; for (const ch of String(name || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AV_COLORS[h % AV_COLORS.length];
+}
+function avatarInitials(name){
+  const n = String(name || '').trim();
+  return n ? n.slice(0, 2) : '··';
+}
 function updateUserUI(){
   const icon = document.getElementById('userIcon');
   const label = document.getElementById('userLabel');
   const myListBtn = document.getElementById('myListBtn');
   const myTripsBtn = document.getElementById('myTripsBtn');
   const promoBanner = document.getElementById('guestPromoBanner');
-  const logoutBtn = document.getElementById('userLogoutBtn');
+  const chipBtn = document.getElementById('accountChipBtn');
   if (!icon || !label) return;
   if (currentUser){
     icon.className = 'fa-solid fa-heart';
@@ -2577,15 +2705,128 @@ function updateUserUI(){
     if (myListBtn) myListBtn.style.display = '';
     if (myTripsBtn) myTripsBtn.style.display = '';
     if (promoBanner) promoBanner.style.display = 'none';
-    if (logoutBtn) logoutBtn.style.display = '';
+    const gchip = document.getElementById('guestChipBtn'); if (gchip) gchip.style.display = 'none';
+    if (chipBtn){
+      chipBtn.style.display = '';
+      const nick = userListData.nickname || '';
+      const av = document.getElementById('accountChipAv');
+      av.textContent = avatarInitials(nick);
+      av.style.background = avatarColor(nick);
+      document.getElementById('accountChipLabel').textContent = nick || 'Account';
+    }
   } else {
     icon.className = 'fa-solid fa-user';
     label.textContent = 'My Account';
     if (myListBtn) myListBtn.style.display = 'none';
     if (myTripsBtn) myTripsBtn.style.display = 'none';
     if (promoBanner) promoBanner.style.display = 'block';
-    if (logoutBtn) logoutBtn.style.display = 'none';
+    if (chipBtn) chipBtn.style.display = 'none';
+    const gchip2 = document.getElementById('guestChipBtn'); if (gchip2) gchip2.style.display = '';
   }
+}
+
+// ===== خ١ (٢٧ أغسطس ٢٠٢٦): الإطار — الوجهات الخمس والاستضافة بنقل العنصر =====
+// الاستضافة: جسم النافذة القائمة (بمعرّفه) يُنقل مرة واحدة إلى حاوية الوجهة، فتعمل كل دوال العرض القائمة بلا تغيير.
+const HOSTED = { Trips: false, Community: false };
+let currentTab = 'Places';
+function hostBody(bodyId, hostId){
+  const body = document.getElementById(bodyId), host = document.getElementById(hostId);
+  if (body && host && body.parentNode !== host) host.appendChild(body);
+}
+// النافذة المنبثقة تُعرض فقط إن لم يكن جسمها مستضافًا بوجهة (يحفظ الدوال القائمة كما هي)
+function showBackdropUnlessHosted(backdropId, tab){
+  if (HOSTED[tab]) { switchTab(tab); return; }
+  document.getElementById(backdropId).classList.add('show');
+}
+function switchTab(tab){
+  currentTab = tab;
+  ['Places','Trips','Curators','Community','Addresses'].forEach(t => {
+    const sc = document.getElementById('screen' + t); if (sc) sc.classList.toggle('on', t === tab);
+  });
+  document.querySelectorAll('.mp-tab').forEach(b => b.classList.toggle('on', b.getAttribute('data-tab') === tab));
+  window.scrollTo(0, 0);
+  if (tab === 'Trips'){
+    if (!HOSTED.Trips){ hostBody('myTripsBody', 'tripsHost'); HOSTED.Trips = true; }
+    openMyTripsModal();
+  } else if (tab === 'Community'){
+    if (!HOSTED.Community){ hostBody('communityBody', 'communityHost'); HOSTED.Community = true; }
+    openCommunityModal();
+  }
+}
+// شاشة السياسة (باب مغلق): النص من مسودة v2 والضوابط v1 — يُدرج بـ٢/هـ نصًّا كاملًا؛ الآن هيكل الشاشة بعناوين البنود
+function openPolicyModal(kind){
+  const body = document.getElementById('policyBody');
+  if (kind === 'rules'){
+    body.innerHTML = `<h3 style="text-align:center;">📏 Content Rules</h3><p style="font-size:11px;color:var(--ink-soft);text-align:center;">Last updated: August 2026 · draft, not published</p>
+      <h4>1. Prohibited places</h4><p style="font-size:12px;">Nightclubs and beach clubs · venues serving alcohol · shisha lounges · gambling · adult content.</p>
+      <h4>2. Prohibited practices</h4><p style="font-size:12px;">Link not matching the place · fake or closed places · other people's private addresses · offensive or misleading text · disguised advertising · counter inflation.</p>
+      <h4>3. On violations</h4><p style="font-size:12px;">Our usual actions in the Terms apply, at our discretion.</p>`;
+  } else {
+    body.innerHTML = `<h3 style="text-align:center;">📄 Privacy Policy &amp; Terms</h3><p style="font-size:11px;color:var(--ink-soft);text-align:center;">Last updated: August 2026 · draft, not published</p>
+      <h4>Privacy</h4><ol style="font-size:12px;padding-left:18px;"><li>Who we are</li><li>Data we collect</li><li>Why we collect it</li><li>What others can see</li><li>Your rights</li><li>Security</li></ol>
+      <h4>Terms</h4><ol style="font-size:12px;padding-left:18px;"><li>Your account</li><li>Content you add (Content Rules apply)</li><li>Our usual actions on violations</li><li>Limitation of liability</li><li>Changes</li></ol>
+      <p style="font-size:11px;color:var(--ink-soft);">Full text is pasted here in batch ٢/هـ from the approved draft.</p>`;
+  }
+  document.getElementById('policyBackdrop').classList.add('show');
+}
+function closePolicyModal(){ document.getElementById('policyBackdrop').classList.remove('show'); }
+
+// ٢/أ: نافذة الحساب — صارت الجزء الأعلى من الدرج (خ١)؛ تُملأ من الذاكرة (لا قراءة إضافية)
+function openAccountModal(){
+  if (!currentUser){ openAuthModal(); return; }
+  const nick = userListData.nickname || '';
+  const av = document.getElementById('accountAv');
+  av.textContent = avatarInitials(nick);
+  av.style.background = avatarColor(nick);
+  document.getElementById('accountName').textContent = nick || '—';
+  document.getElementById('accountEmail').textContent = currentUser.email || '—';
+  const dro = document.getElementById('drawerOwner'); if (dro) dro.style.display = isOwner ? '' : 'none';
+  document.getElementById('accountBackdrop').classList.add('show');
+}
+function closeAccountModal(){
+  document.getElementById('accountBackdrop').classList.remove('show');
+}
+function closeAccountModalOnBackdrop(ev){ if (ev && ev.target && ev.target.id === 'accountBackdrop') closeAccountModal(); }
+
+// ٢/أ: تأكيد الهوية كوعد — يُستدعى من ٢/ب و٢/د: const ok = await requestReauth();
+let reauthResolver = null;
+function requestReauth(){
+  return new Promise(resolve => {
+    reauthResolver = resolve;
+    document.getElementById('reauthPassword').value = '';
+    document.getElementById('reauthError').textContent = '';
+    document.getElementById('reauthBackdrop').classList.add('show');
+    setTimeout(() => document.getElementById('reauthPassword').focus(), 50);
+  });
+}
+function closeReauthModal(result){
+  document.getElementById('reauthBackdrop').classList.remove('show');
+  const r = reauthResolver; reauthResolver = null;
+  if (r) r(result === true);
+}
+async function doReauthContinue(){
+  const pass = document.getElementById('reauthPassword').value;
+  const errEl = document.getElementById('reauthError');
+  errEl.textContent = '';
+  if (!pass){ errEl.textContent = 'Enter your current password'; return; }
+  try{
+    await mpData.auth.reauthWithPassword(pass);
+    closeReauthModal(true);
+  }catch(e){
+    const code = (e && e.code) || '';
+    if (code.includes('wrong-password') || code.includes('invalid-credential') || code.includes('invalid-login-credentials')) errEl.textContent = 'Incorrect password';
+    else if (code.includes('too-many-requests')) errEl.textContent = 'Too many attempts — try again later';
+    else errEl.textContent = 'Could not confirm — try again';
+  }
+}
+
+// ٢/أ: عين إظهار كلمة المرور
+function togglePasswordVisibility(inputId, btn){
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  const show = el.type === 'password';
+  el.type = show ? 'text' : 'password';
+  if (btn) btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
 }
 
 /* =========================================================
@@ -3278,7 +3519,7 @@ async function loadCommunityLists(){
 async function openCommunityModal(){
   mpTrack.hit('community_open', { depth: 1 });
   document.getElementById('communityBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
-  document.getElementById('communityBackdrop').classList.add('show');
+  showBackdropUnlessHosted('communityBackdrop', 'Community'); // خ١
   await loadCommunityLists();
   communityTab = 'city';
   viewingUserUid = null;
@@ -3287,6 +3528,7 @@ async function openCommunityModal(){
 function closeCommunityModal(){
   document.getElementById('communityBackdrop').classList.remove('show');
   viewingUserUid = null;
+  if (HOSTED.Community && currentTab === 'Community') renderCommunityModal(); // خ١
 }
 function switchCommunityTab(tab){
   communityTab = tab;
@@ -4101,7 +4343,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(35vh + 12px)'; } });
-logTiming('BUILD: M2-DAL-r3 (hold/restore · private split · floors · catalog private sections removed)');
+logTiming('BUILD: M2-FRAME-k1a (topbar · five tabs · hosted Trips/Community · drawer · policy door)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
@@ -4118,7 +4360,7 @@ logTiming('Script started (t=0 reference)');
   ]);
   logTiming('Initial app data loaded (ownerUid, cities, categories)');
   if (auth) {
-    auth.onAuthStateChanged(async (user) => {
+    mpData.auth.onChange(async (user) => {
       logTiming('onAuthStateChanged fired (auth state known)');
       currentUser = user;
       updateUserUI();
