@@ -313,6 +313,12 @@
   .mp-burger{ background:none; border:1.5px solid var(--line); border-radius:10px; width:38px; height:38px; font-size:18px; cursor:pointer; color:var(--ink); }
   .mp-idchip{ display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:4px 12px 4px 4px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:800; font-size:12.5px; color:var(--ink); }
   .mp-idchip .mini-av{ width:30px; height:30px; font-size:12px; }
+  .mp-idchip{ max-width:45vw; } .mp-idchip > span:last-child{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mp-wordmark{ font-family:'Cairo',sans-serif; font-weight:900; font-size:18px; color:var(--ink); letter-spacing:.3px; }
+  .mp-chipmenu{ display:none; position:fixed; top:54px; right:12px; z-index:1100; background:var(--card); border:1.5px solid var(--line); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.15); min-width:170px; overflow:hidden; }
+  .mp-chipmenu.show{ display:block; }
+  .mp-chipmenu button{ display:block; width:100%; background:none; border:none; padding:11px 14px; text-align:left; direction:ltr; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; border-bottom:1px solid var(--line); }
+  .mp-chipmenu button:last-child{ border-bottom:none; }
   .mp-tabbar{ position:fixed; bottom:0; left:0; right:0; height:64px; z-index:700; background:var(--card); border-top:1px solid var(--line);
               display:flex; direction:ltr; }
   .mp-tab{ flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; color:var(--ink-soft); font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; }
@@ -346,6 +352,21 @@
   .warnline{ display:flex; gap:6px; font-size:11.5px; color:#8b1e1e; background:#fdecea; border:1px solid #e3b3b6; border-radius:10px; padding:8px 10px; margin:8px 0; text-align:left; direction:ltr; }
   .btn-danger{ background:#b5545a; color:#fff; }
   .soon-tag{ display:inline-block; font-size:10.5px; color:var(--brass); border:1px solid var(--brass); border-radius:999px; padding:1px 8px; margin-left:6px; vertical-align:middle; }
+  /* خ٢ (٢٧ أغسطس ٢٠٢٦) — وجهة العناوين الشخصية (المشهدان ٦/و و٦/و٢) */
+  .addr-wrap{ max-width:760px; margin:0 auto; padding:0 12px; }
+  .addr-sticky{ position:sticky; top:52px; z-index:10; background:var(--paper); padding:10px 0 8px; }
+  .lockbar{ background:#fdecea; color:#8b1e1e; border:1px solid #e3b3b6; border-radius:12px; padding:8px 12px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; text-align:center; }
+  .addr-actrow{ display:flex; gap:8px; margin-top:8px; }
+  .addr-actrow .btn{ flex:1; margin-top:0; padding:10px; font-size:13px; }
+  .addr-cathead{ font-family:'Cairo',sans-serif; font-weight:800; font-size:13px; color:var(--ink); margin:14px 0 6px; text-align:left; direction:ltr; }
+  .addr-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:6px; direction:ltr; text-align:left; }
+  .addr-row a{ color:var(--ink); text-decoration:none; font-size:13px; font-family:'Cairo',sans-serif; font-weight:700; flex:1; }
+  .addr-row small{ color:var(--ink-soft); font-weight:500; }
+  .addr-row .acts{ display:flex; gap:6px; }
+  .addr-chip{ display:inline-block; border:1.5px solid var(--line); border-radius:999px; padding:6px 12px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; background:#fff; cursor:pointer; color:var(--ink); }
+  .addr-chip.on{ border-color:var(--brass); background:rgba(165,117,31,.1); }
+  .addr-chips{ display:flex; flex-wrap:wrap; gap:6px; direction:ltr; }
+  .addr-empty{ text-align:center; color:var(--ink-soft); font-size:12.5px; padding:30px 10px; }
   #qrcode{ display:flex; justify-content:center; margin:12px 0; }
   .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper);
           padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:9999; }
@@ -360,18 +381,24 @@
 
   <!-- خ١: الشريط العلوي — القائمة + شارة الهوية (المشهد ٦) -->
   <div class="mp-topbar" id="mpTopbar">
-    <button type="button" class="mp-burger" onclick="openAccountModal()" aria-label="Menu">☰</button>
-    <button type="button" class="mp-idchip" id="accountChipBtn" onclick="openAccountModal()" style="display:none;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button type="button" class="mp-burger" onclick="openAccountModal()" aria-label="Menu">☰</button>
+      <span class="mp-wordmark">MyPickz</span>
+    </div>
+    <button type="button" class="mp-idchip" id="accountChipBtn" onclick="toggleChipMenu()" style="display:none;">
       <span class="mini-av" id="accountChipAv" style="background:var(--ink);">··</span><span id="accountChipLabel">Account</span>
     </button>
     <button type="button" class="mp-idchip" id="guestChipBtn" onclick="openGate()"><span class="mini-av" style="background:var(--ink-soft);">👤</span><span>Sign in</span></button>
+    <!-- قرار المالك ٢٧ أغسطس: الشارة تفتح قائمة صغيرة (حسابي · خروج) — الدرج من ☰ الظاهر -->
+    <div class="mp-chipmenu" id="chipMenu">
+      <button type="button" onclick="closeChipMenu(); openAccountModal();">👤 My Account</button>
+      <button type="button" onclick="closeChipMenu(); confirmLogout();">🚪 Log Out</button>
+    </div>
   </div>
 
   <!-- خ١: الوجهة ١ — الأماكن: الشاشة الحالية كما هي (اختيار الدولة والمدينة · التصنيفات · الدليل · قائمتي · المفضلة) -->
   <div class="mp-screen on" id="screenPlaces">
-  <div class="cover">
-    <h1>🗺️ MyPickz</h1>
-  </div>
+  <!-- قرار المالك ٢٧ أغسطس: الغلاف الكبير أُلغي — الهوية بالشريط العلوي -->
 
   <div class="tab-label">Country</div>
   <div class="city-tabs" id="countryTabs"></div>
@@ -434,7 +461,14 @@
   <!-- خ١: الوجهة ٤ — المجتمع: جسم نافذة المجتمع يُنقل إلى هنا -->
   <div class="mp-screen" id="screenCommunity"><div class="mp-hosted"><h3>🌍 Community Lists</h3><p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 12px;">Browse public lists shared by other users.</p><div id="communityHost"></div></div></div>
   <!-- خ١: الوجهة ٥ — العناوين الشخصية: تُبنى كاملة بخ٢ -->
-  <div class="mp-screen" id="screenAddresses"><div class="mp-empty"><div class="big">🔒</div>Personal addresses live here soon.<br><span style="font-size:11px;">Always private — never shared.</span></div></div>
+  <div class="mp-screen" id="screenAddresses"><div class="addr-wrap">
+    <div class="addr-sticky">
+      <div class="lockbar">🔒 Always private — never shared, no setting can change this</div>
+      <div class="addr-actrow"><button class="btn btn-brass" onclick="openAddrModal()">➕ Add</button><button class="btn btn-ghost" id="addrEditBtn" onclick="toggleAddrEdit()">✏️ Edit</button></div>
+    </div>
+    <div class="addr-chips" id="addrCityChips" style="margin:8px 0;"></div>
+    <div id="addrBody"><div class="addr-empty">Loading…</div></div>
+  </div></div>
 
   <!-- خ١: الشريط الخمسي (المشهد ٦) -->
   <div class="mp-tabbar" id="mpTabbar">
@@ -528,6 +562,26 @@
     </div>
   </div>
 
+  <!-- خ٢: إضافة/تعديل عنوان شخصي (المشهد ٦/و٢) — يكتب المستند الخاص فقط -->
+  <div class="modal-backdrop" id="addrBackdrop">
+    <div class="modal" style="text-align:left; direction:ltr; max-height:88vh; overflow-y:auto;">
+      <h3 id="addrModalTitle">🔒 Add address</h3>
+      <label style="font-size:11.5px; color:var(--ink-soft);">City</label>
+      <div class="addr-chips" id="addrModalCities" style="margin:4px 0 10px;"></div>
+      <label style="font-size:11.5px; color:var(--ink-soft);">Category</label>
+      <div class="addr-chips" id="addrModalCats" style="margin:4px 0 10px;"></div>
+      <label style="font-size:11.5px; color:var(--ink-soft);">Name</label>
+      <input id="addrName" class="modal-input" placeholder="e.g. Home" autocomplete="off">
+      <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Google Maps link</label>
+      <input id="addrUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" inputmode="url" autocomplete="off" style="direction:ltr;">
+      <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Note (optional)</label>
+      <input id="addrNote" class="modal-input" placeholder="e.g. Gate 3" autocomplete="off">
+      <div id="addrError" style="color:#b5545a; font-size:12px; min-height:16px; margin-top:6px;"></div>
+      <button class="btn btn-brass" style="width:100%; margin-top:8px;" onclick="saveAddr()">Save</button>
+      <button class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="closeModalById('addrBackdrop')">Cancel</button>
+    </div>
+  </div>
+
   <!-- خ١-ب: تغيير كلمة المرور (المشهد ٩) — مبنية معطَّلة حتى ٢/ب -->
   <div class="modal-backdrop" id="pwBackdrop">
     <div class="modal" style="text-align:left; direction:ltr;">
@@ -588,7 +642,7 @@
       <button type="button" class="acc-item" onclick="closeAccountModal(); openModalById('pwBackdrop');"><span>🔑 Change password</span><span class="soon">Soon · preview</span></button>
       <button type="button" class="acc-item" disabled title="Coming in the next update"><span>✉️ Resend verification</span><span class="soon">Soon</span></button>
       <button type="button" class="acc-item" onclick="closeAccountModal(); openHomeChooser(true);"><span>⚙️ Preferences — default destination</span><span id="prefHomeLabel" style="font-size:11px; color:var(--ink-soft);"></span></button>
-      <button type="button" class="acc-item" onclick="closeAccountModal(); doSignOut();"><span>🚪 Log Out</span><span></span></button>
+      <button type="button" class="acc-item" onclick="confirmLogout()"><span>🚪 Log Out</span><span></span></button>
       <button type="button" class="acc-item danger" onclick="closeAccountModal(); openDeletePreview();"><span>🗑 Delete Account — permanent</span><span class="soon">Soon · preview</span></button>
 
       <div class="dr-head">Tools</div>
@@ -1356,7 +1410,9 @@ const mpData = (function(){
       }
     },
     userLists: {
-      merge: function(uid, data){ return col('userLists').doc(uid).set(data, { merge: true }); }
+      merge: function(uid, data){ return col('userLists').doc(uid).set(data, { merge: true }); },
+      // خ٢: فهرس المدن التي فيها عناوين خاصة — قراءة واحدة بدل مسح المدن كلها
+      addPrivateCity: function(uid, cityId){ return col('userLists').doc(uid).set({ privateCities: firebase.firestore.FieldValue.arrayUnion(cityId) }, { merge: true }); }
     },
     users: {
       flag: function(uid, field){
@@ -1399,6 +1455,11 @@ const mpData = (function(){
       },
       save: function(uid, cityId, categories){
         return col('userPrivatePlaces').doc(uid + '_' + cityId).set({ categories: categories, updatedAt: Date.now() }, { merge: true });
+      },
+      // خ٢: استبدال تصنيف كاملًا (لحذف عنوان) — الكتابة بمسار منقوط تستبدل المصفوفة لا تدمجها
+      setCategory: function(uid, cityId, catId, entry){
+        const u = {}; u['categories.' + catId] = entry; u.updatedAt = Date.now();
+        return col('userPrivatePlaces').doc(uid + '_' + cityId).set({ categories: {}, updatedAt: Date.now() }, { merge: true }).then(() => col('userPrivatePlaces').doc(uid + '_' + cityId).update(u));
       }
     },
     cityLists: {
@@ -2662,6 +2723,120 @@ async function runOnboardingIfNeeded(){
   if (!HOME_TABS.includes(userListData.defaultTab)) openHomeChooser(false);
   else switchTab(userListData.defaultTab);
 }
+// ===== خ٢ (٢٧ أغسطس ٢٠٢٦): وجهة العناوين الشخصية — المشهدان ٦/و و٦/و٢ =====
+// المصدر الوحيد: userPrivatePlaces/{uid}_{cityId} عبر النواة · لا علم عام ولا مشاركة ولا زر رحلة
+let addrData = {};          // { cityId: { catId: { active, places:[{id,name,url,note,area}] } } }
+let addrCities = [];        // مدن فيها مستند خاص (من فهرس userLists.privateCities)
+let addrFilter = 'All';
+let addrEdit = false;
+let addrModalCity = null, addrModalCat = null, addrEditRef = null; // {cityId, catId, index} عند التعديل
+let addrLoaded = false;     // تخزين القراءات بالذاكرة — يُبطَل عند أي كتابة (قرار ٢٧ أغسطس)
+function privateCategoryList(){
+  const out = [];
+  DATA.forEach(sec => { if (!sec.ownerOnly) return;
+    sec.items.forEach(i => out.push({ id: i.id, icon: i.icon, name: i.name, section: sec.title, sicon: sec.icon }));
+    customItems.filter(c => c.section === sec.title).forEach(c => out.push({ id: c.id, icon: c.icon, name: c.name, section: sec.title, sicon: sec.icon }));
+  });
+  return out;
+}
+async function loadAddresses(force){
+  if (!currentUser) return;
+  if (addrLoaded && !force){ renderAddresses(); return; }
+  const idx = (userListData && userListData.privateCities) || [];
+  addrCities = Array.from(new Set(idx.concat(myListCityId ? [myListCityId] : []))).filter(Boolean);
+  addrData = {};
+  await Promise.all(addrCities.map(async c => { try{ addrData[c] = await mpData.privatePlaces.get(currentUser.uid, c); }catch(e){ addrData[c] = {}; } }));
+  addrCities = addrCities.filter(c => Object.values(addrData[c] || {}).some(e => (e.places || []).length));
+  if (addrFilter !== 'All' && !addrCities.includes(addrFilter)) addrFilter = 'All';
+  addrLoaded = true;
+  renderAddresses();
+}
+function cityNameOf(id){ const c = allCities().find(x => x.id === id); return c ? c.name : id; }
+function renderAddresses(){
+  const chips = document.getElementById('addrCityChips');
+  if (addrCities.length > 1){
+    chips.style.display = '';
+    chips.innerHTML = ['All'].concat(addrCities).map(c => `<button type="button" class="addr-chip ${addrFilter === c ? 'on' : ''}" onclick="addrFilter='${c}'; renderAddresses();">${c === 'All' ? 'All' : cityNameOf(c)}</button>`).join('');
+  } else { chips.style.display = 'none'; }
+  const cats = privateCategoryList();
+  const bySection = {};
+  cats.forEach(cat => { (bySection[cat.section] = bySection[cat.section] || { icon: cat.sicon, rows: [] }); });
+  let count = 0;
+  addrCities.forEach(cityId => {
+    if (addrFilter !== 'All' && cityId !== addrFilter) return;
+    const catsMap = addrData[cityId] || {};
+    cats.forEach(cat => {
+      const places = (catsMap[cat.id] && catsMap[cat.id].places) || [];
+      places.forEach((p, i) => { count++;
+        bySection[cat.section].rows.push(`<div class="addr-row">
+          <a class="place-link" data-mpsrc="app" data-mpcat="${cat.id}" data-mppersonal="1" href="${p.url}" target="_blank" rel="noopener">${cat.icon} ${cat.name}${p.name ? ': ' + p.name : ''} <small>— ${cityNameOf(cityId)}${p.note ? ' · ' + p.note : ''}</small></a>
+          ${addrEdit ? `<span class="acts"><button type="button" class="remove-btn" onclick="openAddrModal('${cityId}','${cat.id}',${i})" title="Edit"><i class="fa-solid fa-pen"></i></button><button type="button" class="remove-btn" onclick="deleteAddr('${cityId}','${cat.id}',${i})" title="Delete"><i class="fa-solid fa-trash"></i></button></span>` : '<span>🔗</span>'}
+        </div>`);
+      });
+    });
+  });
+  let html = '';
+  Object.keys(bySection).forEach(title => { const b = bySection[title]; if (!b.rows.length) return; html += `<div class="addr-cathead">${b.icon} ${title}</div>` + b.rows.join(''); });
+  document.getElementById('addrBody').innerHTML = html || '<div class="addr-empty">No personal addresses yet.<br><span style="font-size:11px;">Tap ➕ Add — your home, work, clinic… only you can see them.</span></div>';
+  document.getElementById('addrEditBtn').textContent = addrEdit ? '✅ Done' : '✏️ Edit';
+}
+function toggleAddrEdit(){ addrEdit = !addrEdit; renderAddresses(); }
+function openAddrModal(cityId, catId, index){
+  if (!currentUser) return;
+  if (currentUserSuspended){ showToast("Your account is suspended — you can't add addresses"); return; }
+  const cats = privateCategoryList();
+  const cities = myListAllCities ? myListAllCities() : allCities();
+  addrEditRef = (cityId && catId !== undefined && index !== undefined) ? { cityId, catId, index } : null;
+  const existing = addrEditRef ? ((addrData[cityId][catId].places || [])[index] || {}) : {};
+  addrModalCity = addrEditRef ? cityId : (addrFilter !== 'All' ? addrFilter : (currentCityId || myListCityId || (cities[0] && cities[0].id))); // قرار ٢٧ أغسطس: المدينة المتصفَّحة بالأماكن
+  addrModalCat = addrEditRef ? catId : (cats[0] && cats[0].id);
+  document.getElementById('addrModalTitle').textContent = addrEditRef ? '✏️ Edit address' : '🔒 Add address';
+  document.getElementById('addrModalCities').innerHTML = cities.map(c => `<button type="button" class="addr-chip ${c.id === addrModalCity ? 'on' : ''}" onclick="addrModalCity='${c.id}'; this.parentNode.querySelectorAll('.addr-chip').forEach(b=>b.classList.remove('on')); this.classList.add('on');">${c.name}</button>`).join('');
+  document.getElementById('addrModalCats').innerHTML = cats.map(c => `<button type="button" class="addr-chip ${c.id === addrModalCat ? 'on' : ''}" onclick="addrModalCat='${c.id}'; this.parentNode.querySelectorAll('.addr-chip').forEach(b=>b.classList.remove('on')); this.classList.add('on');">${c.icon} ${c.name}</button>`).join('');
+  document.getElementById('addrName').value = existing.name || '';
+  document.getElementById('addrUrl').value = existing.url || '';
+  document.getElementById('addrNote').value = existing.note || '';
+  document.getElementById('addrError').textContent = '';
+  openModalById('addrBackdrop');
+}
+async function saveAddr(){
+  const name = document.getElementById('addrName').value.trim();
+  const url = document.getElementById('addrUrl').value.trim();
+  const note = document.getElementById('addrNote').value.trim();
+  const err = document.getElementById('addrError');
+  err.textContent = '';
+  if (!name){ err.textContent = 'Enter a name'; return; }
+  if (!isGoogleMapsUrl(url)){ err.textContent = 'Paste a Google Maps link'; return; }
+  const cityId = addrModalCity, catId = addrModalCat;
+  const catsMap = addrData[cityId] || (addrData[cityId] = {});
+  const entry = catsMap[catId] || (catsMap[catId] = { active: true, places: [] });
+  const place = { id: 'p_' + Date.now().toString(36), name, url, note, area: '' };
+  if (addrEditRef && addrEditRef.cityId === cityId && addrEditRef.catId === catId){
+    place.id = (entry.places[addrEditRef.index] || place).id || place.id;
+    entry.places[addrEditRef.index] = place;
+  } else {
+    if (addrEditRef){ // نُقل لتصنيف أو مدينة أخرى: يُحذف من موضعه القديم
+      const old = addrData[addrEditRef.cityId][addrEditRef.catId]; old.places.splice(addrEditRef.index, 1);
+      try{ await mpData.privatePlaces.setCategory(currentUser.uid, addrEditRef.cityId, addrEditRef.catId, old); }catch(e){}
+    }
+    entry.places.push(place);
+  }
+  try{
+    await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry);
+    await mpData.userLists.addPrivateCity(currentUser.uid, cityId);
+    if (userListData && !userListData.privateCities.includes(cityId)) userListData.privateCities.push(cityId);
+    closeModalById('addrBackdrop');
+    showToast('Saved ✓');
+    await loadAddresses(true);
+  }catch(e){ err.textContent = 'Could not save — try again'; }
+}
+async function deleteAddr(cityId, catId, index){
+  const entry = addrData[cityId] && addrData[cityId][catId]; if (!entry) return;
+  entry.places.splice(index, 1);
+  try{ await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry); showToast('Deleted'); }catch(e){ showToast('Could not delete'); }
+  await loadAddresses(true);
+}
+
 // خ١-ب: معاينة شاشات ٩ و١٠ (معطَّلة حتى ٢/ب و٢/د)
 function openDeletePreview(){
   document.getElementById('delCntPlaces').textContent = Object.values((myCityListData && myCityListData.categories) || {}).reduce((a, c) => a + ((c.places || []).length), 0) || '—';
@@ -2885,6 +3060,7 @@ function updateUserUI(){
     if (promoBanner) promoBanner.style.display = 'block';
     if (chipBtn) chipBtn.style.display = 'none';
     const gchip2 = document.getElementById('guestChipBtn'); if (gchip2) gchip2.style.display = '';
+    addrLoaded = false; addrData = {}; addrCities = []; closeChipMenu();
   }
 }
 
@@ -2914,6 +3090,8 @@ function switchTab(tab){
   } else if (tab === 'Community'){
     if (!HOSTED.Community){ hostBody('communityBody', 'communityHost'); HOSTED.Community = true; }
     openCommunityModal();
+  } else if (tab === 'Addresses'){
+    loadAddresses(); // خ٢
   }
 }
 // شاشة السياسة (باب مغلق): النص من مسودة v2 والضوابط v1 — يُدرج بـ٢/هـ نصًّا كاملًا؛ الآن هيكل الشاشة بعناوين البنود
@@ -2933,6 +3111,14 @@ function openPolicyModal(kind){
   document.getElementById('policyBackdrop').classList.add('show');
 }
 function closePolicyModal(){ document.getElementById('policyBackdrop').classList.remove('show'); }
+
+// قرار المالك ٢٧ أغسطس: قائمة الشارة (حسابي · خروج) وتأكيد الخروج
+function toggleChipMenu(){ document.getElementById('chipMenu').classList.toggle('show'); }
+function closeChipMenu(){ document.getElementById('chipMenu').classList.remove('show'); }
+document.addEventListener('click', (ev) => { const m = document.getElementById('chipMenu'); if (m && m.classList.contains('show') && !ev.target.closest('#chipMenu') && !ev.target.closest('#accountChipBtn')) m.classList.remove('show'); });
+function confirmLogout(){
+  if (confirm('Log out? Unsaved changes in open forms will be lost.')){ closeAccountModal(); doSignOut(); }
+}
 
 // ٢/أ: نافذة الحساب — صارت الجزء الأعلى من الدرج (خ١)؛ تُملأ من الذاكرة (لا قراءة إضافية)
 function openAccountModal(){
@@ -3027,7 +3213,8 @@ async function loadUserList(){
       nickname: data.nickname || null,
       viewCount: data.viewCount || 0,
       guideSeen: data.guideSeen === true,      // خ١-ب: النبذة شوهدت
-      defaultTab: data.defaultTab || null       // خ١-ب: الوجهة الافتراضية
+      defaultTab: data.defaultTab || null,      // خ١-ب: الوجهة الافتراضية
+      privateCities: Array.isArray(data.privateCities) ? data.privateCities : [] // خ٢: فهرس مدن العناوين الخاصة
     };
   }catch(e){ userListData = { customCities: [], customCountries: [], nickname: null }; userListLoadFailed = true; }
   try{
@@ -3063,6 +3250,7 @@ async function loadMyCityList(cityId){
         try{
           await mpData.privatePlaces.save(currentUser.uid, cityId, priv);
           await mpData.cityLists.removeKeys(currentUser.uid, cityId, legacyKeys);
+          await mpData.userLists.addPrivateCity(currentUser.uid, cityId);
         }catch(e){}
       }
     }
@@ -3071,13 +3259,11 @@ async function loadMyCityList(cityId){
       sharedWith: Array.isArray(data.sharedWith) ? data.sharedWith : [],
       sharedWithNames: (data.sharedWithNames && typeof data.sharedWithNames === 'object') ? data.sharedWithNames : {},
       favoriteCount: data.favoriteCount || 0,
-      categories: { ...split.pub, ...priv }
+      categories: split.pub // خ٢: الخاص لم يعد يُدمج بقائمتي — وجهة العناوين هي المحرِّر الوحيد للمستند الخاص
     };
     // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة — لهذي المدينة فقط
     if (backfillPlaceIds(myCityListData.categories) && !currentUserSuspended){
-      const s2 = splitCategories(myCityListData.categories);
-      mpData.cityLists.save(currentUser.uid, cityId, { ownerId: currentUser.uid, cityId, categories: s2.pub }).catch(()=>{});
-      if (Object.keys(s2.priv).length) mpData.privatePlaces.save(currentUser.uid, cityId, s2.priv).catch(()=>{});
+      mpData.cityLists.save(currentUser.uid, cityId, { ownerId: currentUser.uid, cityId, categories: myCityListData.categories }).catch(()=>{});
     }
   }catch(e){
     myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, favoriteCount:0, categories:{} };
@@ -3599,6 +3785,7 @@ function renderMyListModal(){
 
   let html = '';
   DATA.forEach(section => {
+    if (section.ownerOnly) return; // خ٢: الأقسام الخاصة لها وجهتها المستقلة (Addresses) — لم تعد جزءًا من قائمتي
     const sectionCustom = customItems.filter(c => c.section === section.title);
     const allItems = section.items.concat(sectionCustom); // المستخدم يقدر يشوف/يفعّل تصنيفات المالك المخصّصة، بس ما يقدر ينشئ تصنيفًا جديدًا بنفسه
     html += `<div style="margin-bottom:14px;">
@@ -4521,7 +4708,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k1b-r3 (gate wordmark in ink · one action button per mode)');
+logTiming('BUILD: M2-FRAME-k2-r2 (+ topbar ☰/wordmark · chip menu · no cover · logout confirm · default city · cached reads)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
