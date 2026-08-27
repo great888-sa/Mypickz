@@ -124,7 +124,7 @@ const MP_EXPECTED = [
   ["mpTrack.hit('trip_save')", 1],
   ["mpTrack.hit('favorites_open'", 1],
   ["mpTrack.hit('community_open'", 1],
-  ["mpTrack.hit('share_link')", 4],
+  ["mpTrack.hit('share_link')", { prod: 4, test: 5 }], // خ٢-r3: + إرسال العنوان بتوقيع من وجهة العناوين (نسخة الاختبار حتى ترقية الإطار)
   ["mpTrack.hit('favorite_add')", 1],
   ["mpTrack.hit('signup_start')", 1],
   ["mpTrack.hit('signup_done')", 1],
