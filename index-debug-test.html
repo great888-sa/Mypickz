@@ -470,7 +470,8 @@
   <div class="mp-screen" id="screenAddresses"><div class="addr-wrap">
     <div class="addr-sticky">
       <div class="addr-title">🔒 Personal Addresses <span class="addr-caption">· Private to you — send only when you choose</span></div>
-      <div class="addr-chips" id="addrCityChips" style="margin:8px 0;"></div>
+      <select id="addrCountryTop" class="modal-input" style="margin:8px 0 6px; direction:ltr; text-align:left;" onchange="pickAddrCountry(this.value)"></select>
+      <div class="addr-chips" id="addrCityChips" style="margin:0 0 6px;"></div>
     </div>
     <div id="addrBody"><div class="addr-empty">Loading…</div></div>
   </div></div>
@@ -2738,6 +2739,7 @@ async function runOnboardingIfNeeded(){
 let addrData = {};          // { cityId: { catId: { active, places:[{id,name,url,note,area}] } } }
 let addrCities = [];        // مدن فيها عناوين (من فهرس userLists.privateCities)
 let addrCurrentCity = null; // المدينة المعروضة (لا "الكل")
+let addrCurrentCountry = null; // الدولة المعروضة — الدولة أولًا ثم المدينة (منهج الأماكن)
 let addrLoaded = false;     // تخزين القراءات بالذاكرة — يُبطَل عند أي كتابة
 let addrModalCity = null, addrModalCat = null, addrEditRef = null; // {cityId, catId, index} عند التعديل
 function privateCategoryList(){
@@ -2768,12 +2770,13 @@ function cityNameOf(id){ const c = myListAllCities().find(x => x.id === id) || a
 // خ٢-r4: إضافة مدينة بنفس منهج قائمتي والأماكن — اسم المدينة (إنجليزي فقط) ثم الدولة؛ تُحفظ بمدنك الخاصة (مشتركة مع قائمتي)
 async function addAddrCity(){
   if (!currentUser) return;
-  const name = await openInputModal("New city", "e.g. Riyadh, Jeddah... (English letters only)", "");
-  if (!name || !name.trim()) return;
-  if (!isLatinOnly(name)) { showToast('City name must be in English letters only'); return; }
-  const country = await openInputModal("Country", "e.g. Saudi Arabia, Italy...", "", WORLD_COUNTRIES.map(c => c.name));
+  // الدولة أولًا ثم المدينة — منهج الأماكن (إنجليزي فقط)
+  const country = await openInputModal("Country", "e.g. Saudi Arabia, Italy... (English letters only)", addrCurrentCountry || "", WORLD_COUNTRIES.map(c => c.name));
   if (country === null || !country.trim()){ showToast('Country is required'); return; }
   if (!isLatinOnly(country)) { showToast('Country name must be in English letters only'); return; }
+  const name = await openInputModal("City", "e.g. Riyadh, Jeddah... (English letters only)", "");
+  if (!name || !name.trim()) return;
+  if (!isLatinOnly(name)) { showToast('City name must be in English letters only'); return; }
   const existing = myListAllCities().find(c => c.name.toLowerCase() === name.trim().toLowerCase() && c.country.toLowerCase() === country.trim().toLowerCase());
   let id = existing ? existing.id : null;
   if (!id){
@@ -2782,11 +2785,19 @@ async function addAddrCity(){
     userListData.customCities.push({ id, name: name.trim(), country: country.trim() });
     await saveUserListGeneral();
   }
-  addrCurrentCity = id;
+  addrCurrentCity = id; addrCurrentCountry = country.trim();
   if (!addrCities.includes(id)) addrCities.push(id);
   addrData[id] = addrData[id] || {};
   renderAddresses();
   openAddrModal(id, null);
+}
+function countryOfCity(cityId){ const c = myListAllCities().find(x => x.id === cityId) || allCities().find(x => x.id === cityId); return c ? c.country : null; }
+function pickAddrCountry(country){
+  addrCurrentCountry = country;
+  const inCountry = addrCities.filter(c => countryOfCity(c) === country);
+  addrCurrentCity = inCountry.includes(addrCurrentCity) ? addrCurrentCity : (inCountry[0] || null);
+  if (addrCurrentCity && userListData && userListData.addrCity !== addrCurrentCity){ userListData.addrCity = addrCurrentCity; mpData.userLists.merge(currentUser.uid, { addrCity: addrCurrentCity }).catch(()=>{}); }
+  renderAddresses();
 }
 function pickAddrCity(cityId){
   addrCurrentCity = cityId;
@@ -2794,35 +2805,38 @@ function pickAddrCity(cityId){
   renderAddresses();
 }
 function renderAddresses(){
+  // الدولة أولًا (قائمة منسدلة كالأماكن) ثم شرائح مدن تلك الدولة التي فيها عناوين + ➕ City
+  const countries = [...new Set(addrCities.map(countryOfCity).filter(Boolean))];
+  if (!addrCurrentCountry || !countries.includes(addrCurrentCountry)) addrCurrentCountry = countryOfCity(addrCurrentCity) || countries[0] || null;
+  const csel = document.getElementById('addrCountryTop');
+  csel.innerHTML = countries.length ? countries.map(c => `<option value="${c.replace(/"/g,'&quot;')}" ${c === addrCurrentCountry ? 'selected' : ''}>${countryFlag(c) ? countryFlag(c) + ' ' : ''}${c}</option>`).join('') : '<option value="">— No country yet —</option>';
+  csel.style.display = countries.length ? '' : 'none';
+  const inCountry = addrCities.filter(c => countryOfCity(c) === addrCurrentCountry);
+  if (!inCountry.includes(addrCurrentCity)) addrCurrentCity = inCountry[0] || null;
   const chips = document.getElementById('addrCityChips');
-  chips.innerHTML = addrCities.map(c => `<button type="button" class="addr-chip ${addrCurrentCity === c ? 'on' : ''}" onclick="pickAddrCity('${c}')">${cityNameOf(c)}</button>`).join('')
+  chips.innerHTML = inCountry.map(c => `<button type="button" class="addr-chip ${addrCurrentCity === c ? 'on' : ''}" onclick="pickAddrCity('${c}')">${cityNameOf(c)}</button>`).join('')
     + `<button type="button" class="addr-chip" style="border-style:dashed; color:var(--brass);" onclick="addAddrCity()">➕ City</button>`;
+  // التصنيفات السبعة مسطَّحة (لا أقسام): كلٌّ بعنوانه وعدّاده و＋ — تُعرض دائمًا للمدينة الحالية
   const cats = privateCategoryList();
-  const bySection = {};
-  cats.forEach(cat => { (bySection[cat.section] = bySection[cat.section] || { icon: cat.sicon, rows: [], count: 0, firstCat: cat.id }); });
   const cityId = addrCurrentCity;
   const catsMap = (cityId && addrData[cityId]) || {};
-  cats.forEach(cat => {
-    const places = (catsMap[cat.id] && catsMap[cat.id].places) || [];
-    places.forEach((p, i) => {
-      bySection[cat.section].count++;
-      const sub = [cityNameOf(cityId), p.note].filter(Boolean).join(' · ');
-      bySection[cat.section].rows.push(`<div class="addr-row">
-        <div style="flex:1; min-width:0;"><a class="place-link prow-name" data-mpsrc="app" data-mpcat="${cat.id}" data-mppersonal="1" href="${p.url}" target="_blank" rel="noopener">${cat.icon} ${cat.name}${p.name ? ': ' + p.name : ''}</a><div class="prow-sub">${sub}</div></div>
+  let html = '';
+  if (!cityId){
+    html = '<div class="addr-empty">Start with your city.<br><span style="font-size:11px;">Tap ➕ City, then add your home, work, clinic… only you can see them.</span></div>';
+  } else {
+    cats.forEach(cat => {
+      const places = (catsMap[cat.id] && catsMap[cat.id].places) || [];
+      html += `<div class="addr-cathead"><span>${cat.icon} ${cat.name} (${places.length})</span><button type="button" onclick="openAddrModal('${cityId}','${cat.id}')" title="Add under ${cat.name}">＋</button></div>`;
+      places.forEach((p, i) => {
+        html += `<div class="addr-row">
+        <div style="flex:1; min-width:0;"><a class="place-link prow-name" data-mpsrc="app" data-mpcat="${cat.id}" data-mppersonal="1" href="${p.url}" target="_blank" rel="noopener">${p.name || cat.name}</a>${p.note ? `<div class="prow-sub">${p.note}</div>` : ''}</div>
         <span class="acts">
           <a href="${p.url}" target="_blank" rel="noopener" title="Open in Google Maps">🔗</a>
           <button type="button" onclick="sendAddr('${cityId}','${cat.id}',${i})" title="Send via MyPickz">📤</button>
           <button type="button" onclick="openAddrModal('${cityId}','${cat.id}',${i})" title="Edit">✏️</button>
           <button type="button" onclick="deleteAddr('${cityId}','${cat.id}',${i})" title="Delete">🗑</button>
-        </span></div>`);
-    });
-  });
-  let html = '';
-  if (!cityId){
-    html = '<div class="addr-empty">Start with your city.<br><span style="font-size:11px;">Tap ➕ City, then add your home, work, clinic… only you can see them.</span></div>';
-  } else {
-    Object.keys(bySection).forEach(title => { const b = bySection[title];
-      html += `<div class="addr-cathead"><span>${b.icon} ${title} (${b.count})</span><button type="button" onclick="openAddrModal('${cityId}','${b.firstCat}')" title="Add under ${title}">＋</button></div>` + (b.rows.join('') || `<div class="prow-sub" style="padding:2px 12px 6px;">—</div>`);
+        </span></div>`;
+      });
     });
   }
   document.getElementById('addrBody').innerHTML = html;
@@ -4784,7 +4798,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k2-r4 (opaque gate · promo banner retired · + City via My List flow · no top Add · paste button · categories always listed)');
+logTiming('BUILD: M2-FRAME-k2-r5 (country first then city chips · seven flat categories with counters · name-only rows)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
