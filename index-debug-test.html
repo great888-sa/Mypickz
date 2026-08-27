@@ -319,6 +319,8 @@
   .mp-chipmenu.show{ display:block; }
   .mp-chipmenu button{ display:block; width:100%; background:none; border:none; padding:11px 14px; text-align:left; direction:ltr; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; border-bottom:1px solid var(--line); }
   .mp-chipmenu button:last-child{ border-bottom:none; }
+  /* البوابة الإلزامية (المشهد ١): خلفية معتمة كاملة — لا واجهة قديمة خلفها */
+  #authBackdrop.gate-mode{ background:var(--paper); z-index:1150; }
   .mp-tabbar{ position:fixed; bottom:0; left:0; right:0; height:64px; z-index:700; background:var(--card); border-top:1px solid var(--line);
               display:flex; direction:ltr; }
   .mp-tab{ flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; color:var(--ink-soft); font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; }
@@ -469,7 +471,6 @@
     <div class="addr-sticky">
       <div class="addr-title">🔒 Personal Addresses <span class="addr-caption">· Private to you — send only when you choose</span></div>
       <div class="addr-chips" id="addrCityChips" style="margin:8px 0;"></div>
-      <div class="addr-actrow"><button class="btn btn-brass" onclick="openAddrModal()">➕ Add</button></div>
     </div>
     <div id="addrBody"><div class="addr-empty">Loading…</div></div>
   </div></div>
@@ -580,7 +581,7 @@
       <label style="font-size:11.5px; color:var(--ink-soft);">Name</label>
       <input id="addrName" class="modal-input" placeholder="e.g. Home" autocomplete="off">
       <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Google Maps link</label>
-      <input id="addrUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" inputmode="url" autocomplete="off" style="direction:ltr;">
+      <div style="display:flex; gap:6px; align-items:center;"><input id="addrUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" inputmode="url" autocomplete="off" style="direction:ltr; flex:1;"><button type="button" class="remove-btn" onclick="pasteToAddrUrl()" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button></div>
       <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Note (optional)</label>
       <input id="addrNote" class="modal-input" placeholder="e.g. Gate 3" autocomplete="off">
       <div id="addrError" style="color:#b5545a; font-size:12px; min-height:16px; margin-top:6px;"></div>
@@ -2669,7 +2670,7 @@ function closeStatsModal(){
 function openGate(){
   document.getElementById('authGateView').style.display = '';
   document.getElementById('authFormView').style.display = 'none';
-  document.getElementById('authBackdrop').classList.add('show');
+  const b = document.getElementById('authBackdrop'); b.classList.add('show'); b.classList.add('gate-mode');
 }
 function closeGate(){ document.getElementById('authBackdrop').classList.remove('show'); }
 function openAuthModal(mode){
@@ -2686,7 +2687,7 @@ function openAuthModal(mode){
   document.getElementById('authSignupBtn').style.display = signup ? '' : 'none';
   document.getElementById('authGateView').style.display = 'none';
   document.getElementById('authFormView').style.display = '';
-  document.getElementById('authBackdrop').classList.add('show');
+  const b = document.getElementById('authBackdrop'); b.classList.add('show'); b.classList.add('gate-mode'); // النموذج بنفس الخلفية المعتمة
   setTimeout(() => document.getElementById(signup ? 'authNickname' : 'authEmail').focus(), 50);
 }
 function closeAuthModal(force){
@@ -2763,7 +2764,30 @@ async function loadAddresses(force){
   addrLoaded = true;
   renderAddresses();
 }
-function cityNameOf(id){ const c = allCities().find(x => x.id === id); return c ? c.name : id; }
+function cityNameOf(id){ const c = myListAllCities().find(x => x.id === id) || allCities().find(x => x.id === id); return c ? c.name : id; }
+// خ٢-r4: إضافة مدينة بنفس منهج قائمتي والأماكن — اسم المدينة (إنجليزي فقط) ثم الدولة؛ تُحفظ بمدنك الخاصة (مشتركة مع قائمتي)
+async function addAddrCity(){
+  if (!currentUser) return;
+  const name = await openInputModal("New city", "e.g. Riyadh, Jeddah... (English letters only)", "");
+  if (!name || !name.trim()) return;
+  if (!isLatinOnly(name)) { showToast('City name must be in English letters only'); return; }
+  const country = await openInputModal("Country", "e.g. Saudi Arabia, Italy...", "", WORLD_COUNTRIES.map(c => c.name));
+  if (country === null || !country.trim()){ showToast('Country is required'); return; }
+  if (!isLatinOnly(country)) { showToast('Country name must be in English letters only'); return; }
+  const existing = myListAllCities().find(c => c.name.toLowerCase() === name.trim().toLowerCase() && c.country.toLowerCase() === country.trim().toLowerCase());
+  let id = existing ? existing.id : null;
+  if (!id){
+    id = "mylist_" + Date.now();
+    if (!Array.isArray(userListData.customCities)) userListData.customCities = [];
+    userListData.customCities.push({ id, name: name.trim(), country: country.trim() });
+    await saveUserListGeneral();
+  }
+  addrCurrentCity = id;
+  if (!addrCities.includes(id)) addrCities.push(id);
+  addrData[id] = addrData[id] || {};
+  renderAddresses();
+  openAddrModal(id, null);
+}
 function pickAddrCity(cityId){
   addrCurrentCity = cityId;
   if (userListData && userListData.addrCity !== cityId){ userListData.addrCity = cityId; mpData.userLists.merge(currentUser.uid, { addrCity: cityId }).catch(()=>{}); }
@@ -2772,7 +2796,7 @@ function pickAddrCity(cityId){
 function renderAddresses(){
   const chips = document.getElementById('addrCityChips');
   chips.innerHTML = addrCities.map(c => `<button type="button" class="addr-chip ${addrCurrentCity === c ? 'on' : ''}" onclick="pickAddrCity('${c}')">${cityNameOf(c)}</button>`).join('')
-    + `<button type="button" class="addr-chip" style="border-style:dashed; color:var(--brass);" onclick="openAddrModal(null, null, undefined, true)">➕ City</button>`;
+    + `<button type="button" class="addr-chip" style="border-style:dashed; color:var(--brass);" onclick="addAddrCity()">➕ City</button>`;
   const cats = privateCategoryList();
   const bySection = {};
   cats.forEach(cat => { (bySection[cat.section] = bySection[cat.section] || { icon: cat.sicon, rows: [], count: 0, firstCat: cat.id }); });
@@ -2795,7 +2819,7 @@ function renderAddresses(){
   });
   let html = '';
   if (!cityId){
-    html = '<div class="addr-empty">No personal addresses yet.<br><span style="font-size:11px;">Tap ➕ Add — your home, work, clinic… only you can see them.</span></div>';
+    html = '<div class="addr-empty">Start with your city.<br><span style="font-size:11px;">Tap ➕ City, then add your home, work, clinic… only you can see them.</span></div>';
   } else {
     Object.keys(bySection).forEach(title => { const b = bySection[title];
       html += `<div class="addr-cathead"><span>${b.icon} ${title} (${b.count})</span><button type="button" onclick="openAddrModal('${cityId}','${b.firstCat}')" title="Add under ${title}">＋</button></div>` + (b.rows.join('') || `<div class="prow-sub" style="padding:2px 12px 6px;">—</div>`);
@@ -2813,9 +2837,13 @@ async function sendAddr(cityId, catId, index){
     else { await navigator.clipboard.writeText(text); showToast('Copied — paste it anywhere'); }
   }catch(e){}
 }
+async function pasteToAddrUrl(){
+  try{ const t = await navigator.clipboard.readText(); if (!t || !t.trim()){ showToast('Clipboard is empty'); return; } document.getElementById('addrUrl').value = t.trim(); showToast('Pasted ✓'); }
+  catch(e){ showToast('Could not access clipboard — paste manually in the field'); }
+}
 // نافذة الإضافة/التعديل (٦/و٢): الدولة ثم المدينة بالمنهج الموحَّد — المختارة مسبقًا مدينة العناوين الحالية
 function addrFillCountries(selectedCityId){
-  const list = allCities().filter(c => c.country);
+  const list = myListAllCities().filter(c => c.country); // نفس مصدر مدن قائمتي: مدن الدليل المنشورة + مدنك الخاصة
   const countries = [...new Set(list.map(c => c.country))];
   const selCity = list.find(c => c.id === selectedCityId);
   const selCountry = selCity ? selCity.country : (countries[0] || '');
@@ -2824,12 +2852,12 @@ function addrFillCountries(selectedCityId){
 }
 function addrCountryChanged(preferCityId){
   const country = document.getElementById('addrCountry').value;
-  const cities = allCities().filter(c => c.country === country);
+  const cities = myListAllCities().filter(c => c.country === country);
   const chosen = cities.find(c => c.id === preferCityId) ? preferCityId : (cities[0] && cities[0].id);
   document.getElementById('addrCity').innerHTML = cities.map(c => `<option value="${c.id}" ${c.id === chosen ? 'selected' : ''}>${c.name}</option>`).join('');
   addrModalCity = chosen || null;
 }
-function openAddrModal(cityId, catId, index, newCity){
+function openAddrModal(cityId, catId, index){
   if (!currentUser) return;
   if (currentUserSuspended){ showToast("Your account is suspended — you can't add addresses"); return; }
   const cats = privateCategoryList();
@@ -2837,7 +2865,7 @@ function openAddrModal(cityId, catId, index, newCity){
   const existing = addrEditRef ? ((addrData[cityId][catId].places || [])[index] || {}) : {};
   addrModalCat = catId || (cats[0] && cats[0].id);
   document.getElementById('addrModalTitle').textContent = addrEditRef ? '✏️ Edit address' : '🔒 Add address';
-  addrFillCountries(newCity ? null : (cityId || addrCurrentCity));
+  addrFillCountries(cityId || addrCurrentCity);
   document.getElementById('addrModalCats').innerHTML = cats.map(c => `<button type="button" class="addr-chip ${c.id === addrModalCat ? 'on' : ''}" onclick="addrModalCat='${c.id}'; this.parentNode.querySelectorAll('.addr-chip').forEach(b=>b.classList.remove('on')); this.classList.add('on');">${c.icon} ${c.name}</button>`).join('');
   document.getElementById('addrName').value = existing.name || '';
   document.getElementById('addrUrl').value = existing.url || '';
@@ -3104,7 +3132,7 @@ function updateUserUI(){
     label.textContent = 'My Account';
     if (myListBtn) myListBtn.style.display = 'none';
     if (myTripsBtn) myTripsBtn.style.display = 'none';
-    if (promoBanner) promoBanner.style.display = 'block';
+    if (promoBanner) promoBanner.style.display = 'none'; // خ٢-r4: لافتة التسجيل القديمة أُلغيت — البوابة إلزامية
     if (chipBtn) chipBtn.style.display = 'none';
     const gchip2 = document.getElementById('guestChipBtn'); if (gchip2) gchip2.style.display = '';
     addrLoaded = false; addrData = {}; addrCities = []; closeChipMenu();
@@ -4756,7 +4784,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k2-r3 (own addresses city · inline row tools · + per category · unified country/city pickers · send via MyPickz · unified place row · sign-in flash fix)');
+logTiming('BUILD: M2-FRAME-k2-r4 (opaque gate · promo banner retired · + City via My List flow · no top Add · paste button · categories always listed)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
