@@ -355,13 +355,17 @@
   /* خ٢ (٢٧ أغسطس ٢٠٢٦) — وجهة العناوين الشخصية (المشهدان ٦/و و٦/و٢) */
   .addr-wrap{ max-width:760px; margin:0 auto; padding:0 12px; }
   .addr-sticky{ position:sticky; top:52px; z-index:10; background:var(--paper); padding:10px 0 8px; }
-  .lockbar{ background:#fdecea; color:#8b1e1e; border:1px solid #e3b3b6; border-radius:12px; padding:8px 12px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; text-align:center; }
   .addr-actrow{ display:flex; gap:8px; margin-top:8px; }
   .addr-actrow .btn{ flex:1; margin-top:0; padding:10px; font-size:13px; }
-  .addr-cathead{ font-family:'Cairo',sans-serif; font-weight:800; font-size:13px; color:var(--ink); margin:14px 0 6px; text-align:left; direction:ltr; }
+  .addr-cathead{ font-family:'Cairo',sans-serif; font-weight:800; font-size:13px; color:var(--ink); margin:14px 0 6px; text-align:left; direction:ltr; display:flex; justify-content:space-between; align-items:center; }
+  .addr-cathead button{ background:none; border:1.5px solid var(--line); border-radius:999px; width:26px; height:26px; cursor:pointer; font-weight:800; color:var(--brass); }
   .addr-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:6px; direction:ltr; text-align:left; }
-  .addr-row a{ color:var(--ink); text-decoration:none; font-size:13px; font-family:'Cairo',sans-serif; font-weight:700; flex:1; }
-  .addr-row small{ color:var(--ink-soft); font-weight:500; }
+  /* قاعدة "صف المكان" الموحَّدة (٢٧ أغسطس): الاسم أزرق غامق عريض ١٤ · سطر ثانٍ أهدأ · أيقونات يمينًا بترتيب ثابت */
+  .prow-name{ font-family:'Cairo',sans-serif; font-weight:800; font-size:14px; color:var(--ink); text-decoration:none; display:block; }
+  .prow-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  .addr-row .acts button, .addr-row .acts a{ background:none; border:none; font-size:15px; cursor:pointer; padding:4px; color:var(--ink); text-decoration:none; }
+  .addr-title{ font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; color:var(--ink); }
+  .addr-caption{ font-size:11px; color:var(--ink-soft); font-weight:600; }
   .addr-row .acts{ display:flex; gap:6px; }
   .addr-chip{ display:inline-block; border:1.5px solid var(--line); border-radius:999px; padding:6px 12px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; background:#fff; cursor:pointer; color:var(--ink); }
   .addr-chip.on{ border-color:var(--brass); background:rgba(165,117,31,.1); }
@@ -463,10 +467,10 @@
   <!-- خ١: الوجهة ٥ — العناوين الشخصية: تُبنى كاملة بخ٢ -->
   <div class="mp-screen" id="screenAddresses"><div class="addr-wrap">
     <div class="addr-sticky">
-      <div class="lockbar">🔒 Always private — never shared, no setting can change this</div>
-      <div class="addr-actrow"><button class="btn btn-brass" onclick="openAddrModal()">➕ Add</button><button class="btn btn-ghost" id="addrEditBtn" onclick="toggleAddrEdit()">✏️ Edit</button></div>
+      <div class="addr-title">🔒 Personal Addresses <span class="addr-caption">· Private to you — send only when you choose</span></div>
+      <div class="addr-chips" id="addrCityChips" style="margin:8px 0;"></div>
+      <div class="addr-actrow"><button class="btn btn-brass" onclick="openAddrModal()">➕ Add</button></div>
     </div>
-    <div class="addr-chips" id="addrCityChips" style="margin:8px 0;"></div>
     <div id="addrBody"><div class="addr-empty">Loading…</div></div>
   </div></div>
 
@@ -566,8 +570,11 @@
   <div class="modal-backdrop" id="addrBackdrop">
     <div class="modal" style="text-align:left; direction:ltr; max-height:88vh; overflow-y:auto;">
       <h3 id="addrModalTitle">🔒 Add address</h3>
-      <label style="font-size:11.5px; color:var(--ink-soft);">City</label>
-      <div class="addr-chips" id="addrModalCities" style="margin:4px 0 10px;"></div>
+      <label style="font-size:11.5px; color:var(--ink-soft);">Country</label>
+      <select id="addrCountry" class="modal-input" onchange="addrCountryChanged()"></select>
+      <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">City</label>
+      <select id="addrCity" class="modal-input" onchange="addrModalCity=this.value"></select>
+      <div style="height:10px"></div>
       <label style="font-size:11.5px; color:var(--ink-soft);">Category</label>
       <div class="addr-chips" id="addrModalCats" style="margin:4px 0 10px;"></div>
       <label style="font-size:11.5px; color:var(--ink-soft);">Name</label>
@@ -2682,8 +2689,9 @@ function openAuthModal(mode){
   document.getElementById('authBackdrop').classList.add('show');
   setTimeout(() => document.getElementById(signup ? 'authNickname' : 'authEmail').focus(), 50);
 }
-function closeAuthModal(){
-  if (!currentUser){ openGate(); return; } // البوابة إلزامية: إغلاق النموذج بلا دخول يعيد مشهد البوابة
+function closeAuthModal(force){
+  // البوابة إلزامية: إغلاق النموذج بلا دخول يعيد مشهد البوابة — إلا بعد نجاح الدخول/التسجيل (force) حيث الإشعار بالمستخدم يصل بعد لحظة
+  if (!currentUser && !force){ openGate(); return; }
   document.getElementById('authBackdrop').classList.remove('show');
 }
 function openModalById(id){ document.getElementById(id).classList.add('show'); }
@@ -2723,14 +2731,14 @@ async function runOnboardingIfNeeded(){
   if (!HOME_TABS.includes(userListData.defaultTab)) openHomeChooser(false);
   else switchTab(userListData.defaultTab);
 }
-// ===== خ٢ (٢٧ أغسطس ٢٠٢٦): وجهة العناوين الشخصية — المشهدان ٦/و و٦/و٢ =====
+// ===== خ٢ (٢٧ أغسطس ٢٠٢٦، r3 بالتحسينات المعتمدة): وجهة العناوين الشخصية — المشهدان ٦/و و٦/و٢ =====
 // المصدر الوحيد: userPrivatePlaces/{uid}_{cityId} عبر النواة · لا علم عام ولا مشاركة ولا زر رحلة
+// مدينة العناوين مستقلة عن مدينة التصفح بالأماكن (استخدام يومي) — تُحفظ بمستند المستخدم (addrCity)
 let addrData = {};          // { cityId: { catId: { active, places:[{id,name,url,note,area}] } } }
-let addrCities = [];        // مدن فيها مستند خاص (من فهرس userLists.privateCities)
-let addrFilter = 'All';
-let addrEdit = false;
+let addrCities = [];        // مدن فيها عناوين (من فهرس userLists.privateCities)
+let addrCurrentCity = null; // المدينة المعروضة (لا "الكل")
+let addrLoaded = false;     // تخزين القراءات بالذاكرة — يُبطَل عند أي كتابة
 let addrModalCity = null, addrModalCat = null, addrEditRef = null; // {cityId, catId, index} عند التعديل
-let addrLoaded = false;     // تخزين القراءات بالذاكرة — يُبطَل عند أي كتابة (قرار ٢٧ أغسطس)
 function privateCategoryList(){
   const out = [];
   DATA.forEach(sec => { if (!sec.ownerOnly) return;
@@ -2739,59 +2747,97 @@ function privateCategoryList(){
   });
   return out;
 }
+function addrCountOf(cityId){ return Object.values(addrData[cityId] || {}).reduce((a, e) => a + ((e.places || []).length), 0); }
 async function loadAddresses(force){
   if (!currentUser) return;
   if (addrLoaded && !force){ renderAddresses(); return; }
   const idx = (userListData && userListData.privateCities) || [];
-  addrCities = Array.from(new Set(idx.concat(myListCityId ? [myListCityId] : []))).filter(Boolean);
+  const cities = Array.from(new Set(idx)).filter(Boolean);
   addrData = {};
-  await Promise.all(addrCities.map(async c => { try{ addrData[c] = await mpData.privatePlaces.get(currentUser.uid, c); }catch(e){ addrData[c] = {}; } }));
-  addrCities = addrCities.filter(c => Object.values(addrData[c] || {}).some(e => (e.places || []).length));
-  if (addrFilter !== 'All' && !addrCities.includes(addrFilter)) addrFilter = 'All';
+  await Promise.all(cities.map(async c => { try{ addrData[c] = await mpData.privatePlaces.get(currentUser.uid, c); }catch(e){ addrData[c] = {}; } }));
+  addrCities = cities.filter(c => addrCountOf(c) > 0);
+  // المدينة المعروضة: المحفوظة، وإلا مدينة أكثر العناوين
+  const saved = userListData && userListData.addrCity;
+  if (saved && addrCities.includes(saved)) addrCurrentCity = saved;
+  else if (!addrCities.includes(addrCurrentCity)) addrCurrentCity = addrCities.slice().sort((a, b) => addrCountOf(b) - addrCountOf(a))[0] || null;
   addrLoaded = true;
   renderAddresses();
 }
 function cityNameOf(id){ const c = allCities().find(x => x.id === id); return c ? c.name : id; }
+function pickAddrCity(cityId){
+  addrCurrentCity = cityId;
+  if (userListData && userListData.addrCity !== cityId){ userListData.addrCity = cityId; mpData.userLists.merge(currentUser.uid, { addrCity: cityId }).catch(()=>{}); }
+  renderAddresses();
+}
 function renderAddresses(){
   const chips = document.getElementById('addrCityChips');
-  if (addrCities.length > 1){
-    chips.style.display = '';
-    chips.innerHTML = ['All'].concat(addrCities).map(c => `<button type="button" class="addr-chip ${addrFilter === c ? 'on' : ''}" onclick="addrFilter='${c}'; renderAddresses();">${c === 'All' ? 'All' : cityNameOf(c)}</button>`).join('');
-  } else { chips.style.display = 'none'; }
+  chips.innerHTML = addrCities.map(c => `<button type="button" class="addr-chip ${addrCurrentCity === c ? 'on' : ''}" onclick="pickAddrCity('${c}')">${cityNameOf(c)}</button>`).join('')
+    + `<button type="button" class="addr-chip" style="border-style:dashed; color:var(--brass);" onclick="openAddrModal(null, null, undefined, true)">➕ City</button>`;
   const cats = privateCategoryList();
   const bySection = {};
-  cats.forEach(cat => { (bySection[cat.section] = bySection[cat.section] || { icon: cat.sicon, rows: [] }); });
-  let count = 0;
-  addrCities.forEach(cityId => {
-    if (addrFilter !== 'All' && cityId !== addrFilter) return;
-    const catsMap = addrData[cityId] || {};
-    cats.forEach(cat => {
-      const places = (catsMap[cat.id] && catsMap[cat.id].places) || [];
-      places.forEach((p, i) => { count++;
-        bySection[cat.section].rows.push(`<div class="addr-row">
-          <a class="place-link" data-mpsrc="app" data-mpcat="${cat.id}" data-mppersonal="1" href="${p.url}" target="_blank" rel="noopener">${cat.icon} ${cat.name}${p.name ? ': ' + p.name : ''} <small>— ${cityNameOf(cityId)}${p.note ? ' · ' + p.note : ''}</small></a>
-          ${addrEdit ? `<span class="acts"><button type="button" class="remove-btn" onclick="openAddrModal('${cityId}','${cat.id}',${i})" title="Edit"><i class="fa-solid fa-pen"></i></button><button type="button" class="remove-btn" onclick="deleteAddr('${cityId}','${cat.id}',${i})" title="Delete"><i class="fa-solid fa-trash"></i></button></span>` : '<span>🔗</span>'}
-        </div>`);
-      });
+  cats.forEach(cat => { (bySection[cat.section] = bySection[cat.section] || { icon: cat.sicon, rows: [], count: 0, firstCat: cat.id }); });
+  const cityId = addrCurrentCity;
+  const catsMap = (cityId && addrData[cityId]) || {};
+  cats.forEach(cat => {
+    const places = (catsMap[cat.id] && catsMap[cat.id].places) || [];
+    places.forEach((p, i) => {
+      bySection[cat.section].count++;
+      const sub = [cityNameOf(cityId), p.note].filter(Boolean).join(' · ');
+      bySection[cat.section].rows.push(`<div class="addr-row">
+        <div style="flex:1; min-width:0;"><a class="place-link prow-name" data-mpsrc="app" data-mpcat="${cat.id}" data-mppersonal="1" href="${p.url}" target="_blank" rel="noopener">${cat.icon} ${cat.name}${p.name ? ': ' + p.name : ''}</a><div class="prow-sub">${sub}</div></div>
+        <span class="acts">
+          <a href="${p.url}" target="_blank" rel="noopener" title="Open in Google Maps">🔗</a>
+          <button type="button" onclick="sendAddr('${cityId}','${cat.id}',${i})" title="Send via MyPickz">📤</button>
+          <button type="button" onclick="openAddrModal('${cityId}','${cat.id}',${i})" title="Edit">✏️</button>
+          <button type="button" onclick="deleteAddr('${cityId}','${cat.id}',${i})" title="Delete">🗑</button>
+        </span></div>`);
     });
   });
   let html = '';
-  Object.keys(bySection).forEach(title => { const b = bySection[title]; if (!b.rows.length) return; html += `<div class="addr-cathead">${b.icon} ${title}</div>` + b.rows.join(''); });
-  document.getElementById('addrBody').innerHTML = html || '<div class="addr-empty">No personal addresses yet.<br><span style="font-size:11px;">Tap ➕ Add — your home, work, clinic… only you can see them.</span></div>';
-  document.getElementById('addrEditBtn').textContent = addrEdit ? '✅ Done' : '✏️ Edit';
+  if (!cityId){
+    html = '<div class="addr-empty">No personal addresses yet.<br><span style="font-size:11px;">Tap ➕ Add — your home, work, clinic… only you can see them.</span></div>';
+  } else {
+    Object.keys(bySection).forEach(title => { const b = bySection[title];
+      html += `<div class="addr-cathead"><span>${b.icon} ${title} (${b.count})</span><button type="button" onclick="openAddrModal('${cityId}','${b.firstCat}')" title="Add under ${title}">＋</button></div>` + (b.rows.join('') || `<div class="prow-sub" style="padding:2px 12px 6px;">—</div>`);
+    });
+  }
+  document.getElementById('addrBody').innerHTML = html;
 }
-function toggleAddrEdit(){ addrEdit = !addrEdit; renderAddresses(); }
-function openAddrModal(cityId, catId, index){
+// إرسال العنوان خارج التطبيق بتوقيع (قرار إرسال لا مشاركة بيانات) — مشاركة النظام، وإلا نسخ للحافظة
+async function sendAddr(cityId, catId, index){
+  const cat = privateCategoryList().find(c => c.id === catId); const p = ((addrData[cityId] || {})[catId] || {}).places[index]; if (!p) return;
+  const text = `${cat ? cat.icon + ' ' + cat.name : ''}${p.name ? ': ' + p.name : ''} — ${cityNameOf(cityId)}${p.note ? ' · ' + p.note : ''}\n${p.url}\nSent via MyPickz · mypickz.app`;
+  mpTrack.hit('share_link');
+  try{
+    if (navigator.share) await navigator.share({ text });
+    else { await navigator.clipboard.writeText(text); showToast('Copied — paste it anywhere'); }
+  }catch(e){}
+}
+// نافذة الإضافة/التعديل (٦/و٢): الدولة ثم المدينة بالمنهج الموحَّد — المختارة مسبقًا مدينة العناوين الحالية
+function addrFillCountries(selectedCityId){
+  const list = allCities().filter(c => c.country);
+  const countries = [...new Set(list.map(c => c.country))];
+  const selCity = list.find(c => c.id === selectedCityId);
+  const selCountry = selCity ? selCity.country : (countries[0] || '');
+  document.getElementById('addrCountry').innerHTML = countries.map(c => `<option value="${c.replace(/"/g,'&quot;')}" ${c === selCountry ? 'selected' : ''}>${countryFlag(c) ? countryFlag(c) + ' ' : ''}${c}</option>`).join('');
+  addrCountryChanged(selectedCityId);
+}
+function addrCountryChanged(preferCityId){
+  const country = document.getElementById('addrCountry').value;
+  const cities = allCities().filter(c => c.country === country);
+  const chosen = cities.find(c => c.id === preferCityId) ? preferCityId : (cities[0] && cities[0].id);
+  document.getElementById('addrCity').innerHTML = cities.map(c => `<option value="${c.id}" ${c.id === chosen ? 'selected' : ''}>${c.name}</option>`).join('');
+  addrModalCity = chosen || null;
+}
+function openAddrModal(cityId, catId, index, newCity){
   if (!currentUser) return;
   if (currentUserSuspended){ showToast("Your account is suspended — you can't add addresses"); return; }
   const cats = privateCategoryList();
-  const cities = myListAllCities ? myListAllCities() : allCities();
-  addrEditRef = (cityId && catId !== undefined && index !== undefined) ? { cityId, catId, index } : null;
+  addrEditRef = (cityId && catId && index !== undefined) ? { cityId, catId, index } : null;
   const existing = addrEditRef ? ((addrData[cityId][catId].places || [])[index] || {}) : {};
-  addrModalCity = addrEditRef ? cityId : (addrFilter !== 'All' ? addrFilter : (currentCityId || myListCityId || (cities[0] && cities[0].id))); // قرار ٢٧ أغسطس: المدينة المتصفَّحة بالأماكن
-  addrModalCat = addrEditRef ? catId : (cats[0] && cats[0].id);
+  addrModalCat = catId || (cats[0] && cats[0].id);
   document.getElementById('addrModalTitle').textContent = addrEditRef ? '✏️ Edit address' : '🔒 Add address';
-  document.getElementById('addrModalCities').innerHTML = cities.map(c => `<button type="button" class="addr-chip ${c.id === addrModalCity ? 'on' : ''}" onclick="addrModalCity='${c.id}'; this.parentNode.querySelectorAll('.addr-chip').forEach(b=>b.classList.remove('on')); this.classList.add('on');">${c.name}</button>`).join('');
+  addrFillCountries(newCity ? null : (cityId || addrCurrentCity));
   document.getElementById('addrModalCats').innerHTML = cats.map(c => `<button type="button" class="addr-chip ${c.id === addrModalCat ? 'on' : ''}" onclick="addrModalCat='${c.id}'; this.parentNode.querySelectorAll('.addr-chip').forEach(b=>b.classList.remove('on')); this.classList.add('on');">${c.icon} ${c.name}</button>`).join('');
   document.getElementById('addrName').value = existing.name || '';
   document.getElementById('addrUrl').value = existing.url || '';
@@ -2808,6 +2854,7 @@ async function saveAddr(){
   if (!name){ err.textContent = 'Enter a name'; return; }
   if (!isGoogleMapsUrl(url)){ err.textContent = 'Paste a Google Maps link'; return; }
   const cityId = addrModalCity, catId = addrModalCat;
+  if (!cityId){ err.textContent = 'Choose a city'; return; }
   const catsMap = addrData[cityId] || (addrData[cityId] = {});
   const entry = catsMap[catId] || (catsMap[catId] = { active: true, places: [] });
   const place = { id: 'p_' + Date.now().toString(36), name, url, note, area: '' };
@@ -2815,16 +2862,15 @@ async function saveAddr(){
     place.id = (entry.places[addrEditRef.index] || place).id || place.id;
     entry.places[addrEditRef.index] = place;
   } else {
-    if (addrEditRef){ // نُقل لتصنيف أو مدينة أخرى: يُحذف من موضعه القديم
-      const old = addrData[addrEditRef.cityId][addrEditRef.catId]; old.places.splice(addrEditRef.index, 1);
-      try{ await mpData.privatePlaces.setCategory(currentUser.uid, addrEditRef.cityId, addrEditRef.catId, old); }catch(e){}
-    }
+    if (addrEditRef){ const old = addrData[addrEditRef.cityId][addrEditRef.catId]; old.places.splice(addrEditRef.index, 1);
+      try{ await mpData.privatePlaces.setCategory(currentUser.uid, addrEditRef.cityId, addrEditRef.catId, old); }catch(e){} }
     entry.places.push(place);
   }
   try{
     await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry);
     await mpData.userLists.addPrivateCity(currentUser.uid, cityId);
     if (userListData && !userListData.privateCities.includes(cityId)) userListData.privateCities.push(cityId);
+    addrCurrentCity = cityId; if (userListData){ userListData.addrCity = cityId; mpData.userLists.merge(currentUser.uid, { addrCity: cityId }).catch(()=>{}); }
     closeModalById('addrBackdrop');
     showToast('Saved ✓');
     await loadAddresses(true);
@@ -2832,6 +2878,7 @@ async function saveAddr(){
 }
 async function deleteAddr(cityId, catId, index){
   const entry = addrData[cityId] && addrData[cityId][catId]; if (!entry) return;
+  if (!confirm('Delete this address?')) return;
   entry.places.splice(index, 1);
   try{ await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry); showToast('Deleted'); }catch(e){ showToast('Could not delete'); }
   await loadAddresses(true);
@@ -2905,7 +2952,7 @@ async function doSignUp(){
       console.warn('Nickname reservation failed at sign-up:', e && e.code, e);
     }
     signUpInProgress = false;
-    closeAuthModal();
+    closeAuthModal(true);
     showToast(nicknameSaved ? 'Account created ✓' : 'Account created — please choose a username');
     if (!nicknameSaved){
       await enforceNickname(); // شبكة الأمان بنفس الجلسة، لا بعد التحديث — تسبق النبذة حتى لا تتراكب النافذتان
@@ -2952,7 +2999,7 @@ async function doSignIn(){
   try{
     await mpData.auth.signIn(email, pass);
     // فحص الاسم المستعار لم يعد هنا — صار موحَّدًا في onAuthStateChanged (يغطي الدخول واستعادة الجلسة معًا، أ-٢ الدفعة ٢)
-    closeAuthModal();
+    closeAuthModal(true);
     showToast('Welcome ✓');
   }catch(e){
     errEl.textContent = authErrorMessage(e);
@@ -3214,7 +3261,8 @@ async function loadUserList(){
       viewCount: data.viewCount || 0,
       guideSeen: data.guideSeen === true,      // خ١-ب: النبذة شوهدت
       defaultTab: data.defaultTab || null,      // خ١-ب: الوجهة الافتراضية
-      privateCities: Array.isArray(data.privateCities) ? data.privateCities : [] // خ٢: فهرس مدن العناوين الخاصة
+      privateCities: Array.isArray(data.privateCities) ? data.privateCities : [], // خ٢: فهرس مدن العناوين الخاصة
+      addrCity: data.addrCity || null           // خ٢-r3: مدينة العناوين المستقلة
     };
   }catch(e){ userListData = { customCities: [], customCountries: [], nickname: null }; userListLoadFailed = true; }
   try{
@@ -4708,7 +4756,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k2-r2 (+ topbar ☰/wordmark · chip menu · no cover · logout confirm · default city · cached reads)');
+logTiming('BUILD: M2-FRAME-k2-r3 (own addresses city · inline row tools · + per category · unified country/city pickers · send via MyPickz · unified place row · sign-in flash fix)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
