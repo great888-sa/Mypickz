@@ -585,6 +585,8 @@
       <div style="display:flex; gap:6px; align-items:center;"><input id="addrUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" inputmode="url" autocomplete="off" style="direction:ltr; flex:1;"><button type="button" class="remove-btn" onclick="pasteToAddrUrl()" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button></div>
       <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Note (optional)</label>
       <input id="addrNote" class="modal-input" placeholder="e.g. Gate 3" autocomplete="off">
+      <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Phone (optional)</label>
+      <input id="addrPhone" class="modal-input" placeholder="e.g. +966 5x xxx xxxx" inputmode="tel" autocomplete="off" style="direction:ltr;">
       <div id="addrError" style="color:#b5545a; font-size:12px; min-height:16px; margin-top:6px;"></div>
       <button class="btn btn-brass" style="width:100%; margin-top:8px;" onclick="saveAddr()">Save</button>
       <button class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="closeModalById('addrBackdrop')">Cancel</button>
@@ -2829,9 +2831,10 @@ function renderAddresses(){
       html += `<div class="addr-cathead"><span>${cat.icon} ${cat.name} (${places.length})</span><button type="button" onclick="openAddrModal('${cityId}','${cat.id}')" title="Add under ${cat.name}">＋</button></div>`;
       places.forEach((p, i) => {
         html += `<div class="addr-row">
-        <div style="flex:1; min-width:0;"><a class="place-link prow-name" data-mpsrc="app" data-mpcat="${cat.id}" data-mppersonal="1" href="${p.url}" target="_blank" rel="noopener">${p.name || cat.name}</a>${p.note ? `<div class="prow-sub">${p.note}</div>` : ''}</div>
+        <div style="flex:1; min-width:0;"><a class="place-link prow-name" data-mpsrc="app" data-mpcat="${cat.id}" data-mppersonal="1" href="${p.url}" target="_blank" rel="noopener">${p.name || cat.name}</a>${(p.note || p.phone) ? `<div class="prow-sub">${[p.note, p.phone].filter(Boolean).join(' · ')}</div>` : ''}</div>
         <span class="acts">
           <a href="${p.url}" target="_blank" rel="noopener" title="Open in Google Maps">🔗</a>
+          ${p.phone ? `<a href="tel:${String(p.phone).replace(/[^+\d]/g,'')}" title="Call">📞</a>` : ''}
           <button type="button" onclick="sendAddr('${cityId}','${cat.id}',${i})" title="Send via MyPickz">📤</button>
           <button type="button" onclick="openAddrModal('${cityId}','${cat.id}',${i})" title="Edit">✏️</button>
           <button type="button" onclick="deleteAddr('${cityId}','${cat.id}',${i})" title="Delete">🗑</button>
@@ -2844,7 +2847,7 @@ function renderAddresses(){
 // إرسال العنوان خارج التطبيق بتوقيع (قرار إرسال لا مشاركة بيانات) — مشاركة النظام، وإلا نسخ للحافظة
 async function sendAddr(cityId, catId, index){
   const cat = privateCategoryList().find(c => c.id === catId); const p = ((addrData[cityId] || {})[catId] || {}).places[index]; if (!p) return;
-  const text = `${cat ? cat.icon + ' ' + cat.name : ''}${p.name ? ': ' + p.name : ''} — ${cityNameOf(cityId)}${p.note ? ' · ' + p.note : ''}\n${p.url}\nSent via MyPickz · mypickz.app`;
+  const text = `${cat ? cat.icon + ' ' + cat.name : ''}${p.name ? ': ' + p.name : ''} — ${cityNameOf(cityId)}${p.note ? ' · ' + p.note : ''}${p.phone ? ' · ' + p.phone : ''}\n${p.url}\nSent via MyPickz · mypickz.app`;
   mpTrack.hit('share_link');
   try{
     if (navigator.share) await navigator.share({ text });
@@ -2884,6 +2887,7 @@ function openAddrModal(cityId, catId, index){
   document.getElementById('addrName').value = existing.name || '';
   document.getElementById('addrUrl').value = existing.url || '';
   document.getElementById('addrNote').value = existing.note || '';
+  document.getElementById('addrPhone').value = existing.phone || '';
   document.getElementById('addrError').textContent = '';
   openModalById('addrBackdrop');
 }
@@ -2891,6 +2895,7 @@ async function saveAddr(){
   const name = document.getElementById('addrName').value.trim();
   const url = document.getElementById('addrUrl').value.trim();
   const note = document.getElementById('addrNote').value.trim();
+  const phone = document.getElementById('addrPhone').value.trim();
   const err = document.getElementById('addrError');
   err.textContent = '';
   if (!name){ err.textContent = 'Enter a name'; return; }
@@ -2899,7 +2904,7 @@ async function saveAddr(){
   if (!cityId){ err.textContent = 'Choose a city'; return; }
   const catsMap = addrData[cityId] || (addrData[cityId] = {});
   const entry = catsMap[catId] || (catsMap[catId] = { active: true, places: [] });
-  const place = { id: 'p_' + Date.now().toString(36), name, url, note, area: '' };
+  const place = { id: 'p_' + Date.now().toString(36), name, url, note, phone, area: '' };
   if (addrEditRef && addrEditRef.cityId === cityId && addrEditRef.catId === catId){
     place.id = (entry.places[addrEditRef.index] || place).id || place.id;
     entry.places[addrEditRef.index] = place;
@@ -4798,7 +4803,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k2-r5 (country first then city chips · seven flat categories with counters · name-only rows)');
+logTiming('BUILD: M2-FRAME-k2-r6 (+ optional phone with tap-to-call)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
