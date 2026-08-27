@@ -135,13 +135,16 @@ const MP_EXPECTED = [
   ["mpTrack.captureSource();", 1],
   ["mpTrack.trapError(mpTrack.classify", 1],
   ["window.addEventListener('unhandledrejection'", 1],
-  ['data-mpsrc=', 7],
-  ['data-mppersonal=', 2],
+  // خ٢ (٢٧ أغسطس): وجهة العناوين الشخصية تعرض روابطها بسماتها (data-mpsrc="app" · data-mppersonal="1") — إبرة إضافية بنسخة الاختبار
+  //   حتى ترقية الإطار للإنتاج (حينها يصير العدد ٨/٣ بالملفين وتُوحَّد القيمة). القيمة إما رقم واحد للملفين أو {prod, test}.
+  ['data-mpsrc=', { prod: 7, test: 8 }],
+  ['data-mppersonal=', { prod: 2, test: 3 }],
   ['data-mpowner="1"', 1]
 ];
 function countOcc(haystack, needle){ return haystack.split(needle).length - 1; }
 function mpGuard(label, content){
-  for (const [needle, expected] of MP_EXPECTED) {
+  for (const [needle, exp] of MP_EXPECTED) {
+    const expected = (typeof exp === 'object') ? (label === PROD ? exp.prod : exp.test) : exp;
     const c = countOcc(content, needle);
     check(c === expected, 'mpTrack ' + label + ': ' + needle.slice(0, 44) + ' = ' + expected, 'found ' + c);
   }
@@ -204,6 +207,21 @@ for (const [n, s] of [[PROD, prod], [TEST, test]]) {
   console.log('INFO  ' + n + (hasDal ? ' has mpData' : ' legacy (no mpData yet)') + ' — direct calls outside DAL = ' + direct);
 }
 check(DAL_MAX[PROD] >= DAL_MAX[TEST], 'DAL caps consistent (prod cap never below test cap before promotion)');
+// ٢/أ (٢٦ أغسطس): نداءات المصادقة المباشرة خارج النواة — سقف صفر بعد الهجرة (الإنتاج ٥ حتى ترقيته)
+const AUTH_MAX = { [TEST]: 0, [PROD]: 5 };
+const AUTH_RE = /(?<!mpData\.)\bauth\.(signInWithEmailAndPassword|createUserWithEmailAndPassword|sendPasswordResetEmail|signOut|onAuthStateChanged|currentUser|updatePassword|reauthenticateWithCredential)\b/g;
+function countAuthDirect(content){
+  const iso = sliceModule(content, 'const mpData = (function(){');
+  const total = (content.match(AUTH_RE) || []).length;
+  const inIso = (iso.match(AUTH_RE) || []).length;
+  return total - inIso;
+}
+for (const [n, s] of [[PROD, prod], [TEST, test]]) {
+  const hasDal = countOcc(s, 'const mpData = (function(){') === 1;
+  const max = hasDal ? AUTH_MAX[n] : 5;
+  const direct = countAuthDirect(s);
+  check(direct <= max, 'direct auth calls outside DAL ' + n + ' = ' + direct + ' (max ' + max + ')');
+}
 
 finish();
 
