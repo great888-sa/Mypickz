@@ -286,7 +286,7 @@
                 color:var(--ink-soft); font-size:11.5px; line-height:1.8; border-top:1px solid var(--line); }
 
   .modal-backdrop{ position:fixed; inset:0; background:rgba(28,43,58,0.55); display:none;
-                    align-items:center; justify-content:center; padding:20px 20px 64px; z-index:1250; }
+                    align-items:center; justify-content:center; padding:20px 20px 64px; z-index:2000; }
   .modal-backdrop.show{ display:flex; }
   .modal{ background:var(--card); border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
   .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 12px; }
@@ -333,8 +333,8 @@
   .mp-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif; }
   .mp-empty .big{ font-size:34px; margin-bottom:8px; }
   /* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
-  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; direction:ltr; position:sticky; top:52px; background:var(--paper); z-index:10; }
-  #plBody{ padding-bottom:40px; }
+  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; direction:ltr; position:sticky; top:52px; background:var(--paper); z-index:10; box-shadow:0 6px 6px -6px rgba(28,43,58,.14); }
+  #plBody{ padding-bottom:16px; }
   .pl-src{ flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; padding:5px 10px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
   .pl-src.on{ background:var(--brass); border-color:var(--brass); color:#fff; }
   .pl-actrow{ display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0 0 7px; direction:ltr; align-items:center; }
@@ -637,7 +637,7 @@
 
   <!-- خ٢: إضافة/تعديل عنوان شخصي (المشهد ٦/و٢) — يكتب المستند الخاص فقط -->
   <div class="modal-backdrop" id="addrBackdrop">
-    <div class="modal" style="text-align:left; direction:ltr; max-height:88vh; overflow-y:auto;">
+    <div class="modal" style="text-align:left; direction:ltr; max-height:72vh; overflow-y:auto;">
       <h3 id="addrModalTitle">🔒 Add address</h3>
       <label style="font-size:11.5px; color:var(--ink-soft);">Country</label>
       <select id="addrCountry" class="modal-input" onchange="addrCountryChanged()"></select>
@@ -3468,6 +3468,11 @@ async function deletePlPlaceFromModal(){
   renderPlacesMine();
 }
 
+// r15: نقل خلفيات النوافذ كلها لذيل الجسم عند الجاهزية — يفكّ أي محاصرة سياق تراص محتملة من الحاويات
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.modal-backdrop').forEach(function(b){ document.body.appendChild(b); });
+});
+
 // شاشة السياسة (باب مغلق): النص من مسودة v2 والضوابط v1 — يُدرج بـ٢/هـ نصًّا كاملًا؛ الآن هيكل الشاشة بعناوين البنود
 function openPolicyModal(kind){
   const body = document.getElementById('policyBody');
@@ -5069,7 +5074,7 @@ function logTiming(label){
   if (!__timingBox){
     __timingBox = document.createElement('div');
     // خ١: اللوحة فوق الشريط الخمسي (٦٤) لا فوقه؛ وتُطوى بنقرة على شريطها إلى سطر واحد حتى يظهر ما تحتها
-    __timingBox.style.cssText = 'position:fixed; bottom:64px; left:0; right:0; z-index:899; background:#2a3f4f; color:#9fe8a0; padding:6px 14px 8px; font-size:11px; font-family:monospace; direction:ltr; text-align:left; max-height:30vh; overflow-y:auto; box-shadow:0 -4px 12px rgba(0,0,0,.3); transition:max-height .2s;';
+    __timingBox.style.cssText = 'position:fixed; bottom:64px; left:0; right:0; z-index:400; background:#2a3f4f; color:#9fe8a0; padding:6px 14px 8px; font-size:11px; font-family:monospace; direction:ltr; text-align:left; max-height:30vh; overflow-y:auto; box-shadow:0 -4px 12px rgba(0,0,0,.3); transition:max-height .2s;';
     const bar = document.createElement('div');
     bar.textContent = '▼ TIMING — tap to collapse/expand';
     bar.style.cssText = 'cursor:pointer; font-weight:700; color:#fff; margin-bottom:4px; user-select:none;';
@@ -5089,7 +5094,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r14 (frame height round: modal layer 50->1250 above TIMING/tabbar, cap 72vh across rule + 6 inline modals, lifted backdrop padding; dead bottom void fixed [40px]; source switcher sticky per reference easy-exit rule)');
+logTiming('BUILD: M2-FRAME-k5-r15 (frame height round 2: escaped inline 88vh cap in Addresses modal -> 72vh; modal layer 2000 vs TIMING 400 [decisive]; all modal backdrops portaled to body end on ready [kills any stacking-context trap]; bottom pad 16; sticky switcher soft shadow)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
