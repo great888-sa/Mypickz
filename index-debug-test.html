@@ -90,7 +90,7 @@
   .btn-ghost{ background:transparent; color:var(--ink); border:1.5px solid var(--line); }
 
   .quick-nav{
-    position:sticky; top:52px; z-index:20; /* خ١: تحت الشريط العلوي الثابت */
+    position:sticky; top:44px; z-index:20; /* خ١: تحت الشريط العلوي الثابت */
     max-width:760px; margin:0 auto 18px; padding:10px 20px;
     background:rgba(239,231,214,0.92); backdrop-filter:blur(6px);
     display:flex; gap:8px; overflow-x:auto; border-bottom:1px solid var(--line);
@@ -295,7 +295,7 @@
   .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 12px; }
   .modal-input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px; }
   /* ٢/أ (٢٦ أغسطس ٢٠٢٦) — شارة الهوية بالشريط، نافذة الحساب، تأكيد الهوية، عين الإظهار، الشريط اللاصق للنوافذ الطويلة */
-  .mini-av{ display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; color:#fff; font-family:'Cairo',sans-serif; font-weight:900; font-size:13px; letter-spacing:.5px; }
+  .mini-av{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; color:#fff; font-family:'Cairo',sans-serif; font-weight:900; font-size:12px; letter-spacing:.5px; }
   .acc-head{ display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--paper-dark); border-radius:12px; margin-bottom:12px; text-align:left; direction:ltr; }
   .acc-head .mini-av{ width:44px; height:44px; font-size:16px; }
   .acc-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; color:var(--ink); }
@@ -310,11 +310,11 @@
   .modal-topbar{ position:sticky; top:-1px; z-index:3; background:var(--card); padding:2px 0 8px; margin-bottom:8px; border-bottom:1px dashed var(--line); display:flex; gap:8px; }
   .modal-topbar .btn{ margin-top:0; padding:9px 12px; font-size:12.5px; }
   /* ===== خ١ (٢٧ أغسطس ٢٠٢٦) — الإطار: الشريط العلوي · الشريط الخمسي · الوجهات · الدرج (النموذج المعلَّم: المشاهد ٦ و٧) ===== */
-  body{ padding-top:52px; padding-bottom:64px; }
-  .mp-topbar{ position:fixed; top:0; left:0; right:0; height:52px; z-index:700; background:var(--paper); border-bottom:1px solid var(--line);
+  body{ padding-top:44px; padding-bottom:54px; }
+  .mp-topbar{ position:fixed; top:0; left:0; right:0; height:44px; z-index:700; background:var(--paper); border-bottom:1px solid var(--line);
               display:flex; align-items:center; justify-content:space-between; padding:0 12px; direction:ltr; }
-  .mp-burger{ background:none; border:1.5px solid var(--line); border-radius:10px; width:38px; height:38px; font-size:18px; cursor:pointer; color:var(--ink); }
-  .mp-idchip{ display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:4px 12px 4px 4px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; color:var(--ink); }
+  .mp-burger{ background:none; border:1.5px solid var(--line); border-radius:10px; width:32px; height:32px; font-size:16px; cursor:pointer; color:var(--ink); }
+  .mp-idchip{ display:inline-flex; align-items:center; gap:7px; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:3px 10px 3px 3px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; color:var(--ink); }
   .mp-idchip .mini-av{ width:30px; height:30px; font-size:12px; }
   .mp-idchip{ max-width:45vw; } .mp-idchip > span:last-child{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .mp-wordmark{ font-family:'Cairo',sans-serif; font-weight:900; font-size:18px; color:var(--ink); letter-spacing:.3px; }
@@ -324,7 +324,7 @@
   .mp-chipmenu button:last-child{ border-bottom:none; }
   /* البوابة الإلزامية (المشهد ١): خلفية معتمة كاملة — لا واجهة قديمة خلفها */
   #authBackdrop.gate-mode{ background:var(--paper); z-index:1150; }
-  .mp-tabbar{ position:fixed; bottom:0; left:0; right:0; height:64px; z-index:700; background:var(--card); border-top:1px solid var(--line);
+  .mp-tabbar{ position:fixed; bottom:0; left:0; right:0; height:54px; z-index:700; background:var(--card); border-top:1px solid var(--line);
               display:flex; direction:ltr; }
   .mp-tab{ flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; color:var(--ink-soft); font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; }
   .mp-tab .ti{ font-size:20px; line-height:1; }
@@ -336,7 +336,7 @@
   .mp-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif; }
   .mp-empty .big{ font-size:34px; margin-bottom:8px; }
   /* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
-  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; direction:ltr; position:sticky; top:52px; background:var(--paper); z-index:10; box-shadow:0 6px 6px -6px rgba(28,43,58,.14); }
+  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; direction:ltr; position:sticky; top:44px; background:var(--paper); z-index:10; box-shadow:0 6px 6px -6px rgba(28,43,58,.14); }
   #plBody{ padding-bottom:16px; }
   .pl-src{ flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; padding:5px 10px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
   .pl-src.on{ background:var(--brass); border-color:var(--brass); color:#fff; }
@@ -382,7 +382,7 @@
   .soon-tag{ display:inline-block; font-size:10.5px; color:var(--brass); border:1px solid var(--brass); border-radius:999px; padding:1px 8px; margin-left:6px; vertical-align:middle; }
   /* خ٢ (٢٧ أغسطس ٢٠٢٦) — وجهة العناوين الشخصية (المشهدان ٦/و و٦/و٢) */
   .addr-wrap{ max-width:760px; margin:0 auto; padding:0 12px; }
-  .addr-sticky{ position:sticky; top:52px; z-index:10; background:var(--paper); padding:10px 0 8px; }
+  .addr-sticky{ position:sticky; top:44px; z-index:10; background:var(--paper); padding:10px 0 8px; }
   .addr-actrow{ display:flex; gap:8px; margin-top:8px; }
   .addr-actrow .btn{ flex:1; margin-top:0; padding:10px; font-size:13px; }
   .addr-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin:14px 0 6px; text-align:left; direction:ltr; display:flex; justify-content:space-between; align-items:center; }
@@ -5077,7 +5077,7 @@ function logTiming(label){
   if (!__timingBox){
     __timingBox = document.createElement('div');
     // خ١: اللوحة فوق الشريط الخمسي (٦٤) لا فوقه؛ وتُطوى بنقرة على شريطها إلى سطر واحد حتى يظهر ما تحتها
-    __timingBox.style.cssText = 'position:fixed; bottom:64px; left:0; right:0; z-index:400; background:#2a3f4f; color:#9fe8a0; padding:6px 14px 8px; font-size:11px; font-family:monospace; direction:ltr; text-align:left; max-height:30vh; overflow-y:auto; box-shadow:0 -4px 12px rgba(0,0,0,.3); transition:max-height .2s;';
+    __timingBox.style.cssText = 'position:fixed; bottom:54px; left:0; right:0; z-index:400; background:#2a3f4f; color:#9fe8a0; padding:6px 14px 8px; font-size:11px; font-family:monospace; direction:ltr; text-align:left; max-height:30vh; overflow-y:auto; box-shadow:0 -4px 12px rgba(0,0,0,.3); transition:max-height .2s;';
     const bar = document.createElement('div');
     bar.textContent = '▼ TIMING — tap to collapse/expand';
     bar.style.cssText = 'cursor:pointer; font-weight:700; color:#fff; margin-bottom:4px; user-select:none;';
@@ -5097,7 +5097,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r16 (design precision: modal inner padding 18/20/14, first/last child margin trim across all modals — kills top void above titles and bottom void under last buttons)');
+logTiming('BUILD: M2-FRAME-k5-r17 (owner study: fixed bars slimmed — topbar 52->44 [burger 32, account monogram 28], tabbar 64->54; all synced: sticky rows, content top padding, TIMING bottom; ~+18px content per screen)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
