@@ -288,7 +288,10 @@
   .modal-backdrop{ position:fixed; inset:0; background:rgba(28,43,58,0.55); display:none;
                     align-items:center; justify-content:center; padding:20px 20px 64px; z-index:2000; }
   .modal-backdrop.show{ display:flex; }
-  .modal{ background:var(--card); border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .modal{ background:var(--card); border-radius:16px; padding:18px 20px 14px; max-width:340px; width:100%; text-align:center; max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .modal > :first-child{ margin-top:0; }
+  .modal > :last-child{ margin-bottom:0; }
+  .modal-x{ }
   .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 12px; }
   .modal-input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px; }
   /* ٢/أ (٢٦ أغسطس ٢٠٢٦) — شارة الهوية بالشريط، نافذة الحساب، تأكيد الهوية، عين الإظهار، الشريط اللاصق للنوافذ الطويلة */
@@ -5094,7 +5097,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r15 (frame height round 2: escaped inline 88vh cap in Addresses modal -> 72vh; modal layer 2000 vs TIMING 400 [decisive]; all modal backdrops portaled to body end on ready [kills any stacking-context trap]; bottom pad 16; sticky switcher soft shadow)');
+logTiming('BUILD: M2-FRAME-k5-r16 (design precision: modal inner padding 18/20/14, first/last child margin trim across all modals — kills top void above titles and bottom void under last buttons)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
