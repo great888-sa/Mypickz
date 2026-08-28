@@ -333,14 +333,14 @@
   .mp-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif; }
   .mp-empty .big{ font-size:34px; margin-bottom:8px; }
   /* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
-  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:2px 2px 10px; direction:ltr; }
+  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:0 0 8px; direction:ltr; }
   .pl-src{ flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; padding:7px 14px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
   .pl-src.on{ background:var(--brass); border-color:var(--brass); color:#fff; }
-  .pl-actrow{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; direction:ltr; align-items:center; }
-  .pl-actbtn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border:1.5px solid var(--line); border-radius:999px; padding:7px 12px; background:#fff; color:var(--ink); cursor:pointer; }
+  .pl-actrow{ display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0 0 7px; direction:ltr; align-items:center; }
+  .pl-actbtn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border:1.5px solid var(--line); border-radius:999px; padding:6px 10px; background:#fff; color:var(--ink); cursor:pointer; }
   .pl-actbtn.brass{ background:var(--brass); border-color:var(--brass); color:#fff; }
   .pl-actbtn.linkish{ border:none; text-decoration:underline; }
-  .pl-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin:14px 0 6px; display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left; }
+  .pl-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin:10px 0 6px; display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left; }
   .pl-cathead .addmini{ background:none; border:1.5px solid var(--line); border-radius:999px; min-width:26px; height:26px; cursor:pointer; font-weight:700; color:var(--brass); font-size:14px; }
   .pl-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line-strong); border-radius:12px; padding:10px 12px; margin-bottom:6px; direction:ltr; text-align:left; }
   .pl-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; color:var(--ink); text-decoration:none; display:block; }
@@ -348,10 +348,10 @@
   .pl-acts{ display:flex; gap:6px; align-items:center; }
   .pl-acts button, .pl-acts a{ background:none; border:none; font-size:15px; cursor:pointer; padding:4px; color:var(--ink); text-decoration:none; }
   .pl-acts a.act-chip{ border:1.5px solid var(--line-strong); border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; background:#fff; }
-  .pl-switchrow{ display:flex; align-items:center; gap:8px; background:var(--paper-dark); border-radius:12px; padding:8px 10px; margin:8px 0; font-size:12px; direction:ltr; text-align:left; }
-  .pl-sharebox{ background:var(--paper-dark); border-radius:12px; padding:8px 10px; margin:8px 0; font-size:11.5px; direction:ltr; text-align:left; }
+  .pl-switchrow{ display:flex; align-items:center; gap:8px; background:var(--paper-dark); border-radius:10px; padding:8px 10px; margin:2px 0 6px; font-size:12px; direction:ltr; text-align:left; }
+  .pl-sharebox{ background:var(--paper-dark); border-radius:10px; padding:8px 10px; margin:0 0 12px; font-size:11.5px; direction:ltr; text-align:left; }
   .pl-ownerpanel{ border:1.5px dashed var(--brass); border-radius:12px; padding:10px 12px; margin-top:12px; direction:ltr; text-align:left; }
-  .pl-catpick{ display:inline-block; border:1.5px solid var(--line); border-radius:999px; padding:5px 10px; margin:2px 3px 2px 0; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; background:#fff; cursor:pointer; }
+  .pl-catpick{ display:inline-block; border:1.5px solid var(--line); border-radius:999px; padding:5px 10px; margin:2px 3px 2px 0; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; background:#fff; color:var(--ink); cursor:pointer; }
   .pl-catpick.on{ border-color:var(--brass); background:rgba(165,117,31,.12); }
   /* الدرج — نافذة الحساب المبنية تصير جزأه الأعلى (المشهد ٧) */
   #accountBackdrop{ z-index:1200 !important; }
@@ -3306,7 +3306,7 @@ function renderPlacesMine(){
     + '<button type="button" class="pl-actbtn" style="opacity:.55;" onclick="showToast(\'Day plan — Soon (step 6)\')">🗓 Day plan <span style="font-size:8.5px; font-weight:700;">Soon</span></button>'
     + '<button type="button" class="pl-actbtn linkish" onclick="openPlPlaceModal(null, null)">All categories</button>'
     + '</div>';
-  html += '<div class="pl-actrow"><span style="font-size:10px; color:var(--ink-soft); font-weight:700;">View:</span>'
+  html += '<div class="pl-actrow" style="padding-bottom:4px;"><span style="font-size:10px; color:var(--ink-soft); font-weight:700;">View:</span>'
     + '<button type="button" class="pl-actbtn" style="background:var(--ink); color:var(--paper); border-color:var(--ink);">📋 List</button>'
     + '<button type="button" class="pl-actbtn" onclick="showToast(\'Map view — station 4\')">🗺 Map <span style="font-size:8.5px; font-weight:700;">Soon</span></button></div>';
   html += '<div class="pl-switchrow"><button type="button" class="switch-btn small ' + (myCityListData.public ? 'on' : '') + '" onclick="plTogglePublic()"><span class="knob"></span></button><span>Allow other users to view this list</span></div>';
@@ -3691,14 +3691,20 @@ async function addMyListCountry(){
 }
 
 async function addMyListCity(){
-  const name = await openInputModal("New city (private to your list)", "e.g. Milan, Dubai... (English letters only)", "");
+  // خ٥/م٢-د (r7 — توحيد مع مسار العناوين): الدولة أولًا بقائمة الدول + فحص اللاتينية + منع التكرار
+  const country = await openInputModal("Country", "e.g. Saudi Arabia, Italy... (English letters only)", myListCountry || "", WORLD_COUNTRIES.map(c => c.name));
+  if (country === null || !country.trim()){ showToast('Country is required'); return; }
+  if (!isLatinOnly(country)) { showToast('Country name must be in English letters only'); return; }
+  const name = await openInputModal("City", "e.g. Riyadh, Milan... (English letters only)", "");
   if (!name || !name.trim()) return;
   if (!isLatinOnly(name)) { showToast('City name must be in English letters only'); return; }
-  const country = await openInputModal("Country", "e.g. Italy, UAE...", myListCountry || "");
-  if (country === null || !country.trim()){ showToast('Country is required'); return; }
-  const id = "mylist_" + Date.now();
-  if (!Array.isArray(userListData.customCities)) userListData.customCities = [];
-  userListData.customCities.push({ id, name: name.trim(), country: country.trim() });
+  const existing = myListAllCities().find(c => c.name.toLowerCase() === name.trim().toLowerCase() && c.country.toLowerCase() === country.trim().toLowerCase());
+  let id = existing ? existing.id : null;
+  if (!id){
+    id = "mylist_" + Date.now();
+    if (!Array.isArray(userListData.customCities)) userListData.customCities = [];
+    userListData.customCities.push({ id, name: name.trim(), country: country.trim() });
+  }
   myListCountry = country.trim();
   myListCityId = id;
   await saveUserListGeneral();
@@ -5058,7 +5064,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r6 (stage2 integration audit: auth-state hook renders Places body on load/login/logout; zones 1-3 clean [ids, globals, css]; DAL 60)');
+logTiming('BUILD: M2-FRAME-k5-r7 (early field feedback: add-city unified with Addresses [country-first + WORLD_COUNTRIES suggestions + latin check + dedupe]; density synced to reference v1.25 values [srcrow/actrow/switchrow/sharebox/cathead]; catpick ink color fix)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
