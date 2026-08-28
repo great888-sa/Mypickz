@@ -23,7 +23,7 @@
 <style>
   :root{
     --paper:#efe7d6; --paper-dark:#e4d9c1; --ink:#1c2b3a; --ink-soft:#4a5a68;
-    --brass:#a5751f; --brass-light:#c99a3f; --line:#c9bda1; --card:#faf6ec;
+    --brass:#a5751f; --brass-light:#c99a3f; --line:#c9bda1; --line-strong:#b3a27a; --card:#faf6ec;
   }
   *{box-sizing:border-box;}
   body{
@@ -295,7 +295,7 @@
   .mini-av{ display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; color:#fff; font-family:'Cairo',sans-serif; font-weight:900; font-size:13px; letter-spacing:.5px; }
   .acc-head{ display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--paper-dark); border-radius:12px; margin-bottom:12px; text-align:left; direction:ltr; }
   .acc-head .mini-av{ width:44px; height:44px; font-size:16px; }
-  .acc-name{ font-family:'Cairo',sans-serif; font-weight:800; font-size:14px; color:var(--ink); }
+  .acc-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; color:var(--ink); }
   .acc-mail{ font-size:11.5px; color:var(--ink-soft); direction:ltr; }
   .acc-item{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:11px 12px; margin-top:8px; border:1.5px solid var(--line); border-radius:12px; background:#fff; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; text-align:left; direction:ltr; }
   .acc-item:disabled{ opacity:.55; cursor:default; }
@@ -311,7 +311,7 @@
   .mp-topbar{ position:fixed; top:0; left:0; right:0; height:52px; z-index:700; background:var(--paper); border-bottom:1px solid var(--line);
               display:flex; align-items:center; justify-content:space-between; padding:0 12px; direction:ltr; }
   .mp-burger{ background:none; border:1.5px solid var(--line); border-radius:10px; width:38px; height:38px; font-size:18px; cursor:pointer; color:var(--ink); }
-  .mp-idchip{ display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:4px 12px 4px 4px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:800; font-size:12.5px; color:var(--ink); }
+  .mp-idchip{ display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:4px 12px 4px 4px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; color:var(--ink); }
   .mp-idchip .mini-av{ width:30px; height:30px; font-size:12px; }
   .mp-idchip{ max-width:45vw; } .mp-idchip > span:last-child{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .mp-wordmark{ font-family:'Cairo',sans-serif; font-weight:900; font-size:18px; color:var(--ink); letter-spacing:.3px; }
@@ -332,11 +332,32 @@
   .mp-hosted h3{ text-align:center; margin-top:0; }
   .mp-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif; }
   .mp-empty .big{ font-size:34px; margin-bottom:8px; }
+  /* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
+  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:2px 2px 10px; direction:ltr; }
+  .pl-src{ flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; padding:7px 14px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
+  .pl-src.on{ background:var(--brass); border-color:var(--brass); color:#fff; }
+  .pl-actrow{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; direction:ltr; align-items:center; }
+  .pl-actbtn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border:1.5px solid var(--line); border-radius:999px; padding:7px 12px; background:#fff; color:var(--ink); cursor:pointer; }
+  .pl-actbtn.brass{ background:var(--brass); border-color:var(--brass); color:#fff; }
+  .pl-actbtn.linkish{ border:none; text-decoration:underline; }
+  .pl-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin:14px 0 6px; display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left; }
+  .pl-cathead .addmini{ background:none; border:1.5px solid var(--line); border-radius:999px; min-width:26px; height:26px; cursor:pointer; font-weight:700; color:var(--brass); font-size:14px; }
+  .pl-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line-strong); border-radius:12px; padding:10px 12px; margin-bottom:6px; direction:ltr; text-align:left; }
+  .pl-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; color:var(--ink); text-decoration:none; display:block; }
+  .pl-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  .pl-acts{ display:flex; gap:6px; align-items:center; }
+  .pl-acts button, .pl-acts a{ background:none; border:none; font-size:15px; cursor:pointer; padding:4px; color:var(--ink); text-decoration:none; }
+  .pl-acts a.act-chip{ border:1.5px solid var(--line-strong); border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; background:#fff; }
+  .pl-switchrow{ display:flex; align-items:center; gap:8px; background:var(--paper-dark); border-radius:12px; padding:8px 10px; margin:8px 0; font-size:12px; direction:ltr; text-align:left; }
+  .pl-sharebox{ background:var(--paper-dark); border-radius:12px; padding:8px 10px; margin:8px 0; font-size:11.5px; direction:ltr; text-align:left; }
+  .pl-ownerpanel{ border:1.5px dashed var(--brass); border-radius:12px; padding:10px 12px; margin-top:12px; direction:ltr; text-align:left; }
+  .pl-catpick{ display:inline-block; border:1.5px solid var(--line); border-radius:999px; padding:5px 10px; margin:2px 3px 2px 0; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; background:#fff; cursor:pointer; }
+  .pl-catpick.on{ border-color:var(--brass); background:rgba(165,117,31,.12); }
   /* الدرج — نافذة الحساب المبنية تصير جزأه الأعلى (المشهد ٧) */
   #accountBackdrop{ z-index:1200 !important; }
   #accountBackdrop.show{ display:block; }
   #accountBackdrop .modal{ position:fixed; top:0; right:0; bottom:0; max-width:340px; width:86%; border-radius:0 0 0 18px; overflow-y:auto; max-height:none; text-align:left; direction:ltr; padding-top:18px; }
-  .dr-head{ font-family:'Cairo',sans-serif; font-weight:800; font-size:11px; color:var(--ink-soft); letter-spacing:.5px; text-transform:uppercase; margin:14px 0 6px; }
+  .dr-head{ font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; color:var(--ink-soft); letter-spacing:.5px; text-transform:uppercase; margin:14px 0 6px; }
   .dr-item{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:10px 12px; margin-top:6px; border:1.5px solid var(--line); border-radius:12px; background:#fff; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; text-align:left; direction:ltr; text-decoration:none; }
   .dr-item:disabled{ opacity:.55; cursor:default; }
   .dr-item .soon{ font-size:10.5px; color:var(--brass); }
@@ -346,7 +367,7 @@
   .homecards{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .hcard{ background:#fff; border:1.5px solid var(--line); border-radius:14px; padding:12px 8px; cursor:pointer; text-align:center; font-family:'Cairo',sans-serif; }
   .hcard.on{ border-color:var(--brass); background:rgba(165,117,31,.08); }
-  .hcard .hi{ font-size:22px; } .hcard .hn{ font-weight:800; font-size:13px; color:var(--ink); margin-top:2px; } .hcard .hd{ font-size:10.5px; color:var(--ink-soft); }
+  .hcard .hi{ font-size:22px; } .hcard .hn{ font-weight:700; font-size:13px; color:var(--ink); margin-top:2px; } .hcard .hd{ font-size:10.5px; color:var(--ink-soft); }
   .steps{ display:flex; justify-content:center; gap:8px; margin-bottom:10px; }
   .stepdot{ width:8px; height:8px; border-radius:50%; background:var(--line); } .stepdot.on{ background:#b5545a; }
   .receipt{ background:var(--paper-dark); border-radius:12px; padding:8px 12px; margin:8px 0; direction:ltr; text-align:left; }
@@ -359,14 +380,15 @@
   .addr-sticky{ position:sticky; top:52px; z-index:10; background:var(--paper); padding:10px 0 8px; }
   .addr-actrow{ display:flex; gap:8px; margin-top:8px; }
   .addr-actrow .btn{ flex:1; margin-top:0; padding:10px; font-size:13px; }
-  .addr-cathead{ font-family:'Cairo',sans-serif; font-weight:800; font-size:13px; color:var(--ink); margin:14px 0 6px; text-align:left; direction:ltr; display:flex; justify-content:space-between; align-items:center; }
-  .addr-cathead button{ background:none; border:1.5px solid var(--line); border-radius:999px; width:26px; height:26px; cursor:pointer; font-weight:800; color:var(--brass); }
-  .addr-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:6px; direction:ltr; text-align:left; }
+  .addr-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin:14px 0 6px; text-align:left; direction:ltr; display:flex; justify-content:space-between; align-items:center; }
+  .addr-cathead button{ background:none; border:1.5px solid var(--line); border-radius:999px; width:26px; height:26px; cursor:pointer; font-weight:700; color:var(--brass); }
+  .addr-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line-strong); border-radius:12px; padding:10px 12px; margin-bottom:6px; direction:ltr; text-align:left; }
   /* قاعدة "صف المكان" الموحَّدة (٢٧ أغسطس): الاسم أزرق غامق عريض ١٤ · سطر ثانٍ أهدأ · أيقونات يمينًا بترتيب ثابت */
-  .prow-name{ font-family:'Cairo',sans-serif; font-weight:800; font-size:14px; color:var(--ink); text-decoration:none; display:block; }
+  .prow-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; color:var(--ink); text-decoration:none; display:block; }
   .prow-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
   .addr-row .acts button, .addr-row .acts a{ background:none; border:none; font-size:15px; cursor:pointer; padding:4px; color:var(--ink); text-decoration:none; }
-  .addr-title{ font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; color:var(--ink); }
+  .addr-row .acts a.act-chip{ border:1.5px solid var(--line-strong); border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; background:#fff; }
+  .addr-title{ font-family:'Cairo',sans-serif; font-weight:700; font-size:15px; color:var(--ink); }
   .addr-caption{ font-size:11px; color:var(--ink-soft); font-weight:600; }
   .addr-row .acts{ display:flex; gap:6px; }
   .addr-chip{ display:inline-block; border:1.5px solid var(--line); border-radius:999px; padding:6px 12px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; background:#fff; cursor:pointer; color:var(--ink); }
@@ -405,6 +427,43 @@
   <!-- خ١: الوجهة ١ — الأماكن: الشاشة الحالية كما هي (اختيار الدولة والمدينة · التصنيفات · الدليل · قائمتي · المفضلة) -->
   <div class="mp-screen on" id="screenPlaces">
   <!-- قرار المالك ٢٧ أغسطس: الغلاف الكبير أُلغي — الهوية بالشريط العلوي -->
+  <!-- خ٥/م٢: وجهة الأماكن الجديدة — مبدّل المصدر الرباعي (المشهد ٦/أ v1.25)؛ الواجهة القديمة مغلَّفة مخفية حتى الترحيل بالمرحلة ٥ ودوالها حية -->
+  <div class="pl-srcrow" id="plSrcRow">
+    <button type="button" class="pl-src on" data-src="mine" onclick="selectPlacesSource('mine')">📝 My List</button>
+    <button type="button" class="pl-src" data-src="curators" onclick="selectPlacesSource('curators')">⭐ Curators</button>
+    <button type="button" class="pl-src" data-src="community" onclick="selectPlacesSource('community')">🌍 Community</button>
+    <button type="button" class="pl-src" data-src="favorites" onclick="selectPlacesSource('favorites')">❤️ Favorites</button>
+  </div>
+  <div id="plBody"></div>
+  <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:#fbeceb; border:1px dashed #b5545a; border-radius:10px; font-size:12px; color:#7a2b30; direction:ltr; word-break:break-word; text-align:center;"></div>
+  <div class="modal-backdrop" id="plPlaceBackdrop"><div class="modal" style="direction:ltr; text-align:left;">
+    <h3 id="plPlaceTitle" style="margin-top:0;">➕ Add a place</h3>
+    <div id="plPasteWrap">
+      <textarea id="plShareText" class="modal-input" rows="3" placeholder="Paste what Google Maps shared…" style="direction:ltr; text-align:left;"></textarea>
+      <div style="display:flex; gap:6px; margin-top:6px; align-items:center;">
+        <button type="button" class="pl-actbtn" onclick="plPasteShare()">📋 Paste</button>
+        <button type="button" class="pl-actbtn" onclick="plParseShare()">Read it</button>
+        <span class="pl-sub" style="margin:0;">In Google Maps: Share → Copy, then paste here.</span>
+      </div>
+    </div>
+    <div class="pl-sub" style="margin-top:10px;">City</div>
+    <div id="plModalCity" style="font-family:'Cairo',sans-serif; font-weight:700; font-size:12px;"></div>
+    <div class="pl-sub" style="margin-top:8px;">Category</div>
+    <div id="plModalCats" style="max-height:150px; overflow:auto; margin-top:4px;"></div>
+    <input id="plName" class="modal-input" placeholder="Place name" style="margin-top:8px;">
+    <div style="display:flex; gap:6px; align-items:center; margin-top:4px;">
+      <input id="plUrl" class="modal-input" placeholder="Google Maps link" style="flex:1; direction:ltr; text-align:left; margin-top:0;">
+      <button type="button" class="pl-actbtn" onclick="plPasteUrl()" title="Paste link from clipboard">📋</button>
+    </div>
+    <input id="plArea" class="modal-input" placeholder="Area (optional)" style="margin-top:4px;">
+    <textarea id="plNote" class="modal-input" rows="2" placeholder="Note (optional)" style="margin-top:4px;"></textarea>
+    <div style="display:flex; gap:6px; margin-top:10px;">
+      <button type="button" class="btn btn-brass" style="flex:1;" onclick="savePlPlace()">Save</button>
+      <button type="button" class="btn btn-ghost" onclick="closePlPlaceModal()">Cancel</button>
+      <button type="button" class="btn btn-ghost" id="plDeleteBtn" style="display:none; color:#b5545a;" onclick="deletePlPlaceFromModal()">🗑 Delete</button>
+    </div>
+  </div></div>
+  <div id="placesLegacy" style="display:none;">
 
   <div class="tab-label">Country</div>
   <div class="city-tabs" id="countryTabs"></div>
@@ -449,7 +508,6 @@
     <div style="font-size:11.5px; color:var(--ink-soft); margin-bottom:10px; line-height:1.6;">Save your favorite places ❤️ and build your own personal list 📝 — takes less than a minute.</div>
     <button class="btn btn-brass" onclick="openAuthModal()">Sign Up</button>
   </div>
-  <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:#fbeceb; border:1px dashed #b5545a; border-radius:10px; font-size:12px; color:#7a2b30; direction:ltr; word-break:break-word; text-align:center;"></div>
 
   <div id="loadingState">Loading…</div>
   <div id="sections" style="display:none"></div>
@@ -458,6 +516,7 @@
     Links are managed via Google Maps sharing settings (View only recommended). Owner tools are available only when signed in with the owner account.
   </div>
 
+  </div><!-- /placesLegacy -->
   </div><!-- /screenPlaces -->
 
   <!-- خ١: الوجهة ٢ — الرحلات: جسم نافذة "رحلاتي" يُنقل إلى هنا عند أول فتح (الاستضافة بنقل العنصر) -->
@@ -1473,6 +1532,9 @@ const mpData = (function(){
         return col('userPrivatePlaces').doc(uid + '_' + cityId).set({ categories: {}, updatedAt: Date.now() }, { merge: true }).then(() => col('userPrivatePlaces').doc(uid + '_' + cityId).update(u));
       }
     },
+    nicknames: { // خ٥/م٢-ب (هجرة انتهازية — التصور المعتمد): قراءة اسم مستعار للمشاركة بالاسم
+      get: function(key){ return col('nicknames').doc(key).get(); }
+    },
     cityLists: {
       get: async function(uid, cityId){
         const d = await col('userCityLists').doc(uid + '_' + cityId).get();
@@ -1480,6 +1542,10 @@ const mpData = (function(){
       },
       save: function(uid, cityId, data){
         return col('userCityLists').doc(uid + '_' + cityId).set(data, { merge: true });
+      },
+      // خ٥/م٢-ب (هجرة انتهازية): حذف قائمة مدينة عند حذف مدينتها الخاصة
+      remove: function(uid, cityId){
+        return col('userCityLists').doc(uid + '_' + cityId).delete();
       },
       // ترحيل: حذف مفاتيح خاصة موروثة من مستند القائمة بمسار منقوط (القواعد تجيز الحذف — الإضافة وحدها تُرفض)
       removeKeys: function(uid, cityId, keys){
@@ -2456,8 +2522,8 @@ function renderTripDetail(wrap){
 
   resolved.forEach((day, dIdx) => {
     html += `<div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
-      <span style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; font-weight:800; font-size:13px; flex-shrink:0;">${day.dayNumber}</span>
-      <span style="font-weight:800; font-size:15px; letter-spacing:.5px;">DAY ${day.dayNumber}</span>
+      <span style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">${day.dayNumber}</span>
+      <span style="font-weight:700; font-size:15px; letter-spacing:.5px;">DAY ${day.dayNumber}</span>
       <span style="flex:1; height:2px; background:linear-gradient(to left, var(--line), transparent);"></span>
     </div>`;
     const order = day.categoryOrder || defaultCategoryOrder();
@@ -2470,7 +2536,7 @@ function renderTripDetail(wrap){
       const places = day.places[catId];
       html += `<div style="margin:12px 0 6px; display:flex; align-items:center; gap:8px;">
         <span style="width:9px; height:9px; border-radius:50%; background:${meta.color}; flex-shrink:0;"></span>
-        <span style="font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:${meta.color};">${meta.icon} ${meta.label}</span>
+        <span style="font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:${meta.color};">${meta.icon} ${meta.label}</span>
         ${!readOnly ? `
         <button type="button" class="reorder-btn" style="margin-right:auto;" ${catIdx===0?'disabled':''} onclick="moveCategoryOrder(${dIdx}, '${catId}', -1)">▲</button>
         <button type="button" class="reorder-btn" ${catIdx===visibleCats.length-1?'disabled':''} onclick="moveCategoryOrder(${dIdx}, '${catId}', 1)">▼</button>` : ''}
@@ -2610,8 +2676,8 @@ function renderCommunityTripDetail(wrap){
 
   resolved.forEach(day => {
     html += `<div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
-      <span style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; font-weight:800; font-size:13px; flex-shrink:0;">${day.dayNumber}</span>
-      <span style="font-weight:800; font-size:15px; letter-spacing:.5px;">DAY ${day.dayNumber}</span>
+      <span style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">${day.dayNumber}</span>
+      <span style="font-weight:700; font-size:15px; letter-spacing:.5px;">DAY ${day.dayNumber}</span>
       <span style="flex:1; height:2px; background:linear-gradient(to left, var(--line), transparent);"></span>
     </div>`;
     const order = day.categoryOrder || defaultCategoryOrder();
@@ -2620,7 +2686,7 @@ function renderCommunityTripDetail(wrap){
       const meta = categoryMeta(catId);
       html += `<div style="margin:12px 0 6px; display:flex; align-items:center; gap:8px;">
         <span style="width:9px; height:9px; border-radius:50%; background:${meta.color}; flex-shrink:0;"></span>
-        <span style="font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:${meta.color};">${meta.icon} ${meta.label}</span>
+        <span style="font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:${meta.color};">${meta.icon} ${meta.label}</span>
       </div>`;
       day.places[catId].forEach(p => {
         if (!p._available){
@@ -2833,7 +2899,7 @@ function renderAddresses(){
         html += `<div class="addr-row">
         <div style="flex:1; min-width:0;"><a class="place-link prow-name" data-mpsrc="app" data-mpcat="${cat.id}" data-mppersonal="1" href="${p.url}" target="_blank" rel="noopener">${p.name || cat.name}</a>${(p.note || p.phone) ? `<div class="prow-sub">${[p.note, p.phone].filter(Boolean).join(' · ')}</div>` : ''}</div>
         <span class="acts">
-          <a href="${p.url}" target="_blank" rel="noopener" title="Open in Google Maps">🔗</a>
+          <a class="act-chip" href="${p.url}" target="_blank" rel="noopener" title="Open in Google Maps">Maps ↗</a>
           ${p.phone ? `<a href="tel:${String(p.phone).replace(/[^+\d]/g,'')}" title="Call">📞</a>` : ''}
           <button type="button" onclick="sendAddr('${cityId}','${cat.id}',${i})" title="Send via MyPickz">📤</button>
           <button type="button" onclick="openAddrModal('${cityId}','${cat.id}',${i})" title="Edit">✏️</button>
@@ -3178,7 +3244,9 @@ function switchTab(tab){
   });
   document.querySelectorAll('.mp-tab').forEach(b => b.classList.toggle('on', b.getAttribute('data-tab') === tab));
   window.scrollTo(0, 0);
-  if (tab === 'Trips'){
+  if (tab === 'Places'){
+    renderPlacesBody(); // خ٥/م٢: وجهة الأماكن الجديدة
+  } else if (tab === 'Trips'){
     if (!HOSTED.Trips){ hostBody('myTripsBody', 'tripsHost'); HOSTED.Trips = true; }
     openMyTripsModal();
   } else if (tab === 'Community'){
@@ -3188,6 +3256,193 @@ function switchTab(tab){
     loadAddresses(); // خ٢
   }
 }
+/* ═════ خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25) ═════
+   تبني فوق دوال قائمتي القائمة حصرًا (التحميل · الحفظ · النشر · المشاركة · المدن) — لا نداء منصة جديدًا.
+   إبر القياس: لا إبرة جديدة بهذه المرحلة عمدًا — النقل من النافذة القديمة والتثبيت بالحارس بالمرحلة ٦. */
+let placesSource = 'mine';
+let plEdit = null;       // null = إضافة · {catId, index} = تحرير (تغيير التصنيف بالنافذة = النقل بين التصنيفات)
+let plModalCat = null;   // التصنيف المختار داخل النافذة
+
+function selectPlacesSource(src){
+  placesSource = src;
+  document.querySelectorAll('#plSrcRow .pl-src').forEach(b => b.classList.toggle('on', b.getAttribute('data-src') === src));
+  renderPlacesBody();
+}
+async function renderPlacesBody(){
+  const body = document.getElementById('plBody'); if (!body) return;
+  if (!currentUser){ body.innerHTML = '<div class="mp-empty"><div class="big">📍</div>Sign in to build your places.</div>'; return; }
+  if (placesSource !== 'mine'){
+    const t = { curators:['⭐','Curators'], community:['🌍','Community'], favorites:['❤️','Favorites'] }[placesSource];
+    body.innerHTML = '<div class="mp-empty"><div class="big">' + t[0] + '</div>' + t[1] + ' — opens in stage 3 of this step.</div>';
+    return;
+  }
+  if (!myListCityId) myListCityId = currentCityId;
+  if (!myListCountry){ const c0 = myListAllCities().find(x => x.id === myListCityId); myListCountry = c0 ? c0.country : (myListAllCountries()[0] || null); }
+  body.innerHTML = '<div class="mp-empty">Loading…</div>';
+  await loadMyCityList(myListCityId);
+  renderPlacesMine();
+}
+function plCatsAll(){ // كل التصنيفات العامة المتاحة بقسمها — للنافذة الموحدة
+  const out = [];
+  DATA.forEach(section => {
+    if (section.ownerOnly) return;
+    const items = section.items.concat(customItems.filter(c => c.section === section.title));
+    items.forEach(item => { if (!isPrivateCategoryId(item.id)) out.push({ id: item.id, icon: displayIcon(item), name: displayName(item), section: sectionDisplay(section).name }); });
+  });
+  return out;
+}
+function plCityName(){ const c = myListAllCities().find(x => x.id === myListCityId); return c ? c.name : ''; }
+function renderPlacesMine(){
+  const body = document.getElementById('plBody'); if (!body || !myCityListData) return;
+  const countries = myListAllCountries();
+  const csel = countries.length ? '<select class="pl-actbtn" style="flex:1; min-width:150px;" onchange="plPickCountry(this.value)">'
+    + countries.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === myListCountry ? ' selected' : '') + '>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + c + '</option>').join('') + '</select>' : '';
+  const inCountry = myListAllCities().filter(c => c.country === myListCountry);
+  const chips = inCountry.map(c => '<button type="button" class="addr-chip ' + (c.id === myListCityId ? 'on' : '') + '" onclick="plPickCity(\'' + c.id + '\')">' + escapeHtml(c.name) + '</button>').join('');
+  let html = '<div class="pl-actrow">' + csel + '</div><div class="addr-chips" style="margin-bottom:4px;">' + chips + '</div>';
+  html += '<div class="pl-actrow">'
+    + '<button type="button" class="pl-actbtn brass" onclick="openPlAddFromMaps()">📍 Add from Google Maps</button>'
+    + '<button type="button" class="pl-actbtn" onclick="plAddCity()">➕ City</button>'
+    + '<button type="button" class="pl-actbtn" style="opacity:.55;" onclick="showToast(\'Day plan — Soon (step 6)\')">🗓 Day plan <span style="font-size:8.5px; font-weight:700;">Soon</span></button>'
+    + '<button type="button" class="pl-actbtn linkish" onclick="openPlPlaceModal(null, null)">All categories</button>'
+    + '</div>';
+  html += '<div class="pl-actrow"><span style="font-size:10px; color:var(--ink-soft); font-weight:700;">View:</span>'
+    + '<button type="button" class="pl-actbtn" style="background:var(--ink); color:var(--paper); border-color:var(--ink);">📋 List</button>'
+    + '<button type="button" class="pl-actbtn" onclick="showToast(\'Map view — station 4\')">🗺 Map <span style="font-size:8.5px; font-weight:700;">Soon</span></button></div>';
+  html += '<div class="pl-switchrow"><button type="button" class="switch-btn small ' + (myCityListData.public ? 'on' : '') + '" onclick="plTogglePublic()"><span class="knob"></span></button><span>Allow other users to view this list</span></div>';
+  const shares = (myCityListData.sharedWith || []).map(uid => '<span style="display:inline-flex; align-items:center; gap:4px; margin-right:8px;">' + escapeHtml((myCityListData.sharedWithNames || {})[uid] || 'user') + ' <button type="button" style="background:none; border:none; cursor:pointer; font-size:11px;" onclick="plRemoveShare(\'' + uid + '\')" title="Remove">✕</button></span>').join('');
+  html += '<div class="pl-sharebox"><div style="display:flex; justify-content:space-between; align-items:center;"><span>🔗 Shared with someone</span><button type="button" class="pl-actbtn" style="padding:3px 10px;" onclick="plShareWith()">➕ Add</button></div>' + (shares ? '<div style="margin-top:6px;">' + shares + '</div>' : '') + '</div>';
+  // التصنيفات التي فيها أماكن فقط — بعدّادها و＋ (المدينة الجديدة تفتح فارغة بدعوة واحدة)
+  const cats = plCatsAll();
+  let any = false;
+  cats.forEach(cat => {
+    const entry = (myCityListData.categories || {})[cat.id];
+    const all = (entry && entry.places) || [];
+    const visible = all.map((q, realIdx) => ({ q: q, realIdx: realIdx })).filter(x => x.q && (x.q.name || x.q.url));
+    if (!visible.length) return;
+    any = true;
+    html += '<div class="pl-cathead"><span>' + cat.icon + ' ' + escapeHtml(cat.name) + ' (' + visible.length + ')</span><button type="button" class="addmini" onclick="openPlPlaceModal(\'' + cat.id + '\', null)" title="Add under ' + escapeHtml(cat.name) + '">＋</button></div>';
+    visible.forEach(vx => {
+      const pl = vx.q, i = vx.realIdx;
+      const fav = pl.url && isFavorite(pl.url);
+      html += '<div class="pl-row"><div style="flex:1; min-width:0;">'
+        + '<a class="pl-name" href="' + String(pl.url || '#').replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + escapeHtml(pl.name || cat.name) + '</a>'
+        + ((pl.area || pl.note) ? '<div class="pl-sub">' + escapeHtml([pl.area, pl.note].filter(Boolean).join(' · ')) + '</div>' : '')
+        + '</div><span class="pl-acts">'
+        + (pl.url ? '<a class="act-chip" href="' + String(pl.url).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" title="Open in Google Maps">Maps ↗</a>' : '')
+        + '<button type="button" onclick="plToggleFav(\'' + cat.id + '\', ' + i + ')" title="Favorite">' + (fav ? '❤️' : '🤍') + '</button>'
+        + ((activeTripId && pl.id) ? '<button type="button" style="color:var(--brass);" onclick="addPlaceToTrip(\'mylist\', \'' + myListCityId + '\', \'' + cat.id + '\', \'' + pl.id + '\')" title="Add to active trip">🧳</button>' : '')
+        + '<button type="button" onclick="openPlPlaceModal(\'' + cat.id + '\', ' + i + ')" title="Edit">✏️</button>'
+        + '<button type="button" onclick="plDeleteRow(\'' + cat.id + '\', ' + i + ')" title="Delete">🗑</button>'
+        + '</span></div>';
+    });
+  });
+  if (!any) html += '<div class="mp-empty" style="padding:34px 10px;"><div class="big">📝</div>Start your ' + escapeHtml(plCityName()) + ' list.<br><span style="font-size:11px;">Tap “Add from Google Maps”, or ＋ under any category.</span></div>';
+  if (isOwner) html += '<div class="pl-ownerpanel"><div style="font-family:\'Cairo\',sans-serif; font-weight:700; font-size:12.5px;">👑 Owner · edit mode</div><div class="pl-sub" id="plMigrLine">Guide places migration — counter and run arrive in stage 5 of this step.</div><button type="button" class="pl-actbtn brass" style="margin-top:6px;" onclick="showToast(\'Migration runs in stage 5 — city by city, counts matched\')">Move guide places to my lists</button></div>';
+  body.innerHTML = html;
+}
+async function plPickCountry(v){ await selectMyListCountry(v); renderPlacesMine(); }
+async function plPickCity(id){ await selectMyListCity(id); renderPlacesMine(); }
+async function plAddCity(){ await addMyListCity(); await loadMyCityList(myListCityId); renderPlacesMine(); }
+async function plTogglePublic(){ await toggleMyListPublic(); renderPlacesMine(); }
+async function plShareWith(){ await shareMyListWithSomeone(); renderPlacesMine(); }
+async function plRemoveShare(uid){ await removeMyListShare(uid); renderPlacesMine(); }
+async function plToggleFav(catId, i){
+  const e = userGetEntry(catId); const pl = (e.places || [])[i]; if (!pl || !pl.url) return;
+  await toggleFavorite(pl.url, pl.name, catId, myListCityId, pl.area || '');
+  renderPlacesMine();
+}
+function plDeleteRow(catId, i){
+  const e = userGetEntry(catId); const pl = (e.places || [])[i]; if (!pl) return;
+  if (!confirm('Delete "' + (pl.name || 'this place') + '"?')) return;
+  removeUserPlace(catId, i);
+  renderPlacesMine();
+}
+/* نافذة المكان الموحدة: إضافة · تحرير · نقل بين التصنيفات · لصق ما شاركته الخرائط */
+function openPlAddFromMaps(){ plEdit = null; plModalCat = null; plFillModal(true); }
+function openPlPlaceModal(catId, index){
+  if (catId !== null && index !== null){ plEdit = { catId: catId, index: index }; plModalCat = catId; }
+  else { plEdit = null; plModalCat = catId; }
+  plFillModal(false);
+}
+function plFillModal(pasteMode){
+  document.getElementById('plPlaceTitle').textContent = plEdit ? '✏️ Edit place' : '➕ Add a place';
+  document.getElementById('plPasteWrap').style.display = pasteMode ? '' : 'none';
+  document.getElementById('plShareText').value = '';
+  document.getElementById('plModalCity').textContent = '🏙 ' + plCityName() + ' — change the city from the chips above';
+  const cats = plCatsAll(); let sec = null; let ch = '';
+  cats.forEach(c => {
+    if (c.section !== sec){ sec = c.section; ch += '<div class="pl-sub" style="margin:6px 0 2px; font-weight:700;">' + escapeHtml(sec) + '</div>'; }
+    ch += '<button type="button" class="pl-catpick' + (plModalCat === c.id ? ' on' : '') + '" data-cat="' + c.id + '" onclick="plPickModalCat(\'' + c.id + '\')">' + c.icon + ' ' + escapeHtml(c.name) + '</button>';
+  });
+  document.getElementById('plModalCats').innerHTML = ch;
+  const pl = plEdit ? ((userGetEntry(plEdit.catId).places || [])[plEdit.index] || {}) : {};
+  document.getElementById('plName').value = pl.name || '';
+  document.getElementById('plUrl').value = pl.url || '';
+  document.getElementById('plArea').value = pl.area || '';
+  document.getElementById('plNote').value = pl.note || '';
+  document.getElementById('plDeleteBtn').style.display = plEdit ? '' : 'none';
+  document.getElementById('plPlaceBackdrop').classList.add('show');
+  if (pasteMode) setTimeout(() => document.getElementById('plShareText').focus(), 60);
+}
+function plPickModalCat(id){
+  plModalCat = id;
+  document.querySelectorAll('#plModalCats .pl-catpick').forEach(b => b.classList.toggle('on', b.getAttribute('data-cat') === id));
+}
+function closePlPlaceModal(){ document.getElementById('plPlaceBackdrop').classList.remove('show'); plEdit = null; }
+async function plPasteShare(){
+  try{ const t = await navigator.clipboard.readText(); if (!t || !t.trim()){ showToast('Clipboard is empty'); return; } document.getElementById('plShareText').value = t.trim(); plParseShare(); }
+  catch(e){ showToast('Could not access clipboard — paste manually in the box'); }
+}
+function plParseShare(){
+  // يُقرأ بالمتصفح: الرابط والاسم؛ العنوان كاملًا إلى الملاحظة كما هو — لا تحليل لحي أو رمز بريدي؛ المنطقة يكتبها المستخدم
+  const raw = (document.getElementById('plShareText').value || '').trim(); if (!raw){ showToast('Paste the shared text first'); return; }
+  const um = raw.match(/https?:\/\/\S+/); const url = um ? um[0] : '';
+  const lines = raw.split(/\n+/).map(l => l.replace(/https?:\/\/\S+/g, '').trim()).filter(Boolean);
+  if (url) document.getElementById('plUrl').value = url;
+  if (lines.length && !document.getElementById('plName').value) document.getElementById('plName').value = lines[0];
+  if (lines.length > 1 && !document.getElementById('plNote').value) document.getElementById('plNote').value = lines.slice(1).join(' · ');
+  showToast(url ? 'Read ✓ — pick a category, then Save' : 'No link found in the pasted text');
+}
+async function plPasteUrl(){
+  try{ const t = await navigator.clipboard.readText(); if (!t || !t.trim()){ showToast('Clipboard is empty'); return; } document.getElementById('plUrl').value = t.trim(); showToast('Pasted ✓'); }
+  catch(e){ showToast('Could not access clipboard — paste manually in the field'); }
+}
+async function savePlPlace(){
+  if (currentUserSuspended){ showToast("Your account is suspended — you can't save changes"); return; }
+  const name = document.getElementById('plName').value.trim();
+  const url = document.getElementById('plUrl').value.trim();
+  if (!plModalCat){ showToast('Pick a category first'); return; }
+  if (!name || !url){ showToast('Name and Google Maps link are required'); return; }
+  // عقد المكان الجديد بحقوله الفارغة — الحقول حاضرة دائمًا ولو فارغة
+  const place = plEdit ? ((userGetEntry(plEdit.catId).places || [])[plEdit.index] || {}) : {};
+  place.id = place.id || ('place_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+  place.name = name; place.url = url;
+  place.area = document.getElementById('plArea').value.trim();
+  place.note = document.getElementById('plNote').value.trim();
+  if (plEdit && plEdit.catId !== plModalCat){
+    userEnsurePlaces(plEdit.catId).places.splice(plEdit.index, 1); // النقل بين التصنيفات
+    const dst = userEnsurePlaces(plModalCat); dst.active = true; dst.places.push(place);
+  } else if (plEdit){
+    userEnsurePlaces(plEdit.catId).places[plEdit.index] = place;
+  } else {
+    const dst = userEnsurePlaces(plModalCat); dst.active = true; dst.places.push(place);
+  }
+  await saveMyCityList();
+  closePlPlaceModal();
+  renderPlacesMine();
+  showToast('Saved to My List · ' + plCityName() + ' ✓');
+}
+async function deletePlPlaceFromModal(){
+  if (!plEdit) return;
+  const pl = (userGetEntry(plEdit.catId).places || [])[plEdit.index];
+  if (!confirm('Delete "' + ((pl && pl.name) || 'this place') + '"?')) return;
+  userEnsurePlaces(plEdit.catId).places.splice(plEdit.index, 1);
+  await saveMyCityList();
+  closePlPlaceModal();
+  renderPlacesMine();
+}
+
 // شاشة السياسة (باب مغلق): النص من مسودة v2 والضوابط v1 — يُدرج بـ٢/هـ نصًّا كاملًا؛ الآن هيكل الشاشة بعناوين البنود
 function openPolicyModal(kind){
   const body = document.getElementById('policyBody');
@@ -3455,7 +3710,7 @@ async function removeMyListCity(cityId){
   if (!city) return; // حماية: يسمح فقط بحذف المدن اللي أضافها المستخدم نفسه
   if (!confirm(`Delete "${city.name}" and any places saved under it? This cannot be undone.`)) return;
   userListData.customCities = (userListData.customCities || []).filter(c => c.id !== cityId);
-  try{ await db.collection('userCityLists').doc(myCityListDocId(cityId)).delete(); }catch(e){}
+  try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){} // خ٥/م٢-ب: عبر النواة
   if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
   if (myListCityId === cityId){
     const remaining = myListAllCities().filter(c => c.country === myListCountry);
@@ -3676,7 +3931,7 @@ async function shareMyListWithSomeone(){
   const key = name.trim().toLowerCase();
   if (!key) return;
   try{
-    const doc = await db.collection('nicknames').doc(key).get();
+    const doc = await mpData.nicknames.get(key); // خ٥/م٢-ب: عبر النواة
     if (!doc.exists){ showToast('No user found with that username'); return; }
     const data = doc.data();
     const targetUid = data.uid;
@@ -4803,7 +5058,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k2-r6 (+ optional phone with tap-to-call)');
+logTiming('BUILD: M2-FRAME-k5-r6 (stage2 integration audit: auth-state hook renders Places body on load/login/logout; zones 1-3 clean [ids, globals, css]; DAL 60)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
@@ -4831,6 +5086,7 @@ logTiming('Script started (t=0 reference)');
       logTiming('User data loaded (favorites, My List, Trips) — login features ready');
       resolveAuthReady();
       render();
+      if (currentTab === 'Places') renderPlacesBody(); // خ٥/م٢-ج: أول تحميل واستعادة الجلسة والدخول والخروج — الوجهة الجديدة تتحدث مع كل تغيّر حالة
       enforceNickname(); // لا ننتظرها — تعمل فوق المحتوى الظاهر
     });
   } else {
