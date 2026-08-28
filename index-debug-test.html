@@ -3363,10 +3363,11 @@ function plDeleteRow(catId, i){
   renderPlacesMine();
 }
 /* نافذة المكان الموحدة: إضافة · تحرير · نقل بين التصنيفات · لصق ما شاركته الخرائط */
-function openPlAddFromMaps(){ plEdit = null; plModalCat = null; plFillModal(true); }
+function openPlAddFromMaps(){ plEdit = null; plModalCat = null; plModalSec = null; plFillModal(true); }
 function openPlPlaceModal(catId, index){
   if (catId !== null && index !== null){ plEdit = { catId: catId, index: index }; plModalCat = catId; }
   else { plEdit = null; plModalCat = catId; }
+  if (!catId) plModalSec = null;
   plFillModal(false);
 }
 function plFillModal(pasteMode){
@@ -3374,12 +3375,8 @@ function plFillModal(pasteMode){
   document.getElementById('plPasteWrap').style.display = pasteMode ? '' : 'none';
   document.getElementById('plShareText').value = '';
   document.getElementById('plModalCity').textContent = '🏙 ' + plCityName() + ' — change the city from the chips above';
-  const cats = plCatsAll(); let sec = null; let ch = '';
-  cats.forEach(c => {
-    if (c.section !== sec){ sec = c.section; ch += '<div style="font-family:\'Cairo\',sans-serif; font-weight:700; font-size:12px; color:var(--ink); margin:8px 0 3px;">' + escapeHtml(sec) + '</div>'; }
-    ch += '<button type="button" class="pl-catpick' + (plModalCat === c.id ? ' on' : '') + '" data-cat="' + c.id + '" onclick="plPickModalCat(\'' + c.id + '\')">' + c.icon + ' ' + escapeHtml(c.name) + '</button>';
-  });
-  document.getElementById('plModalCats').innerHTML = ch;
+  if (plModalCat){ const c0 = plCatsAll().find(c => c.id === plModalCat); if (c0) plModalSec = c0.section; }
+  plRenderModalCats();
   const pl = plEdit ? ((userGetEntry(plEdit.catId).places || [])[plEdit.index] || {}) : {};
   document.getElementById('plName').value = pl.name || '';
   document.getElementById('plUrl').value = pl.url || '';
@@ -3391,7 +3388,28 @@ function plFillModal(pasteMode){
 }
 function plPickModalCat(id){
   plModalCat = id;
-  document.querySelectorAll('#plModalCats .pl-catpick').forEach(b => b.classList.toggle('on', b.getAttribute('data-cat') === id));
+  document.querySelectorAll('#plModalCats .pl-catpick[data-cat]').forEach(b => b.classList.toggle('on', b.getAttribute('data-cat') === id));
+}
+let plModalSec = null;   // r10: القسم المختار بالمرحلة الأولى
+let plModalSecs = [];    // أسماء الأقسام بترتيبها (التمرير بالفهرس لا بالنص)
+function plRenderModalCats(){
+  const cats = plCatsAll();
+  plModalSecs = [];
+  cats.forEach(c => { if (plModalSecs.indexOf(c.section) < 0) plModalSecs.push(c.section); });
+  let ch = '<div>' + plModalSecs.map((sc, i) => '<button type="button" class="pl-catpick' + (sc === plModalSec ? ' on' : '') + '" onclick="plPickModalSec(' + i + ')">' + escapeHtml(sc) + '</button>').join('') + '</div>';
+  if (plModalSec){
+    ch += '<div style="margin-top:6px; padding-top:6px; border-top:1px solid var(--line);">' + cats.filter(c => c.section === plModalSec).map(c => '<button type="button" class="pl-catpick' + (plModalCat === c.id ? ' on' : '') + '" data-cat="' + c.id + '" onclick="plPickModalCat(\'' + c.id + '\')">' + c.icon + ' ' + escapeHtml(c.name) + '</button>').join('') + '</div>';
+  } else {
+    ch += '<div class="pl-sub" style="margin-top:4px;">Pick a section to see its categories.</div>';
+  }
+  document.getElementById('plModalCats').innerHTML = ch;
+}
+function plPickModalSec(i){
+  const sc = plModalSecs[i]; if (!sc) return;
+  plModalSec = sc;
+  const cur = plCatsAll().find(c => c.id === plModalCat);
+  if (cur && cur.section !== sc) plModalCat = null; // تغيير القسم يلغي تصنيف قسم آخر
+  plRenderModalCats();
 }
 function closePlPlaceModal(){ document.getElementById('plPlaceBackdrop').classList.remove('show'); plEdit = null; }
 async function plPasteShare(){
@@ -5068,7 +5086,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r9 (structural formatting review per field round 3: place modal rebuilt on Addresses-sibling anatomy [field labels, no inner scrollbox -> no clipped chips, section headers]; All categories merged into View line as drawn in v1.27; select.modal-input de-OS-styled)');
+logTiming('BUILD: M2-FRAME-k5-r10 (field round 4: two-stage category picker as drawn in v1.28 — section chips first, tap reveals only that section; preselected paths land with section+category chosen, so the wall of 30 chips is gone)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
