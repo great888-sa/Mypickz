@@ -337,6 +337,7 @@
   .mp-empty .big{ font-size:34px; margin-bottom:8px; }
   /* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
   .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; direction:ltr; position:sticky; top:44px; background:var(--paper); z-index:10; box-shadow:0 6px 6px -6px rgba(28,43,58,.14); }
+  .pl-srcrow{ padding:6px 0 6px; }
   #plBody{ padding-bottom:16px; }
   .pl-src{ flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; padding:5px 10px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
   .pl-src.on{ background:var(--brass); border-color:var(--brass); color:#fff; }
@@ -344,7 +345,7 @@
   .pl-actbtn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; border:1.5px solid var(--line); border-radius:999px; padding:6px 10px; background:#fff; color:var(--ink); cursor:pointer; }
   .pl-actbtn.brass{ background:var(--brass); border-color:var(--brass); color:#fff; }
   .pl-actbtn.linkish{ border:none; text-decoration:underline; }
-  .pl-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; color:var(--ink); margin:10px 0 6px; display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left; }
+  .pl-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; color:var(--ink); margin:10px 0 6px; background:var(--paper-dark); border-radius:10px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left; }
   .pl-cathead .addmini{ background:none; border:1.5px solid var(--line); border-radius:999px; min-width:26px; height:26px; cursor:pointer; font-weight:700; color:var(--brass); font-size:14px; }
   .pl-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line-strong); border-radius:12px; padding:8px 11px; margin-bottom:6px; direction:ltr; text-align:left; }
   .pl-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); text-decoration:none; display:block; }
@@ -443,6 +444,13 @@
   <div id="plBody"></div>
   </div><!-- /غلاف الأماكن -->
   <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:#fbeceb; border:1px dashed #b5545a; border-radius:10px; font-size:12px; color:#7a2b30; direction:ltr; word-break:break-word; text-align:center;"></div>
+  <div class="modal-backdrop" id="cityDelBackdrop"><div class="modal" style="direction:ltr; text-align:left;">
+    <h3 id="cityDelTitle" style="margin-top:0;">🗑 Delete city</h3>
+    <p id="cityDelHint" class="pl-sub" style="margin:4px 0 10px;"></p>
+    <button type="button" class="btn btn-ghost" style="width:100%; margin-bottom:8px;" id="cityDelSideBtn" onclick="cityDelSide()"></button>
+    <button type="button" class="btn btn-ghost" style="width:100%; margin-bottom:8px; color:#b5545a;" onclick="cityDelFull()">Delete city everywhere</button>
+    <button type="button" class="btn btn-brass" style="width:100%;" onclick="closeModalById('cityDelBackdrop')">Cancel</button>
+  </div></div>
   <div class="modal-backdrop" id="plPlaceBackdrop"><div class="modal" style="direction:ltr; text-align:left;">
     <h3 id="plPlaceTitle" style="margin-top:0;">➕ Add a place</h3>
     <div id="plPasteWrap">
@@ -1541,6 +1549,10 @@ const mpData = (function(){
       setCategory: function(uid, cityId, catId, entry){
         const u = {}; u['categories.' + catId] = entry; u.updatedAt = Date.now();
         return col('userPrivatePlaces').doc(uid + '_' + cityId).set({ categories: {}, updatedAt: Date.now() }, { merge: true }).then(() => col('userPrivatePlaces').doc(uid + '_' + cityId).update(u));
+      },
+      // خ٥/r18: حذف المستند الخاص لمدينة عند حذفها نهائيًا
+      remove: function(uid, cityId){
+        return col('userPrivatePlaces').doc(uid + '_' + cityId).delete();
       }
     },
     nicknames: { // خ٥/م٢-ب (هجرة انتهازية — التصور المعتمد): قراءة اسم مستعار للمشاركة بالاسم
@@ -2860,9 +2872,7 @@ async function addAddrCity(){
   let id = existing ? existing.id : null;
   if (!id){
     id = "mylist_" + Date.now();
-    if (!Array.isArray(userListData.customCities)) userListData.customCities = [];
-    userListData.customCities.push({ id, name: name.trim(), country: country.trim() });
-    await saveUserListGeneral();
+    pendingCity = { id: id, name: name.trim(), country: country.trim() }; // r18: لا تخليد قبل حفظ أول عنوان
   }
   addrCurrentCity = id; addrCurrentCountry = country.trim();
   if (!addrCities.includes(id)) addrCities.push(id);
@@ -2893,7 +2903,7 @@ function renderAddresses(){
   const inCountry = addrCities.filter(c => countryOfCity(c) === addrCurrentCountry);
   if (!inCountry.includes(addrCurrentCity)) addrCurrentCity = inCountry[0] || null;
   const chips = document.getElementById('addrCityChips');
-  chips.innerHTML = inCountry.map(c => `<button type="button" class="addr-chip ${addrCurrentCity === c ? 'on' : ''}" onclick="pickAddrCity('${c}')">${cityNameOf(c)}</button>`).join('')
+  chips.innerHTML = inCountry.map(c => `<button type="button" class="addr-chip ${addrCurrentCity === c ? 'on' : ''}" onclick="pickAddrCity('${c}')">${cityNameOf(c)}${c.indexOf('mylist_') === 0 ? ` <span style="font-size:12px;" onclick="event.stopPropagation(); removeAddrCity('${c}')" title="Delete city">🗑️</span>` : ''}</button>`).join('')
     + `<button type="button" class="addr-chip" style="border-style:dashed; color:var(--brass);" onclick="addAddrCity()">➕ City</button>`;
   // التصنيفات السبعة مسطَّحة (لا أقسام): كلٌّ بعنوانه وعدّاده و＋ — تُعرض دائمًا للمدينة الحالية
   const cats = privateCategoryList();
@@ -2968,6 +2978,61 @@ function openAddrModal(cityId, catId, index){
   document.getElementById('addrError').textContent = '';
   openModalById('addrBackdrop');
 }
+let cityDelCtx = null; // {cityId, from:'addr'|'places'}
+function openCityDeleteChooser(cityId, from){
+  const city = (userListData.customCities || []).find(c => c.id === cityId);
+  if (!city) return;
+  cityDelCtx = { cityId: cityId, from: from };
+  document.getElementById('cityDelTitle').textContent = '🗑 Delete "' + city.name + '"';
+  document.getElementById('cityDelHint').textContent = from === 'addr'
+    ? 'This city may also hold a places list in Places.'
+    : 'This city may also hold personal addresses in Addresses.';
+  document.getElementById('cityDelSideBtn').textContent = from === 'addr' ? 'Remove from Addresses only' : 'Remove from My List only';
+  openModalById('cityDelBackdrop');
+}
+async function cityCountList(cityId){ // عدد أماكن قائمة المدينة (للطرف الآخر)
+  try{ const d = await mpData.cityLists.get(currentUser.uid, cityId); if (!d || !d.categories) return 0;
+    return Object.values(d.categories).reduce((a, e) => a + ((e && e.places) ? e.places.length : 0), 0); }catch(e){ return 0; }
+}
+async function cityCountAddr(cityId){
+  try{ const cats = await mpData.privatePlaces.get(currentUser.uid, cityId);
+    return Object.values(cats || {}).reduce((a, e) => a + ((e && e.places) ? e.places.length : 0), 0); }catch(e){ return 0; }
+}
+async function cityDelSide(){
+  const { cityId, from } = cityDelCtx || {}; if (!cityId) return;
+  closeModalById('cityDelBackdrop');
+  if (from === 'addr'){
+    try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); }catch(e){}
+    delete addrData[cityId];
+    addrCities = addrCities.filter(c => c !== cityId);
+    if (addrCurrentCity === cityId) addrCurrentCity = null;
+    if ((await cityCountList(cityId)) === 0) await removeMyListCity(cityId, { confirmed: true }); // منع الشبح: الطرف الآخر فارغ
+    showToast('Removed from Addresses');
+    renderAddresses(); if (currentTab === 'Places') renderPlacesBody();
+  } else {
+    try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){}
+    if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
+    if ((await cityCountAddr(cityId)) === 0){ await removeMyListCity(cityId, { confirmed: true }); }
+    else if (myListCityId === cityId){ const rem = myListAllCities().filter(c => c.country === myListCountry && c.id !== cityId); myListCityId = rem.length ? rem[0].id : null; }
+    showToast('Removed from My List');
+    renderPlacesBody(); 
+  }
+}
+async function cityDelFull(){
+  const { cityId } = cityDelCtx || {}; if (!cityId) return;
+  closeModalById('cityDelBackdrop');
+  try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); }catch(e){}
+  delete addrData[cityId];
+  addrCities = addrCities.filter(c => c !== cityId);
+  if (addrCurrentCity === cityId) addrCurrentCity = null;
+  await removeMyListCity(cityId, { confirmed: true });
+  renderAddresses(); if (currentTab === 'Places') renderPlacesBody();
+}
+async function removeAddrCity(cityId){
+  // r18: المدينة كيان مشترك — حذفها يزيل عناوينها وقائمة أماكنها معًا، والتأكيد يقولها صراحة
+  if (pendingCity && pendingCity.id === cityId){ pendingCity = null; delete addrData[cityId]; addrCities = addrCities.filter(c => c !== cityId); if (addrCurrentCity === cityId) addrCurrentCity = null; renderAddresses(); return; }
+  openCityDeleteChooser(cityId, 'addr');
+}
 async function saveAddr(){
   const name = document.getElementById('addrName').value.trim();
   const url = document.getElementById('addrUrl').value.trim();
@@ -2991,6 +3056,7 @@ async function saveAddr(){
     entry.places.push(place);
   }
   try{
+    await commitPendingCityIfNeeded(cityId); // r18: تخليد المدينة المعلقة مع حفظ أول عنوان
     await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry);
     await mpData.userLists.addPrivateCity(currentUser.uid, cityId);
     if (userListData && !userListData.privateCities.includes(cityId)) userListData.privateCities.push(cityId);
@@ -3270,6 +3336,15 @@ function switchTab(tab){
 /* ═════ خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25) ═════
    تبني فوق دوال قائمتي القائمة حصرًا (التحميل · الحفظ · النشر · المشاركة · المدن) — لا نداء منصة جديدًا.
    إبر القياس: لا إبرة جديدة بهذه المرحلة عمدًا — النقل من النافذة القديمة والتثبيت بالحارس بالمرحلة ٦. */
+let pendingCity = null; // r18 — الحفظ الصريح: مدينة جديدة تبقى بالذاكرة وتُخلَّد مع أول حفظ فعلي تحتها؛ الإلغاء يبخّرها
+async function commitPendingCityIfNeeded(cityId){
+  if (pendingCity && pendingCity.id === cityId){
+    if (!Array.isArray(userListData.customCities)) userListData.customCities = [];
+    userListData.customCities.push({ id: pendingCity.id, name: pendingCity.name, country: pendingCity.country });
+    pendingCity = null;
+    await saveUserListGeneral();
+  }
+}
 let placesSource = 'mine';
 let plEdit = null;       // null = إضافة · {catId, index} = تحرير (تغيير التصنيف بالنافذة = النقل بين التصنيفات)
 let plModalCat = null;   // التصنيف المختار داخل النافذة
@@ -3350,10 +3425,13 @@ function renderPlacesMine(){
   if (isOwner) html += '<div class="pl-ownerpanel"><div style="font-family:\'Cairo\',sans-serif; font-weight:700; font-size:12.5px;">👑 Owner · edit mode</div><div class="pl-sub" id="plMigrLine">Guide places migration — counter and run arrive in stage 5 of this step.</div><button type="button" class="pl-actbtn brass" style="margin-top:6px;" onclick="showToast(\'Migration runs in stage 5 — city by city, counts matched\')">Move guide places to my lists</button></div>';
   body.innerHTML = html;
 }
-async function plPickCountry(v){ await selectMyListCountry(v); renderPlacesMine(); }
-async function plPickCity(id){ await selectMyListCity(id); renderPlacesMine(); }
+async function plPickCountry(v){ if (pendingCity) pendingCity = null; await selectMyListCountry(v); renderPlacesMine(); }
+async function plPickCity(id){ if (pendingCity && pendingCity.id !== id) pendingCity = null; await selectMyListCity(id); renderPlacesMine(); }
 async function plAddCity(){ await addMyListCity(); await loadMyCityList(myListCityId); renderPlacesMine(); }
-async function plRemoveCity(cityId){ await removeMyListCity(cityId); renderPlacesBody(); } // r8: استرجاع حذف المدينة (الدالة الأصلية بحمايتها وتأكيدها)
+async function plRemoveCity(cityId){
+  if (pendingCity && pendingCity.id === cityId){ await removeMyListCity(cityId); renderPlacesBody(); return; } // معلقة: فورية
+  openCityDeleteChooser(cityId, 'places');
+}
 async function plTogglePublic(){ await toggleMyListPublic(); renderPlacesMine(); }
 async function plShareWith(){ await shareMyListWithSomeone(); renderPlacesMine(); }
 async function plRemoveShare(uid){ await removeMyListShare(uid); renderPlacesMine(); }
@@ -3656,6 +3734,7 @@ async function loadMyCityList(cityId){
 
 // حفظ بيانات المدينة الحالية بـMy List — مستند مستقل، مو الملف الشامل القديم
 async function saveMyCityList(){
+  await commitPendingCityIfNeeded(myListCityId); // r18: تخليد المدينة المعلقة مع أول حفظ فعلي
   if (!currentUser || !myListCityId || !myCityListData) return;
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   // نفس فحص روابط خرائط جوجل الموجود أصلًا، مطبَّق على تصنيفات هذي المدينة فقط
@@ -3690,9 +3769,7 @@ function myListPublishedOwnerCities(){
   return allCities().filter(c => cityStatus[c.id] === true);
 }
 // كل المدن المتاحة للمستخدم داخل قائمته الشخصية: مدن المالك المنشورة + مدنه الخاصة هو بس
-function myListAllCities(){
-  return myListPublishedOwnerCities().concat(userListData.customCities || []);
-}
+function myListAllCities(){ const __all = myListPublishedOwnerCities().concat(userListData.customCities || []); return pendingCity ? __all.concat([pendingCity]) : __all; }
 function myListAllCountries(){
   const fromCities = myListAllCities().map(c => c.country).filter(Boolean);
   return [...new Set(fromCities.concat(userListData.customCountries || []))];
@@ -3735,19 +3812,18 @@ async function addMyListCity(){
   let id = existing ? existing.id : null;
   if (!id){
     id = "mylist_" + Date.now();
-    if (!Array.isArray(userListData.customCities)) userListData.customCities = [];
-    userListData.customCities.push({ id, name: name.trim(), country: country.trim() });
+    pendingCity = { id: id, name: name.trim(), country: country.trim() }; // r18: لا تخليد قبل أول حفظ
   }
   myListCountry = country.trim();
   myListCityId = id;
-  await saveUserListGeneral();
   renderMyListModal();
 }
 
-async function removeMyListCity(cityId){
+async function removeMyListCity(cityId, opts){
+  if (pendingCity && pendingCity.id === cityId){ pendingCity = null; showToast('City removed'); return; } // معلقة: تتبخر بلا أثر
   const city = (userListData.customCities || []).find(c => c.id === cityId);
   if (!city) return; // حماية: يسمح فقط بحذف المدن اللي أضافها المستخدم نفسه
-  if (!confirm(`Delete "${city.name}" and any places saved under it? This cannot be undone.`)) return;
+  if (!(opts && opts.confirmed) && !confirm(`Delete "${city.name}" and any places saved under it? This cannot be undone.`)) return;
   userListData.customCities = (userListData.customCities || []).filter(c => c.id !== cityId);
   try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){} // خ٥/م٢-ب: عبر النواة
   if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
@@ -5097,7 +5173,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r17 (owner study: fixed bars slimmed — topbar 52->44 [burger 32, account monogram 28], tabbar 64->54; all synced: sticky rows, content top padding, TIMING bottom; ~+18px content per screen)');
+logTiming('BUILD: M2-FRAME-k5-r19 (owner-approved two-option city delete from either surface [side-only vs everywhere] with ghost-prevention [entity auto-removed only when the other side is already empty]; pending cities stay instant; Places catheads framed soft strip)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
