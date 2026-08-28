@@ -288,7 +288,7 @@
   .modal-backdrop{ position:fixed; inset:0; background:rgba(28,43,58,0.55); display:none;
                     align-items:center; justify-content:center; padding:20px; z-index:50; }
   .modal-backdrop.show{ display:flex; }
-  .modal{ background:var(--card); border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; }
+  .modal{ background:var(--card); border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; max-height:82vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
   .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 12px; }
   .modal-input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px; }
   /* ٢/أ (٢٦ أغسطس ٢٠٢٦) — شارة الهوية بالشريط، نافذة الحساب، تأكيد الهوية، عين الإظهار، الشريط اللاصق للنوافذ الطويلة */
@@ -333,7 +333,8 @@
   .mp-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif; }
   .mp-empty .big{ font-size:34px; margin-bottom:8px; }
   /* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
-  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:0 0 8px; direction:ltr; }
+  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; direction:ltr; }
+  #plBody{ padding-bottom:110px; }
   .pl-src{ flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; padding:5px 10px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
   .pl-src.on{ background:var(--brass); border-color:var(--brass); color:#fff; }
   .pl-actrow{ display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0 0 7px; direction:ltr; align-items:center; }
@@ -429,6 +430,7 @@
   <div class="mp-screen on" id="screenPlaces">
   <!-- قرار المالك ٢٧ أغسطس: الغلاف الكبير أُلغي — الهوية بالشريط العلوي -->
   <!-- خ٥/م٢: وجهة الأماكن الجديدة — مبدّل المصدر الرباعي (المشهد ٦/أ v1.25)؛ الواجهة القديمة مغلَّفة مخفية حتى الترحيل بالمرحلة ٥ ودوالها حية -->
+  <div class="addr-wrap">
   <div class="pl-srcrow" id="plSrcRow">
     <button type="button" class="pl-src on" data-src="mine" onclick="selectPlacesSource('mine')">📝 My List</button>
     <button type="button" class="pl-src" data-src="curators" onclick="selectPlacesSource('curators')">⭐ Curators</button>
@@ -436,6 +438,7 @@
     <button type="button" class="pl-src" data-src="favorites" onclick="selectPlacesSource('favorites')">❤️ Favorites</button>
   </div>
   <div id="plBody"></div>
+  </div><!-- /غلاف الأماكن -->
   <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:#fbeceb; border:1px dashed #b5545a; border-radius:10px; font-size:12px; color:#7a2b30; direction:ltr; word-break:break-word; text-align:center;"></div>
   <div class="modal-backdrop" id="plPlaceBackdrop"><div class="modal" style="direction:ltr; text-align:left;">
     <h3 id="plPlaceTitle" style="margin-top:0;">➕ Add a place</h3>
@@ -5086,7 +5089,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r12 (visible-dose font trial after r11 half-point proved sub-perceptual: names 13, catheads 12, source chips 11 with tighter padding, select 12, row padding 8x11 — scoped to Places screen pending owner verdict)');
+logTiming('BUILD: M2-FRAME-k5-r13 (owner-annotated round: Places body wrapped in addr-wrap [side padding, centering, max width] + top breathing under topbar + 110px bottom clearance above bars; .modal gets max-height 82vh with guaranteed inner scroll — fixes frozen category screen)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
