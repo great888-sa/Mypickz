@@ -353,6 +353,7 @@
   .pl-ownerpanel{ border:1.5px dashed var(--brass); border-radius:12px; padding:10px 12px; margin-top:12px; direction:ltr; text-align:left; }
   .pl-catpick{ display:inline-block; border:1.5px solid var(--line); border-radius:999px; padding:5px 10px; margin:2px 3px 2px 0; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; background:#fff; color:var(--ink); cursor:pointer; }
   .pl-catpick.on{ border-color:var(--brass); background:rgba(165,117,31,.12); }
+  select.modal-input{ -webkit-appearance:none; appearance:none; background:#fff; }
   /* الدرج — نافذة الحساب المبنية تصير جزأه الأعلى (المشهد ٧) */
   #accountBackdrop{ z-index:1200 !important; }
   #accountBackdrop.show{ display:block; }
@@ -446,17 +447,21 @@
         <span class="pl-sub" style="margin:0;">In Google Maps: Share → Copy, then paste here.</span>
       </div>
     </div>
-    <div class="pl-sub" style="margin-top:10px;">City</div>
+    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">City</label>
     <div id="plModalCity" style="font-family:'Cairo',sans-serif; font-weight:700; font-size:12px;"></div>
-    <div class="pl-sub" style="margin-top:8px;">Category</div>
-    <div id="plModalCats" style="max-height:150px; overflow:auto; margin-top:4px;"></div>
-    <input id="plName" class="modal-input" placeholder="Place name" style="margin-top:8px;">
-    <div style="display:flex; gap:6px; align-items:center; margin-top:4px;">
-      <input id="plUrl" class="modal-input" placeholder="Google Maps link" style="flex:1; direction:ltr; text-align:left; margin-top:0;">
+    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Category</label>
+    <div id="plModalCats" style="margin-top:2px;"></div>
+    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Name</label>
+    <input id="plName" class="modal-input" placeholder="e.g. Holybelly">
+    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Google Maps link</label>
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input id="plUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" style="flex:1; direction:ltr; text-align:left; margin-top:0;">
       <button type="button" class="pl-actbtn" onclick="plPasteUrl()" title="Paste link from clipboard">📋</button>
     </div>
-    <input id="plArea" class="modal-input" placeholder="Area (optional)" style="margin-top:4px;">
-    <textarea id="plNote" class="modal-input" rows="2" placeholder="Note (optional)" style="margin-top:4px;"></textarea>
+    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Area (optional)</label>
+    <input id="plArea" class="modal-input" placeholder="e.g. 10th arr.">
+    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Note (optional)</label>
+    <textarea id="plNote" class="modal-input" rows="2" placeholder="e.g. best pancakes before 11"></textarea>
     <div style="display:flex; gap:6px; margin-top:10px;">
       <button type="button" class="btn btn-brass" style="flex:1;" onclick="savePlPlace()">Save</button>
       <button type="button" class="btn btn-ghost" onclick="closePlPlaceModal()">Cancel</button>
@@ -3304,11 +3309,10 @@ function renderPlacesMine(){
     + '<button type="button" class="pl-actbtn brass" onclick="openPlAddFromMaps()">📍 Add from Google Maps</button>'
     + '<button type="button" class="pl-actbtn" onclick="plAddCity()">➕ City</button>'
     + '<button type="button" class="pl-actbtn" style="opacity:.55;" onclick="showToast(\'Day plan — Soon (step 6)\')">🗓 Day plan <span style="font-size:8.5px; font-weight:700;">Soon</span></button>'
-    + '<button type="button" class="pl-actbtn linkish" onclick="openPlPlaceModal(null, null)">All categories</button>'
     + '</div>';
-  html += '<div class="pl-actrow" style="padding-bottom:4px;"><span style="font-size:10px; color:var(--ink-soft); font-weight:700;">View:</span>'
+  html += '<div class="pl-actrow" style="padding-bottom:4px; justify-content:space-between;"><button type="button" class="pl-actbtn linkish" style="background:none; padding-left:0;" onclick="openPlPlaceModal(null, null)">All categories</button><span style="display:inline-flex; gap:6px; align-items:center;"><span style="font-size:10px; color:var(--ink-soft); font-weight:700;">View:</span>'
     + '<button type="button" class="pl-actbtn" style="background:var(--ink); color:var(--paper); border-color:var(--ink);">📋 List</button>'
-    + '<button type="button" class="pl-actbtn" onclick="showToast(\'Map view — station 4\')">🗺 Map <span style="font-size:8.5px; font-weight:700;">Soon</span></button></div>';
+    + '<button type="button" class="pl-actbtn" onclick="showToast(\'Map view — station 4\')">🗺 Map <span style="font-size:8.5px; font-weight:700;">Soon</span></button></span></div>';
   const shares = (myCityListData.sharedWith || []).map(uid => '<span style="display:inline-flex; align-items:center; gap:4px; margin-right:8px;">' + escapeHtml((myCityListData.sharedWithNames || {})[uid] || 'user') + ' <button type="button" style="background:none; border:none; cursor:pointer; font-size:11px;" onclick="plRemoveShare(\'' + uid + '\')" title="Remove">✕</button></span>').join('');
   html += '<div class="pl-switchrow" style="justify-content:space-between;"><span style="display:inline-flex; align-items:center; gap:8px;"><button type="button" class="switch-btn small ' + (myCityListData.public ? 'on' : '') + '" onclick="plTogglePublic()"><span class="knob"></span></button><span>Allow others to view</span></span><span style="display:inline-flex; align-items:center; gap:6px;">🔗<button type="button" class="pl-actbtn" style="padding:3px 10px;" onclick="plShareWith()" title="Share with someone by username">➕ Add</button></span></div>' + (shares ? '<div class="pl-sharebox">' + shares + '</div>' : '');
   // التصنيفات التي فيها أماكن فقط — بعدّادها و＋ (المدينة الجديدة تفتح فارغة بدعوة واحدة)
@@ -3372,7 +3376,7 @@ function plFillModal(pasteMode){
   document.getElementById('plModalCity').textContent = '🏙 ' + plCityName() + ' — change the city from the chips above';
   const cats = plCatsAll(); let sec = null; let ch = '';
   cats.forEach(c => {
-    if (c.section !== sec){ sec = c.section; ch += '<div class="pl-sub" style="margin:6px 0 2px; font-weight:700;">' + escapeHtml(sec) + '</div>'; }
+    if (c.section !== sec){ sec = c.section; ch += '<div style="font-family:\'Cairo\',sans-serif; font-weight:700; font-size:12px; color:var(--ink); margin:8px 0 3px;">' + escapeHtml(sec) + '</div>'; }
     ch += '<button type="button" class="pl-catpick' + (plModalCat === c.id ? ' on' : '') + '" data-cat="' + c.id + '" onclick="plPickModalCat(\'' + c.id + '\')">' + c.icon + ' ' + escapeHtml(c.name) + '</button>';
   });
   document.getElementById('plModalCats').innerHTML = ch;
@@ -5064,7 +5068,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r8 (field round 2: empty-state ltr punctuation fix; custom-city delete restored [baseline parity, per mylist_ chip]; explicit select styling vs OS default; publish+share merged to one compact row as drawn in reference v1.26)');
+logTiming('BUILD: M2-FRAME-k5-r9 (structural formatting review per field round 3: place modal rebuilt on Addresses-sibling anatomy [field labels, no inner scrollbox -> no clipped chips, section headers]; All categories merged into View line as drawn in v1.27; select.modal-input de-OS-styled)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
