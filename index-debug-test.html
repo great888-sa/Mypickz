@@ -286,9 +286,9 @@
                 color:var(--ink-soft); font-size:11.5px; line-height:1.8; border-top:1px solid var(--line); }
 
   .modal-backdrop{ position:fixed; inset:0; background:rgba(28,43,58,0.55); display:none;
-                    align-items:center; justify-content:center; padding:20px; z-index:50; }
+                    align-items:center; justify-content:center; padding:20px 20px 64px; z-index:1250; }
   .modal-backdrop.show{ display:flex; }
-  .modal{ background:var(--card); border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; max-height:82vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .modal{ background:var(--card); border-radius:16px; padding:24px; max-width:340px; width:100%; text-align:center; max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
   .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 12px; }
   .modal-input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px; }
   /* ٢/أ (٢٦ أغسطس ٢٠٢٦) — شارة الهوية بالشريط، نافذة الحساب، تأكيد الهوية، عين الإظهار، الشريط اللاصق للنوافذ الطويلة */
@@ -333,8 +333,8 @@
   .mp-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif; }
   .mp-empty .big{ font-size:34px; margin-bottom:8px; }
   /* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
-  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; direction:ltr; }
-  #plBody{ padding-bottom:110px; }
+  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; direction:ltr; position:sticky; top:52px; background:var(--paper); z-index:10; }
+  #plBody{ padding-bottom:40px; }
   .pl-src{ flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; padding:5px 10px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
   .pl-src.on{ background:var(--brass); border-color:var(--brass); color:#fff; }
   .pl-actrow{ display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0 0 7px; direction:ltr; align-items:center; }
@@ -566,7 +566,7 @@
   </div>
 
   <div class="modal-backdrop" id="myTripsBackdrop">
-    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto; text-align:right;">
       <h3 style="text-align:center;">🧳 My Trips</h3>
       <div id="myTripsBody"></div>
       <button class="btn btn-ghost" style="width:100%; margin-top:12px;" onclick="closeMyTripsModal()">Close</button>
@@ -768,7 +768,7 @@
   </div>
 
   <div class="modal-backdrop" id="reportBackdrop">
-    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto; text-align:right;">
       <h3 style="text-align:center;">📄 Users Report</h3>
       <textarea id="reportTextArea" readonly style="width:100%; height:260px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:monospace; font-size:11.5px; direction:ltr; text-align:left; background:#fff; color:var(--ink);"></textarea>
       <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="copyUsersReport()"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
@@ -777,7 +777,7 @@
   </div>
 
   <div class="modal-backdrop" id="usersBackdrop">
-    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto; text-align:right;">
       <div class="modal-topbar"><button class="btn btn-ghost" style="flex:1" onclick="closeUsersModal()">Close</button></div>
       <h3 style="text-align:center;">👥 Manage Users</h3>
       <div id="usersStatsLine" style="font-size:12px; color:var(--ink-soft); text-align:center; margin:0 0 12px; line-height:1.8;"></div>
@@ -789,7 +789,7 @@
 
   <!-- أ-٣ الطبقة ٢ — System Status (للمالك فقط): بطاقة النبضة الآن، وتُضاف لها بطاقتا الطبقة ٣ (الأخطاء الميدانية) والطبقة ٥ (الاستهلاك) لاحقًا -->
   <div class="modal-backdrop" id="systemStatusBackdrop">
-    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto;">
+    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto;">
       <h3 style="text-align:center;">🩺 System Status</h3>
       <div id="systemStatusBody" style="font-size:12.5px; line-height:1.8;"></div>
       <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeSystemStatusModal()">Close</button>
@@ -797,7 +797,7 @@
   </div>
 
   <div class="modal-backdrop" id="communityBackdrop">
-    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto; text-align:right;">
       <h3 style="text-align:center;">🌍 Community Lists</h3>
       <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 12px;">Browse public lists shared by other users. Hospitals & Clinics, Personal, and Others are never shown here.</p>
       <div id="communityBody"></div>
@@ -818,7 +818,7 @@
   </div>
 
   <div class="modal-backdrop" id="myListBackdrop">
-    <div class="modal" style="max-width:460px; max-height:82vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto; text-align:right;">
       <div class="modal-topbar"><button class="btn btn-brass" style="flex:1" onclick="closeMyListModal()">Save &amp; Close</button></div>
       <h3 style="text-align:center;">📝 My List — <span id="myListCityName"></span></h3>
       <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 10px;">Add your own places under any category below. Only Google Maps links are accepted.</p>
@@ -5089,7 +5089,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r13 (owner-annotated round: Places body wrapped in addr-wrap [side padding, centering, max width] + top breathing under topbar + 110px bottom clearance above bars; .modal gets max-height 82vh with guaranteed inner scroll — fixes frozen category screen)');
+logTiming('BUILD: M2-FRAME-k5-r14 (frame height round: modal layer 50->1250 above TIMING/tabbar, cap 72vh across rule + 6 inline modals, lifted backdrop padding; dead bottom void fixed [40px]; source switcher sticky per reference easy-exit rule)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
