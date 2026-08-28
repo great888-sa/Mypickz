@@ -334,20 +334,20 @@
   .mp-empty .big{ font-size:34px; margin-bottom:8px; }
   /* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
   .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:0 0 8px; direction:ltr; }
-  .pl-src{ flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; padding:7px 14px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
+  .pl-src{ flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11.5px; padding:6px 12px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
   .pl-src.on{ background:var(--brass); border-color:var(--brass); color:#fff; }
   .pl-actrow{ display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0 0 7px; direction:ltr; align-items:center; }
-  .pl-actbtn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border:1.5px solid var(--line); border-radius:999px; padding:6px 10px; background:#fff; color:var(--ink); cursor:pointer; }
+  .pl-actbtn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; border:1.5px solid var(--line); border-radius:999px; padding:6px 10px; background:#fff; color:var(--ink); cursor:pointer; }
   .pl-actbtn.brass{ background:var(--brass); border-color:var(--brass); color:#fff; }
   .pl-actbtn.linkish{ border:none; text-decoration:underline; }
-  .pl-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin:10px 0 6px; display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left; }
+  .pl-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; color:var(--ink); margin:10px 0 6px; display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left; }
   .pl-cathead .addmini{ background:none; border:1.5px solid var(--line); border-radius:999px; min-width:26px; height:26px; cursor:pointer; font-weight:700; color:var(--brass); font-size:14px; }
   .pl-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line-strong); border-radius:12px; padding:10px 12px; margin-bottom:6px; direction:ltr; text-align:left; }
-  .pl-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; color:var(--ink); text-decoration:none; display:block; }
-  .pl-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  .pl-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13.5px; color:var(--ink); text-decoration:none; display:block; }
+  .pl-sub{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
   .pl-acts{ display:flex; gap:6px; align-items:center; }
   .pl-acts button, .pl-acts a{ background:none; border:none; font-size:15px; cursor:pointer; padding:4px; color:var(--ink); text-decoration:none; }
-  .pl-acts a.act-chip{ border:1.5px solid var(--line-strong); border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; background:#fff; }
+  .pl-acts a.act-chip{ border:1.5px solid var(--line-strong); border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; background:#fff; }
   .pl-switchrow{ display:flex; align-items:center; gap:8px; background:var(--paper-dark); border-radius:10px; padding:8px 10px; margin:2px 0 6px; font-size:12px; direction:ltr; text-align:left; }
   .pl-sharebox{ background:var(--paper-dark); border-radius:10px; padding:8px 10px; margin:0 0 12px; font-size:11.5px; direction:ltr; text-align:left; }
   .pl-ownerpanel{ border:1.5px dashed var(--brass); border-radius:12px; padding:10px 12px; margin-top:12px; direction:ltr; text-align:left; }
@@ -388,7 +388,7 @@
   .prow-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; color:var(--ink); text-decoration:none; display:block; }
   .prow-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
   .addr-row .acts button, .addr-row .acts a{ background:none; border:none; font-size:15px; cursor:pointer; padding:4px; color:var(--ink); text-decoration:none; }
-  .addr-row .acts a.act-chip{ border:1.5px solid var(--line-strong); border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; background:#fff; }
+  .addr-row .acts a.act-chip{ border:1.5px solid var(--line-strong); border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; background:#fff; }
   .addr-title{ font-family:'Cairo',sans-serif; font-weight:700; font-size:15px; color:var(--ink); }
   .addr-caption{ font-size:11px; color:var(--ink-soft); font-weight:600; }
   .addr-row .acts{ display:flex; gap:6px; }
@@ -3300,7 +3300,7 @@ function plCityName(){ const c = myListAllCities().find(x => x.id === myListCity
 function renderPlacesMine(){
   const body = document.getElementById('plBody'); if (!body || !myCityListData) return;
   const countries = myListAllCountries();
-  const csel = countries.length ? '<select class="pl-actbtn" style="flex:1; min-width:150px; font-size:13px; padding:8px 30px 8px 10px; -webkit-appearance:none; appearance:none;" onchange="plPickCountry(this.value)">'
+  const csel = countries.length ? '<select class="pl-actbtn" style="flex:1; min-width:150px; font-size:12.5px; padding:7px 30px 7px 10px; -webkit-appearance:none; appearance:none;" onchange="plPickCountry(this.value)">'
     + countries.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === myListCountry ? ' selected' : '') + '>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + c + '</option>').join('') + '</select>' : '';
   const inCountry = myListAllCities().filter(c => c.country === myListCountry);
   const chips = inCountry.map(c => '<button type="button" class="addr-chip ' + (c.id === myListCityId ? 'on' : '') + '" onclick="plPickCity(\'' + c.id + '\')">' + escapeHtml(c.name) + (c.id.indexOf('mylist_') === 0 ? ' <span style="font-size:12px;" onclick="event.stopPropagation(); plRemoveCity(\'' + c.id + '\')" title="Delete city">🗑️</span>' : '') + '</button>').join('');
@@ -5086,7 +5086,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r10 (field round 4: two-stage category picker as drawn in v1.28 — section chips first, tap reveals only that section; preselected paths land with section+category chosen, so the wall of 30 chips is gone)');
+logTiming('BUILD: M2-FRAME-k5-r11 (font trial at owner request, provisional amendment to scale decision 08 pending field verdict: names 13.5, src 11.5, catheads 12.5, chips 10.5, sublines 11, select 12.5; reference v1.29 records sync-at-step-close rule)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
