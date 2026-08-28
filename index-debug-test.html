@@ -345,7 +345,7 @@
   .pl-actbtn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; border:1.5px solid var(--line); border-radius:999px; padding:6px 10px; background:#fff; color:var(--ink); cursor:pointer; }
   .pl-actbtn.brass{ background:var(--brass); border-color:var(--brass); color:#fff; }
   .pl-actbtn.linkish{ border:none; text-decoration:underline; }
-  .pl-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; color:var(--ink); margin:10px 0 6px; background:var(--paper-dark); border-radius:10px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left; }
+  .pl-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; color:var(--ink); margin:10px 0 6px;  display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left; }
   .pl-cathead .addmini{ background:none; border:1.5px solid var(--line); border-radius:999px; min-width:26px; height:26px; cursor:pointer; font-weight:700; color:var(--brass); font-size:14px; }
   .pl-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line-strong); border-radius:12px; padding:8px 11px; margin-bottom:6px; direction:ltr; text-align:left; }
   .pl-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); text-decoration:none; display:block; }
@@ -448,7 +448,7 @@
     <h3 id="cityDelTitle" style="margin-top:0;">🗑 Delete city</h3>
     <p id="cityDelHint" class="pl-sub" style="margin:4px 0 10px;"></p>
     <button type="button" class="btn btn-ghost" style="width:100%; margin-bottom:8px;" id="cityDelSideBtn" onclick="cityDelSide()"></button>
-    <button type="button" class="btn btn-ghost" style="width:100%; margin-bottom:8px; color:#b5545a;" onclick="cityDelFull()">Delete city everywhere</button>
+    <button type="button" class="btn btn-ghost" id="cityDelFullBtn" style="width:100%; margin-bottom:8px; color:#b5545a;" onclick="cityDelFull()">Delete city everywhere</button>
     <button type="button" class="btn btn-brass" style="width:100%;" onclick="closeModalById('cityDelBackdrop')">Cancel</button>
   </div></div>
   <div class="modal-backdrop" id="plPlaceBackdrop"><div class="modal" style="direction:ltr; text-align:left;">
@@ -2903,7 +2903,7 @@ function renderAddresses(){
   const inCountry = addrCities.filter(c => countryOfCity(c) === addrCurrentCountry);
   if (!inCountry.includes(addrCurrentCity)) addrCurrentCity = inCountry[0] || null;
   const chips = document.getElementById('addrCityChips');
-  chips.innerHTML = inCountry.map(c => `<button type="button" class="addr-chip ${addrCurrentCity === c ? 'on' : ''}" onclick="pickAddrCity('${c}')">${cityNameOf(c)}${c.indexOf('mylist_') === 0 ? ` <span style="font-size:12px;" onclick="event.stopPropagation(); removeAddrCity('${c}')" title="Delete city">🗑️</span>` : ''}</button>`).join('')
+  chips.innerHTML = inCountry.map(c => `<button type="button" class="addr-chip ${addrCurrentCity === c ? 'on' : ''}" onclick="pickAddrCity('${c}')">${cityNameOf(c)} <span style="font-size:12px;" onclick="event.stopPropagation(); removeAddrCity('${c}')" title="Delete city">🗑️</span></button>`).join('')
     + `<button type="button" class="addr-chip" style="border-style:dashed; color:var(--brass);" onclick="addAddrCity()">➕ City</button>`;
   // التصنيفات السبعة مسطَّحة (لا أقسام): كلٌّ بعنوانه وعدّاده و＋ — تُعرض دائمًا للمدينة الحالية
   const cats = privateCategoryList();
@@ -2980,14 +2980,15 @@ function openAddrModal(cityId, catId, index){
 }
 let cityDelCtx = null; // {cityId, from:'addr'|'places'}
 function openCityDeleteChooser(cityId, from){
-  const city = (userListData.customCities || []).find(c => c.id === cityId);
-  if (!city) return;
-  cityDelCtx = { cityId: cityId, from: from };
-  document.getElementById('cityDelTitle').textContent = '🗑 Delete "' + city.name + '"';
-  document.getElementById('cityDelHint').textContent = from === 'addr'
-    ? 'This city may also hold a places list in Places.'
-    : 'This city may also hold personal addresses in Addresses.';
-  document.getElementById('cityDelSideBtn').textContent = from === 'addr' ? 'Remove from Addresses only' : 'Remove from My List only';
+  const isCustom = cityId.indexOf('mylist_') === 0;
+  const name = cityNameOf(cityId);
+  cityDelCtx = { cityId: cityId, from: from, isCustom: isCustom };
+  document.getElementById('cityDelTitle').textContent = '🗑 ' + name;
+  document.getElementById('cityDelHint').textContent = isCustom
+    ? (from === 'addr' ? 'This city may also hold a places list in Places.' : 'This city may also hold personal addresses in Addresses.')
+    : 'Standard city — it stays in the app; you can only clear your own content here.';
+  document.getElementById('cityDelSideBtn').textContent = from === 'addr' ? (isCustom ? 'Remove from Addresses only' : 'Remove from Addresses') : (isCustom ? 'Remove from My List only' : 'Clear my list for this city');
+  document.getElementById('cityDelFullBtn').style.display = isCustom ? '' : 'none';
   openModalById('cityDelBackdrop');
 }
 async function cityCountList(cityId){ // عدد أماكن قائمة المدينة (للطرف الآخر)
@@ -3006,13 +3007,13 @@ async function cityDelSide(){
     delete addrData[cityId];
     addrCities = addrCities.filter(c => c !== cityId);
     if (addrCurrentCity === cityId) addrCurrentCity = null;
-    if ((await cityCountList(cityId)) === 0) await removeMyListCity(cityId, { confirmed: true }); // منع الشبح: الطرف الآخر فارغ
+    if (cityDelCtx.isCustom && (await cityCountList(cityId)) === 0) await removeMyListCity(cityId, { confirmed: true }); // منع الشبح (الخاصة فقط)
     showToast('Removed from Addresses');
     renderAddresses(); if (currentTab === 'Places') renderPlacesBody();
   } else {
     try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){}
     if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
-    if ((await cityCountAddr(cityId)) === 0){ await removeMyListCity(cityId, { confirmed: true }); }
+    if (cityDelCtx.isCustom && (await cityCountAddr(cityId)) === 0){ await removeMyListCity(cityId, { confirmed: true }); }
     else if (myListCityId === cityId){ const rem = myListAllCities().filter(c => c.country === myListCountry && c.id !== cityId); myListCityId = rem.length ? rem[0].id : null; }
     showToast('Removed from My List');
     renderPlacesBody(); 
@@ -3391,7 +3392,7 @@ function renderPlacesMine(){
     + '<button type="button" class="pl-actbtn" onclick="plAddCity()">➕ City</button>'
     + '<button type="button" class="pl-actbtn" style="opacity:.55;" onclick="showToast(\'Day plan — Soon (step 6)\')">🗓 Day plan <span style="font-size:8.5px; font-weight:700;">Soon</span></button>'
     + '</div>';
-  html += '<div class="pl-actrow" style="padding-bottom:4px; justify-content:space-between;"><button type="button" class="pl-actbtn linkish" style="background:none; padding-left:0;" onclick="openPlPlaceModal(null, null)">All categories</button><span style="display:inline-flex; gap:6px; align-items:center;"><span style="font-size:10px; color:var(--ink-soft); font-weight:700;">View:</span>'
+  html += '<div class="pl-actrow" style="padding-bottom:4px; justify-content:space-between;"><button type="button" class="pl-actbtn" onclick="openPlPlaceModal(null, null)">All categories</button><span style="display:inline-flex; gap:6px; align-items:center;"><span style="font-size:10px; color:var(--ink-soft); font-weight:700;">View:</span>'
     + '<button type="button" class="pl-actbtn" style="background:var(--ink); color:var(--paper); border-color:var(--ink);">📋 List</button>'
     + '<button type="button" class="pl-actbtn" onclick="showToast(\'Map view — station 4\')">🗺 Map <span style="font-size:8.5px; font-weight:700;">Soon</span></button></span></div>';
   const shares = (myCityListData.sharedWith || []).map(uid => '<span style="display:inline-flex; align-items:center; gap:4px; margin-right:8px;">' + escapeHtml((myCityListData.sharedWithNames || {})[uid] || 'user') + ' <button type="button" style="background:none; border:none; cursor:pointer; font-size:11px;" onclick="plRemoveShare(\'' + uid + '\')" title="Remove">✕</button></span>').join('');
@@ -5173,7 +5174,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r19 (owner-approved two-option city delete from either surface [side-only vs everywhere] with ghost-prevention [entity auto-removed only when the other side is already empty]; pending cities stay instant; Places catheads framed soft strip)');
+logTiming('BUILD: M2-FRAME-k5-r20 (review round: trash on ALL address city chips — standard cities get two-option chooser [clear content only, entity stays], custom get three; ghost-prevention custom-only; All-categories now framed like siblings, cathead strip reverted)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
