@@ -3416,7 +3416,7 @@ function renderPlacesMine(){
         + '</div><span class="pl-acts">'
         + (pl.url ? '<a class="act-chip" href="' + String(pl.url).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" title="Open in Google Maps">Maps ↗</a>' : '')
         + '<button type="button" onclick="plToggleFav(\'' + cat.id + '\', ' + i + ')" title="Favorite">' + (fav ? '❤️' : '🤍') + '</button>'
-        + ((activeTripId && pl.id) ? '<button type="button" style="color:var(--brass);" onclick="addPlaceToTrip(\'mylist\', \'' + myListCityId + '\', \'' + cat.id + '\', \'' + pl.id + '\')" title="Add to active trip">🧳</button>' : '')
+        + ((activeTripId && pl.id) ? '<button type="button" style="color:var(--brass);" onclick="addPlaceToTrip(\'mylist\', \'' + myListCityId + '\', \'' + cat.id + '\', \'' + pl.id + '\')" title="Add to active trip">🧳</button>' : '<button type="button" style="opacity:.45;" onclick="showToast(\'Trips — the new engine arrives in step 6\')" title="Add to trip — Soon">🧳<span style="font-size:7px; font-weight:700;">Soon</span></button>')
         + '<button type="button" onclick="openPlPlaceModal(\'' + cat.id + '\', ' + i + ')" title="Edit">✏️</button>'
         + '<button type="button" onclick="plDeleteRow(\'' + cat.id + '\', ' + i + ')" title="Delete">🗑</button>'
         + '</span></div>';
@@ -5174,7 +5174,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r20 (review round: trash on ALL address city chips — standard cities get two-option chooser [clear content only, entity stays], custom get three; ghost-prevention custom-only; All-categories now framed like siblings, cathead strip reverted)');
+logTiming('BUILD: M2-FRAME-k5-r21 (owner middle-ground: trip bag always visible on place rows — live with an active trip, dimmed Soon otherwise; completes row formatting this stage, activation with step-6 trips engine)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
