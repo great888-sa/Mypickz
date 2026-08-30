@@ -278,6 +278,16 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 #activeTripAddedRow .chip{font-size:10.5px; padding:4px 9px;}
 #activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
 
+#activeTripBar{display:none; position:fixed; left:0; right:0; bottom:54px; z-index:800; padding:8px 12px 10px;}
+#activeTripBar.show{display:block;}
+.atb-head{display:flex; justify-content:space-between; align-items:center; gap:8px;}
+#activeTripLabel{font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.atb-done{padding:6px 14px; font-size:11px;}
+#activeTripAddedRow:empty{display:none;}
+#activeTripAddedRow{margin-top:7px;}
+#activeTripAddedRow .chip{font-size:10.5px; padding:4px 9px;}
+#activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
+
 </style>
 
 <style id="identity">
@@ -465,6 +475,9 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .tripnote{color:var(--ink-strong);}
   #activeTripAddedRow .chip,#activeTripAddedRow .chip.label{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
   #activeTripAddedRow .chip b{color:var(--saffron);}
+  #activeTripBar{background:var(--bar); border-top:1px solid var(--line-strong); box-shadow:0 -8px 20px rgba(0,0,0,.45);}
+  #activeTripLabel{color:var(--on-night);}
+  #activeTripLabel b{color:var(--saffron);}
 </style>
 </head>
 <body>
@@ -603,7 +616,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <!-- خ١: الوجهة ٥ — العناوين الشخصية: تُبنى كاملة بخ٢ -->
   <div class="mp-screen" id="screenAddresses"><div class="wrap destbody">
     <div class="stickyhead">
-      <div class="headrow"><button type="button" class="csel" id="addrSel" onclick="addrTogglePanel('cities')">— ⌄</button><span class="actn label">🔒 Always private</span></div><div class="headrow"><button type="button" class="actn" id="addrCatBtn" onclick="addrTogglePanel('cats')">All categories ⌄</button></div>
+      <div class="headrow"><button type="button" class="csel" id="addrSel" onclick="addrTogglePanel('cities')">— ⌄</button><span class="actn label">🔒 Always private</span></div><div class="headrow"><button type="button" class="actn" id="addrCatBtn" onclick="addrTogglePanel('cats')"><b>＋</b> Add address</button></div>
     </div>
     <div id="addrPanel"></div>
     <div id="addrBody"><div class="addr-empty">Loading…</div></div>
@@ -618,18 +631,9 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <button type="button" class="mp-tab" data-tab="Addresses" onclick="switchTab('Addresses')"><span class="ti">🔒</span><span>Addresses</span></button>
   </div>
 
-  <div id="activeTripBar" style="display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:500; background:var(--ink); color:#fff; border-radius:30px; padding:10px 18px; box-shadow:0 6px 24px rgba(0,0,0,.3); align-items:center; gap:12px; max-width:90vw;">
-    <span id="activeTripLabel" style="font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Adding to: —</span>
-    <span id="activeTripAddedRow" class="chiprow"></span>
-    <button type="button" style="background:var(--brass); border:none; color:var(--ink); border-radius:20px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer;" onclick="stopAddingToTrip()">Done</button>
-  </div>
-
-  <div class="modal-backdrop" id="tripPickerBackdrop">
-    <div class="modal" style="max-width:380px;">
-      <h3>➕ Add to Trip</h3>
-      <div id="tripPickerBody"></div>
-      <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeTripPickerModal()">Cancel</button>
-    </div>
+  <div id="activeTripBar">
+    <div class="atb-head"><span id="activeTripLabel">Adding to: —</span><span class="acts"><button type="button" class="actn" onclick="openActiveTrip()">View trip</button><button type="button" class="cta atb-done" onclick="stopAddingToTrip()">Done</button></span></div>
+    <div id="activeTripAddedRow" class="chiprow"></div>
   </div>
 
   <div class="modal-backdrop" id="myTripsBackdrop">
@@ -2360,6 +2364,10 @@ function startAddingToTrip(tripId){
   showToast('Pick places — they appear below, then tap Done');
   updateActiveTripBanner();
 }
+function openActiveTrip(){                 // من الشريط: يفتح الرحلة النشطة لمراجعتها
+  const id = activeTripId; if (!id) return;
+  switchTab('Trips'); openTripDetail(id);
+}
 function stopAddingToTrip(){
   activeTripId = null;
   activeTripAdded = [];
@@ -2372,13 +2380,13 @@ function updateActiveTripBanner(){
   const bar = document.getElementById('activeTripBar');
   if (!bar) return;
   if (activeTripId){
-    bar.style.display = 'flex';
-    document.getElementById('activeTripLabel').textContent = 'Adding to: ' + activeTripLabel() + (activeTripAdded.length ? ' · ' + activeTripAdded.length : '');
+    bar.classList.add('show');
+    document.getElementById('activeTripLabel').innerHTML = 'Adding to: <b>' + escapeHtml(activeTripLabel()) + '</b>' + (activeTripAdded.length ? ' · ' + activeTripAdded.length : '');
     const list = document.getElementById('activeTripAddedRow');
     if (list) list.innerHTML = activeTripAdded.map((n, i) =>
       '<span class="chip label">' + escapeHtml(n) + ' <b onclick="undoTripAdd(' + i + ')">✕</b></span>').join('');
   } else {
-    bar.style.display = 'none';
+    bar.classList.remove('show');
   }
   render();
   if (viewingUserUid) renderCommunityModal();
@@ -2995,7 +3003,7 @@ function renderAddresses(){
   const sel = document.getElementById('addrSel');
   sel.innerHTML = (addrCurrentCountry ? plCountryCode(addrCurrentCountry) + ' · <b>' + escapeHtml(cityId ? cityNameOf(cityId) : '—') + '</b>' : 'Add your city')
     + ' ' + (addrPanel === 'cities' ? '⌃' : '⌄');
-  const cb = document.getElementById('addrCatBtn'); if (cb) cb.innerHTML = 'All categories ' + (addrPanel === 'cats' ? '⌃' : '⌄');
+  const cb = document.getElementById('addrCatBtn'); if (cb) cb.innerHTML = '<b>＋</b> Add address';
 
   /* لوحة المدن العاجية — العدّاد والسلة و＋ Add city مثبَّت أعلى */
   let panel = '';
@@ -3412,6 +3420,14 @@ function updateUserUI(){
     if (chipBtn) chipBtn.style.display = 'none';
     const gchip2 = document.getElementById('guestChipBtn'); if (gchip2) gchip2.style.display = '';
     addrLoaded = false; addrData = {}; addrCities = []; closeChipMenu();
+    // الخروج يعيد البوابة ولا يترك بيانات الحساب السابق معروضة (البوابة إلزامية — القرار ٢٠٢٦-٠٨-١٦-٠٨)
+    activeTripId = null; activeTripAdded = []; activeTripAddedRefs = [];
+    const atb = document.getElementById('activeTripBar'); if (atb) atb.classList.remove('show');
+    userTrips = []; sharedTrips = []; tripsLoaded = false; currentTripId = null;
+    sharedCityLists = []; myCityListData = null; myCityListLoadedFor = null;
+    favoritePlaces = []; viewingUserUid = null; plPanel = null; addrPanel = null;
+    document.querySelectorAll('.modal-backdrop.show').forEach(function(b){ if (b.id !== 'authBackdrop') b.classList.remove('show'); });
+    openGate();
   }
 }
 
@@ -3516,7 +3532,7 @@ function renderPlacesMine(){
 
   /* الصف الثاني — التصنيفات وطريقة العرض */
   html += '<div class="headrow">'
-    + '<button type="button" class="actn" onclick="plTogglePanel(\'cats\')">All categories ' + (plPanel === 'cats' ? '⌃' : '⌄') + '</button>'
+    + '<button type="button" class="actn" onclick="plTogglePanel(\'cats\')"><b>＋</b> Add place</button>'
     + '<button type="button" class="actn" onclick="showToast(\'Day plan — Soon (step 6)\')">🗓 Day plan <span class="dim">Soon</span></button>'
     + '<span class="actn label">View: <b>List</b> | Map <span class="dim">Soon</span></span>'
     + '</div>';
@@ -4437,7 +4453,7 @@ function renderMyListModal(){
             if (p.area && p.area.trim()) html += `<div style="font-size:10.5px; color:var(--ink-soft); margin-bottom:2px;">📍 ${p.area}</div>`;
             html += `<div style="display:flex; align-items:center; gap:8px;">
               <a class="place-link" data-mpsrc="app" data-mpcat="${item.id||''}" data-mppersonal="${(section.ownerOnly || (item.id&&item.id.indexOf('personal_')===0))?1:0}" style="flex:1; font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${p.name} ←</a>
-              ${(activeTripId && p.id && !isPrivateCategoryId(item.id)) ? `<button type="button" class="remove-btn" style="font-size:11px; color:var(--brass);" onclick="addPlaceToTrip('mylist', '${myListCityId}', '${item.id}', '${p.id}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
+              ${(activeTripId && p.id && !isPrivateCategoryId(item.id)) ? `<button type="button" class="remove-btn" style="font-size:11px; color:var(--brass);" onclick="addPlaceToTrip('mylist', '${myListCityId}', '${item.id}', '${p.id}', null, '${(p.name||'').replace(/'/g,"\\'")}')" title="Add to active trip">🧳</button>` : ''}
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})" title="Edit"><i class="fa-solid fa-pen"></i></button>
               <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})" title="Remove"><i class="fa-solid fa-trash"></i></button>
             </div>`;
@@ -4636,7 +4652,7 @@ function renderCommunityUserList(wrap){
           <div style="display:flex; align-items:center; gap:6px;">
             <a class="place-link" data-mpsrc="community" data-mpcat="${item.id||''}" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
             <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCat}', '${safeCity}', '${safeArea}', '${u.uid}', '${communityViewingCityId}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
-            ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
+            ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}', '${safeName}')" title="Add to active trip">🧳</button>` : ''}
           </div>
           ${renderNoteHtml(p.note)}
         </div>`;
@@ -5179,7 +5195,7 @@ function render(){
               return divider + `<div class="place-row-view">
                   <a class="place-link" data-mpsrc="app" data-mpowner="1" data-mpcat="${item.id||''}" data-mppersonal="${(section.ownerOnly || (item.id&&item.id.indexOf('personal_')===0))?1:0}" href="${p.url}" target="_blank" rel="noopener">${pName} ←</a>
                   <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCategory}', '${safeCity}', '${safeArea}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
-                  ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('owner', '${currentCityId}', '${item.id}', '${p.id}')" title="Add to active trip"><i class="fa-solid fa-suitcase-rolling"></i></button>` : ''}
+                  ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('owner', '${currentCityId}', '${item.id}', '${p.id}', null, '${safeName}')" title="Add to active trip">🧳</button>` : ''}
                 </div>` +
                 (p.note && p.note.trim() && p.noteOn !== false ? renderNoteHtml(p.note) : '');
             }).join('');
@@ -5322,7 +5338,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r19 (two owner decisions drawn into reference v1.34 then coded: Personal Addresses now follows the Places logic — empty categories leave the body and live in an All categories panel with a plus on every row; and Add places jumps straight to the Places destination while the active-trip bar lists every place added, each removable, until Done)');
+logTiming('BUILD: M2-ID-r21 (log out now returns to the gate: the gate was only ever opened once on first load, so signing out left the previous session on screen; the guest branch reopens it, closes any open modal, and clears the trips, shared lists, favourites and panel state so no data from the previous account survives the sign-out)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
