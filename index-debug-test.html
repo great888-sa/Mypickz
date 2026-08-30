@@ -278,15 +278,22 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 #activeTripAddedRow .chip{font-size:10.5px; padding:4px 9px;}
 #activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
 
-#activeTripBar{display:none; position:fixed; left:0; right:0; bottom:54px; z-index:800; padding:8px 12px 10px;}
+#activeTripBar{display:none; position:fixed; left:0; right:0; bottom:62px; z-index:800; padding:10px 12px 12px;}
 #activeTripBar.show{display:block;}
 .atb-head{display:flex; justify-content:space-between; align-items:center; gap:8px;}
 #activeTripLabel{font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .atb-done{padding:6px 14px; font-size:11px;}
 #activeTripAddedRow:empty{display:none;}
-#activeTripAddedRow{margin-top:7px;}
+#activeTripAddedRow{margin-top:8px; flex-wrap:wrap; overflow:visible; row-gap:6px;}
 #activeTripAddedRow .chip{font-size:10.5px; padding:4px 9px;}
 #activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
+
+.pclose{text-align:center; padding:7px 8px 4px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px;}
+
+.pl-acts button,.pl-acts a,.addr-row .acts button,.addr-row .acts a{min-width:32px; min-height:32px; display:inline-flex; align-items:center; justify-content:center;}
+.act,.actn,.chip{min-height:30px;}
+
+.cur-shell{pointer-events:none;}
 
 </style>
 
@@ -432,7 +439,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .warnline{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--danger);}
   .btn-danger{background:var(--danger); color:var(--ivory-bright);}
   .acc-item.danger{border-color:var(--line-ivory); color:var(--danger);}
-  .fav-btn{background:none; color:var(--ink-faint);}
+  .fav-btn{background:none; color:var(--night-4);}
+  .row .fav-btn,.pl-row .fav-btn,.modal .fav-btn,.ticket .fav-btn{color:var(--ink-faint);}
   .fav-btn.on,.stats-count{color:var(--danger);}
 
   /* ═ النموذج القياسي — الهوية ═ */
@@ -441,7 +449,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .modal .cta{background:var(--ink); color:var(--ivory-bright);}
   .actn{background:transparent; border-color:var(--line-strong); color:var(--night-2);}
   .modal .actn{background:transparent; border-color:var(--line-ivory); color:var(--ink);}
-  .actn b{color:var(--saffron);}
+  .actn b,.block .actn b,.cta b{color:var(--saffron);}
+  .cta b{color:var(--ink);}
   .actn .dim,.dim{color:var(--night-4);}
   .block{background:var(--surf); color:var(--night-2);}
   .shname button{background:none; color:var(--night-2);}
@@ -478,6 +487,9 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   #activeTripBar{background:var(--bar); border-top:1px solid var(--line-strong); box-shadow:0 -8px 20px rgba(0,0,0,.45);}
   #activeTripLabel{color:var(--on-night);}
   #activeTripLabel b{color:var(--saffron);}
+  .pclose{color:var(--ink-strong); border-top:1px solid var(--line-ivory);}
+  .cur-shell{opacity:.55;}
+  .act[disabled]{opacity:.5;}
 </style>
 </head>
 <body>
@@ -512,43 +524,44 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   </div></div>
   <div id="plBody"></div>
   </div><!-- /غلاف الأماكن -->
-  <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:#fbeceb; border:1px dashed #b5545a; border-radius:10px; font-size:12px; color:#7a2b30; word-break:break-word; text-align:center;"></div>
-  <div class="modal-backdrop" id="cityDelBackdrop"><div class="modal" style=" text-align:left;">
-    <h3 id="cityDelTitle" style="margin-top:0;">🗑 Delete city</h3>
-    <p id="cityDelHint" class="pl-sub" style="margin:4px 0 10px;"></p>
-    <button type="button" class="btn btn-ghost" style="width:100%; margin-bottom:8px;" id="cityDelSideBtn" onclick="cityDelSide()"></button>
-    <button type="button" class="btn btn-ghost" id="cityDelFullBtn" style="width:100%; margin-bottom:8px; color:#b5545a;" onclick="cityDelFull()">Delete city everywhere</button>
-    <button type="button" class="btn btn-brass" style="width:100%;" onclick="closeModalById('cityDelBackdrop')">Cancel</button>
+  <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:var(--ivory-bright); border:1px dashed var(--danger); border-radius:10px; font-size:12px; color:var(--danger); word-break:break-word; text-align:center;"></div>
+  <div class="modal-backdrop" id="cityDelBackdrop"><div class="modal">
+    <h3 id="cityDelTitle">🗑 Delete city</h3>
+    <p id="cityDelHint" class="flabel"></p>
+    <button type="button" class="btn btn-ghost wide" id="cityDelSideBtn" onclick="cityDelSide()"></button>
+    <button type="button" class="btn btn-danger wide" id="cityDelFullBtn" onclick="cityDelFull()">Delete city everywhere</button>
+    <button type="button" class="btn btn-ghost wide" onclick="closeModalById('cityDelBackdrop')">Cancel</button>
   </div></div>
-  <div class="modal-backdrop" id="plPlaceBackdrop"><div class="modal" style=" text-align:left;">
-    <h3 id="plPlaceTitle" style="margin-top:0;">➕ Add a place</h3>
+  <div class="modal-backdrop" id="plPlaceBackdrop"><div class="modal">
+    <h3 id="plPlaceTitle">➕ Add a place</h3>
+    <div class="chiprow" id="plMethodRow"><button type="button" class="chip on" id="plMethodPaste" onclick="plSetMethod(true)">📋 Paste from Maps</button><button type="button" class="chip" id="plMethodManual" onclick="plSetMethod(false)">✍️ Enter manually</button></div>
     <div id="plPasteWrap">
-      <textarea id="plShareText" class="modal-input" rows="3" placeholder="Paste what Google Maps shared…" style=" text-align:left;"></textarea>
+      <textarea id="plShareText" class="modal-input" rows="3" placeholder="Paste what Google Maps shared…"></textarea>
       <div style="display:flex; gap:6px; margin-top:6px; align-items:center;">
         <button type="button" class="pl-actbtn" onclick="plPasteShare()">📋 Paste</button>
         <button type="button" class="pl-actbtn" onclick="plParseShare()">Read it</button>
         <span class="pl-sub" style="margin:0;">In Google Maps: Share → Copy, then paste here.</span>
       </div>
     </div>
-    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">City</label>
+    <label class="flabel">City</label>
     <div id="plModalCity" style="font-family:'Cairo',sans-serif; font-weight:700; font-size:12px;"></div>
-    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Category</label>
+    <label class="flabel">Category</label>
     <div id="plModalCats" style="margin-top:2px;"></div>
-    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Name</label>
+    <label class="flabel">Name</label>
     <input id="plName" class="modal-input" placeholder="e.g. Holybelly">
-    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Google Maps link</label>
+    <label class="flabel">Google Maps link</label>
     <div style="display:flex; gap:6px; align-items:center;">
       <input id="plUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" style="flex:1; text-align:left; margin-top:0;">
       <button type="button" class="pl-actbtn" onclick="plPasteUrl()" title="Paste link from clipboard">📋</button>
     </div>
-    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Area (optional)</label>
+    <label class="flabel">Area (optional)</label>
     <input id="plArea" class="modal-input" placeholder="e.g. 10th arr.">
-    <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Note (optional)</label>
+    <label class="flabel">Note (optional)</label>
     <textarea id="plNote" class="modal-input" rows="2" placeholder="e.g. best pancakes before 11"></textarea>
     <div style="display:flex; gap:6px; margin-top:10px;">
       <button type="button" class="btn btn-brass" style="flex:1;" onclick="savePlPlace()">Save</button>
       <button type="button" class="btn btn-ghost" onclick="closePlPlaceModal()">Cancel</button>
-      <button type="button" class="btn btn-ghost" id="plDeleteBtn" style="display:none; color:#b5545a;" onclick="deletePlPlaceFromModal()">🗑 Delete</button>
+      <button type="button" class="btn btn-ghost" id="plDeleteBtn" style="display:none; color:var(--danger);" onclick="deletePlPlaceFromModal()">🗑 Delete</button>
     </div>
   </div></div>
   <div id="placesLegacy" style="display:none;">
@@ -579,7 +592,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
         <span class="action-label">Most Loved</span>
       </button>
       <button class="action-btn" onclick="toggleOwnerTools()">
-        <span class="action-icon" style="background:#b5545a; color:#fff;"><i class="fa-solid fa-eye-slash"></i></span>
+        <span class="action-icon" style="background:var(--danger); color:var(--ivory-bright);"><i class="fa-solid fa-eye-slash"></i></span>
         <span class="action-label">Hide Tools</span>
       </button>
     </span>
@@ -593,7 +606,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <div id="editModeBanner">Edit mode is on — you're editing this city only. Tap "Save" below after each change.</div>
   <div id="guestPromoBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:14px 18px; background:var(--card); border:1.5px dashed var(--brass); border-radius:14px; text-align:center;">
     <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin-bottom:4px;">✨ Create a free account</div>
-    <div style="font-size:11.5px; color:var(--ink-soft); margin-bottom:10px; line-height:1.6;">Save your favorite places ❤️ and build your own personal list 📝 — takes less than a minute.</div>
+    <div class="flabel">Save your favorite places ❤️ and build your own personal list 📝 — takes less than a minute.</div>
     <button class="btn btn-brass" onclick="openAuthModal()">Sign Up</button>
   </div>
 
@@ -610,13 +623,22 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <!-- خ١: الوجهة ٢ — الرحلات: جسم نافذة "رحلاتي" يُنقل إلى هنا عند أول فتح (الاستضافة بنقل العنصر) -->
   <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">🧳 <b>My Trips</b></span></div><div class="chiprow" id="tripTypeRow"><button type="button" class="chip on" onclick="pickTripType(this)">All</button><button type="button" class="chip" onclick="pickTripType(this)">🚶 One day trip</button><button type="button" class="chip" onclick="pickTripType(this)">🏙 Single city</button><button type="button" class="chip" onclick="pickTripType(this)">🌍 Multi-city</button><span class="chip label mini">Soon</span></div></div><div id="tripsHost"></div></div></div>
   <!-- خ١: الوجهة ٣ — المنتقون: مكان محجوز حتى خ٤ -->
-  <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">⭐ <b>Curators</b></span><span class="actn label">🔍 Find a curator <span class="dim">Soon</span></span></div></div><div class="curgrid"><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty">⭐<br>Curators arrive in step 4.<br><span class="mini">Follow people you trust, then save their picks with a permanent credit.</span></div></div></div>
+  <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">⭐ <b>Curators</b></span><span class="actn label">🔍 Find a curator <span class="dim">Soon</span></span></div></div><div class="curgrid"><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty mini">Curators arrive in step 4 — the page below is the built shell.</div>
+     <div class="row rowblock cur-shell">
+       <div class="pn">⭐ Curator page <span class="dim">Step 4</span></div>
+       <div class="ps">Verified badge · bio · one contact link · followers</div>
+       <div class="rowacts"><span class="act">Follow</span><span class="act">Share</span><span class="act">Contact</span></div>
+     </div>
+     <div class="row rowblock cur-shell">
+       <div class="pn">📊 Curator board <span class="dim">Step 4</span></div>
+       <div class="ps">Page views · list opens · saves from your places · trip views · follows · referral source</div>
+     </div></div></div>
   <!-- خ١: الوجهة ٤ — المجتمع: جسم نافذة المجتمع يُنقل إلى هنا -->
   <div class="mp-screen" id="screenCommunity"><div class="wrap destbody"><div id="communityHost"></div></div></div>
   <!-- خ١: الوجهة ٥ — العناوين الشخصية: تُبنى كاملة بخ٢ -->
   <div class="mp-screen" id="screenAddresses"><div class="wrap destbody">
     <div class="stickyhead">
-      <div class="headrow"><button type="button" class="csel" id="addrSel" onclick="addrTogglePanel('cities')">— ⌄</button><span class="actn label">🔒 Always private</span></div><div class="headrow"><button type="button" class="actn" id="addrCatBtn" onclick="addrTogglePanel('cats')"><b>＋</b> Add address</button></div>
+      <div class="headrow" id="addrTrio"></div><div class="headrow"><button type="button" class="cta" id="addrCatBtn" onclick="addrTogglePanel('cats')"><b>＋</b> Add address</button><span class="actn label">🔒 Always private</span></div>
     </div>
     <div id="addrPanel"></div>
     <div id="addrBody"><div class="addr-empty">Loading…</div></div>
@@ -632,7 +654,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   </div>
 
   <div id="activeTripBar">
-    <div class="atb-head"><span id="activeTripLabel">Adding to: —</span><span class="acts"><button type="button" class="actn" onclick="openActiveTrip()">View trip</button><button type="button" class="cta atb-done" onclick="stopAddingToTrip()">Done</button></span></div>
+    <div class="atb-head"><span id="activeTripLabel">Adding to: —</span><span class="acts"><button type="button" class="actn" onclick="openActiveTrip()">View trip</button><button type="button" class="actn" onclick="stopAddingToTrip()">Cancel</button><button type="button" class="cta atb-done" onclick="stopAddingToTrip()">Done</button></span></div>
     <div id="activeTripAddedRow" class="chiprow"></div>
   </div>
 
@@ -640,7 +662,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <div class="modal" style="max-width:460px;">
       <h3 style="text-align:center;">🧳 My Trips</h3>
       <div id="myTripsBody"></div>
-      <button class="btn btn-ghost" style="width:100%; margin-top:12px;" onclick="closeMyTripsModal()">Close</button>
+      <button class="btn btn-ghost" style="margin-top:12px;"  onclick="closeMyTripsModal()">Close</button>
     </div>
   </div>
 
@@ -649,7 +671,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <h3 id="inputModalTitle">Title</h3>
       <input type="text" id="inputModalField" class="modal-input" onkeydown="if(event.key==='Enter') confirmInputModal();">
       <select id="inputModalSelect" class="modal-input" style="display:none;"></select>
-      <div id="inputModalError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
+      <div id="inputModalError" style="color:var(--danger);font-size:12px;min-height:16px;margin-top:6px;"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
         <button class="btn btn-brass" style="flex:1" onclick="confirmInputModal()">Confirm</button>
         <button class="btn btn-ghost" style="flex:1" onclick="closeInputModal()">Cancel</button>
@@ -670,7 +692,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       </div>
       <div id="authFormView" style="display:none;">
       <h3 id="authTitle">👤 Welcome back</h3>
-      <p id="authSubtitle" style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">Sign in to your account</p>
+      <p id="authSubtitle" class="flabel">Sign in to your account</p>
       <input type="text" id="authNickname" class="modal-input" placeholder="Username (shown to other users)" autocomplete="nickname" autocapitalize="off" spellcheck="false">
       <input type="email" id="authEmail" class="modal-input" placeholder="Email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" style=" text-align:left; margin-top:8px;">
       <div class="pw-wrap" style="margin-top:8px;">
@@ -678,21 +700,21 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
         <button type="button" class="pw-eye" onclick="togglePasswordVisibility('authPassword', this)" aria-label="Show password">👁</button>
       </div>
       <button type="button" id="forgotPasswordLink" onclick="doForgotPassword()" style="background:none; border:none; padding:0; margin-top:8px; font-family:'Cairo',sans-serif; font-size:11.5px; font-weight:700; color:var(--brass); cursor:pointer;">Forgot password?</button>
-      <div id="authError" style="color:#b5545a;font-size:12px;min-height:16px;margin-top:6px;"></div>
+      <div id="authError" style="color:var(--danger);font-size:12px;min-height:16px;margin-top:6px;"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
         <button class="btn btn-brass" id="authLoginBtn" style="flex:1" onclick="doSignIn()">Log In</button>
         <button class="btn btn-brass" id="authSignupBtn" style="flex:1; display:none;" onclick="doSignUp()">Create Account</button>
       </div>
-      <button type="button" class="btn btn-ghost" style="width:100%; margin-top:10px;" disabled title="Available when Google sign-in arrives">Continue with Google <span class="soon-tag">Soon</span></button>
+      <button type="button" class="btn btn-ghost" style="margin-top:10px;"  disabled title="Available when Google sign-in arrives">Continue with Google <span class="soon-tag">Soon</span></button>
       <p id="authVerifyHint" style="display:none; font-size:10.5px; color:var(--ink-soft); margin-top:8px;">We'll email you a verification link after sign-up.</p>
-      <button type="button" class="btn btn-ghost" style="width:100%; margin-top:8px; border:none; font-size:11.5px;" onclick="openGate()">← Back</button>
+      <button type="button" class="btn btn-ghost wide" style="margin-top:8px; border:none; font-size:11.5px;" onclick="openGate()">← Back</button>
       </div>
     </div>
   </div>
 
   <!-- خ١-ب: اختيار الوجهة الافتراضية (المشهد ٥) — مرة واحدة بعد النبذة؛ وتغييرها من التفضيلات بالدرج -->
   <div class="modal-backdrop" id="homeBackdrop">
-    <div class="modal" style=" text-align:left;">
+    <div class="modal">
       <h3 style="text-align:center;">Choose your home 🏠</h3>
       <p style="text-align:center; color:var(--ink-soft); font-size:12px; margin:0 0 12px;">MyPickz will open here every time. You can change it later in My Account.</p>
       <div class="homecards" id="homeCards">
@@ -702,45 +724,45 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
         <button type="button" class="hcard" data-home="Curators" onclick="pickHome(this)"><div class="hi">⭐</div><div class="hn">Curators</div><div class="hd">Follow trusted curators</div></button>
         <button type="button" class="hcard" data-home="Addresses" style="grid-column:1/3" onclick="pickHome(this)"><div class="hi">🔒</div><div class="hn">Personal Addresses</div><div class="hd">Always private — never shared</div></button>
       </div>
-      <button class="btn btn-brass" style="width:100%; margin-top:12px;" onclick="saveHome()">Continue</button>
+      <button class="btn btn-brass" style="margin-top:12px;"  onclick="saveHome()">Continue</button>
     </div>
   </div>
 
   <!-- خ٢: إضافة/تعديل عنوان شخصي (المشهد ٦/و٢) — يكتب المستند الخاص فقط -->
   <div class="modal-backdrop" id="addrBackdrop">
-    <div class="modal" style="text-align:left;">
+    <div class="modal">
       <h3 id="addrModalTitle">🔒 Add address</h3>
-      <label style="font-size:11.5px; color:var(--ink-soft);">Country</label>
+      <label class="flabel">Country</label>
       <select id="addrCountry" class="modal-input" onchange="addrCountryChanged()"></select>
-      <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">City</label>
+      <label class="flabel">City</label>
       <select id="addrCity" class="modal-input" onchange="addrModalCity=this.value"></select>
       <div style="height:10px"></div>
-      <label style="font-size:11.5px; color:var(--ink-soft);">Category</label>
+      <label class="flabel">Category</label>
       <div class="addr-chips" id="addrModalCats" style="margin:4px 0 10px;"></div>
-      <label style="font-size:11.5px; color:var(--ink-soft);">Name</label>
+      <label class="flabel">Name</label>
       <input id="addrName" class="modal-input" placeholder="e.g. Home" autocomplete="off">
-      <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Google Maps link</label>
+      <label class="flabel">Google Maps link</label>
       <div style="display:flex; gap:6px; align-items:center;"><input id="addrUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" inputmode="url" autocomplete="off" style=" flex:1;"><button type="button" class="remove-btn" onclick="pasteToAddrUrl()" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button></div>
-      <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Note (optional)</label>
+      <label class="flabel">Note (optional)</label>
       <input id="addrNote" class="modal-input" placeholder="e.g. Gate 3" autocomplete="off">
-      <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Phone (optional)</label>
-      <input id="addrPhone" class="modal-input" placeholder="e.g. +966 5x xxx xxxx" inputmode="tel" autocomplete="off" style="">
-      <div id="addrError" style="color:#b5545a; font-size:12px; min-height:16px; margin-top:6px;"></div>
-      <button class="btn btn-brass" style="width:100%; margin-top:8px;" onclick="saveAddr()">Save</button>
-      <button class="btn btn-ghost" style="width:100%; margin-top:6px;" onclick="closeModalById('addrBackdrop')">Cancel</button>
+      <label class="flabel">Phone (optional)</label>
+      <input id="addrPhone" class="modal-input" placeholder="e.g. +966 5x xxx xxxx" inputmode="tel" autocomplete="off" >
+      <div id="addrError" style="color:var(--danger); font-size:12px; min-height:16px; margin-top:6px;"></div>
+      <button class="btn btn-brass" style="margin-top:8px;"  onclick="saveAddr()">Save</button>
+      <button class="btn btn-ghost" style="margin-top:6px;"  onclick="closeModalById('addrBackdrop')">Cancel</button>
     </div>
   </div>
 
   <!-- خ١-ب: تغيير كلمة المرور (المشهد ٩) — مبنية معطَّلة حتى ٢/ب -->
   <div class="modal-backdrop" id="pwBackdrop">
-    <div class="modal" style="text-align:left;">
+    <div class="modal">
       <h3 style="text-align:center;">Change Password 🔑 <span class="soon-tag">Soon</span></h3>
-      <label style="font-size:11.5px; color:var(--ink-soft);">New password</label>
+      <label class="flabel">New password</label>
       <div class="pw-wrap"><input type="password" id="pwNew" class="modal-input" placeholder="At least 8 characters" autocomplete="new-password" disabled><button type="button" class="pw-eye" onclick="togglePasswordVisibility('pwNew', this)">👁</button></div>
-      <label style="font-size:11.5px; color:var(--ink-soft); display:block; margin-top:8px;">Confirm new password</label>
+      <label class="flabel">Confirm new password</label>
       <div class="pw-wrap"><input type="password" id="pwConfirm" class="modal-input" placeholder="Repeat it" autocomplete="new-password" disabled><button type="button" class="pw-eye" onclick="togglePasswordVisibility('pwConfirm', this)">👁</button></div>
-      <button class="btn btn-brass" style="width:100%; margin-top:12px;" disabled>Save New Password</button>
-      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeModalById('pwBackdrop')">Close</button>
+      <button class="btn btn-brass" style="margin-top:12px;"  disabled>Save New Password</button>
+      <button class="btn btn-ghost" style="margin-top:8px;"  onclick="closeModalById('pwBackdrop')">Close</button>
     </div>
   </div>
 
@@ -759,21 +781,21 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
           <li><span>🏷 Nickname</span><b>freed</b></li>
         </ul></div>
         <div class="warnline">⚠️ <span>Trips <b>shared with other people</b> will be deleted for everyone.</span></div>
-        <button class="btn btn-danger" style="width:100%;" onclick="delStep(2)">I understand — continue</button>
-        <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeModalById('delBackdrop')">Cancel</button>
+        <button class="btn btn-danger"  onclick="delStep(2)">I understand — continue</button>
+        <button class="btn btn-ghost" style="margin-top:8px;"  onclick="closeModalById('delBackdrop')">Cancel</button>
       </div>
       <div id="delStep2" style="display:none;">
         <h3>Final confirmation</h3>
         <p style="font-size:13px; color:var(--ink-soft); margin:0 0 10px;">Type <b>DELETE</b> to confirm permanent deletion.</p>
         <input id="delWord" class="modal-input" oninput="checkDelWord()" placeholder="Type DELETE" style="text-align:center; letter-spacing:2px;">
-        <button class="btn btn-danger" id="delGo" style="width:100%; margin-top:10px;" disabled>Delete my account forever <span class="soon-tag" style="color:#fff; border-color:#fff;">Soon</span></button>
-        <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="delStep(1)">Back</button>
+        <button class="btn btn-danger" id="delGo" style="margin-top:10px;"  disabled>Delete my account forever <span class="soon-tag" style="color:var(--ivory-bright); border-color:var(--ivory-bright);">Soon</span></button>
+        <button class="btn btn-ghost" style="margin-top:8px;"  onclick="delStep(1)">Back</button>
       </div>
       <div id="delStep3" style="display:none;">
         <div style="font-size:40px;">🕊</div>
         <h3>Account deleted</h3>
         <p style="font-size:13px; color:var(--ink-soft); line-height:1.7; margin:0 0 12px;">Your account and all your data were permanently deleted.<br>Your nickname is now free for anyone to use.<br>Thank you for trying MyPickz.</p>
-        <button class="btn btn-ghost" style="width:100%;" onclick="delStep(1)">Back to preview</button>
+        <button class="btn btn-ghost"  onclick="delStep(1)">Back to preview</button>
       </div>
     </div>
   </div>
@@ -794,6 +816,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <button type="button" class="acc-item" onclick="confirmLogout()"><span>🚪 Log Out</span><span></span></button>
       <button type="button" class="acc-item danger" onclick="closeAccountModal(); openDeletePreview();"><span>🗑 Delete Account — permanent</span><span class="soon">Soon · preview</span></button>
 
+      <button type="button" class="dr-item" disabled><span>📊 My stats</span><span class="soon">Step 4</span></button>
+
       <div class="dr-head">Tools</div>
       <button type="button" class="dr-item" onclick="closeAccountModal(); copyLink();"><span>🔗 Copy Link</span><span></span></button>
       <button type="button" class="dr-item" onclick="closeAccountModal(); showQR();"><span>🀄 QR</span><span></span></button>
@@ -802,6 +826,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 
       <div id="drawerOwner" style="display:none;">
         <div class="dr-head">Owner</div>
+        <button type="button" class="dr-item" disabled><span>🛠 Admin panel</span><span class="soon">Step 8</span></button>
         <button type="button" class="dr-item" onclick="closeAccountModal(); openUsersModal();"><span>👥 Manage Users</span><span></span></button>
         <button type="button" class="dr-item" onclick="closeAccountModal(); openSystemStatusModal();"><span>🩺 System Status</span><span></span></button>
         <div class="dr-head">Policies <span class="soon" style="font-size:10px; color:var(--brass);">owner preview — hidden until ٢/هـ</span></div>
@@ -809,7 +834,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
         <button type="button" class="dr-item" onclick="closeAccountModal(); openPolicyModal('rules');"><span>📏 Content Rules</span><span></span></button>
       </div>
 
-      <button class="btn btn-ghost" style="width:100%; margin-top:16px;" onclick="closeAccountModal()">Close</button>
+      <button class="btn btn-ghost" style="margin-top:16px;"  onclick="closeAccountModal()">Close</button>
     </div>
   </div>
 
@@ -825,25 +850,25 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <div class="modal-backdrop" id="reauthBackdrop">
     <div class="modal" style="max-width:380px;">
       <h3>🔒 Confirm it's you</h3>
-      <p style="font-size:11.5px; color:var(--ink-soft); margin:0 0 10px;">For your security, confirm your identity before this action.</p>
+      <p class="flabel">For your security, confirm your identity before this action.</p>
       <div class="pw-wrap">
-        <input type="password" id="reauthPassword" class="modal-input" placeholder="Current password" autocomplete="current-password" style=" text-align:left;">
+        <input type="password" id="reauthPassword" class="modal-input" placeholder="Current password" autocomplete="current-password">
         <button type="button" class="pw-eye" onclick="togglePasswordVisibility('reauthPassword', this)" aria-label="Show password">👁</button>
       </div>
-      <div id="reauthError" style="color:#b5545a; font-size:12px; min-height:16px; margin-top:6px;"></div>
-      <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="doReauthContinue()">Continue</button>
+      <div id="reauthError" style="color:var(--danger); font-size:12px; min-height:16px; margin-top:6px;"></div>
+      <button class="btn btn-brass" style="margin-top:10px;"  onclick="doReauthContinue()">Continue</button>
       <p style="font-size:11px; color:var(--ink-soft); margin:12px 0 4px;">Google account?</p>
-      <button type="button" class="btn btn-ghost" style="width:100%;" disabled title="Available when Google sign-in arrives">Confirm with Google</button>
-      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="closeReauthModal(false)">Cancel</button>
+      <button type="button" class="btn btn-ghost"  disabled title="Available when Google sign-in arrives">Confirm with Google</button>
+      <button class="btn btn-ghost" style="margin-top:8px;"  onclick="closeReauthModal(false)">Cancel</button>
     </div>
   </div>
 
   <div class="modal-backdrop" id="reportBackdrop">
     <div class="modal" style="max-width:460px;">
       <h3 style="text-align:center;">📄 Users Report</h3>
-      <textarea id="reportTextArea" readonly style="width:100%; height:260px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:monospace; font-size:11.5px; text-align:left; background:#fff; color:var(--ink);"></textarea>
-      <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="copyUsersReport()"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
-      <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="document.getElementById('reportBackdrop').classList.remove('show')">Close</button>
+      <textarea id="reportTextArea" readonly style="width:100%; height:260px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:monospace; font-size:11.5px; text-align:left; background:var(--ivory-bright); color:var(--ink);"></textarea>
+      <button class="btn btn-brass" style="margin-top:10px;"  onclick="copyUsersReport()"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
+      <button class="btn btn-ghost" style="margin-top:8px;"  onclick="document.getElementById('reportBackdrop').classList.remove('show')">Close</button>
     </div>
   </div>
 
@@ -854,7 +879,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <div id="usersStatsLine" style="font-size:12px; color:var(--ink-soft); text-align:center; margin:0 0 12px; line-height:1.8;"></div>
       <input type="text" id="usersSearchInput" class="modal-input" placeholder="Search by nickname or email..." oninput="renderUsersModal(this.value)" style="margin-bottom:12px;">
       <div id="usersListBody"></div>
-      <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeUsersModal()">Close</button>
+      <button class="btn btn-ghost" style="margin-top:10px;"  onclick="closeUsersModal()">Close</button>
     </div>
   </div>
 
@@ -863,7 +888,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <div class="modal" style="max-width:460px;">
       <h3 style="text-align:center;">🩺 System Status</h3>
       <div id="systemStatusBody" style="font-size:12.5px; line-height:1.8;"></div>
-      <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeSystemStatusModal()">Close</button>
+      <button class="btn btn-ghost" style="margin-top:10px;"  onclick="closeSystemStatusModal()">Close</button>
     </div>
   </div>
 
@@ -872,7 +897,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <h3 style="text-align:center;">🌍 Community Lists</h3>
       <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 12px;">Browse public lists shared by other users. Hospitals & Clinics, Personal, and Others are never shown here.</p>
       <div id="communityBody"></div>
-      <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeCommunityModal()">Close</button>
+      <button class="btn btn-ghost" style="margin-top:10px;"  onclick="closeCommunityModal()">Close</button>
     </div>
   </div>
 
@@ -884,7 +909,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       </div>
       <h3 id="helpTitle" style="text-align:center;"></h3>
       <div id="helpSections"></div>
-      <button class="btn btn-brass" style="width:100%; margin-top:14px;" onclick="closeHelpModal()" id="helpCloseBtn">إغلاق</button>
+      <button class="btn btn-brass" style="margin-top:14px;"  onclick="closeHelpModal()" id="helpCloseBtn">إغلاق</button>
     </div>
   </div>
 
@@ -898,12 +923,12 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <div id="myListCityChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px;"></div>
       <div style="display:flex; align-items:center; gap:8px; margin:0 0 6px; padding:8px 10px; background:var(--ivory-bright); border-radius:10px;">
         <button type="button" class="switch-btn" id="myListPublicToggle" onclick="toggleMyListPublic()"><span class="knob"></span></button>
-        <span style="font-size:11.5px; color:var(--ink-soft);">Allow other users to view this list</span>
+        <span class="flabel">Allow other users to view this list</span>
       </div>
       <div id="myListNicknameRow" style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 8px;"></div>
       <div id="myListShareRow" style="margin:0 0 14px;"></div>
       <div id="myListSections"></div>
-      <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="closeMyListModal()">Save & Close</button>
+      <button class="btn btn-brass" style="margin-top:10px;"  onclick="closeMyListModal()">Save & Close</button>
     </div>
   </div>
 
@@ -911,7 +936,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <div class="modal" style="max-width:380px;">
       <h3>❤️ My Favorites</h3>
       <div id="favoritesList" class="listbox"></div>
-      <button class="btn btn-ghost" style="width:100%;" onclick="closeFavoritesModal()">Close</button>
+      <button class="btn btn-ghost"  onclick="closeFavoritesModal()">Close</button>
     </div>
   </div>
 
@@ -919,7 +944,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <div class="modal" style="max-width:400px;">
       <h3>📊 Most Loved (All Cities)</h3>
       <div id="statsList" class="listbox"></div>
-      <button class="btn btn-ghost" style="width:100%;" onclick="closeStatsModal()">Close</button>
+      <button class="btn btn-ghost"  onclick="closeStatsModal()">Close</button>
     </div>
   </div>
 
@@ -2358,11 +2383,11 @@ function activeTripLabel(){
 let activeTripAdded = [];   // أسماء ما أُضيف بهذه الجلسة — للمراجعة قبل Done
 function startAddingToTrip(tripId){
   activeTripId = tripId;
-  activeTripAdded = [];
+  activeTripAdded = []; activeTripAddedRefs = [];
   closeMyTripsModal();
-  switchTab('Places');                       // الإضافة تقع بوجهة الأماكن — الشريط يبقى ظاهرًا
-  showToast('Pick places — they appear below, then tap Done');
   updateActiveTripBanner();
+  switchTab('Places');                       // الانتقال آخر خطوة — فلا تتسابق دورتا رسم على الجسم
+  showToast('Pick places — they appear below, then tap Done');
 }
 function openActiveTrip(){                 // من الشريط: يفتح الرحلة النشطة لمراجعتها
   const id = activeTripId; if (!id) return;
@@ -2372,6 +2397,12 @@ function stopAddingToTrip(){
   activeTripId = null;
   activeTripAdded = [];
   updateActiveTripBanner();
+  render();
+  if (viewingUserUid) renderCommunityModal();
+  if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
+}
+function refreshActiveViews(){             // كل ما يعرض زر الرحلة يُعاد رسمه عند تغيّر الوضع
+  if (currentTab === 'Places') renderPlacesBody();
   render();
   if (viewingUserUid) renderCommunityModal();
   if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
@@ -2388,9 +2419,7 @@ function updateActiveTripBanner(){
   } else {
     bar.classList.remove('show');
   }
-  render();
-  if (viewingUserUid) renderCommunityModal();
-  if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
+  refreshActiveViews();
 }
 
 async function undoTripAdd(i){
@@ -2471,6 +2500,9 @@ function closeMyTripsModal(){
   currentTripId = null;
   if (HOSTED.Trips && currentTab === 'Trips') renderMyTripsModal(); // خ١: بالوجهة "الإغلاق" = العودة لقائمة الرحلات
 }
+function attrStr(s){                       // ترميز آمن داخل سمة onclick: escapeHtml يفكّ &#39; فيكسر الشيفرة
+  return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/[\r\n]/g, ' ');
+}
 function tripPlaceCount(t){
   let n = 0;
   (t.days || []).forEach(d => TRIP_CATEGORIES.forEach(c => { n += ((d.places && d.places[c.id]) || []).length; }));
@@ -2489,7 +2521,7 @@ function renderMyTripsModal(){
   if (sharedTrips.length){
     html += sharedTrips.map(t =>
       '<div class="row rowblock"><div class="pn">' + escapeHtml(tripTitle(t)) + '</div>'
-      + '<div class="ps">🏙 Type <span class="dim">Soon</span> · ' + tripPlaceCount(t) + ' places · ' + t.days.length + ' day' + (t.days.length > 1 ? 's' : '') + '</div>'
+      + '<div class="ps" dir="auto">🏙 Type <span class="dim">Soon</span> · ' + tripPlaceCount(t) + ' places · ' + t.days.length + ' day' + (t.days.length > 1 ? 's' : '') + '</div>'
       + '<div class="rowacts"><span class="act" onclick="openSharedTripDetail(\'' + t.id + '\')">View trip →</span></div></div>').join('');
   } else {
     html += '<div class="mp-empty mini">No trips have been shared with you yet</div>';
@@ -2500,7 +2532,7 @@ function renderMyTripsModal(){
   } else {
     html += userTrips.map(t =>
       '<div class="row rowblock"><div class="pn">' + escapeHtml(tripTitle(t)) + '</div>'
-      + '<div class="ps">🏙 Type <span class="dim">Soon</span> · ' + tripPlaceCount(t) + ' places · ' + t.days.length + ' day' + (t.days.length > 1 ? 's' : '') + (t.public ? ' · 🌐 Public' : '') + ((t.sharedWith && t.sharedWith.length) ? ' · 🔗 Shared' : '') + '</div>'
+      + '<div class="ps" dir="auto">🏙 Type <span class="dim">Soon</span> · ' + tripPlaceCount(t) + ' places · ' + t.days.length + ' day' + (t.days.length > 1 ? 's' : '') + (t.public ? ' · 🌐 Public' : '') + ((t.sharedWith && t.sharedWith.length) ? ' · 🔗 Shared' : '') + '</div>'
       + '<div class="rowacts"><span class="act" onclick="openTripDetail(\'' + t.id + '\')">View trip →</span>'
       + '<span class="act" onclick="startAddingToTrip(\'' + t.id + '\')">＋ Add places</span></div></div>').join('');
   }
@@ -2516,6 +2548,7 @@ async function openCreateTripFlow(){
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } // نفس حاجز My List — بدل بناء رحلة وهمية بالذاكرة ثم رفضها عند الحفظ (ملاحظة ميدانية الدفعة ٣)
   const cities = allCities();
   if (!cities.length){ showToast('No cities available yet'); return; }
+  showToast('Trip type — step 6 · creating a Single city trip for now');
   const cityName = await openInputModal("Which city is this trip for?", "", cities[0].name, cities.map(c => c.name));
   if (cityName === null) return;
   const cityObj = cities.find(c => c.name === cityName);
@@ -3000,9 +3033,14 @@ function renderAddresses(){
   const cityId = addrCurrentCity;
 
   /* المحدد الواحد — نفس نموذج وجهة الأماكن */
-  const sel = document.getElementById('addrSel');
-  sel.innerHTML = (addrCurrentCountry ? plCountryCode(addrCurrentCountry) + ' · <b>' + escapeHtml(cityId ? cityNameOf(cityId) : '—') + '</b>' : 'Add your city')
-    + ' ' + (addrPanel === 'cities' ? '⌃' : '⌄');
+  const oneC = countries.length <= 1, oneCity2 = inCountry.length <= 1;
+  document.getElementById('addrTrio').innerHTML =
+      (!addrCurrentCountry ? '<span class="csel label">—</span>'
+        : oneC ? '<span class="csel label">' + plCountryCode(addrCurrentCountry) + '</span>'
+        : '<button type="button" class="csel" onclick="addrTogglePanel(\'countries\')">' + plCountryCode(addrCurrentCountry) + ' ' + (addrPanel === 'countries' ? '⌃' : '⌄') + '</button>')
+    + (oneCity2 ? '<span class="csel label grow"><b>' + escapeHtml(cityId ? cityNameOf(cityId) : 'Add your city') + '</b></span>'
+        : '<button type="button" class="csel grow" onclick="addrTogglePanel(\'cities\')"><b>' + escapeHtml(cityNameOf(cityId)) + '</b> ' + (addrPanel === 'cities' ? '⌃' : '⌄') + '</button>')
+    + '<button type="button" class="actn" onclick="addAddrCity()"><b>＋</b> City</button>';
   const cb = document.getElementById('addrCatBtn'); if (cb) cb.innerHTML = '<b>＋</b> Add address';
 
   /* لوحة المدن العاجية — العدّاد والسلة و＋ Add city مثبَّت أعلى */
@@ -3012,15 +3050,18 @@ function renderAddresses(){
       '<div class="prow' + (c === cityId ? ' on' : '') + '"><span onclick="pickAddrCity(\'' + c + '\')">'
       + (c === cityId ? '<b>' + escapeHtml(cityNameOf(c)) + '</b> ' : escapeHtml(cityNameOf(c)) + ' ') + addrCountOf(c) + '</span>'
       + '<span class="dim" onclick="removeAddrCity(\'' + c + '\')" title="Delete city">🗑</span></div>').join('');
-    const foot = countries.length ? '<select class="pfoot" onchange="pickAddrCountry(this.value)">'
-      + countries.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === addrCurrentCountry ? ' selected' : '') + '>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + c + '</option>').join('') + '</select>' : '';
-    panel = '<div class="panel"><div class="pinned" onclick="addAddrCity()">＋ Add city</div>' + rows + foot + '</div>';
+
+    panel = '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(addrCurrentCountry || '') + '</div>' + rows + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
+  } else if (addrPanel === 'countries'){
+    panel = '<div class="panel"><div class="pinned">Browse countries</div>'
+      + countries.map(c => '<div class="prow' + (c === addrCurrentCountry ? ' on' : '') + '" onclick="pickAddrCountry(\'' + attrStr(c) + '\')"><span>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + escapeHtml(c) + '</span><span>' + addrCities.filter(x => countryOfCity(x) === c).length + '</span></div>').join('')
+      + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
   } else if (addrPanel === 'cats' && cityId){
     const cm = (cityId && addrData[cityId]) || {};
     panel = '<div class="panel"><div class="pinned">Pick a category to add an address</div>'
       + privateCategoryList().map(c => { const n = ((cm[c.id] && cm[c.id].places) || []).length;
           return '<div class="prow' + (n ? '' : ' dim') + '" onclick="openAddrModal(\'' + cityId + '\',\'' + c.id + '\')"><span>' + c.icon + ' ' + escapeHtml(c.name) + '</span><span>' + (n ? n + ' ' : '') + '＋</span></div>'; }).join('')
-      + '</div>';
+      + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
   }
   document.getElementById('addrPanel').innerHTML = panel;
 
@@ -3037,8 +3078,8 @@ function renderAddresses(){
       html += '<div class="addr-cathead"><span>' + cat.icon + ' ' + escapeHtml(cat.name) + ' (' + places.length + ')</span><button type="button" onclick="openAddrModal(\'' + cityId + '\',\'' + cat.id + '\')" title="Add under ' + escapeHtml(cat.name) + '">＋</button></div>';
       places.forEach((p, i) => {
         html += '<div class="addr-row"><div class="rowmain">'
-          + '<a class="place-link prow-name" data-mpsrc="app" data-mpcat="' + cat.id + '" data-mppersonal="1" href="' + p.url + '" target="_blank" rel="noopener">' + escapeHtml(p.name || cat.name) + '</a>'
-          + ((p.note || p.phone) ? '<div class="prow-sub">' + escapeHtml([p.note, p.phone].filter(Boolean).join(' · ')) + '</div>' : '')
+          + '<a class="place-link prow-name" dir="auto" data-mpsrc="app" data-mpcat="' + cat.id + '" data-mppersonal="1" href="' + p.url + '" target="_blank" rel="noopener">' + escapeHtml(p.name || cat.name) + '</a>'
+          + ((p.note || p.phone) ? '<div class="prow-sub" dir="auto">' + escapeHtml([p.note, p.phone].filter(Boolean).join(' · ')) + '</div>' : '')
           + '</div><span class="acts">'
           + '<a class="act-chip" href="' + p.url + '" target="_blank" rel="noopener" title="Open in Google Maps">Maps ↗</a>'
           + (p.phone ? '<a href="tel:' + String(p.phone).replace(/[^+\d]/g,'') + '" title="Call">📞</a>' : '')
@@ -3100,17 +3141,28 @@ function openAddrModal(cityId, catId, index){
   openModalById('addrBackdrop');
 }
 let cityDelCtx = null; // {cityId, from:'addr'|'places'}
-function openCityDeleteChooser(cityId, from){
+async function openCityDeleteChooser(cityId, from){
   const isCustom = cityId.indexOf('mylist_') === 0;
   const name = cityNameOf(cityId);
   cityDelCtx = { cityId: cityId, from: from, isCustom: isCustom };
   document.getElementById('cityDelTitle').textContent = '🗑 ' + name;
-  document.getElementById('cityDelHint').textContent = isCustom
-    ? (from === 'addr' ? 'This city may also hold a places list in Places.' : 'This city may also hold personal addresses in Addresses.')
-    : 'Standard city — it stays in the app; you can only clear your own content here.';
-  document.getElementById('cityDelSideBtn').textContent = from === 'addr' ? (isCustom ? 'Remove from Addresses only' : 'Remove from Addresses') : (isCustom ? 'Remove from My List only' : 'Clear my list for this city');
+  document.getElementById('cityDelHint').textContent = 'Counting…';
+  document.getElementById('cityDelSideBtn').textContent = '…';
   document.getElementById('cityDelFullBtn').style.display = isCustom ? '' : 'none';
   openModalById('cityDelBackdrop');
+  // العدّادان: لا يحذف أحد وهو يجهل حجم ما يفقد (قرار المالك ٣٠ أغسطس) — قراءتان بفعل نادر
+  const nList = await cityCountList(cityId), nAddr = await cityCountAddr(cityId);
+  if (!cityDelCtx || cityDelCtx.cityId !== cityId) return;   // أُغلقت أو تغيّرت أثناء القراءة
+  const plural = function(n, w){ return n + ' ' + w + (n === 1 ? '' : 's'); };
+  document.getElementById('cityDelHint').textContent = isCustom
+    ? plural(nList, 'place') + ' in My List · ' + plural(nAddr, 'address') + '. Choose what to delete.'
+    : (from === 'addr' ? plural(nAddr, 'address') + ' here. This removes your own content only.'
+                       : plural(nList, 'place') + ' here. This removes your own content only.');
+  document.getElementById('cityDelSideBtn').textContent = (from === 'addr')
+    ? 'Remove my addresses here (' + nAddr + ')'
+    : 'Clear my list for this city (' + nList + ')';
+  document.getElementById('cityDelFullBtn').textContent =
+    'Delete city everywhere — ' + plural(nList + nAddr, 'item') + ' · cannot be undone';
 }
 async function cityCountList(cityId){ // عدد أماكن قائمة المدينة (للطرف الآخر)
   try{ const d = await mpData.cityLists.get(currentUser.uid, cityId); if (!d || !d.categories) return 0;
@@ -3525,9 +3577,16 @@ function renderPlacesMine(){
   const inCountry = myListAllCities().filter(c => c.country === myListCountry);
 
   /* الصف الأول — المحدد الواحد والفعل الأساسي (المشهد ٦/أ · القرار ٢٠٢٦-٠٨-٢٩-٠٥) */
+  const countriesAll = myListAllCountries();
+  const oneCountry = countriesAll.length <= 1, oneCity = inCountry.length <= 1;
   let html = '<div class="headrow">'
-    + '<button type="button" class="csel" onclick="plTogglePanel(\'cities\')">' + plCountryCode(myListCountry) + ' · <b>' + escapeHtml(plCityName()) + '</b> ' + (plPanel === 'cities' ? '⌃' : '⌄') + '</button>'
-    + '<button type="button" class="cta grow" onclick="openPlAddFromMaps()">📍 Add from Google Maps</button>'
+    + (oneCountry
+        ? '<span class="csel label">' + plCountryCode(myListCountry) + '</span>'
+        : '<button type="button" class="csel" onclick="plTogglePanel(\'countries\')">' + plCountryCode(myListCountry) + ' ' + (plPanel === 'countries' ? '⌃' : '⌄') + '</button>')
+    + (oneCity
+        ? '<span class="csel label grow"><b>' + escapeHtml(plCityName()) + '</b></span>'
+        : '<button type="button" class="csel grow" onclick="plTogglePanel(\'cities\')"><b>' + escapeHtml(plCityName()) + '</b> ' + (plPanel === 'cities' ? '⌃' : '⌄') + '</button>')
+    + '<button type="button" class="actn" onclick="plAddCity()"><b>＋</b> City</button>'
     + '</div>';
 
   /* الصف الثاني — التصنيفات وطريقة العرض */
@@ -3546,12 +3605,15 @@ function renderPlacesMine(){
       + '</div>').join('');
     let catRows = cats.map(c => { const n = plCatCount(c.id);
       return '<div class="prow' + (n ? '' : ' dim') + '" onclick="openPlPlaceModal(\'' + c.id + '\', null)"><span>' + c.icon + ' ' + escapeHtml(c.name) + '</span><span>' + (n ? n + ' ' : '') + '＋</span></div>'; }).join('');
-    const countries = myListAllCountries();
-    const foot = countries.length ? '<select class="pfoot" onchange="plPickCountry(this.value)">'
-      + countries.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === myListCountry ? ' selected' : '') + '>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + c + '</option>').join('') + '</select>' : '';
+
+    const close = '<div class="pclose" onclick="plTogglePanel(null)">✕ Close</div>';
     html += (plPanel === 'cities')
-      ? '<div class="panel"><div class="pinned" onclick="plAddCity()">＋ Add city</div>' + cityRows + foot + '</div>'
-      : '<div class="panel"><div class="pinned">Pick a category to add a place</div>' + catRows + '</div>';
+      ? '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(myListCountry || '') + '</div>' + cityRows + close + '</div>'
+      : (plPanel === 'countries')
+        ? '<div class="panel"><div class="pinned">Browse countries</div>'
+          + countriesAll.map(c => '<div class="prow' + (c === myListCountry ? ' on' : '') + '" onclick="plPickCountry(\'' + attrStr(c) + '\')"><span>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + escapeHtml(c) + '</span><span>' + myListAllCities().filter(x => x.country === c).length + '</span></div>').join('')
+          + close + '</div>'
+        : '<div class="panel"><div class="pinned">Pick a category to add a place</div>' + catRows + close + '</div>';
   }
 
   /* صف النشر والمشاركة */
@@ -3573,12 +3635,12 @@ function renderPlacesMine(){
       const pl = vx.q, i = vx.realIdx;
       const fav = pl.url && isFavorite(pl.url);
       html += '<div class="pl-row"><div class="rowmain">'
-        + '<a class="pl-name" href="' + String(pl.url || '#').replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + escapeHtml(pl.name || cat.name) + '</a>'
-        + ((pl.area || pl.note) ? '<div class="pl-sub">' + escapeHtml([pl.area, pl.note].filter(Boolean).join(' · ')) + '</div>' : '')
+        + '<a class="pl-name" dir="auto" href="' + String(pl.url || '#').replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + escapeHtml(pl.name || cat.name) + '</a>'
+        + ((pl.area || pl.note) ? '<div class="pl-sub" dir="auto">' + escapeHtml([pl.area, pl.note].filter(Boolean).join(' · ')) + '</div>' : '')
         + '</div><span class="pl-acts">'
         + (pl.url ? '<a class="act-chip" href="' + String(pl.url).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" title="Open in Google Maps">Maps ↗</a>' : '')
         + '<button type="button" onclick="plToggleFav(\'' + cat.id + '\', ' + i + ')" title="Favorite">' + (fav ? '❤️' : '🤍') + '</button>'
-        + ((activeTripId && pl.id) ? '<button type="button" class="trip-on" onclick="addPlaceToTrip(\'mylist\', \'' + myListCityId + '\', \'' + cat.id + '\', \'' + pl.id + '\', null, \'' + escapeHtml(pl.name || '').replace(/'/g, "\'") + '\')" title="Add to active trip">🧳</button>' : '<button type="button" class="trip-soon" onclick="showToast(\'Trips — the new engine arrives in step 6\')" title="Add to trip — Soon">🧳<span class="mini">Soon</span></button>')
+        + ((activeTripId && pl.id) ? '<button type="button" class="trip-on" onclick="addPlaceToTrip(\'mylist\', \'' + myListCityId + '\', \'' + cat.id + '\', \'' + pl.id + '\', null, \'' + attrStr(pl.name) + '\')" title="Add to active trip">🧳</button>' : '<button type="button" class="trip-soon" onclick="showToast(\'Trips — the new engine arrives in step 6\')" title="Add to trip — Soon">🧳<span class="mini">Soon</span></button>')
         + '<button type="button" onclick="openPlPlaceModal(\'' + cat.id + '\', ' + i + ')" title="Edit">✏️</button>'
         + '<button type="button" onclick="plDeleteRow(\'' + cat.id + '\', ' + i + ')" title="Delete">🗑</button>'
         + '</span></div>';
@@ -3612,6 +3674,11 @@ function plDeleteRow(catId, i){
 }
 /* نافذة المكان الموحدة: إضافة · تحرير · نقل بين التصنيفات · لصق ما شاركته الخرائط */
 function openPlAddFromMaps(){ plEdit = null; plModalCat = null; plModalSec = null; plFillModal(true); }
+function plSetMethod(paste){                 // طريقتا الإضافة داخل النافذة: لصق ما شاركته الخرائط · أو إدخال يدوي
+  document.getElementById('plPasteWrap').style.display = paste ? '' : 'none';
+  document.querySelectorAll('#plMethodRow .chip').forEach(function(b){ b.classList.remove('on'); });
+  document.getElementById(paste ? 'plMethodPaste' : 'plMethodManual').classList.add('on');
+}
 function openPlPlaceModal(catId, index){
   if (catId !== null && index !== null){ plEdit = { catId: catId, index: index }; plModalCat = catId; }
   else { plEdit = null; plModalCat = catId; }
@@ -3620,7 +3687,7 @@ function openPlPlaceModal(catId, index){
 }
 function plFillModal(pasteMode){
   document.getElementById('plPlaceTitle').textContent = plEdit ? '✏️ Edit place' : '➕ Add a place';
-  document.getElementById('plPasteWrap').style.display = pasteMode ? '' : 'none';
+  plSetMethod(pasteMode !== false);
   document.getElementById('plShareText').value = '';
   document.getElementById('plModalCity').textContent = '🏙 ' + plCityName() + ' — change the city from the chips above';
   if (plModalCat){ const c0 = plCatsAll().find(c => c.id === plModalCat); if (c0) plModalSec = c0.section; }
@@ -4550,7 +4617,7 @@ function renderCommunityModal(){
     html += '<div class="pl-cathead"><span>Public lists (' + usersToShow.length + ')</span></div>';
     html += usersToShow.map(u =>
       '<div class="row rowblock"><div class="pn">' + escapeHtml(u.nickname) + '</div>'
-      + '<div class="ps">' + u.publicCityIds.length + ' city list' + (u.publicCityIds.length === 1 ? '' : 's') + ' · 👁 ' + u.viewCount + ' · 🤍 ' + u.totalFavoriteCount + '</div>'
+      + '<div class="ps" dir="auto">' + u.publicCityIds.length + ' city list' + (u.publicCityIds.length === 1 ? '' : 's') + ' · 👁 ' + u.viewCount + ' · 🤍 ' + u.totalFavoriteCount + '</div>'
       + '<div class="rowacts"><span class="act" onclick="viewCommunityUser(\'' + u.uid + '\')">View →</span></div></div>').join('');
   }
   wrap.innerHTML = html;
@@ -4651,6 +4718,7 @@ function renderCommunityUserList(wrap){
           ${p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : ''}
           <div style="display:flex; align-items:center; gap:6px;">
             <a class="place-link" data-mpsrc="community" data-mpcat="${item.id||''}" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
+            <button type="button" class="act" disabled title="Save to my list — stage 3">📋 Save <span class="dim">Stage 3</span></button>
             <button type="button" class="fav-btn ${fav?'on':''}" onclick="toggleFavorite('${safeUrl}', '${safeName}', '${safeCat}', '${safeCity}', '${safeArea}', '${u.uid}', '${communityViewingCityId}')" title="Add to favorites"><i class="fa-solid fa-heart"></i></button>
             ${(activeTripId && p.id) ? `<button type="button" class="remove-btn" style="color:var(--brass);" onclick="addPlaceToTrip('community', '${communityViewingCityId}', '${item.id}', '${p.id}', '${u.uid}', '${safeName}')" title="Add to active trip">🧳</button>` : ''}
           </div>
@@ -5338,7 +5406,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r21 (log out now returns to the gate: the gate was only ever opened once on first load, so signing out left the previous session on screen; the guest branch reopens it, closes any open modal, and clears the trips, shared lists, favourites and panel state so no data from the previous account survives the sign-out)');
+logTiming('BUILD: M2-ID-r23 (city-delete dialog rebuilt: Cancel was the loudest button and the destructive one was a quiet outline — now reversed, with live counts so nobody deletes without knowing the size, and wording that describes the action instead of naming an internal city class that disappears at migration; plus a modal sweep — every hardcoded colour in modal markup replaced by the palette, 19 field labels moved onto a class, 26 inline styles removed)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
