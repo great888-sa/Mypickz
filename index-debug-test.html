@@ -223,6 +223,9 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 #loadingState{text-align:center; padding:60px 20px; font-family:'Cairo',sans-serif;}
 /* ═ النموذج القياسي — أصناف الوجهات (دفعة الهوية) ═ */
 .headrow{display:flex; justify-content:space-between; align-items:center; gap:8px; margin:8px 0 6px;}
+.stickyhead>*:first-child{margin-top:0;}
+.stickyhead .headrow+.chiprow{margin-top:8px;}
+.chip{line-height:1.3;}
 .grow{flex:1;}
 .csel{font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; padding:7px 11px; border-radius:999px; border:1px solid; cursor:pointer; white-space:nowrap;}
 .cta{font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border:none; border-radius:999px; padding:7px 10px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;}
@@ -249,7 +252,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .act{font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border-width:1.5px; border-style:solid; border-radius:999px; padding:4px 9px; cursor:pointer; white-space:nowrap;}
 
 .chip{flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; padding:6px 12px; border-radius:999px; white-space:nowrap; border-width:1px; border-style:solid;}
-.chip.off{cursor:default;}
+.chip.off,.chip.label,.csel.label,.actn.label{cursor:default;}
 
 .curgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:6px 0 8px;}
 .curcell{display:flex; flex-direction:column; align-items:center; gap:5px;}
@@ -442,11 +445,13 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .chip.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
   .modal .chip{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
   .modal .chip.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
-  .chip.off{background:transparent; border-color:var(--line-night); color:var(--night-4);}
+  .chip.off,.chip.label{background:transparent; border-color:var(--line-night); color:var(--night-4);}
+  .csel.label,.actn.label{background:transparent; border-color:var(--line-night); color:var(--night-3);}
   .actn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
   .actn.danger{background:var(--surf); border-color:var(--line-strong); color:var(--danger-night);}
   .avatar{background:var(--surf); border-color:var(--line-strong); color:var(--night-4);}
   .curname{color:var(--night-4);}
+  .curcell{background:transparent;}
   .stickyhead{background:var(--paper); box-shadow:0 8px 10px -9px rgba(0,0,0,.75);}
   .triprow{background:var(--ivory-bright); color:var(--ink); border-inline-start-color:var(--saffron); box-shadow:0 2px 10px rgba(0,0,0,.28);}
   .triprow.dim{color:var(--ink-faint);}
@@ -583,15 +588,15 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   </div><!-- /screenPlaces -->
 
   <!-- خ١: الوجهة ٢ — الرحلات: جسم نافذة "رحلاتي" يُنقل إلى هنا عند أول فتح (الاستضافة بنقل العنصر) -->
-  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel">🧳 <b>My Trips</b></span></div><div class="chiprow"><span class="chip on">All</span><span class="chip off">🚶 One day trip</span><span class="chip off">🏙 Single city</span><span class="chip off">🌍 Multi-city</span><span class="chip off mini">Soon</span></div></div><div id="tripsHost"></div></div></div>
+  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">🧳 <b>My Trips</b></span></div><div class="chiprow" id="tripTypeRow"><button type="button" class="chip on" onclick="pickTripType(this)">All</button><button type="button" class="chip" onclick="pickTripType(this)">🚶 One day trip</button><button type="button" class="chip" onclick="pickTripType(this)">🏙 Single city</button><button type="button" class="chip" onclick="pickTripType(this)">🌍 Multi-city</button><span class="chip label mini">Soon</span></div></div><div id="tripsHost"></div></div></div>
   <!-- خ١: الوجهة ٣ — المنتقون: مكان محجوز حتى خ٤ -->
-  <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel">⭐ <b>Curators</b></span><span class="actn">🔍 Find a curator <span class="dim">Soon</span></span></div></div><div class="curgrid"><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty">⭐<br>Curators arrive in step 4.<br><span class="mini">Follow people you trust, then save their picks with a permanent credit.</span></div></div></div>
+  <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">⭐ <b>Curators</b></span><span class="actn label">🔍 Find a curator <span class="dim">Soon</span></span></div></div><div class="curgrid"><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty">⭐<br>Curators arrive in step 4.<br><span class="mini">Follow people you trust, then save their picks with a permanent credit.</span></div></div></div>
   <!-- خ١: الوجهة ٤ — المجتمع: جسم نافذة المجتمع يُنقل إلى هنا -->
   <div class="mp-screen" id="screenCommunity"><div class="wrap destbody"><div id="communityHost"></div></div></div>
   <!-- خ١: الوجهة ٥ — العناوين الشخصية: تُبنى كاملة بخ٢ -->
   <div class="mp-screen" id="screenAddresses"><div class="wrap destbody">
     <div class="stickyhead">
-      <div class="headrow"><button type="button" class="csel" id="addrSel" onclick="addrTogglePanel()">— ⌄</button><span class="actn">🔒 Always private</span></div>
+      <div class="headrow"><button type="button" class="csel" id="addrSel" onclick="addrTogglePanel()">— ⌄</button><span class="actn label">🔒 Always private</span></div>
     </div>
     <div id="addrPanel"></div>
     <div id="addrBody"><div class="addr-empty">Loading…</div></div>
@@ -2429,6 +2434,11 @@ function tripPlaceCount(t){
   (t.days || []).forEach(d => TRIP_CATEGORIES.forEach(c => { n += ((d.places && d.places[c.id]) || []).length; }));
   return n;
 }
+function pickTripType(b){                 // حالة عرض فقط — الترشيح الفعلي بالخطوة السادسة (حقل kind)
+  b.parentNode.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  showToast('Trip types — Soon (step 6)');
+}
 function tripTitle(t){ return t.customLabel ? (t.cityName + ' — ' + t.customLabel) : t.cityName; }
 function renderMyTripsModal(){
   const wrap = document.getElementById('myTripsBody');
@@ -3466,7 +3476,7 @@ function renderPlacesMine(){
   html += '<div class="headrow">'
     + '<button type="button" class="actn" onclick="openPlPlaceModal(null, null)">All categories ⌄</button>'
     + '<button type="button" class="actn" onclick="showToast(\'Day plan — Soon (step 6)\')">🗓 Day plan <span class="dim">Soon</span></button>'
-    + '<span class="actn">View: <b>List</b> | Map <span class="dim">Soon</span></span>'
+    + '<span class="actn label">View: <b>List</b> | Map <span class="dim">Soon</span></span>'
     + '</div>';
 
   /* اللوحتان العاجيتان — المدن بعدّاداتها وسلالها و＋ Add city مثبَّت أعلى · والتصنيفات بعدّاداتها */
@@ -4461,11 +4471,11 @@ function renderCommunityModal(){
   let usersToShow = communityUsers;
   const cityName = (allCities().find(c => c.id === currentCityId) || {}).name || '';
 
-  let html = '<div class="stickyhead"><div class="headrow"><span class="csel">🌍 <b>Community</b></span>'
+  let html = '<div class="stickyhead"><div class="headrow"><span class="csel label">🌍 <b>Community</b></span>'
     + (communityTab === 'all'
         ? '<span class="acts"><button type="button" class="actn' + (communitySort === 'viewed' ? ' on' : '') + '" onclick="switchCommunitySort(\'viewed\')">👁 Most viewed</button>'
           + '<button type="button" class="actn' + (communitySort === 'loved' ? ' on' : '') + '" onclick="switchCommunitySort(\'loved\')">🤍 Most loved</button></span>'
-        : '<span class="actn">Search <span class="dim">Soon</span></span>')
+        : '<span class="actn label">Search <span class="dim">Soon</span></span>')
     + '</div>'
     + '<div class="chiprow"><button type="button" class="chip' + (communityTab === 'city' ? ' on' : '') + '" onclick="switchCommunityTab(\'city\')">' + escapeHtml(cityName || 'This city') + '</button>'
     + '<button type="button" class="chip' + (communityTab === 'all' ? ' on' : '') + '" onclick="switchCommunityTab(\'all\')">All users</button></div></div>';
@@ -5271,7 +5281,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r15 (third field round — the .row class had identity but no geometry at all, which is why block cards had square corners, no padding and no gap between them or the Create button; geometry restored from the standard model, section-level empty states compacted, and a second automated guard added: every core class must carry both a structure rule and an identity rule)');
+logTiming('BUILD: M2-ID-r17 (trip type chips respond visually with a Soon toast per the Day plan precedent; third defect family closed — one class served both control and label, so seven pill elements looked tappable but were not: they now carry an explicit label modifier; third automated guard added: any control-shaped element must either carry a handler or be declared a label)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
