@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MyPickz" id="webAppTitle">
-<meta name="theme-color" content="#1c2b3a">
+<meta name="theme-color" content="#0F1B2A">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
@@ -20,395 +20,415 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <!-- Firebase SDK is loaded dynamically below (with retry + clear error reporting) -->
 
-<style>
+<style id="structure">
+  /* ═══ الجزء الأول — البنية · لا لون هنا إطلاقًا ═══
+     مستخرجة آليًّا من ورقة r21 بلا تغيير حرف: ٩٦٥ تصريحًا بنيويًّا. */
+
+*{box-sizing:border-box;}
+body{margin:0; font-family:'Tajawal', sans-serif; min-height:100vh; padding:0 0 60px;}
+.eyebrow{font-family:'Cairo',sans-serif; font-size:12px; letter-spacing:4px; font-weight:700; text-transform:uppercase;}
+h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0 4px;}
+.sub{font-size:14px; max-width:460px; margin:0 auto; line-height:1.7;}
+.tab-label{max-width:900px; margin:18px auto 6px; padding:0 20px; font-family:'Cairo',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase;}
+.city-tabs{max-width:900px; margin:22px auto 0; padding:0 16px; display:flex; gap:8px; overflow-x:auto; padding-bottom:6px;}
+.city-tab{flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; padding:9px 18px; border-radius:999px; border:1.5px solid; cursor:pointer; white-space:nowrap;}
+.toolbar{max-width:760px; margin:20px auto 6px; padding:0 20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;}
+.action-bar{max-width:420px; margin:24px auto 6px; border:1px solid; border-radius:20px; display:flex; flex-wrap:wrap; justify-content:center; padding:10px 4px;}
+.action-btn{flex:0 0 auto; width:76px; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; padding:6px 2px; border-radius:14px; transition:background .15s ease;}
+.action-icon{width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px;}
+.action-label{font-family:'Cairo',sans-serif; font-size:10.5px; font-weight:700;}
+.btn{font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; border:none; border-radius:999px; padding:10px 18px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;}
+.btn-ghost{border:1.5px solid;}
+.quick-nav{position:sticky; top:44px; z-index:20; /* خ١: تحت الشريط العلوي الثابت */
+    max-width:760px; margin:0 auto 18px; padding:10px 20px; backdrop-filter:blur(6px); display:flex; gap:8px; overflow-x:auto; border-bottom:1px solid;}
+.quick-nav-btn{flex:none; border:1px solid; border-radius:999px; width:46px; height:46px; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer;}
+.show-more-btn{display:block; margin:10px auto 0; border:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; cursor:pointer; padding:6px 12px;}
+.section{max-width:760px; margin:30px auto 0; padding:0 20px;}
+.area-filter-row{display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px;}
+.area-chip{flex:none; border:1px solid; border-radius:999px; padding:6px 13px; font-size:11.5px; font-family:'Cairo',sans-serif; font-weight:700; cursor:pointer; white-space:nowrap;}
+.section-head{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+.section-head h2{font-family:'Cairo',sans-serif; font-size:19px; font-weight:700; margin:0;}
+.section-head .count{font-family:'Cairo',sans-serif; font-size:11px; font-weight:700;}
+.grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px;}
+.ticket{border:1px solid; border-radius:12px; padding:13px 15px; display:flex; align-items:center; gap:11px; text-decoration:none;}
+.ticket.disabled{opacity:.55;}
+.icon-badge{width:42px; height:42px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; font-size:19px;}
+.ticket.disabled .icon-badge{opacity:.55;}
+.ticket .name{font-weight:600; font-size:14px; flex:1; line-height:1.4;}
+.section-icon{font-size:15px; width:30px; height:30px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex:none;}
+
+.ticket .missing{font-size:11px;}
+.toggle-row{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:11.5px;}
+.switch-btn{width:36px; height:21px; border-radius:999px; border:none; padding:0; position:relative; cursor:pointer; flex:none;}
+.switch-btn .knob{position:absolute; top:3px; right:3px; width:15px; height:15px; border-radius:50%; transition:transform .2s;}
+.switch-btn.on .knob{transform:translateX(-15px);}
+.remove-btn{border:none; cursor:pointer; margin-inline-start:auto; opacity:.7;}
+.name-edit{width:100%; border:none; border-bottom:1px dashed; font-weight:600; font-size:14px; font-family:'Tajawal',sans-serif; padding:2px 0 4px;}
+.name-edit:focus{outline:none;}
+.places-edit-list{margin-top:8px; display:flex; flex-direction:column; gap:6px;}
+.place-row{display:flex; gap:6px; align-items:center; flex-wrap:wrap; border:1px solid; border-radius:8px; padding:6px;}
+.place-note-row{display:flex; align-items:flex-start; gap:8px; width:100%; margin-top:6px; padding-top:6px; border-top:1px dashed;}
+.place-note-input{flex:1; border:none; font-size:11.5px; font-family:'Tajawal',sans-serif; padding:4px 2px; resize:vertical; min-height:34px; line-height:1.5;}
+.place-note-input:focus{outline:none;}
+.switch-btn.small{width:30px; height:18px; flex:none; margin-top:2px;}
+.switch-btn.small .knob{width:12px; height:12px; top:3px; right:3px;}
+.switch-btn.small.on .knob{transform:translateX(-12px);}
+.place-note{font-size:11.5px; font-style:italic; padding:2px 0 4px; line-height:1.5;}
+.note-link{font-style:normal; font-weight:700; text-decoration:underline;}
+.note-toggle{border:none; padding:0; margin:0 2px; cursor:pointer; font-size:11px; font-style:normal; font-weight:700; font-family:'Tajawal',sans-serif; text-decoration:underline;}
+.place-area-input{width:25%; min-width:80px; border:none; font-size:11.5px; font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid;}
+.place-area-input:focus{outline:none;}
+.place-name-input{width:28%; min-width:90px; border:none; font-size:12px; font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid;}
+.place-name-input:focus{outline:none;}
+.place-url-input{flex:1; min-width:100px; border:none; font-size:12px; font-family:'Tajawal',sans-serif; direction:ltr; text-align:left; padding:4px 6px;}
+.place-url-input:focus{outline:none;}
+.add-place-btn{margin-top:8px; width:100%; border:1.5px dashed; border-radius:8px; padding:8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; cursor:pointer;}
+.multi-edit .toggle-row{flex-wrap:wrap;}
+.reorder-col{display:flex; flex-direction:column; gap:2px; flex:none;}
+.reorder-btn{width:22px; height:20px; border:1px solid; border-radius:5px; font-size:10px; cursor:pointer; line-height:1;}
+.reorder-btn:disabled{opacity:.25; cursor:default;}
+.icon-edit{width:38px; height:38px; border-radius:50%; flex:none; text-align:center; border:none; font-size:17px;}
+.area-divider{font-family:'Cairo',sans-serif; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-top:8px; padding-top:6px; border-top:1px dashed;}
+.area-divider::before{content:"📍 ";}
+.place-list .area-divider:first-child{margin-top:0; border-top:none; padding-top:0;}
+.multi-ticket{flex-direction:column; align-items:stretch; gap:8px;}
+.multi-head{display:flex; align-items:center; gap:11px;}
+.place-list{display:flex; flex-direction:column; gap:4px; padding-inline-start:37px;}
+.place-row-view{display:flex; align-items:center; gap:6px;}
+.place-row-view .place-link{flex:1;}
+.fav-btn{border:none; cursor:pointer; font-size:14px; padding:2px 4px; flex:none;}
+.stats-row{display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid;}
+.stats-rank{width:22px; height:22px; border-radius:50%; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; flex:none;}
+.stats-name{flex:1; font-size:13px; font-weight:600; text-decoration:none;}
+.stats-count{font-size:12px; font-weight:700; flex:none;}
+.place-link{font-size:12.5px; font-weight:600; text-decoration:none; border-bottom:1px dashed; padding:3px 0;}
+.place-link:last-child{border-bottom:none;}
+.status-card{max-width:760px; margin:0 auto 24px; padding:0 20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center;}
+.status-toggle{display:flex; align-items:center; gap:8px; border:1px solid; border-radius:999px; padding:9px 16px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; cursor:pointer;}
+.status-dot{width:8px; height:8px; border-radius:50%; flex:none;}
+.status-divider{width:1px; height:16px;}
+.status-stat{font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px;}
+.add-ticket{border:1.5px dashed; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer;}
+.footer-note{max-width:760px; margin:40px auto 0; padding:16px 20px; text-align:center; font-size:11.5px; line-height:1.8; border-top:1px solid;}
+.modal-backdrop{position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:20px 20px 64px; z-index:2000;}
+.modal-backdrop.show{display:flex;}
+.modal{border-radius:16px; padding:14px 13px; max-width:340px; width:100%; max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch;}
+.modal > :first-child{margin-top:0;}
+.modal > :last-child{margin-bottom:0;}
+.modal h3{font-family:'Cairo',sans-serif; margin:0 0 12px;}
+.modal-input{width:100%; border:1px solid; border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px;}
+/* ٢/أ (٢٦ أغسطس ٢٠٢٦) — شارة الهوية بالشريط، نافذة الحساب، تأكيد الهوية، عين الإظهار، الشريط اللاصق للنوافذ الطويلة */
+  .mini-av{display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; font-family:'Cairo',sans-serif; font-weight:900; font-size:12px; letter-spacing:.5px;}
+.acc-head{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; margin-bottom:12px; text-align:left; direction:ltr;}
+.acc-head .mini-av{width:44px; height:44px; font-size:16px;}
+.acc-name{font-family:'Cairo',sans-serif; font-weight:700; font-size:14px;}
+.acc-mail{font-size:11.5px; direction:ltr;}
+.acc-item{display:flex; justify-content:space-between; align-items:center; width:100%; padding:8px 10px; margin-top:6px; border:none; border-radius:9px; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; text-align:left; direction:ltr;}
+.acc-item:disabled{opacity:.55; cursor:default;}
+.acc-item .soon{font-size:10.5px; font-weight:700;}
+.pw-wrap{position:relative;}
+.pw-wrap .modal-input{padding-right:40px;}
+.pw-eye{position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; font-size:15px; cursor:pointer; padding:4px;}
+.modal-topbar{position:sticky; top:-1px; z-index:3; padding:2px 0 8px; margin-bottom:8px; border-bottom:1px dashed; display:flex; gap:8px;}
+.modal-topbar .btn{margin-top:0; padding:9px 12px; font-size:12.5px;}
+/* ===== خ١ (٢٧ أغسطس ٢٠٢٦) — الإطار: الشريط العلوي · الشريط الخمسي · الوجهات · الدرج (النموذج المعلَّم: المشاهد ٦ و٧) ===== */
+  body{padding-top:44px; padding-bottom:54px;}
+.mp-topbar{position:fixed; top:0; left:0; right:0; height:44px; z-index:700; border-bottom:1px solid; display:flex; align-items:center; justify-content:space-between; padding:0 12px; direction:ltr;}
+.mp-burger{border:1.5px solid; border-radius:8px; width:32px; height:32px; font-size:16px; cursor:pointer;}
+.mp-idchip{display:inline-flex; align-items:center; gap:7px; border:1.5px solid; border-radius:999px; padding:3px 10px 3px 3px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px;}
+.mp-idchip .mini-av{width:30px; height:30px; font-size:12px;}
+.mp-idchip{max-width:45vw;}
+.mp-idchip > span:last-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.mp-wordmark{font-family:'Cairo',sans-serif; font-weight:900; font-size:18px; letter-spacing:.3px;}
+.mp-chipmenu{display:none; position:fixed; top:54px; right:12px; z-index:1100; border:1.5px solid; border-radius:12px; min-width:170px; overflow:hidden;}
+.mp-chipmenu.show{display:block;}
+.mp-chipmenu button{display:block; width:100%; border:none; padding:11px 14px; text-align:left; direction:ltr; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; border-bottom:1px solid;}
+.mp-chipmenu button:last-child{border-bottom:none;}
+/* البوابة الإلزامية (المشهد ١): خلفية معتمة كاملة — لا واجهة قديمة خلفها */
+  #authBackdrop.gate-mode{z-index:1150;}
+.mp-tabbar{position:fixed; bottom:0; left:0; right:0; height:54px; z-index:700; border-top:1px solid; display:flex; direction:ltr;}
+.mp-tab{flex:1; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px;}
+.mp-tab .ti{width:26px; height:26px; line-height:26px; border-radius:50%; margin:0 auto 2px; font-size:13px; display:block; text-align:center;}
+.mp-tab.on .ti{}
+
+.mp-screen{display:none;}
+.mp-screen.on{display:block;}
+.mp-empty{text-align:center; font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif;}
+.mp-empty .big{font-size:34px; margin-bottom:8px;}
+/* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
+  .pl-srcrow{display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; direction:ltr; position:sticky; top:44px; z-index:10;}
+.pl-srcrow{padding:6px 0 6px;}
+
+.pl-src{flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; padding:5px 10px; border-radius:999px; border:1.5px solid; cursor:pointer;}
+.pl-actbtn{font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; border:1.5px solid; border-radius:999px; padding:6px 10px; cursor:pointer;}
+
+.pl-cathead{font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; margin:10px 0 6px; display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left;}
+.pl-cathead .addmini{border:1.5px solid; border-radius:999px; min-width:26px; height:26px; cursor:pointer; font-weight:700; font-size:14px;}
+.pl-row{display:flex; justify-content:space-between; align-items:center; gap:8px; border:1.5px solid; border-radius:12px; padding:8px 11px; margin-bottom:6px; direction:ltr; text-align:left;}
+.pl-name{font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; text-decoration:none; display:block;}
+.pl-sub{font-size:11px; margin-top:2px;}
+.pl-acts{display:flex; gap:6px; align-items:center;}
+.pl-acts button, .pl-acts a{border:none; font-size:15px; cursor:pointer; padding:4px; text-decoration:none;}
+.pl-acts a.act-chip{border:1.5px solid; border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px;}
+.pl-ownerpanel{border:1.5px dashed; border-radius:12px; padding:10px 12px; margin-top:12px; direction:ltr; text-align:left;}
+.pl-catpick{display:inline-block; border:1.5px solid; border-radius:999px; padding:5px 10px; margin:2px 3px 2px 0; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; cursor:pointer;}
+select.modal-input{-webkit-appearance:none; appearance:none;}
+/* الدرج — نافذة الحساب المبنية تصير جزأه الأعلى (المشهد ٧) */
+  #accountBackdrop{z-index:1200 !important;}
+#accountBackdrop.show{display:block;}
+#accountBackdrop .modal{position:fixed; top:0; right:0; bottom:0; max-width:340px; width:86%; border-radius:0 0 0 18px; overflow-y:auto; max-height:none; text-align:left; direction:ltr; padding-top:18px;}
+.dr-head{font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; letter-spacing:.5px; text-transform:uppercase; margin:14px 0 6px;}
+.dr-item{display:flex; justify-content:space-between; align-items:center; width:100%; padding:8px 10px; margin-top:6px; border:none; border-radius:9px; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; text-align:left; direction:ltr; text-decoration:none;}
+.dr-item:disabled{opacity:.55; cursor:default;}
+.acc-item.on,.dr-item.on{border-inline-start:3px solid;}
+.dr-item .soon{font-size:10.5px;}
+/* خ١-ب: البوابة (المشهد ١) · الوجهة الافتراضية (المشهد ٥) · كلمة السر (٩) · الحذف (١٠) */
+  .gate-eyebrow{font-family:'Cairo',sans-serif; font-weight:900; letter-spacing:.5px; font-size:26px; line-height:1.1; margin-bottom:6px;}
+.homecards{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+.hcard{border:1.5px solid; border-radius:14px; padding:12px 8px; cursor:pointer; text-align:center; font-family:'Cairo',sans-serif;}
+.hcard .hi{font-size:22px;}
+.hcard .hn{font-weight:700; font-size:13px; margin-top:2px;}
+.hcard .hd{font-size:10.5px;}
+.steps{display:flex; justify-content:center; gap:8px; margin-bottom:10px;}
+.stepdot{width:8px; height:8px; border-radius:50%;}
+.receipt{border-radius:12px; padding:8px 12px; margin:8px 0; direction:ltr; text-align:left;}
+.receipt ul{list-style:none; margin:0; padding:0;}
+.receipt li{display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0; border-bottom:1px dashed;}
+.receipt li:last-child{border:none;}
+.warnline{display:flex; gap:6px; font-size:11.5px; border:1px solid; border-radius:10px; padding:8px 10px; margin:8px 0; text-align:left; direction:ltr;}
+.soon-tag{display:inline-block; font-size:10.5px; border:1px solid; border-radius:999px; padding:1px 8px; margin-left:6px; vertical-align:middle;}
+/* خ٢ (٢٧ أغسطس ٢٠٢٦) — وجهة العناوين الشخصية (المشهدان ٦/و و٦/و٢) */
+
+
+.addr-cathead{font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; margin:14px 0 6px; text-align:left; direction:ltr; display:flex; justify-content:space-between; align-items:center;}
+.addr-cathead button{border:1.5px solid; border-radius:999px; width:26px; height:26px; cursor:pointer; font-weight:700;}
+.addr-row{display:flex; justify-content:space-between; align-items:center; gap:8px; border:1.5px solid; border-radius:12px; padding:10px 12px; margin-bottom:6px; direction:ltr; text-align:left;}
+/* قاعدة "صف المكان" الموحَّدة (٢٧ أغسطس): الاسم أزرق غامق عريض ١٤ · سطر ثانٍ أهدأ · أيقونات يمينًا بترتيب ثابت */
+  .prow-name{font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; text-decoration:none; display:block;}
+.prow-sub{font-size:11.5px; margin-top:2px;}
+.addr-row .acts button, .addr-row .acts a{border:none; font-size:15px; cursor:pointer; padding:4px; text-decoration:none;}
+.addr-row .acts a.act-chip{border:1.5px solid; border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px;}
+
+
+.addr-row .acts{display:flex; gap:6px;}
+.addr-chip{display:inline-block; border:1.5px solid; border-radius:999px; padding:6px 12px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; cursor:pointer;}
+.addr-chips{display:flex; flex-wrap:wrap; gap:6px; direction:ltr;}
+.addr-empty{text-align:center; font-size:12.5px; padding:30px 10px;}
+#qrcode{display:flex; justify-content:center; margin:12px 0;}
+.toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%); padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:9999;}
+.toast.show{opacity:1;}
+#editModeBanner{max-width:760px; margin:14px auto 0; padding:11px 18px; border:1px dashed; border-radius:10px; font-size:12px; display:none; text-align:center;}
+#editModeBanner.show{display:block;}
+#loadingState{text-align:center; padding:60px 20px; font-family:'Cairo',sans-serif;}
+/* ═ النموذج القياسي — أصناف الوجهات (دفعة الهوية) ═ */
+.headrow{display:flex; justify-content:space-between; align-items:center; gap:8px; margin:8px 0 6px;}
+.grow{flex:1;}
+.csel{font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; padding:7px 11px; border-radius:999px; border:1px solid; cursor:pointer; white-space:nowrap;}
+.cta{font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border:none; border-radius:999px; padding:7px 10px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;}
+.actn{font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border-width:1.5px; border-style:solid; border-radius:999px; padding:5px 10px; cursor:pointer; white-space:nowrap;}
+.block{margin:2px 0 6px; padding:8px 10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; direction:ltr; text-align:left; flex-wrap:wrap;}
+.blkleft,.blkright{display:inline-flex; align-items:center; gap:8px;}
+.shname{display:inline-flex; align-items:center; gap:4px; margin-right:8px;}
+.shname button{border:none; cursor:pointer; font-size:11px;}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 0 8px;}
+.panel{border-radius:12px; padding:8px; font-size:11px; direction:ltr; text-align:left;}
+.panel .pinned{border-radius:8px; padding:6px 8px; margin:0 0 5px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700;}
+.panel .prow{display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-radius:8px; cursor:pointer;}
+.panel .pfoot{width:100%; border:none; border-top:1px solid; margin-top:5px; padding:5px 8px 0; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; -webkit-appearance:none; appearance:none;}
+.rowmain{flex:1; min-width:0;}
+.mini{font-size:8.5px; font-weight:700;}
+.trip-soon{opacity:.45;}
+
+.row,.rowblock{}
+.rowblock{display:block;}
+.rowacts{display:flex; gap:6px; align-items:center; margin-top:7px;}
+.act{font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border-width:1.5px; border-style:solid; border-radius:999px; padding:4px 9px; cursor:pointer; white-space:nowrap;}
+
+.chip{flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; padding:6px 12px; border-radius:999px; white-space:nowrap; border-width:1px; border-style:solid;}
+.chip.off{cursor:default;}
+
+.curgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:6px 0 8px;}
+.curcell{display:flex; flex-direction:column; align-items:center; gap:5px;}
+.avatar{width:54px; height:54px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Cairo',sans-serif; font-weight:900; font-size:15px; border-width:2.5px; border-style:solid;}
+.curname{font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px;}
+
+.wrap{max-width:760px; margin:0 auto; padding:0 12px;}
+.destbody{padding-top:10px; padding-bottom:16px; min-height:150px;}
+.stickyhead{position:sticky; top:44px; z-index:10; padding:10px 0 8px; margin:0 -12px; padding-inline:12px;}
+
+.wide{width:100%; margin-top:8px;}
+.wide:first-of-type{margin-top:0;}
+
+.listbox{margin:10px 0;}
+
+</style>
+
+<style id="identity">
+  /* ═══ الجزء الثاني — الهوية «الليل والورقة» · لون فقط ═══
+     احذف هذه الكتلة كاملة: تبقى كل شاشة مبنيّة بالبنية أعلاه.
+     المصدر: المرجع الحاكم v1.31 (0d63b14c) وملف الهوية (19f8632d).
+     القاعدة: المختار زعفران دائمًا · والفعل الأساسي يتبع سطحه
+              (زعفران على الليلي · حبر على العاجي) — القرار ٢٠٢٦-٠٨-٢٩-٠٧. */
   :root{
-    --paper:#efe7d6; --paper-dark:#e4d9c1; --ink:#1c2b3a; --ink-soft:#4a5a68;
-    --brass:#a5751f; --brass-light:#c99a3f; --line:#c9bda1; --line-strong:#b3a27a; --card:#faf6ec;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><g fill='none' stroke='%23a5751f' stroke-width='0.6' opacity='0.05'><path d='M-20 40 Q 40 10, 100 40 T 220 40'/><path d='M-20 90 Q 40 60, 100 90 T 220 90'/><path d='M-20 140 Q 40 110, 100 140 T 220 140'/></g></svg>"),
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/></svg>"),
-      radial-gradient(circle at 15% 8%, rgba(165,117,31,0.08), transparent 42%),
-      radial-gradient(circle at 85% 30%, rgba(28,43,58,0.05), transparent 38%),
-      radial-gradient(circle at 50% 95%, rgba(165,117,31,0.05), transparent 45%),
-      var(--paper);
-    background-attachment: fixed, fixed, fixed, fixed, fixed, fixed;
-    font-family:'Tajawal', sans-serif; color:var(--ink); min-height:100vh; padding:0 0 60px;
-  }
-  .cover{ max-width:760px; margin:0 auto; padding:40px 20px 20px; text-align:center; }
-  .eyebrow{ font-family:'Cairo',sans-serif; font-size:12px; letter-spacing:4px; color:var(--brass); font-weight:700; text-transform:uppercase; }
-  h1{ font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0 4px; }
-  .sub{ color:var(--ink-soft); font-size:14px; max-width:460px; margin:0 auto; line-height:1.7; }
-
-  .tab-label{
-    max-width:900px; margin:18px auto 6px; padding:0 20px;
-    font-family:'Cairo',sans-serif; font-size:11px; font-weight:700;
-    color:var(--ink-soft); letter-spacing:2px; text-transform:uppercase;
-  }
-  .city-tabs{
-    max-width:900px; margin:22px auto 0; padding:0 16px;
-    display:flex; gap:8px; overflow-x:auto; padding-bottom:6px;
-  }
-  .city-tab{
-    flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px;
-    padding:9px 18px; border-radius:999px; border:1.5px solid var(--line);
-    background:var(--card); color:var(--ink-soft); cursor:pointer; white-space:nowrap;
-  }
-  .city-tab.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
-
-  .toolbar{ max-width:760px; margin:20px auto 6px; padding:0 20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
-
-  .action-bar{
-    max-width:420px; margin:24px auto 6px;
-    background:var(--card); border:1px solid var(--line); border-radius:20px;
-    display:flex; flex-wrap:wrap; justify-content:center; padding:10px 4px;
-    box-shadow:0 2px 10px rgba(28,43,58,0.05);
-  }
-  .action-btn{
-    flex:0 0 auto; width:76px; background:none; border:none; cursor:pointer;
-    display:flex; flex-direction:column; align-items:center; gap:6px;
-    padding:6px 2px; border-radius:14px; transition:background .15s ease;
-  }
-  .action-btn:active{ background:rgba(165,117,31,0.08); }
-  .action-icon{
-    width:38px; height:38px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    font-size:16px;
-  }
-  .action-icon.ink{ background:var(--ink); color:var(--paper); }
-  .action-icon.brass{ background:var(--brass); color:#fff; }
-  .action-label{
-    font-family:'Cairo',sans-serif; font-size:10.5px; font-weight:700; color:var(--ink-soft);
-  }
-  .btn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; border:none; border-radius:999px;
-        padding:10px 18px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
-  .btn-ink{ background:var(--ink); color:var(--paper); }
-  .btn-brass{ background:var(--brass); color:#fff; }
-  .btn-ghost{ background:transparent; color:var(--ink); border:1.5px solid var(--line); }
-
-  .quick-nav{
-    position:sticky; top:44px; z-index:20; /* خ١: تحت الشريط العلوي الثابت */
-    max-width:760px; margin:0 auto 18px; padding:10px 20px;
-    background:rgba(239,231,214,0.92); backdrop-filter:blur(6px);
-    display:flex; gap:8px; overflow-x:auto; border-bottom:1px solid var(--line);
-  }
-  .quick-nav-btn{
-    flex:none; background:var(--card); border:1px solid var(--line); border-radius:999px;
-    width:46px; height:46px; font-size:18px; color:var(--ink);
-    display:flex; align-items:center; justify-content:center; cursor:pointer;
-  }
-  .quick-nav-btn:active{ background:rgba(165,117,31,0.12); }
-
-  .show-more-btn{
-    display:block; margin:10px auto 0; background:transparent; border:none;
-    color:var(--brass); font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px;
-    cursor:pointer; padding:6px 12px;
+    /* الأسطح الخمسة — القرار ٢٠٢٦-٠٨-٢٩-٠٢ */
+    --paper:#0F1B2A; --bar:#162435; --surf:#22334A;
+    --ivory:#EFEBE2; --ivory-bright:#FAF9F5;
+    /* الحبر بشفافيتيه — القرار ٢٠٢٦-٠٨-٢٩-٠٣ · لا رمادي محايد بالنظام */
+    --ink:#132335; --ink-strong:rgba(19,35,53,.72); --ink-faint:rgba(19,35,53,.45); --ink-soft:#243B54;
+    --saffron:#E29A2E;
+    --on-night:#EDF1F6; --night-2:#CBD6E3; --night-3:#B9C3CE; --night-4:#8FA0B4;
+    --line-night:#2B3F5A; --line-bar:#24344A; --line-strong:#35485F; --line-ivory:#DCD7CB;
+    --scrim:rgba(5,10,18,.6);
+    /* القرار ٢-ب: لونان دلاليان · النجاح زعفران (صفر أخضر بالنظام) */
+    --danger:#8B1E1E; --danger-night:#E8A79E;
+    /* موروثة تُبقى معرَّفة حتى دفعة التنظيف — لا تُستعمل بأي قاعدة أدناه */
+    --line:var(--line-ivory); --card:var(--ivory-bright); --paper-dark:var(--surf);
+    --brass:var(--saffron); --brass-light:var(--saffron); --sand:var(--surf);
   }
 
-  .section{ max-width:760px; margin:30px auto 0; padding:0 20px; }
+  /* ── الورق (السطح ٠) ── */
+  html,body{background:var(--paper); color:var(--on-night);}
 
-  .area-filter-row{
-    display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px;
-  }
-  .area-chip{
-    flex:none; background:var(--card); border:1px solid var(--line); border-radius:999px;
-    padding:6px 13px; font-size:11.5px; font-family:'Cairo',sans-serif; font-weight:700;
-    color:var(--ink-soft); cursor:pointer; white-space:nowrap;
-  }
-  .area-chip.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
-  .section-head{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-  .section-head h2{ font-family:'Cairo',sans-serif; font-size:19px; font-weight:700; margin:0; }
-  .section-head .count{ font-family:'Cairo',sans-serif; font-size:11px; color:var(--brass); font-weight:700; }
+  /* ── الشريطان والشارة والقائمة الصغيرة (السطح ١) ── */
+  .mp-topbar{background:var(--bar); border-bottom-color:var(--line-bar);}
+  .mp-burger{background:none; border-color:var(--line-strong); color:var(--night-2);}
+  .mp-wordmark{color:var(--ivory-bright);}
+  .mp-idchip{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);}
+  .mini-av{color:var(--ivory-bright);}
+  .mp-chipmenu{background:var(--ivory); border-color:var(--line-ivory); box-shadow:0 10px 26px rgba(0,0,0,.5);}
+  .mp-chipmenu button{background:none; color:var(--ink); border-bottom-color:var(--line-ivory);}
+  .mp-tabbar{background:var(--bar); border-top-color:var(--line-bar);}
+  .mp-tab{background:none; color:var(--night-4);}
+  .mp-tab.on{color:var(--saffron);}
+  .mp-tab .ti{background:var(--surf); color:var(--night-2);}
+  .mp-tab.on .ti{background:var(--saffron); color:var(--ink);}
+  #authBackdrop.gate-mode{background:var(--paper);}
 
-  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px; }
-  .ticket{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:13px 15px;
-           display:flex; align-items:center; gap:11px; text-decoration:none; color:var(--ink); }
-  .ticket:hover{ border-color:var(--brass); }
-  .ticket.disabled{ opacity:.55; }
-  .icon-badge{
-    width:42px; height:42px; border-radius:50%; flex:none;
-    background:var(--ink); color:var(--paper);
-    display:flex; align-items:center; justify-content:center; font-size:19px;
-    box-shadow:0 1px 3px rgba(28,43,58,0.25);
-  }
-  .ticket.disabled .icon-badge{ background:var(--ink); opacity:.55; }
-  .ticket .name{ font-weight:600; font-size:14px; flex:1; line-height:1.4; }
-  .section-icon{
-    color:#fff; background:var(--ink); font-size:15px; width:30px; height:30px;
-    border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex:none;
-  }
-  .ticket .go{ font-size:11px; color:var(--brass); font-weight:700; }
-  .ticket .missing{ font-size:11px; color:var(--ink-soft); }
+  /* ── الرؤوس اللاصقة وما يقع فوق الورق مباشرة ── */
+  .pl-srcrow{background:var(--surf); box-shadow:none;}
+  
+  .quick-nav{background:var(--paper); border-bottom-color:var(--line-night);}
+  .pl-cathead,.addr-cathead{color:var(--night-3);}
+  
+  .addr-empty,.mp-empty,#loadingState{color:var(--night-4);}
+  .gate-eyebrow{color:var(--saffron);}
 
-  .toggle-row{ display:flex; align-items:center; gap:8px; margin-top:8px; font-size:11.5px; color:var(--ink-soft); }
-  .switch-btn{ width:36px; height:21px; border-radius:999px; border:none; padding:0; background:#cfc4a8; position:relative; cursor:pointer; flex:none; }
-  .switch-btn .knob{ position:absolute; top:3px; right:3px; width:15px; height:15px; border-radius:50%; background:#fff; transition:transform .2s; }
-  .switch-btn.on{ background:var(--brass); }
-  .switch-btn.on .knob{ transform:translateX(-15px); }
-  .remove-btn{ background:none; border:none; cursor:pointer; margin-inline-start:auto; opacity:.7; }
+  /* ── مبدّل المصدر: حاوية واحدة والنشط زعفراني ── */
+  .pl-src{background:transparent; border-color:transparent; color:var(--night-2);}
+  .pl-src.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
 
-  .name-edit{ width:100%; border:none; border-bottom:1px dashed var(--line); background:transparent;
-              font-weight:600; font-size:14px; font-family:'Tajawal',sans-serif; padding:2px 0 4px; }
-  .name-edit:focus{ outline:none; border-color:var(--brass); }
-  .edit-row{ margin-top:8px; }
+  /* ── الشرائح والمحددات فوق الورق: لكل تفاعلي سطحُه ── */
+  .pl-actbtn,.addr-chip,.pl-catpick,.city-tab,.area-chip{
+    background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
+  .addr-chip.on,.pl-catpick.on,.city-tab.active,.area-chip.active{
+    background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+  .pl-actbtn.brass{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
 
-  .places-edit-list{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
-  .place-row{
-    display:flex; gap:6px; align-items:center; flex-wrap:wrap;
-    background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px;
-  }
-  .place-note-row{
-    display:flex; align-items:flex-start; gap:8px; width:100%;
-    margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);
-  }
-  .place-note-input{
-    flex:1; border:none; background:transparent; font-size:11.5px;
-    font-family:'Tajawal',sans-serif; padding:4px 2px; color:var(--ink);
-    resize:vertical; min-height:34px; line-height:1.5;
-  }
-  .place-note-input:focus{ outline:none; }
-  .place-note-input::placeholder{ color:#b8ada0; }
-  .switch-btn.small{ width:30px; height:18px; flex:none; margin-top:2px; }
-  .switch-btn.small .knob{ width:12px; height:12px; top:3px; right:3px; }
-  .switch-btn.small.on .knob{ transform:translateX(-12px); }
-  .place-note{
-    font-size:11.5px; color:var(--ink-soft); font-style:italic;
-    padding:2px 0 4px; line-height:1.5;
-  }
-  .note-link{ color:var(--brass); font-style:normal; font-weight:700; text-decoration:underline; }
-  .note-toggle{
-    background:none; border:none; padding:0; margin:0 2px; cursor:pointer;
-    font-size:11px; font-style:normal; font-weight:700; color:var(--brass);
-    font-family:'Tajawal',sans-serif; text-decoration:underline;
-  }
-  .place-area-input{
-    width:25%; min-width:80px; border:none; background:transparent; font-size:11.5px;
-    font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid var(--line); color:var(--brass);
-  }
-  .place-area-input:focus{ outline:none; }
-  .place-name-input{
-    width:28%; min-width:90px; border:none; background:transparent; font-size:12px;
-    font-family:'Tajawal',sans-serif; padding:4px 6px; border-left:1px solid var(--line);
-  }
-  .place-name-input:focus{ outline:none; }
-  .place-url-input{
-    flex:1; min-width:100px; border:none; background:transparent; font-size:12px;
-    font-family:'Tajawal',sans-serif; direction:ltr; text-align:left; padding:4px 6px;
-  }
-  .place-url-input:focus{ outline:none; }
-  .add-place-btn{
-    margin-top:8px; width:100%; background:transparent; border:1.5px dashed var(--line);
-    color:var(--brass); border-radius:8px; padding:8px; font-family:'Cairo',sans-serif;
-    font-weight:700; font-size:12px; cursor:pointer;
-  }
-  .multi-edit .toggle-row{ flex-wrap:wrap; }
+  .pl-cathead .addmini,.addr-cathead button{background:none; border-color:var(--line-strong); color:var(--saffron);}
+  .soon-tag{color:var(--night-4); border-color:var(--line-strong);}
 
-  .reorder-col{ display:flex; flex-direction:column; gap:2px; flex:none; }
-  .reorder-btn{
-    width:22px; height:20px; border:1px solid var(--line); background:#fff; border-radius:5px;
-    font-size:10px; color:var(--ink-soft); cursor:pointer; line-height:1;
-  }
-  .reorder-btn:disabled{ opacity:.25; cursor:default; }
+  /* ── البطاقات: العاجي الأنصع حكرٌ عليها ── */
+  .pl-row,.addr-row,.ticket{
+    background:var(--ivory-bright); border-color:transparent; color:var(--ink);
+    box-shadow:0 2px 10px rgba(0,0,0,.28);}
+  .ticket:hover{border-color:transparent;}
+  .pl-name,.prow-name,.stats-name,.hcard .hn,.acc-name{color:var(--ink);}
+  .pl-sub,.prow-sub,.place-note,.ticket .missing,.area-divider,.hcard .hd,.toggle-row,.action-label,.sub,.tab-label,.status-stat,.footer-note{color:var(--ink-strong);}
+  .pl-acts button,.pl-acts a,.addr-row .acts button,.addr-row .acts a{background:none; color:var(--ink);}
+  .pl-acts a.act-chip,.addr-row .acts a.act-chip{background:none; border-color:var(--ink);}
+  .place-link,.note-link,.note-toggle{color:var(--ink); border-bottom-color:var(--line-ivory);}
+  .note-toggle{background:none;}
+  .icon-badge,.section-icon,.stats-rank{background:var(--saffron); color:var(--ink); box-shadow:none;}
+  .ticket.disabled .icon-badge{background:var(--saffron);}
+.section-head .count,.eyebrow{color:var(--saffron);}
+  .area-divider,.stats-row,.footer-note,.place-note-row{border-color:var(--line-ivory);}
 
-  .icon-edit{
-    width:38px; height:38px; border-radius:50%; flex:none; text-align:center;
-    background:var(--ink); color:#fff; border:none; font-size:17px;
-  }
+  /* ── الكتل فوق الورق (السطح ٢) ── */
+  .pl-ownerpanel{background:var(--surf); border-color:var(--saffron); color:var(--night-2);}
+  .action-bar,.status-toggle{background:var(--surf); border-color:var(--line-strong); color:var(--night-2); box-shadow:none;}
+  .status-toggle.published{background:var(--surf); border-color:var(--saffron); color:var(--saffron);}
+  .status-dot{background:var(--night-4);}
+  .status-toggle.published .status-dot{background:var(--saffron);}
+  .status-divider{background:var(--line-strong);}
+  #editModeBanner{background:var(--surf); border-color:var(--saffron); color:var(--night-2);}
+  #debugBanner{background:var(--surf); border-color:var(--line-strong); color:var(--danger-night);}
 
-  .area-tag{
-    display:inline-block; font-size:10px; color:var(--ink-soft); font-weight:700;
-    background:rgba(74,90,104,0.1); border-radius:5px; padding:1px 6px; margin-inline-start:4px;
-  }
-  .area-divider{
-    font-family:'Cairo',sans-serif; font-size:10.5px; font-weight:700; color:var(--ink-soft);
-    text-transform:uppercase; letter-spacing:0.5px;
-    margin-top:8px; padding-top:6px; border-top:1px dashed var(--line);
-  }
-  .area-divider::before{ content:"📍 "; }
-  .place-list .area-divider:first-child{ margin-top:0; border-top:none; padding-top:0; }
+  /* ── النوافذ والدرج (عاجي مخفوت) ── */
+  .modal-backdrop{background:var(--scrim);}
+  .modal{background:var(--ivory); color:var(--ink); box-shadow:0 14px 34px rgba(0,0,0,.55);}
+  .modal-topbar{background:var(--ivory); border-bottom-color:var(--line-ivory);}
+  .modal-input,select.modal-input,.place-row{
+    background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
+  .modal-input::placeholder,.place-note-input::placeholder{color:var(--ink-faint);}
+  .place-note-input,.place-name-input,.place-url-input,.place-area-input,.name-edit{
+    background:transparent; color:var(--ink); border-color:var(--line-ivory);}
+  .acc-head,.receipt{background:var(--ivory-bright); color:var(--ink);}
+  .acc-mail,.dr-head{color:var(--ink-strong);}
+  .acc-item,.dr-item{background:none; border-color:var(--line-ivory); color:var(--ink-soft);}
+  .acc-item .soon,.dr-item .soon{color:var(--ink-faint);}
+  .acc-item.on,.dr-item.on{background:var(--ivory-bright); border-inline-start-color:var(--saffron); color:var(--ink);}
+  .hcard{background:var(--ivory-bright); border-color:var(--line-ivory);}
+  .hcard.on{background:var(--ivory-bright); border-color:var(--saffron);}
+  .receipt li{border-bottom-color:var(--line-ivory);}
+  .stepdot{background:var(--line-ivory);}
+  .stepdot.on{background:var(--saffron);}
+  .pw-eye{background:none; color:var(--ink-strong);}
+  .reorder-btn{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink-strong);}
+  .icon-edit{background:var(--saffron); color:var(--ink);}
+  .toast{background:var(--ivory); color:var(--ink);}
 
-  .multi-ticket{ flex-direction:column; align-items:stretch; gap:8px; }
-  .multi-head{ display:flex; align-items:center; gap:11px; }
-  .place-list{ display:flex; flex-direction:column; gap:4px; padding-inline-start:37px; }
-  .place-row-view{ display:flex; align-items:center; gap:6px; }
-  .place-row-view .place-link{ flex:1; }
-  .fav-btn{
-    background:none; border:none; cursor:pointer; font-size:14px; padding:2px 4px;
-    color:#cfc4a8; flex:none;
-  }
-  .fav-btn.on{ color:#b5545a; }
+  /* ── الأفعال: زعفران على الليلي · حبر على العاجي ── */
+  .btn-brass{background:var(--saffron); color:var(--ink);}
+  .modal .btn-brass{background:var(--ink); color:var(--ivory-bright);}
+  .btn-ghost{background:transparent; color:var(--night-2); border-color:var(--line-strong);}
+  .modal .btn-ghost{color:var(--ink); border-color:var(--line-ivory);}
+  .action-btn{background:none;}
+  .action-btn:active{background:rgba(226,154,46,.12);}
+  .quick-nav-btn{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
+  .quick-nav-btn:active{background:rgba(226,154,46,.18);}
+  .action-icon.ink{background:var(--ink); color:var(--ivory-bright);}
+  .action-icon.brass{background:var(--saffron); color:var(--ink);}
+  .add-place-btn,.add-ticket{background:transparent; border-color:var(--line-strong); color:var(--saffron);}
+  .modal .add-place-btn{border-color:var(--line-ivory); color:var(--ink);}
+  .show-more-btn{background:transparent; color:var(--saffron);}
+  .remove-btn{background:none;}
+  .name-edit:focus{border-color:var(--saffron);}
+  .switch-btn{background:var(--line-strong);}
+  .modal .switch-btn{background:var(--line-ivory);}
+  .switch-btn .knob{background:var(--ivory-bright);}
+  .switch-btn.on{background:var(--saffron);}
 
-  .stats-row{
-    display:flex; align-items:center; gap:10px;
-    padding:9px 4px; border-bottom:1px solid var(--line);
-  }
-  .stats-rank{
-    width:22px; height:22px; border-radius:50%; background:var(--ink); color:#fff;
-    font-family:'Cairo',sans-serif; font-weight:700; font-size:11px;
-    display:flex; align-items:center; justify-content:center; flex:none;
-  }
-  .stats-name{ flex:1; font-size:13px; font-weight:600; color:var(--ink); text-decoration:none; }
-  .stats-count{ font-size:12px; font-weight:700; color:#b5545a; flex:none; }
-  .place-link{
-    font-size:12.5px; color:var(--brass); font-weight:600; text-decoration:none;
-    border-bottom:1px dashed var(--line); padding:3px 0;
-  }
-  .place-link:last-child{ border-bottom:none; }
-  .edit-row input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px;
-                    font-size:12px; direction:ltr; text-align:left; background:#fff; }
+  /* ── الدلالي (القرار ٢-ب): نص وزر فقط · لا سطح ولا حد ملوّنان ── */
+  .warnline{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--danger);}
+  .btn-danger{background:var(--danger); color:var(--ivory-bright);}
+  .acc-item.danger{border-color:var(--line-ivory); color:var(--danger);}
+  .fav-btn{background:none; color:var(--ink-faint);}
+  .fav-btn.on,.stats-count{color:var(--danger);}
 
-  .status-card{
-    max-width:760px; margin:0 auto 24px; padding:0 20px;
-    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-    justify-content:center;
-  }
-  .status-toggle{
-    display:flex; align-items:center; gap:8px;
-    background:var(--card); border:1px solid var(--line); border-radius:999px;
-    padding:9px 16px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px;
-    color:var(--ink-soft); cursor:pointer;
-  }
-  .status-toggle.published{ border-color:var(--brass); color:var(--brass); background:rgba(165,117,31,0.08); }
-  .status-dot{ width:8px; height:8px; border-radius:50%; background:var(--ink-soft); flex:none; }
-  .status-toggle.published .status-dot{ background:var(--brass); }
-  .status-divider{ width:1px; height:16px; background:var(--line); }
-  .status-stat{
-    font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; color:var(--ink-soft);
-  }
-  .add-ticket{
-    background:transparent; border:1.5px dashed var(--brass); color:var(--brass);
-    font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
+  /* ═ النموذج القياسي — الهوية ═ */
+  .csel{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);}
+  .cta{background:var(--saffron); color:var(--ink);}
+  .modal .cta{background:var(--ink); color:var(--ivory-bright);}
+  .actn{border-color:var(--line-strong); color:var(--night-2);}
+  .actn b{color:var(--saffron);}
+  .actn .dim,.dim{color:var(--night-4);}
+  .block{background:var(--surf); color:var(--night-2);}
+  .shname button{background:none; color:var(--night-2);}
+  .panel{background:var(--ivory); color:var(--ink);}
+  .panel .pinned{background:var(--ivory-bright); color:var(--ink);}
+  .panel .prow.on{background:var(--ivory-bright);}
+  .panel .prow.dim{color:var(--ink-faint);}
+  .panel .prow .dim{color:var(--ink-faint);}
+  .panel .pfoot{background:none; border-top-color:var(--line-ivory); color:var(--ink-strong);}
+  .trip-on{color:var(--saffron);}
+  .pl-ownerpanel b{color:var(--saffron);}
 
-  .footer-note{ max-width:760px; margin:40px auto 0; padding:16px 20px; text-align:center;
-                color:var(--ink-soft); font-size:11.5px; line-height:1.8; border-top:1px solid var(--line); }
-
-  .modal-backdrop{ position:fixed; inset:0; background:rgba(28,43,58,0.55); display:none;
-                    align-items:center; justify-content:center; padding:20px 20px 64px; z-index:2000; }
-  .modal-backdrop.show{ display:flex; }
-  .modal{ background:var(--card); border-radius:16px; padding:18px 20px 14px; max-width:340px; width:100%; text-align:center; max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-  .modal > :first-child{ margin-top:0; }
-  .modal > :last-child{ margin-bottom:0; }
-  .modal-x{ }
-  .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 12px; }
-  .modal-input{ width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px; }
-  /* ٢/أ (٢٦ أغسطس ٢٠٢٦) — شارة الهوية بالشريط، نافذة الحساب، تأكيد الهوية، عين الإظهار، الشريط اللاصق للنوافذ الطويلة */
-  .mini-av{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; color:#fff; font-family:'Cairo',sans-serif; font-weight:900; font-size:12px; letter-spacing:.5px; }
-  .acc-head{ display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--paper-dark); border-radius:12px; margin-bottom:12px; text-align:left; direction:ltr; }
-  .acc-head .mini-av{ width:44px; height:44px; font-size:16px; }
-  .acc-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; color:var(--ink); }
-  .acc-mail{ font-size:11.5px; color:var(--ink-soft); direction:ltr; }
-  .acc-item{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:11px 12px; margin-top:8px; border:1.5px solid var(--line); border-radius:12px; background:#fff; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; text-align:left; direction:ltr; }
-  .acc-item:disabled{ opacity:.55; cursor:default; }
-  .acc-item .soon{ font-size:10.5px; color:var(--brass); font-weight:700; }
-  .acc-item.danger{ border-color:#e3b3b6; color:#b5545a; }
-  .pw-wrap{ position:relative; }
-  .pw-wrap .modal-input{ padding-right:40px; }
-  .pw-eye{ position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; font-size:15px; cursor:pointer; color:var(--ink-soft); padding:4px; }
-  .modal-topbar{ position:sticky; top:-1px; z-index:3; background:var(--card); padding:2px 0 8px; margin-bottom:8px; border-bottom:1px dashed var(--line); display:flex; gap:8px; }
-  .modal-topbar .btn{ margin-top:0; padding:9px 12px; font-size:12.5px; }
-  /* ===== خ١ (٢٧ أغسطس ٢٠٢٦) — الإطار: الشريط العلوي · الشريط الخمسي · الوجهات · الدرج (النموذج المعلَّم: المشاهد ٦ و٧) ===== */
-  body{ padding-top:44px; padding-bottom:54px; }
-  .mp-topbar{ position:fixed; top:0; left:0; right:0; height:44px; z-index:700; background:var(--paper); border-bottom:1px solid var(--line);
-              display:flex; align-items:center; justify-content:space-between; padding:0 12px; direction:ltr; }
-  .mp-burger{ background:none; border:1.5px solid var(--line); border-radius:10px; width:32px; height:32px; font-size:16px; cursor:pointer; color:var(--ink); }
-  .mp-idchip{ display:inline-flex; align-items:center; gap:7px; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:3px 10px 3px 3px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; color:var(--ink); }
-  .mp-idchip .mini-av{ width:30px; height:30px; font-size:12px; }
-  .mp-idchip{ max-width:45vw; } .mp-idchip > span:last-child{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .mp-wordmark{ font-family:'Cairo',sans-serif; font-weight:900; font-size:18px; color:var(--ink); letter-spacing:.3px; }
-  .mp-chipmenu{ display:none; position:fixed; top:54px; right:12px; z-index:1100; background:var(--card); border:1.5px solid var(--line); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.15); min-width:170px; overflow:hidden; }
-  .mp-chipmenu.show{ display:block; }
-  .mp-chipmenu button{ display:block; width:100%; background:none; border:none; padding:11px 14px; text-align:left; direction:ltr; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; border-bottom:1px solid var(--line); }
-  .mp-chipmenu button:last-child{ border-bottom:none; }
-  /* البوابة الإلزامية (المشهد ١): خلفية معتمة كاملة — لا واجهة قديمة خلفها */
-  #authBackdrop.gate-mode{ background:var(--paper); z-index:1150; }
-  .mp-tabbar{ position:fixed; bottom:0; left:0; right:0; height:54px; z-index:700; background:var(--card); border-top:1px solid var(--line);
-              display:flex; direction:ltr; }
-  .mp-tab{ flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; color:var(--ink-soft); font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; }
-  .mp-tab .ti{ font-size:20px; line-height:1; }
-  .mp-tab.on{ color:var(--ink); } .mp-tab.on .ti{ transform:translateY(-1px); }
-  .mp-tab.on::after{ content:''; width:26px; height:3px; border-radius:3px; background:var(--brass); margin-top:1px; }
-  .mp-screen{ display:none; } .mp-screen.on{ display:block; }
-  .mp-hosted{ max-width:760px; margin:14px auto 0; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:16px; text-align:right; }
-  .mp-hosted h3{ text-align:center; margin-top:0; }
-  .mp-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif; }
-  .mp-empty .big{ font-size:34px; margin-bottom:8px; }
-  /* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
-  .pl-srcrow{ display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; direction:ltr; position:sticky; top:44px; background:var(--paper); z-index:10; box-shadow:0 6px 6px -6px rgba(28,43,58,.14); }
-  .pl-srcrow{ padding:6px 0 6px; }
-  #plBody{ padding-bottom:16px; }
-  .pl-src{ flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; padding:5px 10px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
-  .pl-src.on{ background:var(--brass); border-color:var(--brass); color:#fff; }
-  .pl-actrow{ display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0 0 7px; direction:ltr; align-items:center; }
-  .pl-actbtn{ font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; border:1.5px solid var(--line); border-radius:999px; padding:6px 10px; background:#fff; color:var(--ink); cursor:pointer; }
-  .pl-actbtn.brass{ background:var(--brass); border-color:var(--brass); color:#fff; }
-  .pl-actbtn.linkish{ border:none; text-decoration:underline; }
-  .pl-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; color:var(--ink); margin:10px 0 6px;  display:flex; justify-content:space-between; align-items:center; direction:ltr; text-align:left; }
-  .pl-cathead .addmini{ background:none; border:1.5px solid var(--line); border-radius:999px; min-width:26px; height:26px; cursor:pointer; font-weight:700; color:var(--brass); font-size:14px; }
-  .pl-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line-strong); border-radius:12px; padding:8px 11px; margin-bottom:6px; direction:ltr; text-align:left; }
-  .pl-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); text-decoration:none; display:block; }
-  .pl-sub{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
-  .pl-acts{ display:flex; gap:6px; align-items:center; }
-  .pl-acts button, .pl-acts a{ background:none; border:none; font-size:15px; cursor:pointer; padding:4px; color:var(--ink); text-decoration:none; }
-  .pl-acts a.act-chip{ border:1.5px solid var(--line-strong); border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; background:#fff; }
-  .pl-switchrow{ display:flex; align-items:center; gap:8px; background:var(--paper-dark); border-radius:10px; padding:8px 10px; margin:2px 0 6px; font-size:12px; direction:ltr; text-align:left; }
-  .pl-sharebox{ background:var(--paper-dark); border-radius:10px; padding:8px 10px; margin:0 0 12px; font-size:11.5px; direction:ltr; text-align:left; }
-  .pl-ownerpanel{ border:1.5px dashed var(--brass); border-radius:12px; padding:10px 12px; margin-top:12px; direction:ltr; text-align:left; }
-  .pl-catpick{ display:inline-block; border:1.5px solid var(--line); border-radius:999px; padding:5px 10px; margin:2px 3px 2px 0; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; background:#fff; color:var(--ink); cursor:pointer; }
-  .pl-catpick.on{ border-color:var(--brass); background:rgba(165,117,31,.12); }
-  select.modal-input{ -webkit-appearance:none; appearance:none; background:#fff; }
-  /* الدرج — نافذة الحساب المبنية تصير جزأه الأعلى (المشهد ٧) */
-  #accountBackdrop{ z-index:1200 !important; }
-  #accountBackdrop.show{ display:block; }
-  #accountBackdrop .modal{ position:fixed; top:0; right:0; bottom:0; max-width:340px; width:86%; border-radius:0 0 0 18px; overflow-y:auto; max-height:none; text-align:left; direction:ltr; padding-top:18px; }
-  .dr-head{ font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; color:var(--ink-soft); letter-spacing:.5px; text-transform:uppercase; margin:14px 0 6px; }
-  .dr-item{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:10px 12px; margin-top:6px; border:1.5px solid var(--line); border-radius:12px; background:#fff; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; text-align:left; direction:ltr; text-decoration:none; }
-  .dr-item:disabled{ opacity:.55; cursor:default; }
-  .dr-item .soon{ font-size:10.5px; color:var(--brass); }
-  .dr-sub{ font-size:11.5px; color:var(--ink-soft); padding:4px 12px 0; }
-  /* خ١-ب: البوابة (المشهد ١) · الوجهة الافتراضية (المشهد ٥) · كلمة السر (٩) · الحذف (١٠) */
-  .gate-eyebrow{ font-family:'Cairo',sans-serif; font-weight:900; letter-spacing:.5px; font-size:26px; color:var(--ink); line-height:1.1; margin-bottom:6px; }
-  .homecards{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .hcard{ background:#fff; border:1.5px solid var(--line); border-radius:14px; padding:12px 8px; cursor:pointer; text-align:center; font-family:'Cairo',sans-serif; }
-  .hcard.on{ border-color:var(--brass); background:rgba(165,117,31,.08); }
-  .hcard .hi{ font-size:22px; } .hcard .hn{ font-weight:700; font-size:13px; color:var(--ink); margin-top:2px; } .hcard .hd{ font-size:10.5px; color:var(--ink-soft); }
-  .steps{ display:flex; justify-content:center; gap:8px; margin-bottom:10px; }
-  .stepdot{ width:8px; height:8px; border-radius:50%; background:var(--line); } .stepdot.on{ background:#b5545a; }
-  .receipt{ background:var(--paper-dark); border-radius:12px; padding:8px 12px; margin:8px 0; direction:ltr; text-align:left; }
-  .receipt ul{ list-style:none; margin:0; padding:0; } .receipt li{ display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0; border-bottom:1px dashed var(--line); } .receipt li:last-child{ border:none; }
-  .warnline{ display:flex; gap:6px; font-size:11.5px; color:#8b1e1e; background:#fdecea; border:1px solid #e3b3b6; border-radius:10px; padding:8px 10px; margin:8px 0; text-align:left; direction:ltr; }
-  .btn-danger{ background:#b5545a; color:#fff; }
-  .soon-tag{ display:inline-block; font-size:10.5px; color:var(--brass); border:1px solid var(--brass); border-radius:999px; padding:1px 8px; margin-left:6px; vertical-align:middle; }
-  /* خ٢ (٢٧ أغسطس ٢٠٢٦) — وجهة العناوين الشخصية (المشهدان ٦/و و٦/و٢) */
-  .addr-wrap{ max-width:760px; margin:0 auto; padding:0 12px; }
-  .addr-sticky{ position:sticky; top:44px; z-index:10; background:var(--paper); padding:10px 0 8px; }
-  .addr-actrow{ display:flex; gap:8px; margin-top:8px; }
-  .addr-actrow .btn{ flex:1; margin-top:0; padding:10px; font-size:13px; }
-  .addr-cathead{ font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin:14px 0 6px; text-align:left; direction:ltr; display:flex; justify-content:space-between; align-items:center; }
-  .addr-cathead button{ background:none; border:1.5px solid var(--line); border-radius:999px; width:26px; height:26px; cursor:pointer; font-weight:700; color:var(--brass); }
-  .addr-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line-strong); border-radius:12px; padding:10px 12px; margin-bottom:6px; direction:ltr; text-align:left; }
-  /* قاعدة "صف المكان" الموحَّدة (٢٧ أغسطس): الاسم أزرق غامق عريض ١٤ · سطر ثانٍ أهدأ · أيقونات يمينًا بترتيب ثابت */
-  .prow-name{ font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; color:var(--ink); text-decoration:none; display:block; }
-  .prow-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
-  .addr-row .acts button, .addr-row .acts a{ background:none; border:none; font-size:15px; cursor:pointer; padding:4px; color:var(--ink); text-decoration:none; }
-  .addr-row .acts a.act-chip{ border:1.5px solid var(--line-strong); border-radius:999px; padding:2px 8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px; background:#fff; }
-  .addr-title{ font-family:'Cairo',sans-serif; font-weight:700; font-size:15px; color:var(--ink); }
-  .addr-caption{ font-size:11px; color:var(--ink-soft); font-weight:600; }
-  .addr-row .acts{ display:flex; gap:6px; }
-  .addr-chip{ display:inline-block; border:1.5px solid var(--line); border-radius:999px; padding:6px 12px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; background:#fff; cursor:pointer; color:var(--ink); }
-  .addr-chip.on{ border-color:var(--brass); background:rgba(165,117,31,.1); }
-  .addr-chips{ display:flex; flex-wrap:wrap; gap:6px; direction:ltr; }
-  .addr-empty{ text-align:center; color:var(--ink-soft); font-size:12.5px; padding:30px 10px; }
-  #qrcode{ display:flex; justify-content:center; margin:12px 0; }
-  .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper);
-          padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:9999; }
-  .toast.show{ opacity:1; }
-  #editModeBanner{ max-width:760px; margin:14px auto 0; padding:11px 18px; background:rgba(165,117,31,0.12);
-                    border:1px dashed var(--brass); border-radius:10px; font-size:12px; display:none; text-align:center; }
-  #editModeBanner.show{ display:block; }
-  #loadingState{ text-align:center; padding:60px 20px; color:var(--ink-soft); font-family:'Cairo',sans-serif; }
+  .act{background:none; border-color:var(--ink); color:var(--ink);}
+  .chip.off{background:transparent; border-color:var(--line-night); color:var(--night-4);}
+  .actn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+  .avatar{background:var(--surf); border-color:var(--line-strong); color:var(--night-4);}
+  .curname{color:var(--night-4);}
+  .stickyhead{background:var(--paper); box-shadow:0 8px 10px -9px rgba(0,0,0,.75);}
 </style>
 </head>
 <body>
@@ -434,13 +454,13 @@
   <div class="mp-screen on" id="screenPlaces">
   <!-- قرار المالك ٢٧ أغسطس: الغلاف الكبير أُلغي — الهوية بالشريط العلوي -->
   <!-- خ٥/م٢: وجهة الأماكن الجديدة — مبدّل المصدر الرباعي (المشهد ٦/أ v1.25)؛ الواجهة القديمة مغلَّفة مخفية حتى الترحيل بالمرحلة ٥ ودوالها حية -->
-  <div class="addr-wrap">
-  <div class="pl-srcrow" id="plSrcRow">
+  <div class="wrap destbody">
+  <div class="stickyhead"><div class="pl-srcrow" id="plSrcRow">
     <button type="button" class="pl-src on" data-src="mine" onclick="selectPlacesSource('mine')">📝 My List</button>
     <button type="button" class="pl-src" data-src="curators" onclick="selectPlacesSource('curators')">⭐ Curators</button>
     <button type="button" class="pl-src" data-src="community" onclick="selectPlacesSource('community')">🌍 Community</button>
     <button type="button" class="pl-src" data-src="favorites" onclick="selectPlacesSource('favorites')">❤️ Favorites</button>
-  </div>
+  </div></div>
   <div id="plBody"></div>
   </div><!-- /غلاف الأماكن -->
   <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:#fbeceb; border:1px dashed #b5545a; border-radius:10px; font-size:12px; color:#7a2b30; direction:ltr; word-break:break-word; text-align:center;"></div>
@@ -539,18 +559,17 @@
   </div><!-- /screenPlaces -->
 
   <!-- خ١: الوجهة ٢ — الرحلات: جسم نافذة "رحلاتي" يُنقل إلى هنا عند أول فتح (الاستضافة بنقل العنصر) -->
-  <div class="mp-screen" id="screenTrips"><div class="mp-hosted"><h3>🧳 My Trips</h3><div id="tripsHost"></div></div></div>
+  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel">🧳 <b>My Trips</b></span></div><div class="chiprow"><span class="chip on">All</span><span class="chip off">🚶 One day trip</span><span class="chip off">🏙 Single city</span><span class="chip off">🌍 Multi-city</span><span class="chip off mini">Soon</span></div></div><div id="tripsHost"></div></div></div>
   <!-- خ١: الوجهة ٣ — المنتقون: مكان محجوز حتى خ٤ -->
-  <div class="mp-screen" id="screenCurators"><div class="mp-empty"><div class="big">⭐</div>Curators are coming soon.<br><span style="font-size:11px;">Follow trusted people and save their picks.</span></div></div>
+  <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel">⭐ <b>Curators</b></span><span class="actn">🔍 Find a curator <span class="dim">Soon</span></span></div></div><div class="curgrid"><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty">⭐<br>Curators arrive in step 4.<br><span class="mini">Follow people you trust, then save their picks with a permanent credit.</span></div></div></div>
   <!-- خ١: الوجهة ٤ — المجتمع: جسم نافذة المجتمع يُنقل إلى هنا -->
-  <div class="mp-screen" id="screenCommunity"><div class="mp-hosted"><h3>🌍 Community Lists</h3><p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 12px;">Browse public lists shared by other users.</p><div id="communityHost"></div></div></div>
+  <div class="mp-screen" id="screenCommunity"><div class="wrap destbody"><div id="communityHost"></div></div></div>
   <!-- خ١: الوجهة ٥ — العناوين الشخصية: تُبنى كاملة بخ٢ -->
-  <div class="mp-screen" id="screenAddresses"><div class="addr-wrap">
-    <div class="addr-sticky">
-      <div class="addr-title">🔒 Personal Addresses <span class="addr-caption">· Private to you — send only when you choose</span></div>
-      <select id="addrCountryTop" class="modal-input" style="margin:8px 0 6px; direction:ltr; text-align:left;" onchange="pickAddrCountry(this.value)"></select>
-      <div class="addr-chips" id="addrCityChips" style="margin:0 0 6px;"></div>
+  <div class="mp-screen" id="screenAddresses"><div class="wrap destbody">
+    <div class="stickyhead">
+      <div class="headrow"><button type="button" class="csel" id="addrSel" onclick="addrTogglePanel()">— ⌄</button><span class="actn">🔒 Always private</span></div>
     </div>
+    <div id="addrPanel"></div>
     <div id="addrBody"><div class="addr-empty">Loading…</div></div>
   </div></div>
 
@@ -577,7 +596,7 @@
   </div>
 
   <div class="modal-backdrop" id="myTripsBackdrop">
-    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:460px; text-align:right;">
       <h3 style="text-align:center;">🧳 My Trips</h3>
       <div id="myTripsBody"></div>
       <button class="btn btn-ghost" style="width:100%; margin-top:12px;" onclick="closeMyTripsModal()">Close</button>
@@ -604,8 +623,8 @@
         <div class="gate-eyebrow">MyPickz 🗺️</div>
         <h3 style="margin-top:2px; font-size:16px; color:var(--ink-soft);">Welcome 👋</h3>
         <p style="color:var(--ink-soft); font-size:13px; margin:0 0 14px;">Your places, your trips — all in one spot.</p>
-        <button class="btn btn-brass" style="width:100%;" onclick="openAuthModal('signin')">Sign In</button>
-        <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="openAuthModal('signup')">Create Account</button>
+        <button class="btn btn-brass wide" onclick="openAuthModal('signin')">Sign In</button>
+        <button class="btn btn-ghost wide" onclick="openAuthModal('signup')">Create Account</button>
         <div id="gatePolicyLink" style="display:none; margin-top:12px;"><button type="button" class="btn btn-ghost" style="border:none; font-size:11.5px; padding:4px 8px;" onclick="openPolicyModal('policy')">Privacy Policy</button></div>
       </div>
       <div id="authFormView" style="display:none;">
@@ -648,7 +667,7 @@
 
   <!-- خ٢: إضافة/تعديل عنوان شخصي (المشهد ٦/و٢) — يكتب المستند الخاص فقط -->
   <div class="modal-backdrop" id="addrBackdrop">
-    <div class="modal" style="text-align:left; direction:ltr; max-height:72vh; overflow-y:auto;">
+    <div class="modal" style="text-align:left; direction:ltr;">
       <h3 id="addrModalTitle">🔒 Add address</h3>
       <label style="font-size:11.5px; color:var(--ink-soft);">Country</label>
       <select id="addrCountry" class="modal-input" onchange="addrCountryChanged()"></select>
@@ -755,7 +774,7 @@
 
   <!-- خ١: شاشة السياسة والضوابط — مبنية بنصها، بابها مغلق (المالك يراها من الدرج) — المشهد ١١ -->
   <div class="modal-backdrop" id="policyBackdrop">
-    <div class="modal" style="max-width:460px; max-height:86vh; overflow-y:auto; text-align:left; direction:ltr;">
+    <div class="modal" style="max-width:460px; text-align:left; direction:ltr;">
       <div class="modal-topbar"><button class="btn btn-ghost" style="flex:1" onclick="closePolicyModal()">Close</button></div>
       <div id="policyBody"></div>
     </div>
@@ -779,7 +798,7 @@
   </div>
 
   <div class="modal-backdrop" id="reportBackdrop">
-    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:460px; text-align:right;">
       <h3 style="text-align:center;">📄 Users Report</h3>
       <textarea id="reportTextArea" readonly style="width:100%; height:260px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:monospace; font-size:11.5px; direction:ltr; text-align:left; background:#fff; color:var(--ink);"></textarea>
       <button class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="copyUsersReport()"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
@@ -788,7 +807,7 @@
   </div>
 
   <div class="modal-backdrop" id="usersBackdrop">
-    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:460px; text-align:right;">
       <div class="modal-topbar"><button class="btn btn-ghost" style="flex:1" onclick="closeUsersModal()">Close</button></div>
       <h3 style="text-align:center;">👥 Manage Users</h3>
       <div id="usersStatsLine" style="font-size:12px; color:var(--ink-soft); text-align:center; margin:0 0 12px; line-height:1.8;"></div>
@@ -800,7 +819,7 @@
 
   <!-- أ-٣ الطبقة ٢ — System Status (للمالك فقط): بطاقة النبضة الآن، وتُضاف لها بطاقتا الطبقة ٣ (الأخطاء الميدانية) والطبقة ٥ (الاستهلاك) لاحقًا -->
   <div class="modal-backdrop" id="systemStatusBackdrop">
-    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto;">
+    <div class="modal" style="max-width:460px;">
       <h3 style="text-align:center;">🩺 System Status</h3>
       <div id="systemStatusBody" style="font-size:12.5px; line-height:1.8;"></div>
       <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="closeSystemStatusModal()">Close</button>
@@ -808,7 +827,7 @@
   </div>
 
   <div class="modal-backdrop" id="communityBackdrop">
-    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:460px; text-align:right;">
       <h3 style="text-align:center;">🌍 Community Lists</h3>
       <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 12px;">Browse public lists shared by other users. Hospitals & Clinics, Personal, and Others are never shown here.</p>
       <div id="communityBody"></div>
@@ -817,7 +836,7 @@
   </div>
 
   <div class="modal-backdrop" id="helpBackdrop">
-    <div class="modal" style="max-width:480px; max-height:85vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:480px; text-align:right;">
       <div style="display:flex; justify-content:center; gap:8px; margin-bottom:14px;">
         <button type="button" class="btn" id="helpLangArBtn" style="margin:0; padding:8px 20px; font-size:12px;" onclick="setHelpLang('ar')">عربي</button>
         <button type="button" class="btn" id="helpLangEnBtn" style="margin:0; padding:8px 20px; font-size:12px;" onclick="setHelpLang('en')">EN</button>
@@ -829,7 +848,7 @@
   </div>
 
   <div class="modal-backdrop" id="myListBackdrop">
-    <div class="modal" style="max-width:460px; max-height:72vh; overflow-y:auto; text-align:right;">
+    <div class="modal" style="max-width:460px; text-align:right;">
       <div class="modal-topbar"><button class="btn btn-brass" style="flex:1" onclick="closeMyListModal()">Save &amp; Close</button></div>
       <h3 style="text-align:center;">📝 My List — <span id="myListCityName"></span></h3>
       <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 10px;">Add your own places under any category below. Only Google Maps links are accepted.</p>
@@ -850,7 +869,7 @@
   <div class="modal-backdrop" id="favoritesBackdrop">
     <div class="modal" style="max-width:380px;">
       <h3>❤️ My Favorites</h3>
-      <div id="favoritesList" style="max-height:300px; overflow-y:auto; text-align:right; margin:10px 0;"></div>
+      <div id="favoritesList" class="listbox"></div>
       <button class="btn btn-ghost" style="width:100%;" onclick="closeFavoritesModal()">Close</button>
     </div>
   </div>
@@ -858,7 +877,7 @@
   <div class="modal-backdrop" id="statsBackdrop">
     <div class="modal" style="max-width:400px;">
       <h3>📊 Most Loved (All Cities)</h3>
-      <div id="statsList" style="max-height:360px; overflow-y:auto; text-align:right; margin:10px 0;"></div>
+      <div id="statsList" class="listbox"></div>
       <button class="btn btn-ghost" style="width:100%;" onclick="closeStatsModal()">Close</button>
     </div>
   </div>
@@ -2381,40 +2400,42 @@ function closeMyTripsModal(){
   currentTripId = null;
   if (HOSTED.Trips && currentTab === 'Trips') renderMyTripsModal(); // خ١: بالوجهة "الإغلاق" = العودة لقائمة الرحلات
 }
+function tripPlaceCount(t){
+  let n = 0;
+  (t.days || []).forEach(d => TRIP_CATEGORIES.forEach(c => { n += ((d.places && d.places[c.id]) || []).length; }));
+  return n;
+}
+function tripTitle(t){ return t.customLabel ? (t.cityName + ' — ' + t.customLabel) : t.cityName; }
 function renderMyTripsModal(){
   const wrap = document.getElementById('myTripsBody');
   if (currentTripId){ renderTripDetail(wrap); return; }
-  let html = '';
-  html += `<div style="font-weight:700; font-size:12.5px; margin-bottom:8px;">🔗 Shared with you</div>`;
+  let html = '<div class="pl-cathead"><span>🔗 Shared with you (' + sharedTrips.length + ')</span></div>';
   if (sharedTrips.length){
-    html += sharedTrips.map(t => `
-      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px;" onclick="openSharedTripDetail('${t.id}')">
-        ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
-      </button>`).join('');
+    html += sharedTrips.map(t =>
+      '<div class="row rowblock"><div class="pn">' + escapeHtml(tripTitle(t)) + '</div>'
+      + '<div class="ps">🏙 Type <span class="dim">Soon</span> · ' + tripPlaceCount(t) + ' places · ' + t.days.length + ' day' + (t.days.length > 1 ? 's' : '') + '</div>'
+      + '<div class="rowacts"><span class="act" onclick="openSharedTripDetail(\'' + t.id + '\')">View trip →</span></div></div>').join('');
   } else {
-    html += `<p style="color:var(--ink-soft); font-size:11.5px; text-align:center; padding:6px 0;">No trips have been shared with you yet</p>`;
+    html += '<div class="mp-empty mini">No trips have been shared with you yet</div>';
   }
-  html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
-  html += `<div style="font-weight:700; font-size:12.5px; margin-bottom:8px;">🧳 Your Trips</div>`;
+  html += '<div class="pl-cathead"><span>🧳 Your Trips (' + userTrips.length + ')</span></div>';
   if (!userTrips.length){
-    html += `<p style="text-align:center; color:var(--ink-soft); font-size:12.5px; padding:10px 0;">No trips yet.</p>`;
+    html += '<div class="mp-empty">🧳<br>No trips yet.<br><span class="mini">Create one, then add places to it from any source.</span></div>';
   } else {
-    html += userTrips.map(t => `
-      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;" onclick="openTripDetail('${t.id}')">
-        <span style="font-weight:700;">${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}${t.public ? ' 🌐' : ''}${(t.sharedWith&&t.sharedWith.length) ? ' 🔗' : ''}</span>
-        <span style="color:var(--ink-soft); font-size:10.5px;">${t.days.length} day${t.days.length>1?'s':''}</span>
-      </button>`).join('');
+    html += userTrips.map(t =>
+      '<div class="row rowblock"><div class="pn">' + escapeHtml(tripTitle(t)) + '</div>'
+      + '<div class="ps">🏙 Type <span class="dim">Soon</span> · ' + tripPlaceCount(t) + ' places · ' + t.days.length + ' day' + (t.days.length > 1 ? 's' : '') + (t.public ? ' · 🌐 Public' : '') + ((t.sharedWith && t.sharedWith.length) ? ' · 🔗 Shared' : '') + '</div>'
+      + '<div class="rowacts"><span class="act" onclick="openTripDetail(\'' + t.id + '\')">View trip →</span>'
+      + '<span class="act" onclick="startAddingToTrip(\'' + t.id + '\')">＋ Add places</span></div></div>').join('');
   }
   if (currentUserSuspended){
-    html += `<div style="border:1.5px dashed #b5545a; background:#fbeceb; border-radius:12px; padding:12px 14px; margin-top:10px; text-align:center;">
-      <div style="font-weight:700; color:#7a2b30; margin-bottom:4px;">🚫 Account Suspended</div>
-      <div style="font-size:12px; color:#7a2b30;">Your account has been suspended and can no longer create trips or add places.</div>
-    </div>`;
+    html += '<div class="warnline">🚫 <span><b>Account Suspended</b><br>Your account has been suspended and can no longer create trips or add places.</span></div>';
   } else {
-    html += `<button type="button" class="btn btn-brass" style="width:100%; margin-top:10px;" onclick="openCreateTripFlow()">➕ Create trip</button>`;
+    html += '<button type="button" class="cta" onclick="openCreateTripFlow()">➕ Create trip</button>';
   }
   wrap.innerHTML = html;
 }
+
 async function openCreateTripFlow(){
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } // نفس حاجز My List — بدل بناء رحلة وهمية بالذاكرة ثم رفضها عند الحفظ (ملاحظة ميدانية الدفعة ٣)
   const cities = allCities();
@@ -2893,44 +2914,60 @@ function pickAddrCity(cityId){
   if (userListData && userListData.addrCity !== cityId){ userListData.addrCity = cityId; mpData.userLists.merge(currentUser.uid, { addrCity: cityId }).catch(()=>{}); }
   renderAddresses();
 }
+let addrPanelOpen = false;                // حالة عرض بحتة
+function addrTogglePanel(){ addrPanelOpen = !addrPanelOpen; renderAddresses(); }
 function renderAddresses(){
-  // الدولة أولًا (قائمة منسدلة كالأماكن) ثم شرائح مدن تلك الدولة التي فيها عناوين + ➕ City
   const countries = [...new Set(addrCities.map(countryOfCity).filter(Boolean))];
   if (!addrCurrentCountry || !countries.includes(addrCurrentCountry)) addrCurrentCountry = countryOfCity(addrCurrentCity) || countries[0] || null;
-  const csel = document.getElementById('addrCountryTop');
-  csel.innerHTML = countries.length ? countries.map(c => `<option value="${c.replace(/"/g,'&quot;')}" ${c === addrCurrentCountry ? 'selected' : ''}>${countryFlag(c) ? countryFlag(c) + ' ' : ''}${c}</option>`).join('') : '<option value="">— No country yet —</option>';
-  csel.style.display = countries.length ? '' : 'none';
   const inCountry = addrCities.filter(c => countryOfCity(c) === addrCurrentCountry);
   if (!inCountry.includes(addrCurrentCity)) addrCurrentCity = inCountry[0] || null;
-  const chips = document.getElementById('addrCityChips');
-  chips.innerHTML = inCountry.map(c => `<button type="button" class="addr-chip ${addrCurrentCity === c ? 'on' : ''}" onclick="pickAddrCity('${c}')">${cityNameOf(c)} <span style="font-size:12px;" onclick="event.stopPropagation(); removeAddrCity('${c}')" title="Delete city">🗑️</span></button>`).join('')
-    + `<button type="button" class="addr-chip" style="border-style:dashed; color:var(--brass);" onclick="addAddrCity()">➕ City</button>`;
-  // التصنيفات السبعة مسطَّحة (لا أقسام): كلٌّ بعنوانه وعدّاده و＋ — تُعرض دائمًا للمدينة الحالية
-  const cats = privateCategoryList();
   const cityId = addrCurrentCity;
+
+  /* المحدد الواحد — نفس نموذج وجهة الأماكن */
+  const sel = document.getElementById('addrSel');
+  sel.innerHTML = (addrCurrentCountry ? plCountryCode(addrCurrentCountry) + ' · <b>' + escapeHtml(cityId ? cityNameOf(cityId) : '—') + '</b>' : 'Add your city')
+    + ' ' + (addrPanelOpen ? '⌃' : '⌄');
+
+  /* لوحة المدن العاجية — العدّاد والسلة و＋ Add city مثبَّت أعلى */
+  let panel = '';
+  if (addrPanelOpen){
+    const rows = inCountry.map(c =>
+      '<div class="prow' + (c === cityId ? ' on' : '') + '"><span onclick="pickAddrCity(\'' + c + '\')">'
+      + (c === cityId ? '<b>' + escapeHtml(cityNameOf(c)) + '</b> ' : escapeHtml(cityNameOf(c)) + ' ') + addrCountOf(c) + '</span>'
+      + '<span class="dim" onclick="removeAddrCity(\'' + c + '\')" title="Delete city">🗑</span></div>').join('');
+    const foot = countries.length ? '<select class="pfoot" onchange="pickAddrCountry(this.value)">'
+      + countries.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === addrCurrentCountry ? ' selected' : '') + '>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + c + '</option>').join('') + '</select>' : '';
+    panel = '<div class="panel"><div class="pinned" onclick="addAddrCity()">＋ Add city</div>' + rows + foot + '</div>';
+  }
+  document.getElementById('addrPanel').innerHTML = panel;
+
+  /* التصنيفات السبعة مسطَّحة — كلٌّ بعدّاده و＋، تُعرض دائمًا ولو فارغة */
+  const cats = privateCategoryList();
   const catsMap = (cityId && addrData[cityId]) || {};
   let html = '';
   if (!cityId){
-    html = '<div class="addr-empty">Start with your city.<br><span style="font-size:11px;">Tap ➕ City, then add your home, work, clinic… only you can see them.</span></div>';
+    html = '<div class="mp-empty">🔒<br>Start with your city.<br><span class="mini">Tap ＋ Add city, then add your home, work, clinic… only you can see them.</span></div>';
   } else {
     cats.forEach(cat => {
       const places = (catsMap[cat.id] && catsMap[cat.id].places) || [];
-      html += `<div class="addr-cathead"><span>${cat.icon} ${cat.name} (${places.length})</span><button type="button" onclick="openAddrModal('${cityId}','${cat.id}')" title="Add under ${cat.name}">＋</button></div>`;
+      html += '<div class="addr-cathead"><span>' + cat.icon + ' ' + escapeHtml(cat.name) + ' (' + places.length + ')</span><button type="button" onclick="openAddrModal(\'' + cityId + '\',\'' + cat.id + '\')" title="Add under ' + escapeHtml(cat.name) + '">＋</button></div>';
       places.forEach((p, i) => {
-        html += `<div class="addr-row">
-        <div style="flex:1; min-width:0;"><a class="place-link prow-name" data-mpsrc="app" data-mpcat="${cat.id}" data-mppersonal="1" href="${p.url}" target="_blank" rel="noopener">${p.name || cat.name}</a>${(p.note || p.phone) ? `<div class="prow-sub">${[p.note, p.phone].filter(Boolean).join(' · ')}</div>` : ''}</div>
-        <span class="acts">
-          <a class="act-chip" href="${p.url}" target="_blank" rel="noopener" title="Open in Google Maps">Maps ↗</a>
-          ${p.phone ? `<a href="tel:${String(p.phone).replace(/[^+\d]/g,'')}" title="Call">📞</a>` : ''}
-          <button type="button" onclick="sendAddr('${cityId}','${cat.id}',${i})" title="Send via MyPickz">📤</button>
-          <button type="button" onclick="openAddrModal('${cityId}','${cat.id}',${i})" title="Edit">✏️</button>
-          <button type="button" onclick="deleteAddr('${cityId}','${cat.id}',${i})" title="Delete">🗑</button>
-        </span></div>`;
+        html += '<div class="addr-row"><div class="rowmain">'
+          + '<a class="place-link prow-name" data-mpsrc="app" data-mpcat="' + cat.id + '" data-mppersonal="1" href="' + p.url + '" target="_blank" rel="noopener">' + escapeHtml(p.name || cat.name) + '</a>'
+          + ((p.note || p.phone) ? '<div class="prow-sub">' + escapeHtml([p.note, p.phone].filter(Boolean).join(' · ')) + '</div>' : '')
+          + '</div><span class="acts">'
+          + '<a class="act-chip" href="' + p.url + '" target="_blank" rel="noopener" title="Open in Google Maps">Maps ↗</a>'
+          + (p.phone ? '<a href="tel:' + String(p.phone).replace(/[^+\d]/g,'') + '" title="Call">📞</a>' : '')
+          + '<button type="button" onclick="sendAddr(\'' + cityId + '\',\'' + cat.id + '\',' + i + ')" title="Send via MyPickz">📤</button>'
+          + '<button type="button" onclick="openAddrModal(\'' + cityId + '\',\'' + cat.id + '\',' + i + ')" title="Edit">✏️</button>'
+          + '<button type="button" onclick="deleteAddr(\'' + cityId + '\',\'' + cat.id + '\',' + i + ')" title="Delete">🗑</button>'
+          + '</span></div>';
       });
     });
   }
   document.getElementById('addrBody').innerHTML = html;
 }
+
 // إرسال العنوان خارج التطبيق بتوقيع (قرار إرسال لا مشاركة بيانات) — مشاركة النظام، وإلا نسخ للحافظة
 async function sendAddr(cityId, catId, index){
   const cat = privateCategoryList().find(c => c.id === catId); const p = ((addrData[cityId] || {})[catId] || {}).places[index]; if (!p) return;
@@ -3379,26 +3416,60 @@ function plCatsAll(){ // كل التصنيفات العامة المتاحة ب�
   return out;
 }
 function plCityName(){ const c = myListAllCities().find(x => x.id === myListCityId); return c ? c.name : ''; }
+function plCountryCode(name){
+  const c = WORLD_COUNTRIES.find(x => x.name === name);
+  return c ? c.code : String(name || '').slice(0, 2).toUpperCase();
+}
+let plPanelsOpen = false;                 // حالة عرض بحتة — لا بيانات ولا نداء منصة
+function plTogglePanels(){ plPanelsOpen = !plPanelsOpen; renderPlacesMine(); }
+function plCatCount(catId){
+  const e = (myCityListData && myCityListData.categories) || {};
+  const p = (e[catId] && e[catId].places) || [];
+  return p.filter(q => q && (q.name || q.url)).length;
+}
 function renderPlacesMine(){
   const body = document.getElementById('plBody'); if (!body || !myCityListData) return;
-  const countries = myListAllCountries();
-  const csel = countries.length ? '<select class="pl-actbtn" style="flex:1; min-width:150px; font-size:12px; padding:6px 30px 6px 10px; -webkit-appearance:none; appearance:none;" onchange="plPickCountry(this.value)">'
-    + countries.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === myListCountry ? ' selected' : '') + '>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + c + '</option>').join('') + '</select>' : '';
-  const inCountry = myListAllCities().filter(c => c.country === myListCountry);
-  const chips = inCountry.map(c => '<button type="button" class="addr-chip ' + (c.id === myListCityId ? 'on' : '') + '" onclick="plPickCity(\'' + c.id + '\')">' + escapeHtml(c.name) + (c.id.indexOf('mylist_') === 0 ? ' <span style="font-size:12px;" onclick="event.stopPropagation(); plRemoveCity(\'' + c.id + '\')" title="Delete city">🗑️</span>' : '') + '</button>').join('');
-  let html = '<div class="pl-actrow">' + csel + '</div><div class="addr-chips" style="margin-bottom:4px;">' + chips + '</div>';
-  html += '<div class="pl-actrow">'
-    + '<button type="button" class="pl-actbtn brass" onclick="openPlAddFromMaps()">📍 Add from Google Maps</button>'
-    + '<button type="button" class="pl-actbtn" onclick="plAddCity()">➕ City</button>'
-    + '<button type="button" class="pl-actbtn" style="opacity:.55;" onclick="showToast(\'Day plan — Soon (step 6)\')">🗓 Day plan <span style="font-size:8.5px; font-weight:700;">Soon</span></button>'
-    + '</div>';
-  html += '<div class="pl-actrow" style="padding-bottom:4px; justify-content:space-between;"><button type="button" class="pl-actbtn" onclick="openPlPlaceModal(null, null)">All categories</button><span style="display:inline-flex; gap:6px; align-items:center;"><span style="font-size:10px; color:var(--ink-soft); font-weight:700;">View:</span>'
-    + '<button type="button" class="pl-actbtn" style="background:var(--ink); color:var(--paper); border-color:var(--ink);">📋 List</button>'
-    + '<button type="button" class="pl-actbtn" onclick="showToast(\'Map view — station 4\')">🗺 Map <span style="font-size:8.5px; font-weight:700;">Soon</span></button></span></div>';
-  const shares = (myCityListData.sharedWith || []).map(uid => '<span style="display:inline-flex; align-items:center; gap:4px; margin-right:8px;">' + escapeHtml((myCityListData.sharedWithNames || {})[uid] || 'user') + ' <button type="button" style="background:none; border:none; cursor:pointer; font-size:11px;" onclick="plRemoveShare(\'' + uid + '\')" title="Remove">✕</button></span>').join('');
-  html += '<div class="pl-switchrow" style="justify-content:space-between;"><span style="display:inline-flex; align-items:center; gap:8px;"><button type="button" class="switch-btn small ' + (myCityListData.public ? 'on' : '') + '" onclick="plTogglePublic()"><span class="knob"></span></button><span>Allow others to view</span></span><span style="display:inline-flex; align-items:center; gap:6px;">🔗<button type="button" class="pl-actbtn" style="padding:3px 10px;" onclick="plShareWith()" title="Share with someone by username">➕ Add</button></span></div>' + (shares ? '<div class="pl-sharebox">' + shares + '</div>' : '');
-  // التصنيفات التي فيها أماكن فقط — بعدّادها و＋ (المدينة الجديدة تفتح فارغة بدعوة واحدة)
   const cats = plCatsAll();
+  const inCountry = myListAllCities().filter(c => c.country === myListCountry);
+
+  /* الصف الأول — المحدد الواحد والفعل الأساسي (المشهد ٦/أ · القرار ٢٠٢٦-٠٨-٢٩-٠٥) */
+  let html = '<div class="headrow">'
+    + '<button type="button" class="csel" onclick="plTogglePanels()">' + plCountryCode(myListCountry) + ' · <b>' + escapeHtml(plCityName()) + '</b> ' + (plPanelsOpen ? '⌃' : '⌄') + '</button>'
+    + '<button type="button" class="cta grow" onclick="openPlAddFromMaps()">📍 Add from Google Maps</button>'
+    + '</div>';
+
+  /* الصف الثاني — التصنيفات وطريقة العرض */
+  html += '<div class="headrow">'
+    + '<button type="button" class="actn" onclick="openPlPlaceModal(null, null)">All categories ⌄</button>'
+    + '<button type="button" class="actn" onclick="showToast(\'Day plan — Soon (step 6)\')">🗓 Day plan <span class="dim">Soon</span></button>'
+    + '<span class="actn">View: <b>List</b> | Map <span class="dim">Soon</span></span>'
+    + '</div>';
+
+  /* اللوحتان العاجيتان — المدن بعدّاداتها وسلالها و＋ Add city مثبَّت أعلى · والتصنيفات بعدّاداتها */
+  if (plPanelsOpen){
+    let cityRows = inCountry.map(c =>
+      '<div class="prow' + (c.id === myListCityId ? ' on' : '') + '"><span onclick="plPickCity(\'' + c.id + '\')">'
+      + (c.id === myListCityId ? '<b>' + escapeHtml(c.name) + '</b>' : escapeHtml(c.name)) + '</span>'
+      + (c.id.indexOf('mylist_') === 0 ? '<span class="dim" onclick="plRemoveCity(\'' + c.id + '\')" title="Delete city">🗑</span>' : '<span class="dim"></span>')
+      + '</div>').join('');
+    let catRows = cats.map(c => { const n = plCatCount(c.id);
+      return '<div class="prow' + (n ? '' : ' dim') + '" onclick="openPlPlaceModal(\'' + c.id + '\', null)"><span>' + c.icon + ' ' + escapeHtml(c.name) + '</span><span>' + n + '</span></div>'; }).join('');
+    const countries = myListAllCountries();
+    const foot = countries.length ? '<select class="pfoot" onchange="plPickCountry(this.value)">'
+      + countries.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === myListCountry ? ' selected' : '') + '>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + c + '</option>').join('') + '</select>' : '';
+    html += '<div class="grid2">'
+      + '<div class="panel"><div class="pinned" onclick="plAddCity()">＋ Add city</div>' + cityRows + foot + '</div>'
+      + '<div class="panel"><div class="pinned">All categories</div>' + catRows + '</div>'
+      + '</div>';
+  }
+
+  /* صف النشر والمشاركة */
+  const shares = (myCityListData.sharedWith || []).map(uid => '<span class="shname">' + escapeHtml((myCityListData.sharedWithNames || {})[uid] || 'user') + ' <button type="button" onclick="plRemoveShare(\'' + uid + '\')" title="Remove">✕</button></span>').join('');
+  html += '<div class="block"><span class="blkleft"><button type="button" class="switch-btn small ' + (myCityListData.public ? 'on' : '') + '" onclick="plTogglePublic()"><span class="knob"></span></button> Allow others to view</span>'
+    + '<span class="blkright">🔗 <button type="button" class="actn" onclick="plShareWith()" title="Share with someone by username"><b>＋</b> Add</button></span></div>'
+    + (shares ? '<div class="block">' + shares + '</div>' : '');
+
+  /* التصنيفات التي فيها أماكن — بعدّادها و＋ · ثم صف المكان بأفعاله الخمسة */
   let any = false;
   cats.forEach(cat => {
     const entry = (myCityListData.categories || {})[cat.id];
@@ -3410,22 +3481,23 @@ function renderPlacesMine(){
     visible.forEach(vx => {
       const pl = vx.q, i = vx.realIdx;
       const fav = pl.url && isFavorite(pl.url);
-      html += '<div class="pl-row"><div style="flex:1; min-width:0;">'
+      html += '<div class="pl-row"><div class="rowmain">'
         + '<a class="pl-name" href="' + String(pl.url || '#').replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + escapeHtml(pl.name || cat.name) + '</a>'
         + ((pl.area || pl.note) ? '<div class="pl-sub">' + escapeHtml([pl.area, pl.note].filter(Boolean).join(' · ')) + '</div>' : '')
         + '</div><span class="pl-acts">'
         + (pl.url ? '<a class="act-chip" href="' + String(pl.url).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" title="Open in Google Maps">Maps ↗</a>' : '')
         + '<button type="button" onclick="plToggleFav(\'' + cat.id + '\', ' + i + ')" title="Favorite">' + (fav ? '❤️' : '🤍') + '</button>'
-        + ((activeTripId && pl.id) ? '<button type="button" style="color:var(--brass);" onclick="addPlaceToTrip(\'mylist\', \'' + myListCityId + '\', \'' + cat.id + '\', \'' + pl.id + '\')" title="Add to active trip">🧳</button>' : '<button type="button" style="opacity:.45;" onclick="showToast(\'Trips — the new engine arrives in step 6\')" title="Add to trip — Soon">🧳<span style="font-size:7px; font-weight:700;">Soon</span></button>')
+        + ((activeTripId && pl.id) ? '<button type="button" class="trip-on" onclick="addPlaceToTrip(\'mylist\', \'' + myListCityId + '\', \'' + cat.id + '\', \'' + pl.id + '\')" title="Add to active trip">🧳</button>' : '<button type="button" class="trip-soon" onclick="showToast(\'Trips — the new engine arrives in step 6\')" title="Add to trip — Soon">🧳<span class="mini">Soon</span></button>')
         + '<button type="button" onclick="openPlPlaceModal(\'' + cat.id + '\', ' + i + ')" title="Edit">✏️</button>'
         + '<button type="button" onclick="plDeleteRow(\'' + cat.id + '\', ' + i + ')" title="Delete">🗑</button>'
         + '</span></div>';
     });
   });
-  if (!any) html += '<div class="mp-empty" style="padding:34px 10px; direction:ltr;"><div class="big">📝</div>Start your ' + escapeHtml(plCityName()) + ' list.<br><span style="font-size:11px;">Tap “Add from Google Maps”, or ＋ under any category.</span></div>';
-  if (isOwner) html += '<div class="pl-ownerpanel"><div style="font-family:\'Cairo\',sans-serif; font-weight:700; font-size:12.5px;">👑 Owner · edit mode</div><div class="pl-sub" id="plMigrLine">Guide places migration — counter and run arrive in stage 5 of this step.</div><button type="button" class="pl-actbtn brass" style="margin-top:6px;" onclick="showToast(\'Migration runs in stage 5 — city by city, counts matched\')">Move guide places to my lists</button></div>';
+  if (!any) html += '<div class="mp-empty">📝<br>Start your ' + escapeHtml(plCityName()) + ' list.<br><span class="mini">Tap “Add from Google Maps”, or ＋ under any category.</span></div>';
+  if (isOwner) html += '<div class="pl-ownerpanel"><b>👑 Owner · edit mode</b><div class="pl-sub" id="plMigrLine">Guide places migration — counter and run arrive in stage 5 of this step.</div><button type="button" class="cta" onclick="showToast(\'Migration runs in stage 5 — city by city, counts matched\')">Move guide places to my lists</button></div>';
   body.innerHTML = html;
 }
+
 async function plPickCountry(v){ if (pendingCity) pendingCity = null; await selectMyListCountry(v); renderPlacesMine(); }
 async function plPickCity(id){ if (pendingCity && pendingCity.id !== id) pendingCity = null; await selectMyListCity(id); renderPlacesMine(); }
 async function plAddCity(){ await addMyListCity(); await loadMyCityList(myListCityId); renderPlacesMine(); }
@@ -4362,33 +4434,33 @@ function switchCommunitySort(sort){
 function renderCommunityModal(){
   const wrap = document.getElementById('communityBody');
   if (viewingUserUid){ renderCommunityUserList(wrap); return; }
-
   let usersToShow = communityUsers;
-  let html = `<div style="display:flex; gap:6px; margin-bottom:10px;">
-    <button type="button" class="btn ${communityTab==='city'?'btn-brass':'btn-ghost'}" style="flex:1; margin:0; padding:9px;" onclick="switchCommunityTab('city')">This City</button>
-    <button type="button" class="btn ${communityTab==='all'?'btn-brass':'btn-ghost'}" style="flex:1; margin:0; padding:9px;" onclick="switchCommunityTab('all')">All Users</button>
-  </div>`;
+  const cityName = (allCities().find(c => c.id === currentCityId) || {}).name || '';
+
+  let html = '<div class="stickyhead"><div class="headrow"><span class="csel">🌍 <b>Community</b></span>'
+    + (communityTab === 'all'
+        ? '<span class="acts"><button type="button" class="actn' + (communitySort === 'viewed' ? ' on' : '') + '" onclick="switchCommunitySort(\'viewed\')">👁 Most viewed</button>'
+          + '<button type="button" class="actn' + (communitySort === 'loved' ? ' on' : '') + '" onclick="switchCommunitySort(\'loved\')">🤍 Most loved</button></span>'
+        : '<span class="actn">Search <span class="dim">Soon</span></span>')
+    + '</div>'
+    + '<div class="chiprow"><button type="button" class="chip' + (communityTab === 'city' ? ' on' : '') + '" onclick="switchCommunityTab(\'city\')">' + escapeHtml(cityName || 'This city') + '</button>'
+    + '<button type="button" class="chip' + (communityTab === 'all' ? ' on' : '') + '" onclick="switchCommunityTab(\'all\')">All users</button></div></div>';
 
   if (communityTab === 'city'){
-    const cityName = allCities().find(c=>c.id===currentCityId)?.name || '';
     usersToShow = communityUsers.filter(u => u.publicCityIds.includes(currentCityId));
-    html += `<p style="font-size:11px; color:var(--ink-soft); text-align:center; margin-bottom:8px;">Users with a public list for ${cityName}</p>`;
   } else {
-    html += `<div style="display:flex; gap:6px; margin-bottom:8px;">
-      <button type="button" class="remove-btn" style="flex:1; font-size:11px; ${communitySort==='viewed'?'color:var(--brass);':''}" onclick="switchCommunitySort('viewed')"><i class="fa-solid fa-eye"></i> Most Viewed</button>
-      <button type="button" class="remove-btn" style="flex:1; font-size:11px; ${communitySort==='loved'?'color:var(--brass);':''}" onclick="switchCommunitySort('loved')"><i class="fa-solid fa-heart"></i> Most Loved</button>
-    </div>`;
-    usersToShow = [...communityUsers].sort((a,b) => communitySort==='loved' ? b.totalFavoriteCount - a.totalFavoriteCount : b.viewCount - a.viewCount);
+    usersToShow = [...communityUsers].sort((a, b) => communitySort === 'loved'
+      ? b.totalFavoriteCount - a.totalFavoriteCount : b.viewCount - a.viewCount);
   }
 
   if (!usersToShow.length){
-    html += `<p style="color:var(--ink-soft); font-size:12.5px; text-align:center; padding:10px 0;">No public lists yet</p>`;
+    html += '<div class="mp-empty">🌍<br>No public lists yet' + (communityTab === 'city' && cityName ? ' for ' + escapeHtml(cityName) : '') + '.<br><span class="mini">Publish one of your city lists and it shows up here.</span></div>';
   } else {
-    html += usersToShow.map(u => `
-      <button type="button" class="add-place-btn" style="width:100%; text-align:right; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;" onclick="viewCommunityUser('${u.uid}')">
-        <span style="font-weight:700;">${u.nickname}</span>
-        <span style="color:var(--ink-soft); font-size:10.5px;">👁️ ${u.viewCount} · ❤️ ${u.totalFavoriteCount}</span>
-      </button>`).join('');
+    html += '<div class="pl-cathead"><span>Public lists (' + usersToShow.length + ')</span></div>';
+    html += usersToShow.map(u =>
+      '<div class="row rowblock"><div class="pn">' + escapeHtml(u.nickname) + '</div>'
+      + '<div class="ps">' + u.publicCityIds.length + ' city list' + (u.publicCityIds.length === 1 ? '' : 's') + ' · 👁 ' + u.viewCount + ' · 🤍 ' + u.totalFavoriteCount + '</div>'
+      + '<div class="rowacts"><span class="act" onclick="viewCommunityUser(\'' + u.uid + '\')">View →</span></div></div>').join('');
   }
   wrap.innerHTML = html;
 }
@@ -5174,7 +5246,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-FRAME-k5-r21 (owner middle-ground: trip bag always visible on place rows — live with an active trip, dimmed Soon otherwise; completes row formatting this stage, activation with step-6 trips engine)');
+logTiming('BUILD: M2-ID-r12 (identity batch step 8 of 8 — all 22 modals on one contract: single 72vh cap in the sheet, ten inline caps removed, two nested inner scroll boxes dropped so the window itself scrolls, gate buttons moved onto classes)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
