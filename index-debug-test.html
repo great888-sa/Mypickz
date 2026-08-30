@@ -273,15 +273,16 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .trip-cat{font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.4px;}
 .tripnote{font-size:11px; font-weight:700; margin-top:3px;}
 
-#activeTripBar{flex-wrap:wrap;}
 #activeTripAddedRow{width:100%; margin-top:6px;}
 #activeTripAddedRow .chip{font-size:10.5px; padding:4px 9px;}
 #activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
 
-#activeTripBar{display:none; position:fixed; left:0; right:0; bottom:62px; z-index:800; padding:10px 12px 12px;}
+#activeTripBar{display:none; position:fixed; left:0; right:0; bottom:54px; z-index:800; padding:9px 12px 11px; max-height:38vh; overflow-y:auto;}
 #activeTripBar.show{display:block;}
-.atb-head{display:flex; justify-content:space-between; align-items:center; gap:8px;}
-#activeTripLabel{font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.atb-head{display:flex; flex-wrap:wrap; align-items:center; gap:8px 6px;}
+.atb-head .acts{display:flex; gap:6px; margin-inline-start:auto; flex:none;}
+#activeTripBar .actn,#activeTripBar .cta{min-height:30px; padding:6px 12px; font-size:11px; white-space:nowrap;}
+#activeTripLabel{flex:1 1 100%; min-width:0; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .atb-done{padding:6px 14px; font-size:11px;}
 #activeTripAddedRow:empty{display:none;}
 #activeTripAddedRow{margin-top:8px; flex-wrap:wrap; overflow:visible; row-gap:6px;}
@@ -5406,7 +5407,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r23 (city-delete dialog rebuilt: Cancel was the loudest button and the destructive one was a quiet outline — now reversed, with live counts so nobody deletes without knowing the size, and wording that describes the action instead of naming an internal city class that disappears at migration; plus a modal sweep — every hardcoded colour in modal markup replaced by the palette, 19 field labels moved onto a class, 26 inline styles removed)');
+logTiming('BUILD: M2-ID-r24 (active-trip bar layout hardened: it only fitted while the trip name was short — the title now takes a full line and truncates, the three actions sit right-aligned on their own line, the acts class inside the bar was never defined at all, and the bar sits directly on the tab bar with its own scroll cap)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
