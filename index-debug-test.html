@@ -274,7 +274,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .tripnote{font-size:11px; font-weight:700; margin-top:3px;}
 
 #activeTripAddedRow{width:100%; margin-top:6px;}
-#activeTripAddedRow .chip{font-size:10.5px; padding:4px 9px;}
+#activeTripAddedRow .chip{font-size:12px; padding:6px 11px; line-height:1.4;}
 #activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
 
 #activeTripBar{display:none; position:fixed; left:0; right:0; bottom:54px; z-index:800; padding:9px 12px 11px; max-height:38vh; overflow-y:auto;}
@@ -286,7 +286,6 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .atb-done{padding:6px 14px; font-size:11px;}
 #activeTripAddedRow:empty{display:none;}
 #activeTripAddedRow{margin-top:8px; flex-wrap:wrap; overflow:visible; row-gap:6px;}
-#activeTripAddedRow .chip{font-size:10.5px; padding:4px 9px;}
 #activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
 
 .pclose{text-align:center; padding:7px 8px 4px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px;}
@@ -295,6 +294,11 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .act,.actn,.chip{min-height:30px;}
 
 .cur-shell{pointer-events:none;}
+
+.dayhead{display:flex; align-items:center; gap:10px; margin:20px 0 12px;}
+.daynum{display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; font-weight:700; font-size:13px; flex-shrink:0;}
+.daytitle{font-family:'Cairo',sans-serif; font-weight:700; font-size:15px; letter-spacing:.5px;}
+.dayline{flex:1; height:2px;}
 
 </style>
 
@@ -491,6 +495,9 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .pclose{color:var(--ink-strong); border-top:1px solid var(--line-ivory);}
   .cur-shell{opacity:.55;}
   .act[disabled]{opacity:.5;}
+  .daynum{background:var(--surf); color:var(--on-night);}
+  .daytitle{color:var(--on-night);}
+  .dayline{background:linear-gradient(to right, var(--line-strong), transparent);}
 </style>
 </head>
 <body>
@@ -2684,10 +2691,11 @@ function renderTripDetail(wrap){
   }
 
   resolved.forEach((day, dIdx) => {
-    html += `<div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
-      <span style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">${day.dayNumber}</span>
-      <span style="font-weight:700; font-size:15px; letter-spacing:.5px;">DAY ${day.dayNumber}</span>
-      <span style="flex:1; height:2px; background:linear-gradient(to left, var(--line), transparent);"></span>
+    html += `<div class="dayhead">
+      <span class="daynum">${day.dayNumber}</span>
+      <span class="daytitle">DAY ${day.dayNumber}</span>
+      <span class="dayline"></span>
+      ${!readOnly ? `<button type="button" class="actn danger" onclick="removeTripDay(${dIdx})" title="Delete this day">🗑</button>` : ''}
     </div>`;
     const order = day.categoryOrder || defaultCategoryOrder();
     const visibleCats = order.filter(catId => (day.places[catId]||[]).length > 0);
@@ -2782,6 +2790,19 @@ async function removeTripPlace(dayIdx, catId, placeIdx){
   await saveTrip(trip);
   resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
   renderMyTripsModal();
+}
+async function removeTripDay(dayIdx){
+  const trip = userTrips.find(t => t.id === currentTripId);
+  if (!trip || !trip.days[dayIdx]) return;
+  const day = trip.days[dayIdx];
+  const n = TRIP_CATEGORIES.reduce((a, c) => a + ((day.places && day.places[c.id]) || []).length, 0);
+  if (!confirm('Delete Day ' + day.dayNumber + (n ? ' and its ' + n + ' place' + (n === 1 ? '' : 's') : '') + '? This cannot be undone.')) return;
+  trip.days.splice(dayIdx, 1);
+  trip.days.forEach((d, i) => { d.dayNumber = i + 1; });      // إعادة الترقيم فلا تبقى فجوة
+  await saveTrip(trip);
+  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
+  renderMyTripsModal();
+  showToast('Day deleted');
 }
 async function addTripDay(){
   const trip = userTrips.find(t => t.id === currentTripId);
@@ -5415,7 +5436,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r26 (three marked defects in the trip detail — plus sign now saffron in every context, empty day state on the shared class, Add day on classes; and a full static drill: 215 buttons traced to 145 handlers with none missing and none addressing a missing element, 312 functions with one genuinely orphaned and removed, ten critical life paths complete)');
+logTiming('BUILD: M2-ID-r27 (a day could be added but never removed — no such function existed; delete-day added with a confirmation that names the day and its place count and renumbers the rest, plus a bin on each day header; chip text in the bar enlarged to 12)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
