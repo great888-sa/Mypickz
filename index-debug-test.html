@@ -234,7 +234,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .blkleft,.blkright{display:inline-flex; align-items:center; gap:8px;}
 .shname{display:inline-flex; align-items:center; gap:4px; margin-right:8px;}
 .shname button{border:none; cursor:pointer; font-size:11px;}
-.grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 0 8px;}
+
 .panel{border-radius:12px; padding:8px; font-size:11px; text-align:left;}
 .panel .pinned{border-radius:8px; padding:6px 8px; margin:0 0 5px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700;}
 .panel .prow{display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-radius:8px; cursor:pointer;}
@@ -252,7 +252,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .act{font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border-width:1.5px; border-style:solid; border-radius:999px; padding:4px 9px; cursor:pointer; white-space:nowrap;}
 
 .chip{flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; padding:6px 12px; border-radius:999px; white-space:nowrap; border-width:1px; border-style:solid;}
-.chip.off,.chip.label,.csel.label,.actn.label{cursor:default;}
+.chip.label,.csel.label,.actn.label{cursor:default;}
 
 .curgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:6px 0 8px;}
 .curcell{display:flex; flex-direction:column; align-items:center; gap:5px;}
@@ -272,6 +272,11 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .trip-dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-inline-end:6px;}
 .trip-cat{font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.4px;}
 .tripnote{font-size:11px; font-weight:700; margin-top:3px;}
+
+#activeTripBar{flex-wrap:wrap;}
+#activeTripAddedRow{width:100%; margin-top:6px;}
+#activeTripAddedRow .chip{font-size:10.5px; padding:4px 9px;}
+#activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
 
 </style>
 
@@ -445,7 +450,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .chip.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
   .modal .chip{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
   .modal .chip.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
-  .chip.off,.chip.label{background:transparent; border-color:var(--line-night); color:var(--night-4);}
+.chip.label{background:transparent; border-color:var(--line-night); color:var(--night-4);}
   .csel.label,.actn.label{background:transparent; border-color:var(--line-night); color:var(--night-3);}
   .actn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
   .actn.danger{background:var(--surf); border-color:var(--line-strong); color:var(--danger-night);}
@@ -458,6 +463,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .trip-dot{background:var(--saffron);}
   .trip-cat{color:var(--night-3);}
   .tripnote{color:var(--ink-strong);}
+  #activeTripAddedRow .chip,#activeTripAddedRow .chip.label{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
+  #activeTripAddedRow .chip b{color:var(--saffron);}
 </style>
 </head>
 <body>
@@ -596,7 +603,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <!-- خ١: الوجهة ٥ — العناوين الشخصية: تُبنى كاملة بخ٢ -->
   <div class="mp-screen" id="screenAddresses"><div class="wrap destbody">
     <div class="stickyhead">
-      <div class="headrow"><button type="button" class="csel" id="addrSel" onclick="addrTogglePanel()">— ⌄</button><span class="actn label">🔒 Always private</span></div>
+      <div class="headrow"><button type="button" class="csel" id="addrSel" onclick="addrTogglePanel('cities')">— ⌄</button><span class="actn label">🔒 Always private</span></div><div class="headrow"><button type="button" class="actn" id="addrCatBtn" onclick="addrTogglePanel('cats')">All categories ⌄</button></div>
     </div>
     <div id="addrPanel"></div>
     <div id="addrBody"><div class="addr-empty">Loading…</div></div>
@@ -613,6 +620,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 
   <div id="activeTripBar" style="display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:500; background:var(--ink); color:#fff; border-radius:30px; padding:10px 18px; box-shadow:0 6px 24px rgba(0,0,0,.3); align-items:center; gap:12px; max-width:90vw;">
     <span id="activeTripLabel" style="font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Adding to: —</span>
+    <span id="activeTripAddedRow" class="chiprow"></span>
     <button type="button" style="background:var(--brass); border:none; color:var(--ink); border-radius:20px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer;" onclick="stopAddingToTrip()">Done</button>
   </div>
 
@@ -2343,14 +2351,18 @@ function activeTripLabel(){
   if (!t) return '';
   return t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName;
 }
+let activeTripAdded = [];   // أسماء ما أُضيف بهذه الجلسة — للمراجعة قبل Done
 function startAddingToTrip(tripId){
   activeTripId = tripId;
+  activeTripAdded = [];
   closeMyTripsModal();
-  showToast('Now tap any place to add it here');
+  switchTab('Places');                       // الإضافة تقع بوجهة الأماكن — الشريط يبقى ظاهرًا
+  showToast('Pick places — they appear below, then tap Done');
   updateActiveTripBanner();
 }
 function stopAddingToTrip(){
   activeTripId = null;
+  activeTripAdded = [];
   updateActiveTripBanner();
   render();
   if (viewingUserUid) renderCommunityModal();
@@ -2361,7 +2373,10 @@ function updateActiveTripBanner(){
   if (!bar) return;
   if (activeTripId){
     bar.style.display = 'flex';
-    document.getElementById('activeTripLabel').textContent = 'Adding to: ' + activeTripLabel();
+    document.getElementById('activeTripLabel').textContent = 'Adding to: ' + activeTripLabel() + (activeTripAdded.length ? ' · ' + activeTripAdded.length : '');
+    const list = document.getElementById('activeTripAddedRow');
+    if (list) list.innerHTML = activeTripAdded.map((n, i) =>
+      '<span class="chip label">' + escapeHtml(n) + ' <b onclick="undoTripAdd(' + i + ')">✕</b></span>').join('');
   } else {
     bar.style.display = 'none';
   }
@@ -2370,14 +2385,29 @@ function updateActiveTripBanner(){
   if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
 }
 
+async function undoTripAdd(i){
+  const trip = userTrips.find(t => t.id === activeTripId);
+  const rec = activeTripAdded[i]; if (!trip || rec === undefined) return;
+  const ref = (activeTripAddedRefs || [])[i];
+  if (ref){
+    const day = trip.days.find(d => d.dayNumber === ref.day);
+    const arr = day && day.places[ref.cat];
+    if (arr){ const k = arr.findIndex(p => p.placeId === ref.placeId); if (k >= 0) arr.splice(k, 1); }
+    await saveTrip(trip);
+  }
+  activeTripAdded.splice(i, 1); activeTripAddedRefs.splice(i, 1);
+  updateActiveTripBanner();
+  showToast('Removed');
+}
+let activeTripAddedRefs = [];
 let pendingPlaceRef = null;
 // يُستدعى من زر "➕" على أي بطاقة مكان — يظهر فقط أثناء وضع الإضافة النشط لرحلة معيّنة
-async function addPlaceToTrip(sourceType, cityId, subcatId, placeId, sourceUid){
+async function addPlaceToTrip(sourceType, cityId, subcatId, placeId, sourceUid, placeName){
   if (!currentUser){ openAuthModal(); return; }
   if (!activeTripId){ showToast('Open a trip from My Trips first'); return; }
   const trip = userTrips.find(t => t.id === activeTripId);
   if (!trip || trip.cityId !== cityId){ showToast('This place is not in the same city as your active trip'); return; }
-  pendingPlaceRef = { sourceType, cityId, subcatId, placeId, sourceUid: sourceUid || null };
+  pendingPlaceRef = { sourceType, cityId, subcatId, placeId, sourceUid: sourceUid || null, name: placeName || 'Place' };
   if (trip.days.length === 1) openCategoryPicker(trip.id, 1);
   else openDayPicker(trip.id);
 }
@@ -2408,10 +2438,14 @@ async function confirmAddPlace(tripId, dayNumber, categoryId){
   if (!day){ day = emptyDay(dayNumber); trip.days.push(day); }
   if (!day.places[categoryId]) day.places[categoryId] = [];
   day.places[categoryId].push({ ...pendingPlaceRef });
+  const addedName = (pendingPlaceRef && pendingPlaceRef.name) || 'Place';
+  activeTripAdded.push(addedName);
+  activeTripAddedRefs.push({ day: dayNumber, cat: categoryId, placeId: pendingPlaceRef.placeId });
   document.getElementById('tripPickerBackdrop').classList.remove('show');
   pendingPlaceRef = null;
   await saveTrip(trip);
-  showToast('Added ✓');
+  updateActiveTripBanner();
+  showToast('Added ✓ — ' + addedName);
 }
 
 /* ===== My Trips — القائمة + إنشاء رحلة + تفاصيل رحلة ===== */
@@ -2948,8 +2982,8 @@ function pickAddrCity(cityId){
   if (userListData && userListData.addrCity !== cityId){ userListData.addrCity = cityId; mpData.userLists.merge(currentUser.uid, { addrCity: cityId }).catch(()=>{}); }
   renderAddresses();
 }
-let addrPanelOpen = false;                // حالة عرض بحتة
-function addrTogglePanel(){ addrPanelOpen = !addrPanelOpen; renderAddresses(); }
+let addrPanel = null;                     // 'cities' | 'cats' | null — حالة عرض بحتة
+function addrTogglePanel(which){ addrPanel = (addrPanel === which) ? null : which; renderAddresses(); }
 function renderAddresses(){
   const countries = [...new Set(addrCities.map(countryOfCity).filter(Boolean))];
   if (!addrCurrentCountry || !countries.includes(addrCurrentCountry)) addrCurrentCountry = countryOfCity(addrCurrentCity) || countries[0] || null;
@@ -2960,11 +2994,12 @@ function renderAddresses(){
   /* المحدد الواحد — نفس نموذج وجهة الأماكن */
   const sel = document.getElementById('addrSel');
   sel.innerHTML = (addrCurrentCountry ? plCountryCode(addrCurrentCountry) + ' · <b>' + escapeHtml(cityId ? cityNameOf(cityId) : '—') + '</b>' : 'Add your city')
-    + ' ' + (addrPanelOpen ? '⌃' : '⌄');
+    + ' ' + (addrPanel === 'cities' ? '⌃' : '⌄');
+  const cb = document.getElementById('addrCatBtn'); if (cb) cb.innerHTML = 'All categories ' + (addrPanel === 'cats' ? '⌃' : '⌄');
 
   /* لوحة المدن العاجية — العدّاد والسلة و＋ Add city مثبَّت أعلى */
   let panel = '';
-  if (addrPanelOpen){
+  if (addrPanel === 'cities'){
     const rows = inCountry.map(c =>
       '<div class="prow' + (c === cityId ? ' on' : '') + '"><span onclick="pickAddrCity(\'' + c + '\')">'
       + (c === cityId ? '<b>' + escapeHtml(cityNameOf(c)) + '</b> ' : escapeHtml(cityNameOf(c)) + ' ') + addrCountOf(c) + '</span>'
@@ -2972,6 +3007,12 @@ function renderAddresses(){
     const foot = countries.length ? '<select class="pfoot" onchange="pickAddrCountry(this.value)">'
       + countries.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === addrCurrentCountry ? ' selected' : '') + '>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + c + '</option>').join('') + '</select>' : '';
     panel = '<div class="panel"><div class="pinned" onclick="addAddrCity()">＋ Add city</div>' + rows + foot + '</div>';
+  } else if (addrPanel === 'cats' && cityId){
+    const cm = (cityId && addrData[cityId]) || {};
+    panel = '<div class="panel"><div class="pinned">Pick a category to add an address</div>'
+      + privateCategoryList().map(c => { const n = ((cm[c.id] && cm[c.id].places) || []).length;
+          return '<div class="prow' + (n ? '' : ' dim') + '" onclick="openAddrModal(\'' + cityId + '\',\'' + c.id + '\')"><span>' + c.icon + ' ' + escapeHtml(c.name) + '</span><span>' + (n ? n + ' ' : '') + '＋</span></div>'; }).join('')
+      + '</div>';
   }
   document.getElementById('addrPanel').innerHTML = panel;
 
@@ -2984,6 +3025,7 @@ function renderAddresses(){
   } else {
     cats.forEach(cat => {
       const places = (catsMap[cat.id] && catsMap[cat.id].places) || [];
+      if (!places.length) return;                 // منطق الأماكن نفسه: الفارغ باللوحة لا بالجسم
       html += '<div class="addr-cathead"><span>' + cat.icon + ' ' + escapeHtml(cat.name) + ' (' + places.length + ')</span><button type="button" onclick="openAddrModal(\'' + cityId + '\',\'' + cat.id + '\')" title="Add under ' + escapeHtml(cat.name) + '">＋</button></div>';
       places.forEach((p, i) => {
         html += '<div class="addr-row"><div class="rowmain">'
@@ -3454,8 +3496,8 @@ function plCountryCode(name){
   const c = WORLD_COUNTRIES.find(x => x.name === name);
   return c ? c.code : String(name || '').slice(0, 2).toUpperCase();
 }
-let plPanelsOpen = false;                 // حالة عرض بحتة — لا بيانات ولا نداء منصة
-function plTogglePanels(){ plPanelsOpen = !plPanelsOpen; renderPlacesMine(); }
+let plPanel = null;                       // 'cities' | 'cats' | null — حالة عرض بحتة
+function plTogglePanel(which){ plPanel = (plPanel === which) ? null : which; renderPlacesMine(); }
 function plCatCount(catId){
   const e = (myCityListData && myCityListData.categories) || {};
   const p = (e[catId] && e[catId].places) || [];
@@ -3468,33 +3510,32 @@ function renderPlacesMine(){
 
   /* الصف الأول — المحدد الواحد والفعل الأساسي (المشهد ٦/أ · القرار ٢٠٢٦-٠٨-٢٩-٠٥) */
   let html = '<div class="headrow">'
-    + '<button type="button" class="csel" onclick="plTogglePanels()">' + plCountryCode(myListCountry) + ' · <b>' + escapeHtml(plCityName()) + '</b> ' + (plPanelsOpen ? '⌃' : '⌄') + '</button>'
+    + '<button type="button" class="csel" onclick="plTogglePanel(\'cities\')">' + plCountryCode(myListCountry) + ' · <b>' + escapeHtml(plCityName()) + '</b> ' + (plPanel === 'cities' ? '⌃' : '⌄') + '</button>'
     + '<button type="button" class="cta grow" onclick="openPlAddFromMaps()">📍 Add from Google Maps</button>'
     + '</div>';
 
   /* الصف الثاني — التصنيفات وطريقة العرض */
   html += '<div class="headrow">'
-    + '<button type="button" class="actn" onclick="openPlPlaceModal(null, null)">All categories ⌄</button>'
+    + '<button type="button" class="actn" onclick="plTogglePanel(\'cats\')">All categories ' + (plPanel === 'cats' ? '⌃' : '⌄') + '</button>'
     + '<button type="button" class="actn" onclick="showToast(\'Day plan — Soon (step 6)\')">🗓 Day plan <span class="dim">Soon</span></button>'
     + '<span class="actn label">View: <b>List</b> | Map <span class="dim">Soon</span></span>'
     + '</div>';
 
   /* اللوحتان العاجيتان — المدن بعدّاداتها وسلالها و＋ Add city مثبَّت أعلى · والتصنيفات بعدّاداتها */
-  if (plPanelsOpen){
+  if (plPanel){
     let cityRows = inCountry.map(c =>
       '<div class="prow' + (c.id === myListCityId ? ' on' : '') + '"><span onclick="plPickCity(\'' + c.id + '\')">'
       + (c.id === myListCityId ? '<b>' + escapeHtml(c.name) + '</b>' : escapeHtml(c.name)) + '</span>'
       + (c.id.indexOf('mylist_') === 0 ? '<span class="dim" onclick="plRemoveCity(\'' + c.id + '\')" title="Delete city">🗑</span>' : '<span class="dim"></span>')
       + '</div>').join('');
     let catRows = cats.map(c => { const n = plCatCount(c.id);
-      return '<div class="prow' + (n ? '' : ' dim') + '" onclick="openPlPlaceModal(\'' + c.id + '\', null)"><span>' + c.icon + ' ' + escapeHtml(c.name) + '</span><span>' + n + '</span></div>'; }).join('');
+      return '<div class="prow' + (n ? '' : ' dim') + '" onclick="openPlPlaceModal(\'' + c.id + '\', null)"><span>' + c.icon + ' ' + escapeHtml(c.name) + '</span><span>' + (n ? n + ' ' : '') + '＋</span></div>'; }).join('');
     const countries = myListAllCountries();
     const foot = countries.length ? '<select class="pfoot" onchange="plPickCountry(this.value)">'
       + countries.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === myListCountry ? ' selected' : '') + '>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + c + '</option>').join('') + '</select>' : '';
-    html += '<div class="grid2">'
-      + '<div class="panel"><div class="pinned" onclick="plAddCity()">＋ Add city</div>' + cityRows + foot + '</div>'
-      + '<div class="panel"><div class="pinned">All categories</div>' + catRows + '</div>'
-      + '</div>';
+    html += (plPanel === 'cities')
+      ? '<div class="panel"><div class="pinned" onclick="plAddCity()">＋ Add city</div>' + cityRows + foot + '</div>'
+      : '<div class="panel"><div class="pinned">Pick a category to add a place</div>' + catRows + '</div>';
   }
 
   /* صف النشر والمشاركة */
@@ -3521,7 +3562,7 @@ function renderPlacesMine(){
         + '</div><span class="pl-acts">'
         + (pl.url ? '<a class="act-chip" href="' + String(pl.url).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" title="Open in Google Maps">Maps ↗</a>' : '')
         + '<button type="button" onclick="plToggleFav(\'' + cat.id + '\', ' + i + ')" title="Favorite">' + (fav ? '❤️' : '🤍') + '</button>'
-        + ((activeTripId && pl.id) ? '<button type="button" class="trip-on" onclick="addPlaceToTrip(\'mylist\', \'' + myListCityId + '\', \'' + cat.id + '\', \'' + pl.id + '\')" title="Add to active trip">🧳</button>' : '<button type="button" class="trip-soon" onclick="showToast(\'Trips — the new engine arrives in step 6\')" title="Add to trip — Soon">🧳<span class="mini">Soon</span></button>')
+        + ((activeTripId && pl.id) ? '<button type="button" class="trip-on" onclick="addPlaceToTrip(\'mylist\', \'' + myListCityId + '\', \'' + cat.id + '\', \'' + pl.id + '\', null, \'' + escapeHtml(pl.name || '').replace(/'/g, "\'") + '\')" title="Add to active trip">🧳</button>' : '<button type="button" class="trip-soon" onclick="showToast(\'Trips — the new engine arrives in step 6\')" title="Add to trip — Soon">🧳<span class="mini">Soon</span></button>')
         + '<button type="button" onclick="openPlPlaceModal(\'' + cat.id + '\', ' + i + ')" title="Edit">✏️</button>'
         + '<button type="button" onclick="plDeleteRow(\'' + cat.id + '\', ' + i + ')" title="Delete">🗑</button>'
         + '</span></div>';
@@ -5281,7 +5322,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r17 (trip type chips respond visually with a Soon toast per the Day plan precedent; third defect family closed — one class served both control and label, so seven pill elements looked tappable but were not: they now carry an explicit label modifier; third automated guard added: any control-shaped element must either carry a handler or be declared a label)');
+logTiming('BUILD: M2-ID-r19 (two owner decisions drawn into reference v1.34 then coded: Personal Addresses now follows the Places logic — empty categories leave the body and live in an All categories panel with a plus on every row; and Add places jumps straight to the Places destination while the active-trip bar lists every place added, each removable, until Done)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
