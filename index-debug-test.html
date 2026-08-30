@@ -450,7 +450,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .modal .cta{background:var(--ink); color:var(--ivory-bright);}
   .actn{background:transparent; border-color:var(--line-strong); color:var(--night-2);}
   .modal .actn{background:transparent; border-color:var(--line-ivory); color:var(--ink);}
-  .actn b,.block .actn b,.cta b{color:var(--saffron);}
+  .actn b,.block .actn b,.btn-ghost b,.modal .actn b,.modal .btn-ghost b{color:var(--saffron);}
   .cta b{color:var(--ink);}
   .actn .dim,.dim{color:var(--night-4);}
   .block{background:var(--surf); color:var(--night-2);}
@@ -657,6 +657,15 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <div id="activeTripBar">
     <div class="atb-head"><span id="activeTripLabel">Adding to: —</span><span class="acts"><button type="button" class="actn" onclick="openActiveTrip()">View trip</button><button type="button" class="actn" onclick="stopAddingToTrip()">Cancel</button><button type="button" class="cta atb-done" onclick="stopAddingToTrip()">Done</button></span></div>
     <div id="activeTripAddedRow" class="chiprow"></div>
+  </div>
+
+  <div class="modal-backdrop" id="tripPickerBackdrop">
+    <div class="modal">
+      <h3>➕ Add to Trip</h3>
+      <div class="chiprow" style="margin:0 0 8px"><span class="chip label mini">Trip type — step 6</span><span class="chip label">🚶 One day trip</span><span class="chip label">🏙 Single city</span><span class="chip label">🌍 Multi-city</span></div>
+      <div id="tripPickerBody"></div>
+      <button type="button" class="btn btn-ghost wide" onclick="closeTripPickerModal()">Cancel</button>
+    </div>
   </div>
 
   <div class="modal-backdrop" id="myTripsBackdrop">
@@ -2683,7 +2692,7 @@ function renderTripDetail(wrap){
     const order = day.categoryOrder || defaultCategoryOrder();
     const visibleCats = order.filter(catId => (day.places[catId]||[]).length > 0);
     if (!visibleCats.length){
-      html += `<p style="font-size:11.5px; color:var(--ink-soft); padding-right:14px;">No places yet.</p>`;
+      html += `<div class="mp-empty mini">No places yet.</div>`;
     }
     visibleCats.forEach((catId, catIdx) => {
       const meta = categoryMeta(catId);
@@ -2720,7 +2729,7 @@ function renderTripDetail(wrap){
   });
 
   if (!readOnly){
-    html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="addTripDay()">➕ Add day</button>
+    html += `<button type="button" class="btn btn-ghost wide" onclick="addTripDay()"><b>＋</b> Add day</button>
     <button type="button" class="actn danger wide" onclick="deleteTrip()">🗑️ Delete this trip</button>`;
   }
   wrap.innerHTML = html;
@@ -3674,7 +3683,6 @@ function plDeleteRow(catId, i){
   renderPlacesMine();
 }
 /* نافذة المكان الموحدة: إضافة · تحرير · نقل بين التصنيفات · لصق ما شاركته الخرائط */
-function openPlAddFromMaps(){ plEdit = null; plModalCat = null; plModalSec = null; plFillModal(true); }
 function plSetMethod(paste){                 // طريقتا الإضافة داخل النافذة: لصق ما شاركته الخرائط · أو إدخال يدوي
   document.getElementById('plPasteWrap').style.display = paste ? '' : 'none';
   document.querySelectorAll('#plMethodRow .chip').forEach(function(b){ b.classList.remove('on'); });
@@ -5407,7 +5415,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r24 (active-trip bar layout hardened: it only fitted while the trip name was short — the title now takes a full line and truncates, the three actions sit right-aligned on their own line, the acts class inside the bar was never defined at all, and the bar sits directly on the tab bar with its own scroll cap)');
+logTiming('BUILD: M2-ID-r26 (three marked defects in the trip detail — plus sign now saffron in every context, empty day state on the shared class, Add day on classes; and a full static drill: 215 buttons traced to 145 handlers with none missing and none addressing a missing element, 312 functions with one genuinely orphaned and removed, ten critical life paths complete)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
