@@ -333,15 +333,17 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .soon-tag{color:var(--night-4); border-color:var(--line-strong);}
 
   /* ── البطاقات: العاجي الأنصع حكرٌ عليها ── */
-  .pl-row,.addr-row,.ticket{
+  .row,.pl-row,.addr-row,.ticket{
     background:var(--ivory-bright); border-color:transparent; color:var(--ink);
     box-shadow:0 2px 10px rgba(0,0,0,.28);}
   .ticket:hover{border-color:transparent;}
-  .pl-name,.prow-name,.stats-name,.hcard .hn,.acc-name{color:var(--ink);}
+  .pl-name,.prow-name,.stats-name,.hcard .hn,.acc-name,.row .pn{color:var(--ink);}
+  .row .ps{color:var(--ink-strong);}
   .pl-sub,.prow-sub,.place-note,.ticket .missing,.area-divider,.hcard .hd,.toggle-row,.action-label,.sub,.tab-label,.status-stat,.footer-note{color:var(--ink-strong);}
   .pl-acts button,.pl-acts a,.addr-row .acts button,.addr-row .acts a{background:none; color:var(--ink);}
   .pl-acts a.act-chip,.addr-row .acts a.act-chip{background:none; border-color:var(--ink);}
-  .place-link,.note-link,.note-toggle{color:var(--ink); border-bottom-color:var(--line-ivory);}
+  .place-link,.note-link,.note-toggle{color:var(--on-night); border-bottom-color:var(--line-night);}
+  .row .place-link,.modal .place-link,.pl-row .place-link,.addr-row .place-link,.ticket .place-link{color:var(--ink); border-bottom-color:var(--line-ivory);}
   .note-toggle{background:none;}
   .icon-badge,.section-icon,.stats-rank{background:var(--saffron); color:var(--ink); box-shadow:none;}
   .ticket.disabled .icon-badge{background:var(--saffron);}
@@ -396,7 +398,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .add-place-btn,.add-ticket{background:transparent; border-color:var(--line-strong); color:var(--saffron);}
   .modal .add-place-btn{border-color:var(--line-ivory); color:var(--ink);}
   .show-more-btn{background:transparent; color:var(--saffron);}
-  .remove-btn{background:none;}
+  .remove-btn{background:none; color:var(--night-2);}
+  .modal .remove-btn,.row .remove-btn{color:var(--ink);}
   .name-edit:focus{border-color:var(--saffron);}
   .switch-btn{background:var(--line-strong);}
   .modal .switch-btn{background:var(--line-ivory);}
@@ -414,7 +417,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .csel{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);}
   .cta{background:var(--saffron); color:var(--ink);}
   .modal .cta{background:var(--ink); color:var(--ivory-bright);}
-  .actn{border-color:var(--line-strong); color:var(--night-2);}
+  .actn{background:transparent; border-color:var(--line-strong); color:var(--night-2);}
+  .modal .actn{background:transparent; border-color:var(--line-ivory); color:var(--ink);}
   .actn b{color:var(--saffron);}
   .actn .dim,.dim{color:var(--night-4);}
   .block{background:var(--surf); color:var(--night-2);}
@@ -427,6 +431,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .panel .pfoot{background:none; border-top-color:var(--line-ivory); color:var(--ink-strong);}
   .trip-on{color:var(--saffron);}
   .pl-ownerpanel b{color:var(--saffron);}
+  .pl-ownerpanel .pl-sub{color:var(--night-2);}
 
   .act{background:none; border-color:var(--ink); color:var(--ink);}
   .chip{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
@@ -435,6 +440,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .modal .chip.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
   .chip.off{background:transparent; border-color:var(--line-night); color:var(--night-4);}
   .actn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+  .actn.danger{background:var(--surf); border-color:var(--line-strong); color:var(--danger-night);}
   .avatar{background:var(--surf); border-color:var(--line-strong); color:var(--night-4);}
   .curname{color:var(--night-4);}
   .stickyhead{background:var(--paper); box-shadow:0 8px 10px -9px rgba(0,0,0,.75);}
@@ -2625,7 +2631,7 @@ function renderTripDetail(wrap){
 
   if (!readOnly){
     html += `<button type="button" class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="addTripDay()">➕ Add day</button>
-    <button type="button" class="remove-btn" style="width:100%; margin-top:14px; color:var(--danger);" onclick="deleteTrip()">🗑️ Delete this trip</button>`;
+    <button type="button" class="actn danger wide" onclick="deleteTrip()">🗑️ Delete this trip</button>`;
   }
   wrap.innerHTML = html;
 }
@@ -3363,7 +3369,7 @@ function hostBody(bodyId, hostId){
 }
 // النافذة المنبثقة تُعرض فقط إن لم يكن جسمها مستضافًا بوجهة (يحفظ الدوال القائمة كما هي)
 function showBackdropUnlessHosted(backdropId, tab){
-  if (HOSTED[tab]) { switchTab(tab); return; }
+  if (HOSTED[tab]) { if (currentTab !== tab) switchTab(tab); return; } // يكسر الاستدعاء المتبادل: الوجهة مستضيفة والحارس لا يعيد النداء
   document.getElementById(backdropId).classList.add('show');
 }
 function switchTab(tab){
@@ -4537,12 +4543,12 @@ function renderCommunityUserList(wrap){
         ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
       </button>`).join('');
   } else {
-    html += `<p style="color:var(--ink-soft); font-size:11.5px; text-align:center; padding:6px 0;">No shared trips yet</p>`;
+    html += `<div class="mp-empty mini">No shared trips yet</div>`;
   }
   html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
 
   if (!cities.length && !communityUserTrips.length){
-    html += `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">No cities in this list yet</p>`;
+    html += `<div class="mp-empty mini">No cities in this list yet</div>`;
     wrap.innerHTML = html;
     return;
   }
@@ -4584,7 +4590,7 @@ function renderCommunityUserList(wrap){
     html += sectionHtml;
   });
 
-  if (!hasAnyPlace) html += `<p style="color:var(--ink-soft); font-size:12px; text-align:center; padding:10px 0;">No active places in this city yet</p>`;
+  if (!hasAnyPlace) html += `<div class="mp-empty mini">No active places in this city yet</div>`;
   wrap.innerHTML = html;
 }
 
@@ -5261,7 +5267,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r13 (field-round fix batch — one pass: document direction flipped to LTR and 42 per-element ltr patches plus 8 legacy right-alignments removed; chip identity added (plain/on/in-modal); paper-dark surfaces inside ivory modals corrected; the semantic family replaces 15 hardcoded colours in JS templates; trip rows and category heads redrawn per decision 3-j with no category colours; diagnostic panel clearance so the last element is never clipped)');
+logTiming('BUILD: M2-ID-r14 (second field round — infinite mutual recursion between switchTab and the hosting guard fixed: it was firing hundreds of trip_open/community_open hits per tap and throwing unhandled rejections; plus eight surface-contrast fixes (actn buttons had no declared surface, .row had no identity at all, empty-state texts and place links sat ink-on-night, owner panel description, delete-trip now on a surface with the night danger tone) and a new automated surface-contrast guard: 52 classes checked, 0 violations)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
