@@ -153,7 +153,8 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 
 .mp-screen{display:none;}
 .mp-screen.on{display:block;}
-.mp-empty{text-align:center; font-size:13px; padding:60px 20px; font-family:'Cairo',sans-serif;}
+.mp-empty{text-align:center; font-size:13px; padding:34px 20px; font-family:'Cairo',sans-serif;}
+.mp-empty.mini{padding:8px 10px; font-size:11.5px;}
 .mp-empty .big{font-size:34px; margin-bottom:8px;}
 /* خ٥/م٢ — وجهة الأماكن الجديدة (المشهد ٦/أ v1.25): مبدّل المصدر الرباعي وجسم قائمتي */
   .pl-srcrow{display:flex; gap:6px; overflow-x:auto; padding:10px 0 8px; position:sticky; top:44px; z-index:10;}
@@ -240,7 +241,10 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .trip-soon{opacity:.45;}
 
 .row,.rowblock{}
+.row{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 11px; margin:0 0 6px; border-radius:12px;}
 .rowblock{display:block;}
+.row .pn{font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; line-height:1.3;}
+.row .ps{font-size:11px; line-height:1.5; margin-top:1px;}
 .rowacts{display:flex; gap:6px; align-items:center; margin-top:7px;}
 .act{font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border-width:1.5px; border-style:solid; border-radius:999px; padding:4px 9px; cursor:pointer; white-space:nowrap;}
 
@@ -256,7 +260,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .destbody{padding-top:10px; padding-bottom:16px; min-height:150px;}
 .stickyhead{position:sticky; top:44px; z-index:10; padding:10px 0 8px; margin:0 -12px; padding-inline:12px;}
 
-.wide{width:100%; margin-top:8px;}
+.wide{width:100%; margin-top:10px;}
 .wide:first-of-type{margin-top:0;}
 
 .listbox{margin:10px 0;}
@@ -2451,7 +2455,7 @@ function renderMyTripsModal(){
   if (currentUserSuspended){
     html += '<div class="warnline">🚫 <span><b>Account Suspended</b><br>Your account has been suspended and can no longer create trips or add places.</span></div>';
   } else {
-    html += '<button type="button" class="cta" onclick="openCreateTripFlow()">➕ Create trip</button>';
+    html += '<button type="button" class="cta wide" onclick="openCreateTripFlow()">➕ Create trip</button>';
   }
   wrap.innerHTML = html;
 }
@@ -5267,7 +5271,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r14 (second field round — infinite mutual recursion between switchTab and the hosting guard fixed: it was firing hundreds of trip_open/community_open hits per tap and throwing unhandled rejections; plus eight surface-contrast fixes (actn buttons had no declared surface, .row had no identity at all, empty-state texts and place links sat ink-on-night, owner panel description, delete-trip now on a surface with the night danger tone) and a new automated surface-contrast guard: 52 classes checked, 0 violations)');
+logTiming('BUILD: M2-ID-r15 (third field round — the .row class had identity but no geometry at all, which is why block cards had square corners, no padding and no gap between them or the Create button; geometry restored from the standard model, section-level empty states compacted, and a second automated guard added: every core class must carry both a structure rule and an identity rule)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
