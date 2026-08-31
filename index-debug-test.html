@@ -4013,10 +4013,19 @@ async function loadMyCityList(cityId){
       mpData.cityLists.save(currentUser.uid, cityId, { ownerId: currentUser.uid, cityId, cityName: cityNameOf(cityId) || cityId, categories: myCityListData.categories }).catch(()=>{});
     }
   }catch(e){
-    // فشل القراءة لا يعني مدينة فارغة — تُعلَّم غير محمَّلة فلا يكتب أي حفظ فوق محتواها
+    const code = (e && e.code) || '';
+    // Firestore يرفض قراءة مستند غير موجود لأن القاعدة تفحص resource.data — وهذه حالة طبيعية
+    // لكل حساب جديد ولكل مدينة جديدة: قائمة فارغة تُنشأ بأول حفظ، لا فشل قراءة.
+    if (code === 'permission-denied' && !currentUserSuspended){
+      myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, favoriteCount:0, categories:{} };
+      myCityListLoadFailed = false; myCityListLoadError = '';
+      myCityListLoadedFor = cityId;
+      return;
+    }
+    // أي خطأ آخر (انقطاع · تعذّر الوصول) فشلٌ حقيقي: تبقى غير محمَّلة فلا يكتب أي حفظ فوق محتواها
     myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, favoriteCount:0, categories:{} };
     myCityListLoadFailed = true; myCityListLoadedFor = null;
-    myCityListLoadError = (e && (e.code || e.message)) || 'unknown';
+    myCityListLoadError = code || (e && e.message) || 'unknown';
     return;
   }
   myCityListLoadFailed = false;
@@ -5507,7 +5516,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r40 (the read-failure guard added in r39 also caught brand-new accounts, whose first read can fail transiently, and then blocked every save — the banner now names the error and offers a retry instead of leaving the account stuck)');
+logTiming('BUILD: M2-ID-r41 (Firestore refuses to read a document that does not exist yet, because the rule inspects resource.data — so every new account and every new city returns permission-denied on its very first read, which the old code swallowed and the r39 guard mistook for a failure and locked the account out; that one case is now recognised as an empty list waiting for its first save, while every other error still blocks writing)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
