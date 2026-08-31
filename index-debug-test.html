@@ -838,11 +838,13 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <button type="button" class="dr-item" onclick="closeAccountModal(); copyLink();"><span>🔗 Copy Link</span><span></span></button>
       <button type="button" class="dr-item" onclick="closeAccountModal(); showQR();"><span>🀄 QR</span><span></span></button>
       <a class="dr-item" href="mailto:mypickz.app@gmail.com?subject=MyPickz%20Feedback"><span>✉️ Contact Us</span><span></span></a>
+      <button type="button" class="dr-item" onclick="closeAccountModal(); openFavoritesModal();"><span>❤️ My Favorites</span><span></span></button>
       <button type="button" class="dr-item" onclick="closeAccountModal(); openHelpModal();"><span>📖 <span id="helpBtnLabel">Guide</span></span><span></span></button>
 
       <div id="drawerOwner" style="display:none;">
         <div class="dr-head">Owner</div>
         <button type="button" class="dr-item" disabled><span>🛠 Admin panel</span><span class="soon">Step 8</span></button>
+        <button type="button" class="dr-item" onclick="closeAccountModal(); openFavoriteStats();"><span>📊 Most Loved</span><span></span></button>
         <button type="button" class="dr-item" onclick="closeAccountModal(); openUsersModal();"><span>👥 Manage Users</span><span></span></button>
         <button type="button" class="dr-item" onclick="closeAccountModal(); openSystemStatusModal();"><span>🩺 System Status</span><span></span></button>
         <div class="dr-head">Policies <span class="soon" style="font-size:10px; color:var(--brass);">owner preview — hidden until ٢/هـ</span></div>
@@ -3061,12 +3063,12 @@ function renderAddresses(){
   const cityId = addrCurrentCity;
 
   /* المحدد الواحد — نفس نموذج وجهة الأماكن */
-  const oneC = countries.length <= 1, oneCity2 = inCountry.length <= 1;
+  const oneC = countries.length <= 1;
   document.getElementById('addrTrio').innerHTML =
       (!addrCurrentCountry ? '<span class="csel label">—</span>'
         : oneC ? '<span class="csel label">' + plCountryCode(addrCurrentCountry) + '</span>'
         : '<button type="button" class="csel" onclick="addrTogglePanel(\'countries\')">' + plCountryCode(addrCurrentCountry) + ' ' + (addrPanel === 'countries' ? '⌃' : '⌄') + '</button>')
-    + (oneCity2 ? '<span class="csel label grow"><b>' + escapeHtml(cityId ? cityNameOf(cityId) : 'Add your city') + '</b></span>'
+    + (!cityId ? '<span class="csel label grow"><b>Add your city</b></span>'
         : '<button type="button" class="csel grow" onclick="addrTogglePanel(\'cities\')"><b>' + escapeHtml(cityNameOf(cityId)) + '</b> ' + (addrPanel === 'cities' ? '⌃' : '⌄') + '</button>')
     + '<button type="button" class="actn" onclick="addAddrCity()"><b>＋</b> City</button>';
   const cb = document.getElementById('addrCatBtn'); if (cb) cb.innerHTML = '<b>＋</b> Add address';
@@ -3077,7 +3079,7 @@ function renderAddresses(){
     const rows = inCountry.map(c =>
       '<div class="prow' + (c === cityId ? ' on' : '') + '"><span onclick="pickAddrCity(\'' + c + '\')">'
       + (c === cityId ? '<b>' + escapeHtml(cityNameOf(c)) + '</b> ' : escapeHtml(cityNameOf(c)) + ' ') + addrCountOf(c) + '</span>'
-      + '<span class="dim" onclick="removeAddrCity(\'' + c + '\')" title="Delete city">🗑</span></div>').join('');
+      + '<span class="dim" onclick="event.stopPropagation(); removeAddrCity(\'' + c + '\')" title="Delete city">🗑</span></div>').join('');
 
     panel = '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(addrCurrentCountry || '') + '</div>' + rows + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
   } else if (addrPanel === 'countries'){
@@ -3607,14 +3609,12 @@ function renderPlacesMine(){
 
   /* الصف الأول — المحدد الواحد والفعل الأساسي (المشهد ٦/أ · القرار ٢٠٢٦-٠٨-٢٩-٠٥) */
   const countriesAll = myListAllCountries();
-  const oneCountry = countriesAll.length <= 1, oneCity = inCountry.length <= 1;
+  const oneCountry = countriesAll.length <= 1;
   let html = '<div class="headrow">'
     + (oneCountry
         ? '<span class="csel label">' + plCountryCode(myListCountry) + '</span>'
         : '<button type="button" class="csel" onclick="plTogglePanel(\'countries\')">' + plCountryCode(myListCountry) + ' ' + (plPanel === 'countries' ? '⌃' : '⌄') + '</button>')
-    + (oneCity
-        ? '<span class="csel label grow"><b>' + escapeHtml(plCityName()) + '</b></span>'
-        : '<button type="button" class="csel grow" onclick="plTogglePanel(\'cities\')"><b>' + escapeHtml(plCityName()) + '</b> ' + (plPanel === 'cities' ? '⌃' : '⌄') + '</button>')
+    + '<button type="button" class="csel grow" onclick="plTogglePanel(\'cities\')"><b>' + escapeHtml(plCityName()) + '</b> ' + (plPanel === 'cities' ? '⌃' : '⌄') + '</button>'
     + '<button type="button" class="actn" onclick="plAddCity()"><b>＋</b> City</button>'
     + '</div>';
 
@@ -3630,7 +3630,7 @@ function renderPlacesMine(){
     let cityRows = inCountry.map(c =>
       '<div class="prow' + (c.id === myListCityId ? ' on' : '') + '"><span onclick="plPickCity(\'' + c.id + '\')">'
       + (c.id === myListCityId ? '<b>' + escapeHtml(c.name) + '</b>' : escapeHtml(c.name)) + '</span>'
-      + (c.id.indexOf('mylist_') === 0 ? '<span class="dim" onclick="plRemoveCity(\'' + c.id + '\')" title="Delete city">🗑</span>' : '<span class="dim"></span>')
+      + '<span class="dim" onclick="event.stopPropagation(); plRemoveCity(\'' + c.id + '\')" title="Delete city">🗑</span>'
       + '</div>').join('');
     let catRows = cats.map(c => { const n = plCatCount(c.id);
       return '<div class="prow' + (n ? '' : ' dim') + '" onclick="openPlPlaceModal(\'' + c.id + '\', null)"><span>' + c.icon + ' ' + escapeHtml(c.name) + '</span><span>' + (n ? n + ' ' : '') + '＋</span></div>'; }).join('');
@@ -5434,7 +5434,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r29 (a brand-new account kept the placeholder identity chip until reload: the chip is painted before the nickname is read, and the repaint inside the nickname check returns early while sign-up is in progress — the chip is now repainted the moment the nickname is reserved)');
+logTiming('BUILD: M2-ID-r30 (three owner-path gaps: owner tools lived inside the hidden legacy block, so Favorites and Most Loved were unreachable at all — both now sit in the drawer; the city bin appeared only for self-added cities although the delete dialog also offers clear-my-list for the built-in ones; and a lone city rendered as a label, which hid its bin entirely — the city control is always a button now, while a lone country stays a label since no destructive action lives there)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
