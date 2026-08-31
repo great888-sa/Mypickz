@@ -3578,7 +3578,13 @@ async function renderPlacesBody(){
     body.innerHTML = '<div class="mp-empty" style=""><div class="big">' + t[0] + '</div>' + t[1] + ' — opens in stage 3 of this step.</div>';
     return;
   }
-  if (!myListCityId) myListCityId = ((userListData && userListData.listCity) && myListAllCities().some(c => c.id === userListData.listCity)) ? userListData.listCity : currentCityId;
+  if (!myListCityId){                                  // ١ المدينة المحفوظة · ٢ أول مدينة بآخر دولة · ٣ الافتراضي
+    const all = myListAllCities(), saved = userListData && userListData.listCity, savedC = userListData && userListData.listCountry;
+    const byCity = saved && all.find(c => c.id === saved);
+    const byCountry = !byCity && savedC && all.find(c => c.country === savedC);
+    myListCityId = byCity ? byCity.id : (byCountry ? byCountry.id : currentCityId);
+    if (byCity || byCountry) myListCountry = (byCity || byCountry).country;
+  }
   if (!myListCountry){ const c0 = myListAllCities().find(x => x.id === myListCityId); myListCountry = c0 ? c0.country : (myListAllCountries()[0] || null); }
   body.innerHTML = '<div class="mp-empty">Loading…</div>';
   await loadMyCityList(myListCityId);
@@ -4040,6 +4046,10 @@ async function selectMyListCountry(country){
   myListCountry = country;
   const firstCity = myListAllCities().find(c => c.country === country);
   myListCityId = firstCity ? firstCity.id : null;
+  if (userListData){                                   // آخر دولة تصفّحتها تُحفظ ولو لم تكن فيها مدن
+    userListData.listCountry = country; userListData.listCity = myListCityId || '';
+    mpData.userLists.merge(currentUser.uid, { listCountry: country, listCity: myListCityId || '' }).catch(()=>{});
+  }
   document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
   await loadMyCityList(myListCityId);
   renderMyListModal();
@@ -4095,7 +4105,8 @@ async function removeMyListCity(cityId, opts){
       remaining = all.filter(c => c.country === myListCountry);
     }
     myListCityId = remaining.length ? remaining[0].id : null;
-    if (userListData) { userListData.listCity = myListCityId; mpData.userLists.merge(currentUser.uid, { listCity: myListCityId || '' }).catch(()=>{}); }
+    if (userListData) { userListData.listCity = myListCityId || ''; userListData.listCountry = myListCountry || '';
+      mpData.userLists.merge(currentUser.uid, { listCity: myListCityId || '', listCountry: myListCountry || '' }).catch(()=>{}); }
   }
   await saveUserListGeneral();
   await syncCommunityProfile(); // تفادي "بيانات أشباح" لمدينة محذوفة كانت عامة بـcommunityProfiles
@@ -4352,7 +4363,13 @@ async function toggleMyListPublic(){
 async function openMyListModal(){
   mpTrack.hit('mylist_open', { depth: 1 });
   if (!currentUser){ openAuthModal(); return; }
-  if (!myListCityId) myListCityId = ((userListData && userListData.listCity) && myListAllCities().some(c => c.id === userListData.listCity)) ? userListData.listCity : currentCityId;
+  if (!myListCityId){                                  // ١ المدينة المحفوظة · ٢ أول مدينة بآخر دولة · ٣ الافتراضي
+    const all = myListAllCities(), saved = userListData && userListData.listCity, savedC = userListData && userListData.listCountry;
+    const byCity = saved && all.find(c => c.id === saved);
+    const byCountry = !byCity && savedC && all.find(c => c.country === savedC);
+    myListCityId = byCity ? byCity.id : (byCountry ? byCountry.id : currentCityId);
+    if (byCity || byCountry) myListCountry = (byCity || byCountry).country;
+  }
   if (!myListCountry){
     const c = myListAllCities().find(c => c.id === myListCityId);
     myListCountry = c ? c.country : (myListAllCountries()[0] || null);
@@ -4372,9 +4389,9 @@ async function selectMyListCity(cityId){
   myListCityId = cityId;
   const c = myListAllCities().find(c => c.id === cityId);
   if (c) myListCountry = c.country;
-  if (userListData && userListData.listCity !== cityId){    // العودة إلى آخر مدينة عند فتح الوجهة
-    userListData.listCity = cityId;
-    mpData.userLists.merge(currentUser.uid, { listCity: cityId }).catch(()=>{});
+  if (userListData && (userListData.listCity !== cityId || userListData.listCountry !== myListCountry)){
+    userListData.listCity = cityId; userListData.listCountry = myListCountry || '';
+    mpData.userLists.merge(currentUser.uid, { listCity: cityId, listCountry: myListCountry || '' }).catch(()=>{});
   }
   document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
   await loadMyCityList(cityId);
@@ -5445,7 +5462,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r31 (destructive city actions ran instantly with no confirmation at all — both now name the city and the exact count before acting; country is always a control on both destinations; Places reopens on the city you left, stored on the user document like the addresses one already was; and deleting the last city of a country no longer strands the country label on an unrelated city)');
+logTiming('BUILD: M2-ID-r32 (Places fell back to the first of the seven hardcoded cities whenever the remembered one was gone — the last browsed country is now stored beside the city, and opening resolves in three steps: the saved city, then the first city of the saved country, and only then the default)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
