@@ -3339,6 +3339,7 @@ async function doSignUp(){
       logTiming('[SIGNUP] users write OK');
       userListData.nickname = nickname; // مزامنة الذاكرة المحلية فورًا (loadUserList قد سبقت الكتابة)
       nicknameSaved = true;
+      updateUserUI();                   // الشارة تُرسم قبل معرفة الاسم، وenforceNickname يخرج مبكرًا أثناء التسجيل
     }catch(e){
       logTiming('[SIGNUP] ❌ FAILED at ' + step + ': ' + (e && e.code) + ' — ' + (e && e.message));
       console.warn('Nickname reservation failed at sign-up:', e && e.code, e);
@@ -5433,7 +5434,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r28 (the trip-type row was sitting inside Add to Trip, where it has nothing to do with picking a category — removed, it belongs to trip creation; the back control was an 11px arrow pointing the wrong way and is now a visible All trips chip; and the trip detail public/share rows, view toggle, add-places button, area and source lines all moved onto the shared classes)');
+logTiming('BUILD: M2-ID-r29 (a brand-new account kept the placeholder identity chip until reload: the chip is painted before the nickname is read, and the repaint inside the nickname check returns early while sign-up is in progress — the chip is now repainted the moment the nickname is reserved)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
