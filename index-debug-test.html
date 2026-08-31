@@ -3066,7 +3066,6 @@ function renderAddresses(){
   const oneC = countries.length <= 1;
   document.getElementById('addrTrio').innerHTML =
       (!addrCurrentCountry ? '<span class="csel label">—</span>'
-        : oneC ? '<span class="csel label">' + plCountryCode(addrCurrentCountry) + '</span>'
         : '<button type="button" class="csel" onclick="addrTogglePanel(\'countries\')">' + plCountryCode(addrCurrentCountry) + ' ' + (addrPanel === 'countries' ? '⌃' : '⌄') + '</button>')
     + (!cityId ? '<span class="csel label grow"><b>Add your city</b></span>'
         : '<button type="button" class="csel grow" onclick="addrTogglePanel(\'cities\')"><b>' + escapeHtml(cityNameOf(cityId)) + '</b> ' + (addrPanel === 'cities' ? '⌃' : '⌄') + '</button>')
@@ -3204,6 +3203,8 @@ async function cityCountAddr(cityId){
 }
 async function cityDelSide(){
   const { cityId, from } = cityDelCtx || {}; if (!cityId) return;
+  const n1 = from === 'addr' ? await cityCountAddr(cityId) : await cityCountList(cityId);
+  if (!confirm((from === 'addr' ? 'Remove your ' + n1 + ' address' + (n1 === 1 ? '' : 'es') + ' in ' : 'Clear your list of ' + n1 + ' place' + (n1 === 1 ? '' : 's') + ' in ') + cityNameOf(cityId) + '? This cannot be undone.')) return;
   closeModalById('cityDelBackdrop');
   if (from === 'addr'){
     try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); }catch(e){}
@@ -3224,6 +3225,8 @@ async function cityDelSide(){
 }
 async function cityDelFull(){
   const { cityId } = cityDelCtx || {}; if (!cityId) return;
+  const nA = await cityCountAddr(cityId), nL = await cityCountList(cityId);
+  if (!confirm('Delete ' + cityNameOf(cityId) + ' everywhere — ' + (nA + nL) + ' item' + (nA + nL === 1 ? '' : 's') + ' will be lost. This cannot be undone.')) return;
   closeModalById('cityDelBackdrop');
   try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); }catch(e){}
   delete addrData[cityId];
@@ -3575,7 +3578,7 @@ async function renderPlacesBody(){
     body.innerHTML = '<div class="mp-empty" style=""><div class="big">' + t[0] + '</div>' + t[1] + ' — opens in stage 3 of this step.</div>';
     return;
   }
-  if (!myListCityId) myListCityId = currentCityId;
+  if (!myListCityId) myListCityId = ((userListData && userListData.listCity) && myListAllCities().some(c => c.id === userListData.listCity)) ? userListData.listCity : currentCityId;
   if (!myListCountry){ const c0 = myListAllCities().find(x => x.id === myListCityId); myListCountry = c0 ? c0.country : (myListAllCountries()[0] || null); }
   body.innerHTML = '<div class="mp-empty">Loading…</div>';
   await loadMyCityList(myListCityId);
@@ -3611,9 +3614,7 @@ function renderPlacesMine(){
   const countriesAll = myListAllCountries();
   const oneCountry = countriesAll.length <= 1;
   let html = '<div class="headrow">'
-    + (oneCountry
-        ? '<span class="csel label">' + plCountryCode(myListCountry) + '</span>'
-        : '<button type="button" class="csel" onclick="plTogglePanel(\'countries\')">' + plCountryCode(myListCountry) + ' ' + (plPanel === 'countries' ? '⌃' : '⌄') + '</button>')
+    + '<button type="button" class="csel" onclick="plTogglePanel(\'countries\')">' + plCountryCode(myListCountry) + ' ' + (plPanel === 'countries' ? '⌃' : '⌄') + '</button>'
     + '<button type="button" class="csel grow" onclick="plTogglePanel(\'cities\')"><b>' + escapeHtml(plCityName()) + '</b> ' + (plPanel === 'cities' ? '⌃' : '⌄') + '</button>'
     + '<button type="button" class="actn" onclick="plAddCity()"><b>＋</b> City</button>'
     + '</div>';
@@ -4087,8 +4088,14 @@ async function removeMyListCity(cityId, opts){
   try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){} // خ٥/م٢-ب: عبر النواة
   if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
   if (myListCityId === cityId){
-    const remaining = myListAllCities().filter(c => c.country === myListCountry);
+    const all = myListAllCities();
+    let remaining = all.filter(c => c.country === myListCountry);
+    if (!remaining.length && all.length){          // لم تبقَ مدينة بهذه الدولة — الدولة تتبع المدينة الجديدة
+      myListCountry = all[0].country;
+      remaining = all.filter(c => c.country === myListCountry);
+    }
     myListCityId = remaining.length ? remaining[0].id : null;
+    if (userListData) { userListData.listCity = myListCityId; mpData.userLists.merge(currentUser.uid, { listCity: myListCityId || '' }).catch(()=>{}); }
   }
   await saveUserListGeneral();
   await syncCommunityProfile(); // تفادي "بيانات أشباح" لمدينة محذوفة كانت عامة بـcommunityProfiles
@@ -4345,7 +4352,7 @@ async function toggleMyListPublic(){
 async function openMyListModal(){
   mpTrack.hit('mylist_open', { depth: 1 });
   if (!currentUser){ openAuthModal(); return; }
-  if (!myListCityId) myListCityId = currentCityId;
+  if (!myListCityId) myListCityId = ((userListData && userListData.listCity) && myListAllCities().some(c => c.id === userListData.listCity)) ? userListData.listCity : currentCityId;
   if (!myListCountry){
     const c = myListAllCities().find(c => c.id === myListCityId);
     myListCountry = c ? c.country : (myListAllCountries()[0] || null);
@@ -4365,6 +4372,10 @@ async function selectMyListCity(cityId){
   myListCityId = cityId;
   const c = myListAllCities().find(c => c.id === cityId);
   if (c) myListCountry = c.country;
+  if (userListData && userListData.listCity !== cityId){    // العودة إلى آخر مدينة عند فتح الوجهة
+    userListData.listCity = cityId;
+    mpData.userLists.merge(currentUser.uid, { listCity: cityId }).catch(()=>{});
+  }
   document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
   await loadMyCityList(cityId);
   renderMyListModal();
@@ -5434,7 +5445,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r30 (three owner-path gaps: owner tools lived inside the hidden legacy block, so Favorites and Most Loved were unreachable at all — both now sit in the drawer; the city bin appeared only for self-added cities although the delete dialog also offers clear-my-list for the built-in ones; and a lone city rendered as a label, which hid its bin entirely — the city control is always a button now, while a lone country stays a label since no destructive action lives there)');
+logTiming('BUILD: M2-ID-r31 (destructive city actions ran instantly with no confirmation at all — both now name the city and the exact count before acting; country is always a control on both destinations; Places reopens on the city you left, stored on the user document like the addresses one already was; and deleting the last city of a country no longer strands the country label on an unrelated city)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
