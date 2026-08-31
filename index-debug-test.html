@@ -3692,7 +3692,8 @@ function renderPlacesMine(){
     });
   });
   if (myCityListLoadFailed){
-    html += '<div class="warnline">⚠️ <span><b>Could not load this city</b><br>Nothing will be saved until it loads, so your places stay safe. Check your connection and reopen.</span></div>';
+    html += '<div class="warnline">⚠️ <span><b>Could not load this city</b><br>Nothing is saved until it loads, so your places stay safe. <span class="dim">(' + escapeHtml(myCityListLoadError) + ')</span></span></div>'
+      + '<button type="button" class="cta wide" onclick="retryLoadCity()">Try again</button>';
   }
   if (!any && !myCityListLoadFailed) html += '<div class="mp-empty">📝<br>Start your ' + escapeHtml(plCityName()) + ' list.<br><span class="mini">Tap “Add from Google Maps”, or ＋ under any category.</span></div>';
   if (isOwner) html += '<div class="pl-ownerpanel"><b>👑 Owner · edit mode</b><div class="pl-sub" id="plMigrLine">Guide places migration — counter and run arrive in stage 5 of this step.</div><button type="button" class="cta" onclick="showToast(\'Migration runs in stage 5 — city by city, counts matched\')">Move guide places to my lists</button></div>';
@@ -3926,7 +3927,13 @@ let sharedCityLists = [];  // قوائم مدن مستخدمين آخرين شُ
 let viewingSharedCityListId = null; // معرّف القائمة المشتركة المفتوحة حاليًا للعرض (قراءة فقط)
 let myCityListData = null; // بيانات المدينة الحالية بـMy List (المرحلة ١ من إعادة الهيكلة): { public, sharedWith, sharedWithNames, favoriteCount, categories:{} }
 let myCityListLoadedFor = null;
-let myCityListLoadFailed = false;   // القراءة فشلت — يُمنع كل حفظ حتى تنجح // أي cityId مُحمَّل حاليًا بـmyCityListData (لتفادي إعادة تحميل غير ضرورية)
+let myCityListLoadFailed = false;   // القراءة فشلت — يُمنع كل حفظ حتى تنجح
+let myCityListLoadError = '';
+async function retryLoadCity(){        // إعادة محاولة صريحة بيد المستخدم
+  myCityListLoadFailed = false; myCityListLoadedFor = null;
+  await loadMyCityList(myListCityId);
+  renderPlacesMine();
+} // أي cityId مُحمَّل حاليًا بـmyCityListData (لتفادي إعادة تحميل غير ضرورية)
 let currentUserSuspended = false;
 let userListLoadFailed = false; // true لو فشلت قراءة userLists شبكيًا — يميّز "لا اسم مستعار" عن "تعذّر التحقق" (لا نحبس المستخدم بخطأ مؤقت)
 let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
@@ -4009,6 +4016,7 @@ async function loadMyCityList(cityId){
     // فشل القراءة لا يعني مدينة فارغة — تُعلَّم غير محمَّلة فلا يكتب أي حفظ فوق محتواها
     myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, favoriteCount:0, categories:{} };
     myCityListLoadFailed = true; myCityListLoadedFor = null;
+    myCityListLoadError = (e && (e.code || e.message)) || 'unknown';
     return;
   }
   myCityListLoadFailed = false;
@@ -5499,7 +5507,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r39 (the real data-loss path: when reading a city list failed for any reason the app treated the city as empty and marked it loaded, so the next save wrote an empty document over the real one — a failed read now leaves the city unloaded, blocks every save and says so on screen, and the two background writes can no longer fire on empty content or on a mismatched city)');
+logTiming('BUILD: M2-ID-r40 (the read-failure guard added in r39 also caught brand-new accounts, whose first read can fail transiently, and then blocked every save — the banner now names the error and offers a retry instead of leaving the account stuck)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
