@@ -3101,12 +3101,13 @@ function renderAddresses(){
   }
   document.getElementById('addrPanel').innerHTML = panel;
 
-  /* التصنيفات السبعة مسطَّحة — كلٌّ بعدّاده و＋، تُعرض دائمًا ولو فارغة */
+  /* التصنيفات السبعة مسطَّحة — كلٌّ بعدّاده و＋ */
   const cats = privateCategoryList();
+  const susp = currentUserSuspended ? '<div class="warnline">🚫 <span><b>Account Suspended</b><br>You can browse everything, but saving is turned off.</span></div>' : '';
   const catsMap = (cityId && addrData[cityId]) || {};
-  let html = '';
+  let html = susp;
   if (!cityId){
-    html = '<div class="mp-empty">🔒<br>Start with your city.<br><span class="mini">Tap ＋ Add city, then add your home, work, clinic… only you can see them.</span></div>';
+    html += '<div class="mp-empty">🔒<br>Start with your city.<br><span class="mini">Tap ＋ Add city, then add your home, work, clinic… only you can see them.</span></div>';
   } else {
     cats.forEach(cat => {
       const places = (catsMap[cat.id] && catsMap[cat.id].places) || [];
@@ -3691,6 +3692,9 @@ function renderPlacesMine(){
         + '</span></div>';
     });
   });
+  if (currentUserSuspended){
+    html += '<div class="warnline">🚫 <span><b>Account Suspended</b><br>You can browse everything, but saving, publishing and sharing are turned off.</span></div>';
+  }
   if (myCityListLoadFailed){
     html += '<div class="warnline">⚠️ <span><b>Could not load this city</b><br>Nothing is saved until it loads, so your places stay safe. <span class="dim">(' + escapeHtml(myCityListLoadError) + ')</span></span></div>'
       + '<button type="button" class="cta wide" onclick="retryLoadCity()">Try again</button>';
@@ -4016,7 +4020,7 @@ async function loadMyCityList(cityId){
     const code = (e && e.code) || '';
     // Firestore يرفض قراءة مستند غير موجود لأن القاعدة تفحص resource.data — وهذه حالة طبيعية
     // لكل حساب جديد ولكل مدينة جديدة: قائمة فارغة تُنشأ بأول حفظ، لا فشل قراءة.
-    if (code === 'permission-denied' && !currentUserSuspended){
+    if (code === 'permission-denied'){       // مستند لم يُنشأ بعد — والإيقاف لا شأن له بالقراءة
       myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, favoriteCount:0, categories:{} };
       myCityListLoadFailed = false; myCityListLoadError = '';
       myCityListLoadedFor = cityId;
@@ -5516,7 +5520,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r41 (Firestore refuses to read a document that does not exist yet, because the rule inspects resource.data — so every new account and every new city returns permission-denied on its very first read, which the old code swallowed and the r39 guard mistook for a failure and locked the account out; that one case is now recognised as an empty list waiting for its first save, while every other error still blocks writing)');
+logTiming('BUILD: M2-ID-r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
