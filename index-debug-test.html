@@ -446,7 +446,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .acc-item.danger{border-color:var(--line-ivory); color:var(--danger);}
   .fav-btn{background:none; color:var(--night-4);}
   .row .fav-btn,.pl-row .fav-btn,.modal .fav-btn,.ticket .fav-btn{color:var(--ink-faint);}
-  .fav-btn.on,.stats-count{color:var(--danger);}
+  .fav-btn.on{color:var(--danger-night);}
+  .row .fav-btn.on,.pl-row .fav-btn.on,.modal .fav-btn.on,.ticket .fav-btn.on,.stats-count{color:var(--danger);}
 
   /* ═ النموذج القياسي — الهوية ═ */
   .csel{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);}
@@ -3083,7 +3084,8 @@ function renderAddresses(){
     panel = '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(addrCurrentCountry || '') + '</div>' + rows + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
   } else if (addrPanel === 'countries'){
     panel = '<div class="panel"><div class="pinned">Browse countries</div>'
-      + countries.map(c => '<div class="prow' + (c === addrCurrentCountry ? ' on' : '') + '" onclick="pickAddrCountry(\'' + attrStr(c) + '\')"><span>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + escapeHtml(c) + '</span><span>' + addrCities.filter(x => countryOfCity(x) === c).length + '</span></div>').join('')
+      + countries.map(c => ({ c: c, n: addrCities.filter(x => countryOfCity(x) === c).length })).filter(o => o.n > 0)
+          .map(o => '<div class="prow' + (o.c === addrCurrentCountry ? ' on' : '') + '" onclick="pickAddrCountry(\'' + attrStr(o.c) + '\')"><span>' + (countryFlag(o.c) ? countryFlag(o.c) + ' ' : '') + escapeHtml(o.c) + '</span><span>' + o.n + '</span></div>').join('')
       + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
   } else if (addrPanel === 'cats' && cityId){
     const cm = (cityId && addrData[cityId]) || {};
@@ -3587,6 +3589,7 @@ async function renderPlacesBody(){
   }
   if (!myListCountry){ const c0 = myListAllCities().find(x => x.id === myListCityId); myListCountry = c0 ? c0.country : (myListAllCountries()[0] || null); }
   body.innerHTML = '<div class="mp-empty">Loading…</div>';
+  await pruneEmptyCountries();               // ينظّف أي دولة يتيمة من بيانات سابقة
   await loadMyCityList(myListCityId);
   renderPlacesMine();
 }
@@ -3654,8 +3657,10 @@ function renderPlacesMine(){
 
   /* صف النشر والمشاركة */
   const shares = (myCityListData.sharedWith || []).map(uid => '<span class="shname">' + escapeHtml((myCityListData.sharedWithNames || {})[uid] || 'user') + ' <button type="button" onclick="plRemoveShare(\'' + uid + '\')" title="Remove">✕</button></span>').join('');
-  html += '<div class="block"><span class="blkleft"><button type="button" class="switch-btn small ' + (myCityListData.public ? 'on' : '') + '" onclick="plTogglePublic()"><span class="knob"></span></button> Allow others to view</span>'
-    + '<span class="blkright">🔗 <button type="button" class="actn" onclick="plShareWith()" title="Share with someone by username"><b>＋</b> Add</button></span></div>'
+  html += '<div class="block"><span class="blkleft">🌐 Allow others to view</span>'
+    + '<button type="button" class="switch-btn small ' + (myCityListData.public ? 'on' : '') + '" onclick="plTogglePublic()"><span class="knob"></span></button></div>'
+    + '<div class="block"><span class="blkleft">🔗 Shared with someone</span>'
+    + '<span class="blkright"><button type="button" class="actn" onclick="plShareWith()" title="Share this city list with someone by username"><b>＋</b> Add</button></span></div>'
     + (shares ? '<div class="block">' + shares + '</div>' : '');
 
   /* التصنيفات التي فيها أماكن — بعدّادها و＋ · ثم صف المكان بأفعاله الخمسة */
@@ -4037,8 +4042,17 @@ function myListPublishedOwnerCities(){
 // كل المدن المتاحة للمستخدم داخل قائمته الشخصية: مدن المالك المنشورة + مدنه الخاصة هو بس
 function myListAllCities(){ const __all = myListPublishedOwnerCities().concat(userListData.customCities || []); return pendingCity ? __all.concat([pendingCity]) : __all; }
 function myListAllCountries(){
-  const fromCities = myListAllCities().map(c => c.country).filter(Boolean);
-  return [...new Set(fromCities.concat(userListData.customCountries || []))];
+  // الدولة كيان مشتق من مدنها — دولة بلا مدينة لا وجود لها (قرار المالك ٣١ أغسطس)
+  return [...new Set(myListAllCities().map(c => c.country).filter(Boolean))];
+}
+async function pruneEmptyCountries(){        // تنقية الدول اليتيمة بمستند المستخدم
+  if (!currentUser || !userListData) return;
+  const live = new Set(myListAllCities().map(c => c.country).filter(Boolean));
+  const kept = (userListData.customCountries || []).filter(c => live.has(c));
+  if (kept.length !== (userListData.customCountries || []).length){
+    userListData.customCountries = kept;
+    try{ await mpData.userLists.merge(currentUser.uid, { customCountries: kept }); }catch(e){}
+  }
 }
 
 async function selectMyListCountry(country){
@@ -4105,6 +4119,7 @@ async function removeMyListCity(cityId, opts){
       remaining = all.filter(c => c.country === myListCountry);
     }
     myListCityId = remaining.length ? remaining[0].id : null;
+    await pruneEmptyCountries();
     if (userListData) { userListData.listCity = myListCityId || ''; userListData.listCountry = myListCountry || '';
       mpData.userLists.merge(currentUser.uid, { listCity: myListCityId || '', listCountry: myListCountry || '' }).catch(()=>{}); }
   }
@@ -4649,7 +4664,8 @@ function renderCommunityModal(){
   const wrap = document.getElementById('communityBody');
   if (viewingUserUid){ renderCommunityUserList(wrap); return; }
   let usersToShow = communityUsers;
-  const cityName = (allCities().find(c => c.id === currentCityId) || {}).name || '';
+  const myCity = myListCityId || currentCityId;                 // شريحة المدينة تتبع ما تتصفّحه فعلًا
+  const cityName = (allCities().find(c => c.id === myCity) || {}).name || '';
 
   let html = '<div class="stickyhead"><div class="headrow"><span class="csel label">🌍 <b>Community</b></span>'
     + (communityTab === 'all'
@@ -4661,7 +4677,7 @@ function renderCommunityModal(){
     + '<button type="button" class="chip' + (communityTab === 'all' ? ' on' : '') + '" onclick="switchCommunityTab(\'all\')">All users</button></div></div>';
 
   if (communityTab === 'city'){
-    usersToShow = communityUsers.filter(u => u.publicCityIds.includes(currentCityId));
+    usersToShow = communityUsers.filter(u => u.publicCityIds.includes(myCity));
   } else {
     usersToShow = [...communityUsers].sort((a, b) => communitySort === 'loved'
       ? b.totalFavoriteCount - a.totalFavoriteCount : b.viewCount - a.viewCount);
@@ -5462,7 +5478,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r32 (Places fell back to the first of the seven hardcoded cities whenever the remembered one was gone — the last browsed country is now stored beside the city, and opening resolves in three steps: the saved city, then the first city of the saved country, and only then the default)');
+logTiming('BUILD: M2-ID-r35 (a country was stored as its own record alongside its cities, so deleting the last city left the country behind with a zero count — countries are now derived from their cities only, and any orphan left by earlier data is pruned from the user document on load and after every city delete)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
