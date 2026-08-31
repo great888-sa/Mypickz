@@ -1086,7 +1086,12 @@ let customCities = []; // مدن أضفتها لاحقًا: [{id, name, country}
 let customCountries = []; // دول أضفتها بدون مدن بعد: ["اسم1", "اسم2"]
 let customCountryFlags = {}; // أعلام الدول اللي أضفتها لاحقًا: { "اسم الدولة": "🇦🇪" }
 const COUNTRY_FLAGS = { "France":"🇫🇷", "Spain":"🇪🇸", "UK":"🇬🇧", "Switzerland":"🇨🇭" };
-function countryFlag(name){ return COUNTRY_FLAGS[name] || customCountryFlags[name] || ''; }
+function countryFlag(name){
+  if (COUNTRY_FLAGS[name]) return COUNTRY_FLAGS[name];
+  if (customCountryFlags[name]) return customCountryFlags[name];
+  const w = WORLD_COUNTRIES.find(c => c.name === name);   // العلم يُشتق من كود الدولة — لا يُخزَّن
+  return w ? isoFlagEmoji(w.code) : '';
+}
 
 // قائمة دول العالم الثابتة (اسم + كود ISO2) لاستخدامها في القائمة المنسدلة عند إضافة دولة جديدة
 const WORLD_COUNTRIES = [
@@ -3589,7 +3594,6 @@ async function renderPlacesBody(){
   }
   if (!myListCountry){ const c0 = myListAllCities().find(x => x.id === myListCityId); myListCountry = c0 ? c0.country : (myListAllCountries()[0] || null); }
   body.innerHTML = '<div class="mp-empty">Loading…</div>';
-  await pruneEmptyCountries();               // ينظّف أي دولة يتيمة من بيانات سابقة
   await loadMyCityList(myListCityId);
   renderPlacesMine();
 }
@@ -3687,7 +3691,10 @@ function renderPlacesMine(){
         + '</span></div>';
     });
   });
-  if (!any) html += '<div class="mp-empty">📝<br>Start your ' + escapeHtml(plCityName()) + ' list.<br><span class="mini">Tap “Add from Google Maps”, or ＋ under any category.</span></div>';
+  if (myCityListLoadFailed){
+    html += '<div class="warnline">⚠️ <span><b>Could not load this city</b><br>Nothing will be saved until it loads, so your places stay safe. Check your connection and reopen.</span></div>';
+  }
+  if (!any && !myCityListLoadFailed) html += '<div class="mp-empty">📝<br>Start your ' + escapeHtml(plCityName()) + ' list.<br><span class="mini">Tap “Add from Google Maps”, or ＋ under any category.</span></div>';
   if (isOwner) html += '<div class="pl-ownerpanel"><b>👑 Owner · edit mode</b><div class="pl-sub" id="plMigrLine">Guide places migration — counter and run arrive in stage 5 of this step.</div><button type="button" class="cta" onclick="showToast(\'Migration runs in stage 5 — city by city, counts matched\')">Move guide places to my lists</button></div>';
   body.innerHTML = html;
 }
@@ -3918,7 +3925,8 @@ let myListCityId = null;   // المدينة اللي المستخدم شغال 
 let sharedCityLists = [];  // قوائم مدن مستخدمين آخرين شُوركت معي بالتحديد (Share with someone)
 let viewingSharedCityListId = null; // معرّف القائمة المشتركة المفتوحة حاليًا للعرض (قراءة فقط)
 let myCityListData = null; // بيانات المدينة الحالية بـMy List (المرحلة ١ من إعادة الهيكلة): { public, sharedWith, sharedWithNames, favoriteCount, categories:{} }
-let myCityListLoadedFor = null; // أي cityId مُحمَّل حاليًا بـmyCityListData (لتفادي إعادة تحميل غير ضرورية)
+let myCityListLoadedFor = null;
+let myCityListLoadFailed = false;   // القراءة فشلت — يُمنع كل حفظ حتى تنجح // أي cityId مُحمَّل حاليًا بـmyCityListData (لتفادي إعادة تحميل غير ضرورية)
 let currentUserSuspended = false;
 let userListLoadFailed = false; // true لو فشلت قراءة userLists شبكيًا — يميّز "لا اسم مستعار" عن "تعذّر التحقق" (لا نحبس المستخدم بخطأ مؤقت)
 let myListCountry = null;  // الدولة المختارة حاليًا داخل نافذة "My List"
@@ -3994,12 +4002,16 @@ async function loadMyCityList(cityId){
       categories: split.pub // خ٢: الخاص لم يعد يُدمج بقائمتي — وجهة العناوين هي المحرِّر الوحيد للمستند الخاص
     };
     // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة — لهذي المدينة فقط
-    if (backfillPlaceIds(myCityListData.categories) && !currentUserSuspended){
-      mpData.cityLists.save(currentUser.uid, cityId, { ownerId: currentUser.uid, cityId, categories: myCityListData.categories }).catch(()=>{});
+    if (backfillPlaceIds(myCityListData.categories) && !currentUserSuspended && Object.keys(myCityListData.categories).length){
+      mpData.cityLists.save(currentUser.uid, cityId, { ownerId: currentUser.uid, cityId, cityName: cityNameOf(cityId) || cityId, categories: myCityListData.categories }).catch(()=>{});
     }
   }catch(e){
+    // فشل القراءة لا يعني مدينة فارغة — تُعلَّم غير محمَّلة فلا يكتب أي حفظ فوق محتواها
     myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, favoriteCount:0, categories:{} };
+    myCityListLoadFailed = true; myCityListLoadedFor = null;
+    return;
   }
+  myCityListLoadFailed = false;
   myCityListLoadedFor = cityId;
 }
 
@@ -4007,6 +4019,11 @@ async function loadMyCityList(cityId){
 async function saveMyCityList(){
   await commitPendingCityIfNeeded(myListCityId); // r18: تخليد المدينة المعلقة مع أول حفظ فعلي
   if (!currentUser || !myListCityId || !myCityListData) return;
+  // حارس التطابق: لا يُكتب محتوى مدينة فوق مستند مدينة أخرى — ولا يُكتب قبل اكتمال التحميل
+  if (myCityListLoadedFor !== myListCityId){
+    console.warn('[MyPickz] save skipped — loaded:', myCityListLoadedFor, 'target:', myListCityId);
+    return;
+  }
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   // نفس فحص روابط خرائط جوجل الموجود أصلًا، مطبَّق على تصنيفات هذي المدينة فقط
   let invalidCount = 0;
@@ -4028,7 +4045,7 @@ async function saveMyCityList(){
     const { pub, priv } = splitCategories(myCityListData.categories);
     const { categories, ...meta } = myCityListData;
     await mpData.cityLists.save(currentUser.uid, myListCityId,
-      { ownerId: currentUser.uid, cityId: myListCityId, nickname: userListData.nickname || null, ...meta, categories: pub });
+      { ownerId: currentUser.uid, cityId: myListCityId, cityName: cityNameOf(myListCityId) || myListCityId, nickname: userListData.nickname || null, ...meta, categories: pub });
     if (Object.keys(priv).length) await mpData.privatePlaces.save(currentUser.uid, myListCityId, priv);
     const hasRealPlace = Object.values(myCityListData.categories).some(entry => (entry.places||[]).some(p => p.url && p.name));
     if (hasRealPlace) mpData.users.flag(currentUser.uid, 'hasMyListActivity').catch(()=>{});
@@ -4046,8 +4063,12 @@ function myListAllCountries(){
   return [...new Set(myListAllCities().map(c => c.country).filter(Boolean))];
 }
 async function pruneEmptyCountries(){        // تنقية الدول اليتيمة بمستند المستخدم
-  if (!currentUser || !userListData) return;
+  // حارس: لا تُنقّي قبل أن تكون البيانات محمَّلة فعلًا — وإلا مُسحت الدول كلها بحساب خاطئ
+  if (!currentUser || !userListData || userListLoadFailed) return;
+  if (!Array.isArray(userListData.customCountries) || !userListData.customCountries.length) return;
+  if (!Array.isArray(userListData.customCities)) return;
   const live = new Set(myListAllCities().map(c => c.country).filter(Boolean));
+  if (!live.size) return;                    // لا مدن محمَّلة = لا حكم
   const kept = (userListData.customCountries || []).filter(c => live.has(c));
   if (kept.length !== (userListData.customCountries || []).length){
     userListData.customCountries = kept;
@@ -4431,7 +4452,7 @@ function renderSharedCityListDetail(){
   document.getElementById('myListCountryChips').innerHTML = '';
   document.getElementById('myListCityChips').innerHTML = '';
   const cityMeta = allCities().find(c => c.id === s.cityId);
-  document.getElementById('myListCityName').textContent = (cityMeta ? cityMeta.name : s.cityId) + ' — ' + (s.nickname || 'User');
+  document.getElementById('myListCityName').textContent = ((cityMeta && cityMeta.name) || s.cityName || s.cityId) + ' — ' + (s.nickname || 'User');
   document.getElementById('myListPublicToggle').closest('div').style.display = 'none';
   document.getElementById('myListNicknameRow').innerHTML = '';
 
@@ -4476,7 +4497,7 @@ function renderMyListModal(){
       sharedRow.innerHTML += sharedCityLists.map(s => {
         const cityMeta = allCities().find(c => c.id === s.cityId);
         return `<button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="openSharedCityList('${s.docId}')">
-          ${s.nickname || 'User'} — ${cityMeta ? cityMeta.name : s.cityId}
+          ${s.nickname || 'User'} — ${(cityMeta && cityMeta.name) || s.cityName || s.cityId}
         </button>`;
       }).join('');
     } else {
@@ -4720,7 +4741,7 @@ async function viewCommunityUser(uid){
       const cityMeta = allCities().find(c => c.id === d.cityId);
       viewingUserCities.push({
         id: d.cityId,
-        name: cityMeta ? cityMeta.name : d.cityId,
+        name: (cityMeta && cityMeta.name) || d.cityName || d.cityId,
         categories: (d.categories && typeof d.categories==='object') ? d.categories : {},
         favoriteCount: d.favoriteCount || 0
       });
@@ -5478,7 +5499,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r35 (a country was stored as its own record alongside its cities, so deleting the last city left the country behind with a zero count — countries are now derived from their cities only, and any orphan left by earlier data is pruned from the user document on load and after every city delete)');
+logTiming('BUILD: M2-ID-r39 (the real data-loss path: when reading a city list failed for any reason the app treated the city as empty and marked it loaded, so the next save wrote an empty document over the real one — a failed read now leaves the city unloaded, blocks every save and says so on screen, and the two background writes can no longer fire on empty content or on a mismatched city)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
