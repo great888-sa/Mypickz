@@ -284,6 +284,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .ctx{font-family:'Cairo',sans-serif; font-weight:700; font-size:11.5px; margin:6px 0 2px; user-select:none; -webkit-user-select:none;}
 .stattext{font-size:11px; user-select:none; -webkit-user-select:none;}
 .mp-idchip .sus{font-size:10px; font-weight:700; white-space:nowrap;}
+.fav{font-size:13px; line-height:1;}
 .mp-empty .cta,.mp-empty .actn{display:inline-flex; width:auto; margin:8px 4px 0; font-size:12px; padding:8px 14px;}
 .psearch{width:100%; border:1px solid; border-radius:9px; padding:7px 10px; font-size:12px; margin:0 0 6px; font-family:inherit;}
 .tools-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 4px;}
@@ -352,6 +353,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .mp-idchip.suspended{border-color:var(--danger-night);}
   .mp-idchip.suspended .mini-av{box-shadow:0 0 0 2px var(--danger-night);}
   .mp-idchip .sus{color:var(--danger-night);}
+  .fav{color:var(--ink-faint);}
+  .fav.on{color:var(--danger);}
   .psearch{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
   .tools-tile{background:var(--ivory-bright); color:var(--ink);}
   .tools-tile .dim{color:var(--ink-faint);}
@@ -655,14 +658,18 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">🧳 <b>My Trips</b></span></div><div class="chiprow" id="tripSrcRow"><button type="button" class="pl-src on" onclick="showToast('You are on My trips')">My trips</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">From curators</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">From community</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">My favorites</button></div><div class="chiprow" id="tripTypeRow"><button type="button" class="chip on" onclick="pickTripType(this)">All</button><button type="button" class="chip" onclick="pickTripType(this)">🚶 One day trip</button><button type="button" class="chip" onclick="pickTripType(this)">🏙 Single city</button><button type="button" class="chip" onclick="pickTripType(this)">🌍 Multi-city</button><span class="chip label mini">Soon</span></div><div class="ctx" id="tripCtx"><b>My trips</b> · All</div></div><div id="tripsHost"></div></div></div>
   <!-- خ١: الوجهة ٣ — المنتقون: مكان محجوز حتى خ٤ -->
   <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">⭐ <b>Curators</b></span><span class="actn label">🔍 Find a curator <span class="dim">Soon</span></span></div><div class="ctx"><b>Curators</b> · Step 4</div></div><div class="curgrid"><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty mini">Curators arrive in step 4 — the page below is the built shell.</div>
-     <div class="row rowblock cur-shell">
-       <div class="pn">⭐ Curator page <span class="dim">Step 4</span></div>
-       <div class="ps">Verified badge · bio · one contact link · followers</div>
-       <div class="rowacts"><span class="act">Follow</span><span class="act">Share</span><span class="act">Contact</span></div>
-     </div>
-     <div class="row rowblock cur-shell">
-       <div class="pn">📊 Curator board <span class="dim">Step 4</span></div>
-       <div class="ps">Page views · list opens · saves from your places · trip views · follows · referral source</div>
+     <!-- v1.38 · ٦/هـ٢ — صفحة المنتقي بنيةً كاملة: عرض بلا وظيفة (cur-shell) وبيانات مثال؛ تتفعّل بالخطوة الرابعة -->
+     <div class="cur-shell">
+       <div class="headrow" style="margin-bottom:6px;"><span class="actn">← Curators</span><span class="chip">Following ✓ <span class="dim">Step 4</span></span></div>
+       <div style="display:flex; align-items:center; gap:10px; margin:2px 0 4px;"><span class="mini-av" style="width:34px; height:34px; line-height:34px; font-size:14px; background:var(--av-2);">No</span><div><div class="pn" style="font-size:15px;">Nourah ✔</div><div class="ps" dir="auto">أماكن الرياض التي أعود إليها</div></div></div>
+       <div class="stattext" style="margin:2px 0 6px;">312 views · 24 places · 5 trips</div>
+       <div class="headrow" style="margin-bottom:6px;"><span class="act">Contact ↗</span><span class="act">Share</span></div>
+       <div class="chiprow" style="margin-bottom:4px;"><span class="pl-src on">Places</span><span class="pl-src">Trips</span></div>
+       <div class="ctx"><b>Nourah's places</b> · Riyadh</div>
+       <div class="headrow" style="margin:4px 0 6px;"><span class="csel">SA ⌄</span><span class="csel grow"><b>Riyadh</b> ⌄</span><span class="actn"><b>＋</b> City</span></div>
+       <div class="pl-cathead"><span>☕ Cafes (2)</span></div>
+       <div class="row"><div><div class="pn">Brew92</div><div class="ps">Al Nakheel</div></div><div class="acts"><span class="act">Maps ↗</span><span class="fav">♥</span><span class="act">Save</span></div></div>
+       <div class="row"><div><div class="pn">Camel Step</div><div class="ps">Al Olaya</div></div><div class="acts"><span class="act">Maps ↗</span><span class="fav">♥</span><span class="act">Save</span></div></div>
      </div></div></div>
   <!-- خ١: الوجهة ٤ — المجتمع: جسم نافذة المجتمع يُنقل إلى هنا -->
   <div class="mp-screen" id="screenCommunity"><div class="wrap destbody"><div id="communityHost"></div></div></div>
@@ -758,11 +765,11 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <h3 style="text-align:center;">Choose your home 🏠</h3>
       <p style="text-align:center; color:var(--ink-soft); font-size:12px; margin:0 0 12px;">MyPickz will open here every time. You can change it later in My Account.</p>
       <div class="homecards" id="homeCards">
-        <button type="button" class="hcard on" data-home="Places" onclick="pickHome(this)"><div class="hi">📍</div><div class="hn">Places</div><div class="hd">Browse hand-picked places</div></button>
-        <button type="button" class="hcard" data-home="Trips" onclick="pickHome(this)"><div class="hi">🧳</div><div class="hn">Trips</div><div class="hd">Plan &amp; organize trips</div></button>
-        <button type="button" class="hcard" data-home="Community" onclick="pickHome(this)"><div class="hi">🌍</div><div class="hn">Community</div><div class="hd">Explore everyone's lists</div></button>
+        <button type="button" class="hcard on" data-home="Places" onclick="pickHome(this)"><div class="hi"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></div><div class="hn">Places</div><div class="hd">Browse hand-picked places</div></button>
+        <button type="button" class="hcard" data-home="Trips" onclick="pickHome(this)"><div class="hi"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="6" r="2.2"/><path d="M7 18h6a3 3 0 0 0 0-6h-2a3 3 0 0 1 0-6h6"/></svg></div><div class="hn">Trips</div><div class="hd">Plan &amp; organize trips</div></button>
+        <button type="button" class="hcard" data-home="Community" onclick="pickHome(this)"><div class="hi"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M2.5 19c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5H2.5zM16 19c0-1.9-.7-3.5-1.9-4.6.9-.6 1.9-.9 2.9-.9 2.6 0 4.5 1.7 4.5 4.3V19H16z"/></svg></div><div class="hn">Community</div><div class="hd">Explore everyone's lists</div></button>
         <button type="button" class="hcard" data-home="Curators" onclick="pickHome(this)"><div class="hi">⭐</div><div class="hn">Curators</div><div class="hd">Follow trusted curators</div></button>
-        <button type="button" class="hcard" data-home="Addresses" style="grid-column:1/3" onclick="pickHome(this)"><div class="hi">🔒</div><div class="hn">Personal Addresses</div><div class="hd">Always private — never shared</div></button>
+        <button type="button" class="hcard" data-home="Addresses" style="grid-column:1/3" onclick="pickHome(this)"><div class="hi"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M3 8h2M3 12h2M3 16h2"/><circle cx="12" cy="10" r="2.2"/><path d="M8.5 17c.6-1.9 1.9-2.8 3.5-2.8s2.9.9 3.5 2.8"/></svg></div><div class="hn">Personal Addresses</div><div class="hd">Always private — never shared</div></button>
       </div>
       <button class="btn btn-brass" style="margin-top:12px;"  onclick="saveHome()">Continue</button>
     </div>
@@ -781,6 +788,9 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <div style="height:10px"></div>
       <label class="flabel">Category</label>
       <div class="addr-chips" id="addrModalCats" style="margin:4px 0 10px;"></div>
+      <div class="chiprow" style="margin-bottom:9px;"><button type="button" class="chip on" id="addrMethodPaste" onclick="addrSetMethod(true)">📋 Paste from Maps</button><button type="button" class="chip" id="addrMethodManual" onclick="addrSetMethod(false)">✍️ Enter manually</button></div>
+      <div id="addrPasteWrap"><label class="flabel">Paste what Google Maps shared</label>
+      <input type="text" id="addrShareBox" class="modal-input" placeholder="Fakeeh Hospital, https://maps.app.goo.gl/…" autocomplete="off" oninput="addrParseShare()"></div>
       <label class="flabel">Name</label>
       <input id="addrName" class="modal-input" placeholder="e.g. Home" autocomplete="off">
       <label class="flabel">Google Maps link</label>
@@ -859,6 +869,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <button type="button" class="acc-item danger" onclick="openFromDrawer(openDeletePreview)"><span>🗑 Delete Account — permanent</span><span class="soon">Soon · preview</span></button>
 
       <div class="dr-head">My Dashboard</div>
+      <button type="button" class="dr-item" disabled><span>⭐ Become a curator</span><span class="soon">Step 4</span></button>
       <button type="button" class="dr-item" disabled><span>📊 Stats</span><span class="soon">Step 4</span></button>
       <button type="button" class="dr-item" disabled><span>🪪 Cards</span><span class="soon">Milestone 3</span></button>
       <button type="button" class="dr-item" disabled><span>📤 Export</span><span class="soon">Milestone 3</span></button>
@@ -2610,7 +2621,8 @@ function renderMyTripsModal(){
       '<div class="row rowblock"><div class="pn">' + escapeHtml(tripTitle(t)) + '</div>'
       + '<div class="ps" dir="auto">🏙 Type <span class="dim">Soon</span> · ' + tripPlaceCount(t) + ' places · ' + t.days.length + ' day' + (t.days.length > 1 ? 's' : '') + (t.public ? ' · 🌐 Public' : '') + ((t.sharedWith && t.sharedWith.length) ? ' · 🔗 Shared' : '') + '</div>'
       + '<div class="rowacts"><span class="act" onclick="openTripDetail(\'' + t.id + '\')">View trip →</span>'
-      + '<span class="act" onclick="startAddingToTrip(\'' + t.id + '\')">＋ Add places</span></div></div>').join('');
+      + '<span class="act" onclick="startAddingToTrip(\'' + t.id + '\')">＋ Add places</span>'
+      + '<span class="act" onclick="showToast(\'Edit trip — Soon (step 6)\')">✏️</span></div></div>').join('');
   }
   if (currentUserSuspended){
     html += '<div class="warnline">🚫 <span><b>Account Suspended</b><br>Your account has been suspended and can no longer create trips or add places.</span></div>';
@@ -3233,6 +3245,22 @@ function addrCountryPick(v){
   sel.value = v; inp.value = v; l.style.display = 'none';
   addrCountryChanged();
 }
+// v1.38 · ٦/و٢ — طريقتا الإدخال بنافذة العنوان: اللصق يملأ الاسم والرابط من نص المشاركة (تحليل محلي فقط)
+function addrSetMethod(paste){
+  const pw = document.getElementById('addrPasteWrap');
+  document.getElementById('addrMethodPaste').classList.toggle('on', paste);
+  document.getElementById('addrMethodManual').classList.toggle('on', !paste);
+  if (pw) pw.style.display = paste ? '' : 'none';
+}
+function addrParseShare(){
+  const raw = String((document.getElementById('addrShareBox') || {}).value || '');
+  if (!raw.trim()) return;
+  const um = raw.match(/https?:\/\/\S+/);
+  if (um){ const u = document.getElementById('addrUrl'); if (u) u.value = um[0]; }
+  const nameGuess = raw.replace(/https?:\/\/\S+/g, ' ').replace(/[\n\r]+/g, ' ').trim().replace(/[،,]$/, '').trim();
+  const n = document.getElementById('addrName');
+  if (n && !n.value.trim() && nameGuess) n.value = nameGuess.slice(0, 80);
+}
 function addrCountryChanged(preferCityId){
   const country = document.getElementById('addrCountry').value;
   const inp = document.getElementById('addrCountrySearch'); if (inp && inp.value !== country) inp.value = country;
@@ -3243,6 +3271,8 @@ function addrCountryChanged(preferCityId){
 }
 function openAddrModal(cityId, catId, index){
   if (!currentUser) return;
+  const sb = document.getElementById('addrShareBox'); if (sb) sb.value = '';
+  if (document.getElementById('addrMethodPaste')) addrSetMethod(true);
   if (currentUserSuspended){ showToast("Your account is suspended — you can't add addresses"); return; }
   const cats = privateCategoryList();
   addrEditRef = (cityId && catId && index !== undefined) ? { cityId, catId, index } : null;
@@ -4926,9 +4956,9 @@ function renderCommunityUserList(wrap){
 
   // v1.38 (المرجع ٦/د · القرارات ١ سبتمبر): الهرم — الطبقة ٢ بطاقات قوائم المدن (+ الرحلات العامة)، والطبقة ٣ أماكن القائمة المختارة
   if (!communityUserLayer){
-    let html = `<button type="button" class="remove-btn" onclick="backToCommunityList()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back</button>
-    <h4 style="text-align:center; margin:4px 0 6px; font-family:'Cairo',sans-serif;">${escapeHtml(u.nickname)}</h4>
-    <div class="ctx" style="text-align:center; margin:0 0 8px;"><b>City lists</b> · ${cities.length}</div>`;
+    // v1.38ب — المشهد ٦/د٢: صفوف مدمجة بارتفاع صف المكان؛ العودة بأول الصفوف؛ سطر السياق يقول أين أنت
+    let html = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;"><button type="button" class="remove-btn" onclick="backToCommunityList()"><i class="fa-solid fa-arrow-left"></i> People</button></div>
+    <div class="ctx" style="margin:0 0 8px;"><b>${escapeHtml(u.nickname)}</b> · City lists · ${cities.length}</div>`;
     if (!cities.length && !communityUserTrips.length){
       html += `<div class="mp-empty mini">No cities in this list yet</div>`;
       wrap.innerHTML = html; return;
@@ -4936,21 +4966,23 @@ function renderCommunityUserList(wrap){
     html += cities.map(c => {
       let n = 0; Object.keys(c.categories || {}).forEach(k => { const e = c.categories[k]; if (e && e.active === true && Array.isArray(e.places)) n += e.places.filter(p => p.url && p.name).length; });
       const saves = c.favoriteCount || 0;
-      return `<div class="row rowblock"><div class="pn" dir="auto">${escapeHtml(c.name)}</div>`
-        + `<div class="ps">${n} place${n === 1 ? '' : 's'}</div>`
-        + `<div class="stattext">${saves} saves</div>`
-        + `<div class="rowacts"><span class="act" onclick="communityUserLayer='${c.id}'; communityViewingCityId='${c.id}'; renderCommunityModal();">Open →</span></div></div>`;
+      return `<div class="row"><div><div class="pn" dir="auto">${escapeHtml(c.name)}</div>`
+        + `<div class="ps">${n} ${n === 1 ? 'place' : 'places'}</div>`
+        + `<div class="stattext">${saves} ${saves === 1 ? 'save' : 'saves'}</div></div>`
+        + `<div class="acts"><span class="act" onclick="communityUserLayer='${c.id}'; communityViewingCityId='${c.id}'; renderCommunityModal();">Open →</span></div></div>`;
     }).join('');
     if (communityUserTrips.length){
-      html += `<div class="row rowblock"><div class="pn">🧳 Public trips</div><div class="ps">${communityUserTrips.length} trip${communityUserTrips.length === 1 ? '' : 's'}</div>`
-        + `<div class="rowacts">` + communityUserTrips.map(t => `<span class="act" onclick="openCommunityTrip('${t.id}')">${escapeHtml(t.customLabel ? (t.cityName + ' — ' + t.customLabel) : t.cityName)} →</span>`).join('') + `</div></div>`;
+      html += `<div class="pl-cathead"><span>🧳 Public trips · ${communityUserTrips.length}</span></div>`
+        + communityUserTrips.map(t => `<div class="row"><div><div class="pn" dir="auto">${escapeHtml(t.customLabel ? (t.cityName + ' — ' + t.customLabel) : t.cityName)}</div>`
+          + `<div class="ps">${tripPlaceCount(t)} ${tripPlaceCount(t) === 1 ? 'place' : 'places'} · ${t.days.length} ${t.days.length === 1 ? 'day' : 'days'}</div></div>`
+          + `<div class="acts"><span class="act" onclick="openCommunityTrip('${t.id}')">Open →</span></div></div>`).join('');
     }
     wrap.innerHTML = html; return;
   }
   if (!cities.find(c => c.id === communityUserLayer)) { communityUserLayer = null; renderCommunityModal(); return; }
   communityViewingCityId = communityUserLayer;
-  let html = `<button type="button" class="remove-btn" onclick="communityUserLayer=null; renderCommunityModal();" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> ${escapeHtml(u.nickname)}'s lists</button>
-  <h4 style="text-align:center; margin:4px 0 6px; font-family:'Cairo',sans-serif;">${escapeHtml(u.nickname)} · ${escapeHtml((cities.find(c => c.id === communityViewingCityId) || {}).name || '')}</h4>`;
+  let html = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;"><button type="button" class="remove-btn" onclick="communityUserLayer=null; renderCommunityModal();"><i class="fa-solid fa-arrow-left"></i> ${escapeHtml(u.nickname)}'s lists</button></div>
+  <div class="ctx" style="margin:0 0 8px;"><b>${escapeHtml(u.nickname)}</b> · ${escapeHtml((cities.find(c => c.id === communityViewingCityId) || {}).name || '')}</div>`;
 
   const cityObj = cities.find(c => c.id === communityViewingCityId);
   const cityLinks = cityObj ? cityObj.categories : {};
@@ -5689,7 +5721,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
+logTiming('BUILD: M2-ID-r49 (conformance pass over all 23 reference scenes: full curator page structure 6/E2, trip row edit indicator with no heart on own trips, home chooser vector icons, address modal method chips with local share parsing, Become a curator in the drawer) — r48 (structures batch · second pass — scene 6/D2 as drawn: compact rows for the person layers, back at the first row, context line, a row per public trip) — r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
