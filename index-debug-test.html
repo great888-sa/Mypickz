@@ -148,8 +148,8 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
   #authBackdrop.gate-mode{z-index:1150;}
 .mp-tabbar{position:fixed; bottom:0; left:0; right:0; height:54px; z-index:700; border-top:1px solid; display:flex;}
 .mp-tab{flex:1; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px;}
-.mp-tab .ti{width:26px; height:26px; line-height:26px; border-radius:50%; margin:0 auto 2px; font-size:13px; display:block; text-align:center;}
-.mp-tab.on .ti{}
+.mp-tab .ti{width:26px; height:26px; line-height:26px; border-radius:50%; margin:0 auto 2px; font-size:13px; display:flex; align-items:center; justify-content:center;}
+.mp-tab .ti svg{width:13px; height:13px; display:block;}
 
 .mp-screen{display:none;}
 .mp-screen.on{display:block;}
@@ -243,7 +243,6 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .mini{font-size:8.5px; font-weight:700;}
 .trip-soon{opacity:.45;}
 
-.row,.rowblock{}
 .row{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 11px; margin:0 0 6px; border-radius:12px;}
 .rowblock{display:block;}
 .row .pn{font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; line-height:1.3;}
@@ -273,11 +272,22 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .trip-cat{font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.4px;}
 .tripnote{font-size:11px; font-weight:700; margin-top:3px;}
 
-#activeTripAddedRow{width:100%; margin-top:6px;}
+#activeTripAddedRow{width:100%; margin-top:6px; display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; padding-bottom:2px; scrollbar-width:none;}
+#activeTripAddedRow::-webkit-scrollbar{display:none;}
+#activeTripAddedRow .chip{flex:none;}
 #activeTripAddedRow .chip{font-size:12px; padding:6px 11px; line-height:1.4;}
 #activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
 
-#activeTripBar{display:none; position:fixed; left:0; right:0; bottom:54px; z-index:800; padding:9px 12px 11px; max-height:38vh; overflow-y:auto;}
+#activeTripBar{display:none; position:fixed; left:0; right:0; bottom:54px; z-index:800; padding:9px 12px 11px; max-height:38vh; overflow-y:auto; border-top:1px solid;}
+.flabel{display:block; font-size:11px; margin:0 0 3px;}
+.ctx{font-family:'Cairo',sans-serif; font-weight:700; font-size:11.5px; margin:6px 0 2px; user-select:none; -webkit-user-select:none;}
+.stattext{font-size:11px; user-select:none; -webkit-user-select:none;}
+.mp-idchip .sus{font-size:10px; font-weight:700; white-space:nowrap;}
+.mp-empty .cta,.mp-empty .actn{display:inline-flex; width:auto; margin:8px 4px 0; font-size:12px; padding:8px 14px;}
+.psearch{width:100%; border:1px solid; border-radius:9px; padding:7px 10px; font-size:12px; margin:0 0 6px; font-family:inherit;}
+.tools-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 4px;}
+.tools-tile{display:flex; flex-direction:column; gap:4px; padding:11px 10px; border-radius:12px; font-size:11px; line-height:1.6; border:none; text-align:left; cursor:default; font-family:inherit;}
+.tools-tile b{font-family:'Cairo',sans-serif; font-size:12px;}
 #activeTripBar.show{display:block;}
 .atb-head{display:flex; flex-wrap:wrap; align-items:center; gap:8px 6px;}
 .atb-head .acts{display:flex; gap:6px; margin-inline-start:auto; flex:none;}
@@ -288,7 +298,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 #activeTripAddedRow{margin-top:8px; flex-wrap:wrap; overflow:visible; row-gap:6px;}
 #activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
 
-.pclose{text-align:center; padding:7px 8px 4px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px;}
+.pclose{text-align:center; padding:7px 8px 4px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; border-top:1px solid;}
 
 .pl-acts button,.pl-acts a,.addr-row .acts button,.addr-row .acts a{min-width:32px; min-height:32px; display:inline-flex; align-items:center; justify-content:center;}
 .act,.actn,.chip{min-height:30px;}
@@ -305,7 +315,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 <style id="identity">
   /* ═══ الجزء الثاني — الهوية «الليل والورقة» · لون فقط ═══
      احذف هذه الكتلة كاملة: تبقى كل شاشة مبنيّة بالبنية أعلاه.
-     المصدر: المرجع الحاكم v1.31 (0d63b14c) وملف الهوية (19f8632d).
+     المصدر: المرجع الحاكم v1.37 (a080a90e) — دفعة تصحيحات الهوية ١ سبتمبر ٢٠٢٦؛ كتلة الهوية لون فقط.
      القاعدة: المختار زعفران دائمًا · والفعل الأساسي يتبع سطحه
               (زعفران على الليلي · حبر على العاجي) — القرار ٢٠٢٦-٠٨-٢٩-٠٧. */
   :root{
@@ -334,6 +344,16 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .mp-wordmark{color:var(--ivory-bright);}
   .mp-idchip{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);}
   .mini-av{color:var(--ivory-bright);}
+  .flabel{color:var(--ink-strong);}
+  .ctx{color:var(--night-3);}
+  .ctx b{color:var(--on-night);}
+  .stattext{color:var(--ink-strong);}
+  .mp-idchip.suspended{border-color:var(--danger-night);}
+  .mp-idchip.suspended .mini-av{box-shadow:0 0 0 2px var(--danger-night);}
+  .mp-idchip .sus{color:var(--danger-night);}
+  .psearch{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
+  .tools-tile{background:var(--ivory-bright); color:var(--ink);}
+  .tools-tile .dim{color:var(--ink-faint);}
   .mp-chipmenu{background:var(--ivory); border-color:var(--line-ivory); box-shadow:0 10px 26px rgba(0,0,0,.5);}
   .mp-chipmenu button{background:none; color:var(--ink); border-bottom-color:var(--line-ivory);}
   .mp-tabbar{background:var(--bar); border-top-color:var(--line-bar);}
@@ -490,10 +510,10 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .tripnote{color:var(--ink-strong);}
   #activeTripAddedRow .chip,#activeTripAddedRow .chip.label{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
   #activeTripAddedRow .chip b{color:var(--saffron);}
-  #activeTripBar{background:var(--bar); border-top:1px solid var(--line-strong); box-shadow:0 -8px 20px rgba(0,0,0,.45);}
+  #activeTripBar{background:var(--bar); border-top-color:var(--line-strong); box-shadow:0 -8px 20px rgba(0,0,0,.45);}
   #activeTripLabel{color:var(--on-night);}
   #activeTripLabel b{color:var(--saffron);}
-  .pclose{color:var(--ink-strong); border-top:1px solid var(--line-ivory);}
+  .pclose{color:var(--ink-strong); border-top-color:var(--line-ivory);}
   .cur-shell{opacity:.55;}
   .act[disabled]{opacity:.5;}
   .daynum{background:var(--surf); color:var(--on-night);}
@@ -510,7 +530,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <span class="mp-wordmark">MyPickz</span>
     </div>
     <button type="button" class="mp-idchip" id="accountChipBtn" onclick="toggleChipMenu()" style="display:none;">
-      <span class="mini-av" id="accountChipAv" style="background:var(--ink);">··</span><span id="accountChipLabel">Account</span>
+      <span class="mini-av" id="accountChipAv" style="background:var(--ink);">··</span><span id="accountChipLabel">Account</span><span class="sus" id="accountChipSus" style="display:none;">· Suspended</span>
     </button>
     <button type="button" class="mp-idchip" id="guestChipBtn" onclick="openGate()"><span class="mini-av" style="background:var(--ink-soft);">👤</span><span>Sign in</span></button>
     <!-- قرار المالك ٢٧ أغسطس: الشارة تفتح قائمة صغيرة (حسابي · خروج) — الدرج من ☰ الظاهر -->
@@ -526,11 +546,11 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <!-- خ٥/م٢: وجهة الأماكن الجديدة — مبدّل المصدر الرباعي (المشهد ٦/أ v1.25)؛ الواجهة القديمة مغلَّفة مخفية حتى الترحيل بالمرحلة ٥ ودوالها حية -->
   <div class="wrap destbody">
   <div class="stickyhead"><div class="pl-srcrow" id="plSrcRow">
-    <button type="button" class="pl-src on" data-src="mine" onclick="selectPlacesSource('mine')">📝 My List</button>
-    <button type="button" class="pl-src" data-src="curators" onclick="selectPlacesSource('curators')">⭐ Curators</button>
-    <button type="button" class="pl-src" data-src="community" onclick="selectPlacesSource('community')">🌍 Community</button>
-    <button type="button" class="pl-src" data-src="favorites" onclick="selectPlacesSource('favorites')">❤️ Favorites</button>
-  </div></div>
+    <button type="button" class="pl-src on" data-src="mine" onclick="selectPlacesSource('mine')">My places</button>
+    <button type="button" class="pl-src" data-src="curators" onclick="selectPlacesSource('curators')">From curators</button>
+    <button type="button" class="pl-src" data-src="community" onclick="selectPlacesSource('community')">From community</button>
+    <button type="button" class="pl-src" data-src="favorites" onclick="selectPlacesSource('favorites')">My favorites</button>
+  </div><div class="ctx" id="plCtx"><b>My places</b></div></div>
   <div id="plBody"></div>
   </div><!-- /غلاف الأماكن -->
   <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:var(--ivory-bright); border:1px dashed var(--danger); border-radius:10px; font-size:12px; color:var(--danger); word-break:break-word; text-align:center;"></div>
@@ -655,16 +675,31 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 
   <!-- خ١: الشريط الخمسي (المشهد ٦) -->
   <div class="mp-tabbar" id="mpTabbar">
-    <button type="button" class="mp-tab on" data-tab="Places" onclick="switchTab('Places')"><span class="ti">📍</span><span>Places</span></button>
-    <button type="button" class="mp-tab" data-tab="Trips" onclick="switchTab('Trips')"><span class="ti">🧳</span><span>Trips</span></button>
-    <button type="button" class="mp-tab" data-tab="Curators" onclick="switchTab('Curators')"><span class="ti">⭐</span><span>Curators</span></button>
-    <button type="button" class="mp-tab" data-tab="Community" onclick="switchTab('Community')"><span class="ti">🌍</span><span>Community</span></button>
-    <button type="button" class="mp-tab" data-tab="Addresses" onclick="switchTab('Addresses')"><span class="ti">🔒</span><span>Addresses</span></button>
+    <button type="button" class="mp-tab on" data-tab="Places" onclick="switchTab('Places')"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></span><span>Places</span></button>
+    <button type="button" class="mp-tab" data-tab="Trips" onclick="switchTab('Trips')"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="6" r="2.2"/><path d="M7 18h6a3 3 0 0 0 0-6h-2a3 3 0 0 1 0-6h6"/></svg></span><span>Trips</span></button>
+    <button type="button" class="mp-tab" data-tab="Curators" onclick="switchTab('Curators')"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 2.1 3.1-.5.9 3 2.8 1.4-1.2 2.9 1.2 2.9-2.8 1.4-.9 3-3.1-.5L12 20l-2.4-2.1-3.1.5-.9-3-2.8-1.4 1.2-2.9-1.2-2.9 2.8-1.4.9-3 3.1.5z"/><path d="M9.5 12l1.8 1.8L15 10" fill="none" stroke="var(--bar)" stroke-width="2" stroke-linecap="round"/></svg></span><span>Curators</span></button>
+    <button type="button" class="mp-tab" data-tab="Community" onclick="switchTab('Community')"><span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M2.5 19c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5H2.5zM16 19c0-1.9-.7-3.5-1.9-4.6.9-.6 1.9-.9 2.9-.9 2.6 0 4.5 1.7 4.5 4.3V19H16z"/></svg></span><span>Community</span></button>
+    <button type="button" class="mp-tab" data-tab="Addresses" onclick="switchTab('Addresses')"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M3 8h2M3 12h2M3 16h2"/><circle cx="12" cy="10" r="2.2"/><path d="M8.5 17c.6-1.9 1.9-2.8 3.5-2.8s2.9.9 3.5 2.8"/></svg></span><span>Addresses</span></button>
   </div>
 
   <div id="activeTripBar">
     <div class="atb-head"><span id="activeTripLabel">Adding to: —</span><span class="acts"><button type="button" class="actn" onclick="openActiveTrip()">View trip</button><button type="button" class="actn" onclick="stopAddingToTrip()">Cancel</button><button type="button" class="cta atb-done" onclick="stopAddingToTrip()">Done</button></span></div>
     <div id="activeTripAddedRow" class="chiprow"></div>
+  </div>
+
+  <!-- v1.37 · ٦/ز — أدواتي: مركز الأدوات (بلاطات بموعد دفعتها؛ لا تُفعَّل قبل موعدها) -->
+  <div class="modal-backdrop" id="toolsBackdrop">
+    <div class="modal">
+      <h3>🎛 My Tools</h3>
+      <div class="ctx" id="toolsCtx" style="margin:0 0 6px;"><b>—</b> · Stats · Cards · Export · Import</div>
+      <div class="tools-grid">
+        <button type="button" class="tools-tile" disabled><b>📊 My stats</b><span>Influence rate · opens · saves from my lists</span><span class="dim">Soon · Step 4</span></button>
+        <button type="button" class="tools-tile" disabled><b>🪪 Share cards</b><span>Image card + QR + link per list</span><span class="dim">Soon · Milestone 3</span></button>
+        <button type="button" class="tools-tile" disabled><b>📤 Export</b><span>Trips &amp; lists as a report</span><span class="dim">Soon · Milestone 3</span></button>
+        <button type="button" class="tools-tile" disabled><b>📥 Import from Google Maps</b><span>Takeout export → my lists</span><span class="dim">Soon · Milestone 3</span></button>
+      </div>
+      <button type="button" class="btn btn-ghost wide" onclick="closeModalById('toolsBackdrop')">Close</button>
+    </div>
   </div>
 
   <div class="modal-backdrop" id="tripPickerBackdrop">
@@ -759,7 +794,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <label class="flabel">Name</label>
       <input id="addrName" class="modal-input" placeholder="e.g. Home" autocomplete="off">
       <label class="flabel">Google Maps link</label>
-      <div style="display:flex; gap:6px; align-items:center;"><input id="addrUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" inputmode="url" autocomplete="off" style=" flex:1;"><button type="button" class="remove-btn" onclick="pasteToAddrUrl()" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button></div>
+      <div style="display:flex; gap:6px; align-items:center;"><input id="addrUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" inputmode="url" autocomplete="off" style=" flex:1;"><button type="button" class="chip" onclick="pasteToAddrUrl()" title="Paste link from clipboard">📋 Paste from Maps</button></div>
       <label class="flabel">Note (optional)</label>
       <input id="addrNote" class="modal-input" placeholder="e.g. Gate 3" autocomplete="off">
       <label class="flabel">Phone (optional)</label>
@@ -827,27 +862,27 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
           <div class="acc-mail" id="accountEmail">—</div>
         </div>
       </div>
-      <button type="button" class="acc-item" onclick="closeAccountModal(); openModalById('pwBackdrop');"><span>🔑 Change password</span><span class="soon">Soon · preview</span></button>
+      <button type="button" class="acc-item" onclick="openFromDrawer(function(){ openModalById('pwBackdrop'); })"><span>🔑 Change password</span><span class="soon">Soon · preview</span></button>
       <button type="button" class="acc-item" disabled title="Coming in the next update"><span>✉️ Resend verification</span><span class="soon">Soon</span></button>
-      <button type="button" class="acc-item" onclick="closeAccountModal(); openHomeChooser(true);"><span>⚙️ Preferences — default destination</span><span id="prefHomeLabel" style="font-size:11px; color:var(--ink-soft);"></span></button>
+      <button type="button" class="acc-item" onclick="openFromDrawer(function(){ openHomeChooser(true); })"><span>⚙️ Preferences — default destination</span><span id="prefHomeLabel" style="font-size:11px; color:var(--ink-soft);"></span></button>
       <button type="button" class="acc-item" onclick="confirmLogout()"><span>🚪 Log Out</span><span></span></button>
-      <button type="button" class="acc-item danger" onclick="closeAccountModal(); openDeletePreview();"><span>🗑 Delete Account — permanent</span><span class="soon">Soon · preview</span></button>
+      <button type="button" class="acc-item danger" onclick="openFromDrawer(openDeletePreview)"><span>🗑 Delete Account — permanent</span><span class="soon">Soon · preview</span></button>
 
-      <button type="button" class="dr-item" disabled><span>📊 My stats</span><span class="soon">Step 4</span></button>
+      <button type="button" class="dr-item" onclick="openFromDrawer(openMyToolsModal)"><span>🎛 My Tools</span><span class="soon">Stats · Cards · Export · Import</span></button>
 
       <div class="dr-head">Tools</div>
       <button type="button" class="dr-item" onclick="closeAccountModal(); copyLink();"><span>🔗 Copy Link</span><span></span></button>
-      <button type="button" class="dr-item" onclick="closeAccountModal(); showQR();"><span>🀄 QR</span><span></span></button>
+      <button type="button" class="dr-item" onclick="openFromDrawer(showQR)"><span>🀄 QR</span><span></span></button>
       <a class="dr-item" href="mailto:mypickz.app@gmail.com?subject=MyPickz%20Feedback"><span>✉️ Contact Us</span><span></span></a>
-      <button type="button" class="dr-item" onclick="closeAccountModal(); openFavoritesModal();"><span>❤️ My Favorites</span><span></span></button>
-      <button type="button" class="dr-item" onclick="closeAccountModal(); openHelpModal();"><span>📖 <span id="helpBtnLabel">Guide</span></span><span></span></button>
+      <button type="button" class="dr-item" onclick="openFromDrawer(openFavoritesModal)"><span>❤️ My Favorites</span><span></span></button>
+      <button type="button" class="dr-item" onclick="openFromDrawer(openHelpModal)"><span>📖 <span id="helpBtnLabel">Guide</span></span><span></span></button>
 
       <div id="drawerOwner" style="display:none;">
         <div class="dr-head">Owner</div>
         <button type="button" class="dr-item" disabled><span>🛠 Admin panel</span><span class="soon">Step 8</span></button>
-        <button type="button" class="dr-item" onclick="closeAccountModal(); openFavoriteStats();"><span>📊 Most Loved</span><span></span></button>
-        <button type="button" class="dr-item" onclick="closeAccountModal(); openUsersModal();"><span>👥 Manage Users</span><span></span></button>
-        <button type="button" class="dr-item" onclick="closeAccountModal(); openSystemStatusModal();"><span>🩺 System Status</span><span></span></button>
+        <button type="button" class="dr-item" onclick="openFromDrawer(openFavoriteStats)"><span>📊 Most Loved</span><span></span></button>
+        <button type="button" class="dr-item" onclick="openFromDrawer(openUsersModal)"><span>👥 Manage Users</span><span></span></button>
+        <button type="button" class="dr-item" onclick="openFromDrawer(openSystemStatusModal)"><span>🩺 System Status</span><span></span></button>
         <div class="dr-head">Policies <span class="soon" style="font-size:10px; color:var(--brass);">owner preview — hidden until ٢/هـ</span></div>
         <button type="button" class="dr-item" onclick="closeAccountModal(); openPolicyModal('policy');"><span>📄 Privacy &amp; Terms</span><span></span></button>
         <button type="button" class="dr-item" onclick="closeAccountModal(); openPolicyModal('rules');"><span>📏 Content Rules</span><span></span></button>
@@ -1399,7 +1434,10 @@ const mpTrack = (function(){
   const dayStr = function(){ const d = new Date(), p = function(n){ return String(n).padStart(2,'0'); };
     return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()); };
   const cityOkId = function(){ const id = String(typeof currentCityId !== 'undefined' ? currentCityId : '');
-    return /^[a-z0-9_-]{1,40}$/.test(id) ? id : 'all'; };
+    if (!/^[a-z0-9_-]{1,40}$/.test(id)) return 'all';
+    // v1.37 (١ سبتمبر): المدينة الحقيقية هي ما بقاموس المدن؛ المدن المخصصة تُجمَّع تحت 'all' (القواعد ترفض غيرها وتُسقط الدفعة كلها)
+    const dict = (typeof CITIES !== 'undefined' && Array.isArray(CITIES)) ? CITIES : [];
+    return dict.some(function(c){ return c && c.id === id; }) ? id : 'all'; };
   const catSlug = function(s){ const v = String(s || 'all').toLowerCase().replace(/[^a-z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40); return v || 'all'; };
   function add(path, field, n){
     try{
@@ -1591,6 +1629,11 @@ const mpData = (function(){
       }
     },
     placeCounts: {
+      // v1.37: الأماكن الأكثر تفضيلًا (قراءة عامة بالقواعد) — لوجهة المجتمع
+      top: async function(limit){
+        const snap = await col('placeFavoriteCounts').orderBy('count', 'desc').limit(limit || 30).get();
+        const rows = []; snap.forEach(function(doc){ const d = doc.data(); if (d && d.count > 0) rows.push(d); }); return rows;
+      },
       // تحديث العدّاد وحده أولًا (يجتاز تجميد الاسم والرابط بقواعد ٣٫٤+)؛
       // وعند غياب المستند: إنشاؤه بالحقول الثلاثة كاملة، وللزيادة فقط.
       bump: async function(docId, name, url, delta){
@@ -2372,6 +2415,20 @@ async function resolveTripPlaces(trip){
     }
   }catch(e){}
 
+  // v1.37 (١ سبتمبر): المرجع المحفوظ يحمل مدينته؛ الأماكن المضافة من مدينة غير مدينة الرحلة (مثل مدينة مخصصة تحمل الاسم نفسه) تُحل من مستندها لا من مستند مدينة الرحلة — قراءة فقط
+  const myLinksByCity = { [trip.cityId]: myLinks };
+  const extraCities = new Set();
+  trip.days.forEach(day => TRIP_CATEGORIES.forEach(c => (day.places[c.id]||[]).forEach(ref => {
+    if (ref.sourceType === 'mylist' && ref.cityId && ref.cityId !== trip.cityId) extraCities.add(ref.cityId);
+  })));
+  for (const cid of extraCities){
+    try{
+      const d = await mpData.cityLists.get(trip.ownerId, cid);
+      const links = Object.assign({}, (d && d.categories) || {});
+      if (currentUser && trip.ownerId === currentUser.uid){ try{ Object.assign(links, await mpData.privatePlaces.get(currentUser.uid, cid)); }catch(e){} }
+      myLinksByCity[cid] = links;
+    }catch(e){ myLinksByCity[cid] = {}; }
+  }
   const communityUids = new Set();
   trip.days.forEach(day => TRIP_CATEGORIES.forEach(c => (day.places[c.id]||[]).forEach(ref => {
     if (ref.sourceType === 'community' && ref.sourceUid) communityUids.add(ref.sourceUid);
@@ -2386,7 +2443,7 @@ async function resolveTripPlaces(trip){
   function resolveRef(ref){
     let linksObj;
     if (ref.sourceType === 'owner') linksObj = ownerLinks;
-    else if (ref.sourceType === 'mylist') linksObj = myLinks;
+    else if (ref.sourceType === 'mylist') linksObj = myLinksByCity[ref.cityId || trip.cityId] || myLinks;
     else linksObj = communityLinksByUid[ref.sourceUid] || {};
     const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
     return place ? { ...place, _ref: ref, _available: true } : { _available: false, _ref: ref };
@@ -2596,7 +2653,7 @@ async function openTripDetail(tripId){
   viewingSharedTrip = false;
   tripViewMode = false;
   const trip = userTrips.find(t => t.id === tripId);
-  document.getElementById('myTripsBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  document.getElementById('myTripsBody').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   resolvedTripCache[tripId] = await resolveTripPlaces(trip);
   renderMyTripsModal();
 }
@@ -2606,7 +2663,7 @@ async function openSharedTripDetail(tripId){
   viewingSharedTrip = true;
   tripViewMode = true;
   const trip = sharedTrips.find(t => t.id === tripId);
-  document.getElementById('myTripsBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  document.getElementById('myTripsBody').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   resolvedTripCache[tripId] = await resolveTripPlaces(trip);
   renderMyTripsModal();
 }
@@ -2843,7 +2900,7 @@ async function openCommunityTrip(tripId){
   viewingCommunityTripId = tripId;
   const trip = communityUserTrips.find(t => t.id === tripId);
   const wrap = document.getElementById('communityBody');
-  wrap.innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  wrap.innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   resolvedTripCache['community_'+tripId] = await resolveTripPlaces(trip);
   // فتح رحلة مشتركة يُحتسَب كمشاهدة إضافية (نفس أهمية فتح الملف الشخصي نفسه)
   if (trip && trip.ownerId){
@@ -2860,7 +2917,7 @@ function renderCommunityTripDetail(wrap){
   const resolved = resolvedTripCache['community_'+trip.id] || [];
   const title = trip.customLabel ? `${trip.cityName} — ${trip.customLabel}` : trip.cityName;
 
-  let html = `<button type="button" class="remove-btn" onclick="backFromCommunityTrip()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-right"></i> Back</button>
+  let html = `<button type="button" class="remove-btn" onclick="backFromCommunityTrip()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back</button>
   <h4 style="text-align:center; margin:4px 0 12px; font-family:'Cairo',sans-serif;">${title}</h4>`;
 
   resolved.forEach(day => {
@@ -2954,6 +3011,24 @@ function closeAuthModal(force){
   document.getElementById('authBackdrop').classList.remove('show');
 }
 function openModalById(id){ document.getElementById(id).classList.add('show'); }
+// v1.37 (قرار المالك ١ سبتمبر): ما فُتح من الدرج يعود إليه عند الإغلاق — ترصد النافذة التي ظهرت وتعيد الدرج حين تُغلق
+function openFromDrawer(openFn){
+  const before = new Set(Array.from(document.querySelectorAll('.modal-backdrop.show')));
+  closeAccountModal();
+  try{ openFn(); }catch(e){ return; }
+  const opened = Array.from(document.querySelectorAll('.modal-backdrop.show')).find(b => !before.has(b));
+  if (!opened || !window.MutationObserver) return;
+  const obs = new MutationObserver(function(){
+    if (!opened.classList.contains('show')){ obs.disconnect(); if (currentUser) openAccountModal(); }
+  });
+  obs.observe(opened, { attributes: true, attributeFilter: ['class'] });
+}
+// v1.37 · ٦/ز — أدواتي: مركز الأدوات (المشهد الجديد بالمرجع) — البلاطات بموعد دفعتها
+function openMyToolsModal(){
+  const ctx = document.getElementById('toolsCtx');
+  if (ctx) ctx.innerHTML = '<b>' + escapeHtml((userListData && userListData.nickname) || 'My Tools') + '</b> · Stats · Cards · Export · Import';
+  openModalById('toolsBackdrop');
+}
 function closeModalById(id){ document.getElementById(id).classList.remove('show'); }
 
 // خ١-ب: الوجهة الافتراضية (المشهد ٥) — تُحفظ بمستند المستخدم، والتطبيق يفتح عليها
@@ -3453,8 +3528,8 @@ function openFavoritesModal(){
     list.innerHTML = `<p style="color:var(--ink-soft); font-size:13px; text-align:center;">No favorite places yet</p>`;
   } else {
     list.innerHTML = favoritePlaces.map(f => `
-      <div style="margin-bottom:10px; border:1px solid var(--line); border-radius:10px; padding:9px 11px; background:var(--card);">
-        ${f.city ? `<div style="font-family:'Cairo',sans-serif; font-size:9.5px; font-weight:700; color:var(--brass); text-transform:uppercase; letter-spacing:1px;">${f.city}</div>` : ''}
+      <div style="margin-bottom:10px; border-radius:10px; padding:9px 11px; background:var(--ivory-bright);">
+        ${f.city ? `<div style="font-family:'Cairo',sans-serif; font-size:9.5px; font-weight:700; color:var(--saffron); text-transform:uppercase; letter-spacing:1px;">${escapeHtml(cityNameOf(f.city))}</div>` : ''}
         ${f.category ? `<div style="font-weight:600; font-size:12.5px; color:var(--ink); margin-top:2px;">${f.category}</div>` : ''}
         ${f.area ? `<div class="area-divider" style="font-size:9.5px; margin-top:5px; padding-top:5px;">${f.area}</div>` : ''}
         <a class="place-link" data-mpsrc="app" data-mpcity="all" style="display:block; margin-top:4px; border-bottom:none;" href="${f.url}" target="_blank" rel="noopener">${f.name}</a>
@@ -3472,10 +3547,18 @@ function handleUserButton(){
 }
 
 // ٢/أ: لون حتمي مشتق من الاسم المستعار — الشارة نفسها بكل مكان (الشريط، نافذة الحساب، ولاحقًا ترويسة "حسابي")
-const AV_COLORS = ['#3d5a80','#6b4e71','var(--saffron)','var(--saffron)','var(--danger)','var(--ink)','#4a6d7c','var(--saffron)'];
+const AV_COLORS = ['#3D5A80','#6B4E71','#4A6D7C','#5B6B3A','#7A4F3A','#3F6B5E','#5C5A8A','#7A5C2E']; // v1.37: لوحة الشارة الثمانية — لا زعفران ولا لون خطر
 function avatarColor(name){
   let h = 0; for (const ch of String(name || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return AV_COLORS[h % AV_COLORS.length];
+}
+// v1.37 — الشارة تعلن الإيقاف (القرار ٢٠٢٦-٠٨-٣١-٠٧): إطار خطر ليلي رفيع ونص الحالة؛ الحرفان باقيان
+function refreshSuspendedBadge(){
+  const chip = document.getElementById('accountChipBtn'), sus = document.getElementById('accountChipSus');
+  if (!chip || !sus) return;
+  const on = !!(currentUser && currentUserSuspended);
+  chip.classList.toggle('suspended', on);
+  sus.style.display = on ? '' : 'none';
 }
 function avatarInitials(name){
   const n = String(name || '').trim();
@@ -3504,6 +3587,7 @@ function updateUserUI(){
       av.textContent = avatarInitials(nick);
       av.style.background = avatarColor(nick);
       document.getElementById('accountChipLabel').textContent = nick || 'Account';
+      refreshSuspendedBadge();
     }
   } else {
     icon.className = 'fa-solid fa-user';
@@ -3576,7 +3660,15 @@ let plModalCat = null;   // التصنيف المختار داخل النافذ�
 function selectPlacesSource(src){
   placesSource = src;
   document.querySelectorAll('#plSrcRow .pl-src').forEach(b => b.classList.toggle('on', b.getAttribute('data-src') === src));
+  plSetCtx();
   renderPlacesBody();
+}
+// v1.37 — سطر السياق الحي: المصدر · المدينة (يتبدل بتبدلهما)
+function plSetCtx(){
+  const el = document.getElementById('plCtx'); if (!el) return;
+  const label = { mine:'My places', curators:'From curators', community:'From community', favorites:'My favorites' }[placesSource] || 'My places';
+  const city = (placesSource === 'favorites') ? 'All cities' : (plCityName() || '');
+  el.innerHTML = '<b>' + escapeHtml(label) + '</b>' + (city ? ' · ' + escapeHtml(city) : '');
 }
 async function renderPlacesBody(){
   const body = document.getElementById('plBody'); if (!body) return;
@@ -3596,6 +3688,7 @@ async function renderPlacesBody(){
   if (!myListCountry){ const c0 = myListAllCities().find(x => x.id === myListCityId); myListCountry = c0 ? c0.country : (myListAllCountries()[0] || null); }
   body.innerHTML = '<div class="mp-empty">Loading…</div>';
   await loadMyCityList(myListCityId);
+  plSetCtx();
   renderPlacesMine();
 }
 function plCatsAll(){ // كل التصنيفات العامة المتاحة بقسمها — للنافذة الموحدة
@@ -3613,7 +3706,14 @@ function plCountryCode(name){
   return c ? c.code : String(name || '').slice(0, 2).toUpperCase();
 }
 let plPanel = null;                       // 'cities' | 'cats' | null — حالة عرض بحتة
-function plTogglePanel(which){ plPanel = (plPanel === which) ? null : which; renderPlacesMine(); }
+function plTogglePanel(which){ plPanel = (plPanel === which) ? null : which; renderPlacesMine(); if (which === 'countries'){ const i = document.getElementById('plCountrySearch'); if (i) i.focus(); } }
+// v1.37 — محدد الدولة بحقل كتابة: الحروف الأولى تصفّي الصفوف (لا يمس البيانات)
+function plFilterCountries(q){
+  const needle = String(q || '').trim().toLowerCase();
+  document.querySelectorAll('#plBody .panel .prow[data-country]').forEach(function(r){
+    r.style.display = (!needle || r.getAttribute('data-country').indexOf(needle) === 0 || r.getAttribute('data-country').indexOf(' ' + needle) >= 0) ? '' : 'none';
+  });
+}
 function plCatCount(catId){
   const e = (myCityListData && myCityListData.categories) || {};
   const p = (e[catId] && e[catId].places) || [];
@@ -3654,8 +3754,8 @@ function renderPlacesMine(){
     html += (plPanel === 'cities')
       ? '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(myListCountry || '') + '</div>' + cityRows + close + '</div>'
       : (plPanel === 'countries')
-        ? '<div class="panel"><div class="pinned">Browse countries</div>'
-          + countriesAll.map(c => '<div class="prow' + (c === myListCountry ? ' on' : '') + '" onclick="plPickCountry(\'' + attrStr(c) + '\')"><span>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + escapeHtml(c) + '</span><span>' + myListAllCities().filter(x => x.country === c).length + '</span></div>').join('')
+        ? '<div class="panel"><input class="psearch" id="plCountrySearch" placeholder="Type a country…" autocomplete="off" oninput="plFilterCountries(this.value)"><div class="pinned">Browse countries</div>'
+          + countriesAll.map(c => '<div class="prow' + (c === myListCountry ? ' on' : '') + '" data-country="' + attrStr(c).toLowerCase() + '" onclick="plPickCountry(\'' + attrStr(c) + '\')"><span>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + escapeHtml(c) + '</span><span>' + myListAllCities().filter(x => x.country === c).length + '</span></div>').join('')
           + close + '</div>'
         : '<div class="panel"><div class="pinned">Pick a category to add a place</div>' + catRows + close + '</div>';
   }
@@ -3699,7 +3799,9 @@ function renderPlacesMine(){
     html += '<div class="warnline">⚠️ <span><b>Could not load this city</b><br>Nothing is saved until it loads, so your places stay safe. <span class="dim">(' + escapeHtml(myCityListLoadError) + ')</span></span></div>'
       + '<button type="button" class="cta wide" onclick="retryLoadCity()">Try again</button>';
   }
-  if (!any && !myCityListLoadFailed) html += '<div class="mp-empty">📝<br>Start your ' + escapeHtml(plCityName()) + ' list.<br><span class="mini">Tap “Add from Google Maps”, or ＋ under any category.</span></div>';
+  if (!any && !myCityListLoadFailed) html += '<div class="mp-empty">No places in ' + escapeHtml(plCityName()) + ' yet<br>'
+    + '<button type="button" class="cta" onclick="plTogglePanel(\'cats\')"><b>＋</b> Add place</button>'
+    + '<button type="button" class="actn" onclick="selectPlacesSource(\'community\')">Browse curators &amp; community</button></div>';
   if (isOwner) html += '<div class="pl-ownerpanel"><b>👑 Owner · edit mode</b><div class="pl-sub" id="plMigrLine">Guide places migration — counter and run arrive in stage 5 of this step.</div><button type="button" class="cta" onclick="showToast(\'Migration runs in stage 5 — city by city, counts matched\')">Move guide places to my lists</button></div>';
   body.innerHTML = html;
 }
@@ -3977,6 +4079,7 @@ async function loadUserList(){
       currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
     }
   }catch(e){ currentUserSuspended = false; }
+  refreshSuspendedBadge();
 }
 
 // معرّف مستند Firestore لبيانات مدينة معيّنة بـMy List الخاصة بالمستخدم الحالي
@@ -4106,7 +4209,7 @@ async function selectMyListCountry(country){
     userListData.listCountry = country; userListData.listCity = myListCityId || '';
     mpData.userLists.merge(currentUser.uid, { listCountry: country, listCity: myListCityId || '' }).catch(()=>{});
   }
-  document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  document.getElementById('myListSections').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   await loadMyCityList(myListCityId);
   renderMyListModal();
 }
@@ -4432,7 +4535,7 @@ async function openMyListModal(){
     myListCountry = c ? c.country : (myListAllCountries()[0] || null);
   }
   document.getElementById('myListBackdrop').classList.add('show');
-  document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  document.getElementById('myListSections').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   await loadMyCityList(myListCityId);
   renderMyListModal();
 }
@@ -4450,7 +4553,7 @@ async function selectMyListCity(cityId){
     userListData.listCity = cityId; userListData.listCountry = myListCountry || '';
     mpData.userLists.merge(currentUser.uid, { listCity: cityId, listCountry: myListCountry || '' }).catch(()=>{});
   }
-  document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  document.getElementById('myListSections').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   await loadMyCityList(cityId);
   renderMyListModal();
 }
@@ -4458,7 +4561,7 @@ async function selectMyListCity(cityId){
 async function openSharedCityList(docId){
   mpTrack.statsList(docId, 'open_ulist');
   viewingSharedCityListId = docId;
-  document.getElementById('myListSections').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  document.getElementById('myListSections').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   renderMyListModal();
 }
 function closeSharedCityList(){
@@ -4680,7 +4783,7 @@ async function loadCommunityLists(){
 
 async function openCommunityModal(){
   mpTrack.hit('community_open', { depth: 1 });
-  document.getElementById('communityBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  document.getElementById('communityBody').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   showBackdropUnlessHosted('communityBackdrop', 'Community'); // خ١
   await loadCommunityLists();
   communityTab = 'city';
@@ -4709,6 +4812,7 @@ function renderCommunityModal(){
   const myCity = myListCityId || currentCityId;                 // شريحة المدينة تتبع ما تتصفّحه فعلًا
   const cityName = (allCities().find(c => c.id === myCity) || {}).name || '';
 
+  if (communityTab === 'places'){ renderCommunityPlaces(wrap, cityName); return; }
   let html = '<div class="stickyhead"><div class="headrow"><span class="csel label">🌍 <b>Community</b></span>'
     + (communityTab === 'all'
         ? '<span class="acts"><button type="button" class="actn' + (communitySort === 'viewed' ? ' on' : '') + '" onclick="switchCommunitySort(\'viewed\')">👁 Most viewed</button>'
@@ -4716,7 +4820,9 @@ function renderCommunityModal(){
         : '<span class="actn label">Search <span class="dim">Soon</span></span>')
     + '</div>'
     + '<div class="chiprow"><button type="button" class="chip' + (communityTab === 'city' ? ' on' : '') + '" onclick="switchCommunityTab(\'city\')">' + escapeHtml(cityName || 'This city') + '</button>'
-    + '<button type="button" class="chip' + (communityTab === 'all' ? ' on' : '') + '" onclick="switchCommunityTab(\'all\')">All users</button></div></div>';
+    + '<button type="button" class="chip' + (communityTab === 'all' ? ' on' : '') + '" onclick="switchCommunityTab(\'all\')">All users</button>'
+    + '<button type="button" class="chip" onclick="switchCommunityTab(\'places\')">Places · Most saved</button></div>'
+    + '<div class="ctx"><b>People</b> · ' + escapeHtml(communityTab === 'city' ? (cityName || 'This city') : 'All users') + '</div></div>';
 
   if (communityTab === 'city'){
     usersToShow = communityUsers.filter(u => u.publicCityIds.includes(myCity));
@@ -4731,7 +4837,8 @@ function renderCommunityModal(){
     html += '<div class="pl-cathead"><span>Public lists (' + usersToShow.length + ')</span></div>';
     html += usersToShow.map(u =>
       '<div class="row rowblock"><div class="pn">' + escapeHtml(u.nickname) + '</div>'
-      + '<div class="ps" dir="auto">' + u.publicCityIds.length + ' city list' + (u.publicCityIds.length === 1 ? '' : 's') + ' · 👁 ' + u.viewCount + ' · 🤍 ' + u.totalFavoriteCount + '</div>'
+      + '<div class="ps" dir="auto">' + u.publicCityIds.length + ' city list' + (u.publicCityIds.length === 1 ? '' : 's') + '</div>'
+      + '<div class="stattext">' + u.viewCount + ' views · ' + u.totalFavoriteCount + ' saves</div>'
       + '<div class="rowacts"><span class="act" onclick="viewCommunityUser(\'' + u.uid + '\')">View →</span></div></div>').join('');
   }
   wrap.innerHTML = html;
@@ -4744,7 +4851,7 @@ async function viewCommunityUser(uid){
   viewingUserData = communityUsers.find(u => u.uid === uid);
   communityViewingCityId = null;
   viewingCommunityTripId = null;
-  document.getElementById('communityBody').innerHTML = `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">Loading...</p>`;
+  document.getElementById('communityBody').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   // ✅ يعمل الآن (المرحلة ٣) — الاستثناء الأمني الجديد يسمح بتحديث viewCount لملف عام
   try{
     await db.collection('communityProfiles').doc(uid).set({ viewCount: firebase.firestore.FieldValue.increment(1) }, { merge:true });
@@ -4775,6 +4882,25 @@ function backToCommunityList(){
   viewingUserUid = null;
   renderCommunityModal();
 }
+// v1.37 · المجتمع بكيانيه — الأماكن: الأكثر تفضيلًا (عبر كل المدن اليوم — بطاقة المكان بلا حقل مدينة بالقواعد ٣٫٧؛ التصفية بالمدينة مع معرّف المكان بالمحطة الثالثة)
+async function renderCommunityPlaces(wrap, cityName){
+  let html = '<div class="stickyhead"><div class="headrow"><span class="csel label">🌍 <b>Community</b></span><span class="actn label">Search <span class="dim">Soon</span></span></div>'
+    + '<div class="chiprow"><button type="button" class="chip" onclick="switchCommunityTab(\'city\')">' + escapeHtml(cityName || 'This city') + '</button>'
+    + '<button type="button" class="chip" onclick="switchCommunityTab(\'all\')">All users</button>'
+    + '<button type="button" class="chip on" onclick="switchCommunityTab(\'places\')">Places · Most saved</button></div>'
+    + '<div class="ctx"><b>Places</b> · Most saved · All cities</div></div>';
+  wrap.innerHTML = html + '<div class="mp-empty">Loading…</div>';
+  let rows = [];
+  try{ rows = await mpData.placeCounts.top(30); }catch(e){ rows = null; }
+  if (communityTab !== 'places') return;
+  if (rows === null){ html += '<div class="mp-empty mini">Could not load places</div>'; }
+  else if (!rows.length){ html += '<div class="mp-empty mini">No saved places yet</div>'; }
+  else {
+    html += rows.map((d, i) => '<div class="row"><div><div class="pn" dir="auto">' + (i + 1) + '. ' + escapeHtml(d.name || 'Place') + '</div><div class="stattext">saved by ' + (d.count || 0) + '</div></div>'
+      + '<div class="acts"><a class="act" href="' + String(d.url || '#').replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">Maps ↗</a></div></div>').join('');
+  }
+  wrap.innerHTML = html;
+}
 
 function renderCommunityUserList(wrap){
   if (viewingCommunityTripId){ renderCommunityTripDetail(wrap); return; }
@@ -4785,7 +4911,7 @@ function renderCommunityUserList(wrap){
     communityViewingCityId = cities[0] ? cities[0].id : null;
   }
 
-  let html = `<button type="button" class="remove-btn" onclick="backToCommunityList()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-right"></i> Back</button>
+  let html = `<button type="button" class="remove-btn" onclick="backToCommunityList()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back</button>
   <h4 style="text-align:center; margin:4px 0 10px; font-family:'Cairo',sans-serif;">${u.nickname}'s List</h4>`;
 
   html += `<div style="font-weight:700; font-size:12.5px; margin:6px 0 8px;">🧳 Shared Trips</div>`;
@@ -4829,7 +4955,7 @@ function renderCommunityUserList(wrap){
         const safeUrl = p.url.replace(/'/g,"\\'"), safeName = p.name.replace(/'/g,"\\'"), safeCat = displayName(item).replace(/'/g,"\\'");
         const safeCity = (cityObj ? cityObj.name : '').replace(/'/g,"\\'"), safeArea = (p.area||'').replace(/'/g,"\\'");
         sectionHtml += `<div style="margin-bottom:8px;">
-          ${p.area ? `<div style="font-size:10px; color:var(--ink-soft);">📍 ${p.area}</div>` : ''}
+          ${p.area ? `<div style="font-size:10px; color:var(--night-3);">📍 ${p.area}</div>` : ''}
           <div style="display:flex; align-items:center; gap:6px;">
             <a class="place-link" data-mpsrc="community" data-mpcat="${item.id||''}" style="flex:1;" href="${p.url}" target="_blank" rel="noopener">${p.name}</a>
             <button type="button" class="act" disabled title="Save to my list — stage 3">📋 Save <span class="dim">Stage 3</span></button>
@@ -5520,7 +5646,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
+logTiming('BUILD: M2-ID-r43 (identity corrections batch — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
