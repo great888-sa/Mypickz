@@ -253,12 +253,12 @@ const NIGHT_SURF = ['paper', 'bar', 'surf', 'line-night', 'line-bar', 'line-stro
 const IVORY_SURF = ['ivory', 'ivory-bright', 'line-ivory'];
 const INK_FAMILY = ['ink', 'ink-strong', 'ink-faint', 'ink-soft', 'danger'];
 const NIGHT_FAMILY = ['on-night', 'night-2', 'night-3', 'night-4', 'saffron', 'danger-night', 'ivory-bright', 'ivory'];
-const KNOWN_UNSTYLED = ['flabel'];            // ر42: صنف مستعمَل بلا قاعدة بأي كتلة — يُغلق بدفعة تصحيحات الهوية
-const KNOWN_STRUCT_IN_IDENTITY = ['#activeTripBar', '.pclose']; // ر42: حدّ بسُمك ونمط داخل كتلة الهوية
-const KNOWN_EMPTY_RULES = ['.mp-tab.on .ti', '.row,.rowblock'];   // ر42: قاعدتان فارغتان بكتلة البنية
+const KNOWN_UNSTYLED = [];                     // ر43: أُغلق (قاعدة flabel أُضيفت بدفعة تصحيحات الهوية) — القائمة تبقى فارغة
+const KNOWN_STRUCT_IN_IDENTITY = [];          // ر43: أُغلق (الحدّان نُقلا إلى كتلة البنية)
+const KNOWN_EMPTY_RULES = [];                  // ر43: أُغلق (القاعدتان الفارغتان حُذفتا)
 const KNOWN_DEAD = ['requestReauth'];          // ر42: مبنية عمدًا قبل موعدها (تأكيد الهوية — تُستدعى بدفعتي كلمة المرور والحذف المتتالي)
 const KNOWN_NO_OUTLET = ['follows', 'stats_curators', 'stats_cards', 'followerCount', 'bio', 'contactUrl', 'showFollowerCount', 'displayName', 'verified']; // الوثيقة الدائمة الثامنة v1.0 — قدرات بُنيت قبل موعدها
-const CAP_COLORS_OUTSIDE_IDENTITY = { [TEST]: 149, [PROD]: 149 }; // ر42 = ١٤٩ (١٤ لونًا صريحًا · ١٣٥ متغيرًا لونيًّا) خارج كتلة الهوية — سمات مضمَّنة وقوالب وثوابت الشيفرة · يُخفَّض ولا يُرفع
+const CAP_COLORS_OUTSIDE_IDENTITY = { [TEST]: 140, [PROD]: 149 }; // ر42 = ١٤٩ (١٤ صريحًا · ١٣٥ متغيرًا) · ر43 = ١٤٠ (١٩ صريحًا — لوحة الشارة ثمانية ألوان بقرار · ١٢١ متغيرًا) · سقف الإنتاج يُخفَّض عند ترقيته · يُخفَّض ولا يُرفع
 const CONTROL_CLASSES = ['btn', 'chip', 'act', 'actn', 'cta', 'csel', 'pl-src', 'mp-tab', 'dr-item', 'acc-item', 'switch-btn', 'pl-actbtn', 'addr-chip', 'pl-catpick', 'city-tab', 'area-chip', 'hcard', 'remove-btn', 'fav-btn', 'reorder-btn', 'add-place-btn', 'quick-nav-btn', 'action-btn', 'status-toggle', 'mp-burger', 'mp-idchip', 'pw-eye', 'show-more-btn', 'pclose', 'prow', 'addmini'];
 const LIFE_PATHS = [ // مسارات الحياة العشرة — دالة مدخل مسمّاة لكل مسار: معرَّفة ومستدعاة
   ['signup', ['doSignUp']], ['signin', ['doSignIn']], ['save place', ['savePlPlace', 'saveMyCityList']],
