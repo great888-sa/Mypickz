@@ -652,7 +652,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   </div><!-- /screenPlaces -->
 
   <!-- خ١: الوجهة ٢ — الرحلات: جسم نافذة "رحلاتي" يُنقل إلى هنا عند أول فتح (الاستضافة بنقل العنصر) -->
-  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">🧳 <b>My Trips</b></span></div><div class="chiprow" id="tripTypeRow"><button type="button" class="chip on" onclick="pickTripType(this)">All</button><button type="button" class="chip" onclick="pickTripType(this)">🚶 One day trip</button><button type="button" class="chip" onclick="pickTripType(this)">🏙 Single city</button><button type="button" class="chip" onclick="pickTripType(this)">🌍 Multi-city</button><span class="chip label mini">Soon</span></div><div class="ctx" id="tripCtx"><b>My trips</b> · All</div></div><div id="tripsHost"></div></div></div>
+  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">🧳 <b>My Trips</b></span></div><div class="chiprow" id="tripSrcRow"><button type="button" class="pl-src on" onclick="showToast('You are on My trips')">My trips</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">From curators</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">From community</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">My favorites</button></div><div class="chiprow" id="tripTypeRow"><button type="button" class="chip on" onclick="pickTripType(this)">All</button><button type="button" class="chip" onclick="pickTripType(this)">🚶 One day trip</button><button type="button" class="chip" onclick="pickTripType(this)">🏙 Single city</button><button type="button" class="chip" onclick="pickTripType(this)">🌍 Multi-city</button><span class="chip label mini">Soon</span></div><div class="ctx" id="tripCtx"><b>My trips</b> · All</div></div><div id="tripsHost"></div></div></div>
   <!-- خ١: الوجهة ٣ — المنتقون: مكان محجوز حتى خ٤ -->
   <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">⭐ <b>Curators</b></span><span class="actn label">🔍 Find a curator <span class="dim">Soon</span></span></div><div class="ctx"><b>Curators</b> · Step 4</div></div><div class="curgrid"><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty mini">Curators arrive in step 4 — the page below is the built shell.</div>
      <div class="row rowblock cur-shell">
@@ -689,21 +689,6 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <div id="activeTripAddedRow" class="chiprow"></div>
   </div>
 
-  <!-- v1.37 · ٦/ز — أدواتي: مركز الأدوات (بلاطات بموعد دفعتها؛ لا تُفعَّل قبل موعدها) -->
-  <div class="modal-backdrop" id="toolsBackdrop">
-    <div class="modal">
-      <h3>🎛 My Tools</h3>
-      <div class="ctx" id="toolsCtx" style="margin:0 0 6px;"><b>—</b> · Stats · Cards · Export · Import</div>
-      <div class="tools-grid">
-        <button type="button" class="tools-tile" disabled><b>📊 My stats</b><span>Influence rate · opens · saves from my lists</span><span class="dim">Soon · Step 4</span></button>
-        <button type="button" class="tools-tile" disabled><b>🪪 Share cards</b><span>Image card + QR + link per list</span><span class="dim">Soon · Milestone 3</span></button>
-        <button type="button" class="tools-tile" disabled><b>📤 Export</b><span>Trips &amp; lists as a report</span><span class="dim">Soon · Milestone 3</span></button>
-        <button type="button" class="tools-tile" disabled><b>📥 Import from Google Maps</b><span>Takeout export → my lists</span><span class="dim">Soon · Milestone 3</span></button>
-      </div>
-      <button type="button" class="btn btn-ghost wide" onclick="closeModalById('toolsBackdrop')">Close</button>
-    </div>
-  </div>
-
   <div class="modal-backdrop" id="tripPickerBackdrop">
     <div class="modal">
       <h3>➕ Add to Trip</h3>
@@ -723,7 +708,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <div class="modal-backdrop" id="inputBackdrop">
     <div class="modal">
       <h3 id="inputModalTitle">Title</h3>
-      <input type="text" id="inputModalField" class="modal-input" autocomplete="off" oninput="inputModalFilter()" onkeydown="if(event.key==='Enter') confirmInputModal();">
+      <input type="text" id="inputModalField" class="modal-input" autocomplete="off" oninput="inputModalTouched=true; inputModalFilter()" onkeydown="if(event.key==='Enter') confirmInputModal();">
       <select id="inputModalSelect" class="modal-input" style="display:none;"></select>
       <div id="inputModalList" class="panel" style="display:none; max-height:38vh; overflow-y:auto; margin-top:6px;"></div>
       <div id="inputModalError" style="color:var(--danger);font-size:12px;min-height:16px;margin-top:6px;"></div>
@@ -788,7 +773,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <div class="modal">
       <h3 id="addrModalTitle">🔒 Add address</h3>
       <label class="flabel">Country</label>
-      <input type="text" id="addrCountrySearch" class="modal-input" placeholder="Type a country…" autocomplete="off" oninput="addrCountryFilter()" onfocus="addrCountryFilter()">
+      <input type="text" id="addrCountrySearch" class="modal-input" placeholder="Type a country…" autocomplete="off" oninput="addrCountryFilter(true)" onfocus="addrCountryFilter()">
       <div id="addrCountryList" class="panel" style="display:none; max-height:30vh; overflow-y:auto; margin:4px 0 8px;"></div>
       <select id="addrCountry" class="modal-input" style="display:none;" onchange="addrCountryChanged()"></select>
       <label class="flabel">City</label>
@@ -873,8 +858,13 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <button type="button" class="acc-item" onclick="confirmLogout()"><span>🚪 Log Out</span><span></span></button>
       <button type="button" class="acc-item danger" onclick="openFromDrawer(openDeletePreview)"><span>🗑 Delete Account — permanent</span><span class="soon">Soon · preview</span></button>
 
-      <div class="dr-head">Tools</div>
-      <button type="button" class="dr-item" onclick="openFromDrawer(openMyToolsModal)"><span>🎛 My Tools</span><span class="soon">Stats · Cards · Export · Import</span></button>
+      <div class="dr-head">My Dashboard</div>
+      <button type="button" class="dr-item" disabled><span>📊 Stats</span><span class="soon">Step 4</span></button>
+      <button type="button" class="dr-item" disabled><span>🪪 Cards</span><span class="soon">Milestone 3</span></button>
+      <button type="button" class="dr-item" disabled><span>📤 Export</span><span class="soon">Milestone 3</span></button>
+      <button type="button" class="dr-item" disabled><span>📥 Import from Google Maps</span><span class="soon">Milestone 3</span></button>
+
+      <div class="dr-head">App</div>
       <button type="button" class="dr-item" onclick="closeAccountModal(); copyLink();"><span>🔗 Copy Link</span><span></span></button>
       <button type="button" class="dr-item" onclick="openFromDrawer(showQR)"><span>🀄 QR</span><span></span></button>
       <a class="dr-item" href="mailto:mypickz.app@gmail.com?subject=MyPickz%20Feedback"><span>✉️ Contact Us</span><span></span></a>
@@ -3028,12 +3018,6 @@ function openFromDrawer(openFn){
   });
   obs.observe(opened, { attributes: true, attributeFilter: ['class'] });
 }
-// v1.37 · ٦/ز — أدواتي: مركز الأدوات (المشهد الجديد بالمرجع) — البلاطات بموعد دفعتها
-function openMyToolsModal(){
-  const ctx = document.getElementById('toolsCtx');
-  if (ctx) ctx.innerHTML = '<b>' + escapeHtml((userListData && userListData.nickname) || 'My Tools') + '</b> · Stats · Cards · Export · Import';
-  openModalById('toolsBackdrop');
-}
 function closeModalById(id){ document.getElementById(id).classList.remove('show'); }
 
 // خ١-ب: الوجهة الافتراضية (المشهد ٥) — تُحفظ بمستند المستخدم، والتطبيق يفتح عليها
@@ -3169,7 +3153,7 @@ function renderAddresses(){
 
     panel = '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(addrCurrentCountry || '') + '<span class="pclose-top" onclick="addrTogglePanel(null)" title="Close">✕</span></div>' + rows + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
   } else if (addrPanel === 'countries'){
-    panel = '<div class="panel"><div class="pinned">Browse countries<span class="pclose-top" onclick="addrTogglePanel(null)" title="Close">✕</span></div><input class="psearch" placeholder="Type a country…" autocomplete="off" oninput="plFilterCountries(this.value)">'
+    panel = '<div class="panel"><div class="pinned" onclick="plShowAllCountries()">Browse countries<span class="pclose-top" onclick="event.stopPropagation(); addrTogglePanel(null)" title="Close">✕</span></div><input class="psearch" placeholder="Type a country…" autocomplete="off" oninput="plFilterCountries(this.value)">'
       + countries.map(c => ({ c: c, n: addrCities.filter(x => countryOfCity(x) === c).length })).filter(o => o.n > 0)
           .map(o => '<div class="prow' + (o.c === addrCurrentCountry ? ' on' : '') + '" data-country="' + attrStr(o.c).toLowerCase() + '" onclick="pickAddrCountry(\'' + attrStr(o.c) + '\')"><span>' + (countryFlag(o.c) ? countryFlag(o.c) + ' ' : '') + escapeHtml(o.c) + '</span><span>' + o.n + '</span></div>').join('')
       + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
@@ -3235,11 +3219,11 @@ function addrFillCountries(selectedCityId){
   addrCountryChanged(selectedCityId);
 }
 // v1.37 — محدد الدولة بنافذة العنوان: حقل كتابة يصفّي القائمة ويكتب القيمة بالمحدد المخفي
-function addrCountryFilter(){
+function addrCountryFilter(fromTyping){
   const sel = document.getElementById('addrCountry'), inp = document.getElementById('addrCountrySearch'), l = document.getElementById('addrCountryList');
   if (!sel || !inp || !l) return;
   const opts = Array.from(sel.options).map(o => o.value);
-  const q = String(inp.value || '').trim().toLowerCase();
+  const q = fromTyping ? String(inp.value || '').trim().toLowerCase() : '';
   const rows = opts.filter(o => !q || o.toLowerCase().indexOf(q) === 0 || o.toLowerCase().indexOf(' ' + q) >= 0).slice(0, 40);
   l.innerHTML = rows.map(o => '<div class="prow' + (o === sel.value ? ' on' : '') + '" onclick="addrCountryPick(\'' + attrStr(o) + '\')"><span>' + (countryFlag(o) ? countryFlag(o) + ' ' : '') + escapeHtml(o) + '</span><span></span></div>').join('') || '<div class="prow dim label"><span>No match</span><span></span></div>';
   l.style.display = '';
@@ -3730,6 +3714,10 @@ function plCountryCode(name){
 let plPanel = null;                       // 'cities' | 'cats' | null — حالة عرض بحتة
 function plTogglePanel(which){ plPanel = (plPanel === which) ? null : which; renderPlacesMine(); }
 // v1.37 — محدد الدولة بحقل كتابة: الحروف الأولى تصفّي الصفوف (لا يمس البيانات)
+function plShowAllCountries(){
+  document.querySelectorAll('.panel .psearch').forEach(function(i){ i.value = ''; });
+  plFilterCountries('');
+}
 function plFilterCountries(q){
   const needle = String(q || '').trim().toLowerCase();
   document.querySelectorAll('.panel .prow[data-country]').forEach(function(r){
@@ -3776,7 +3764,7 @@ function renderPlacesMine(){
     html += (plPanel === 'cities')
       ? '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(myListCountry || '') + '<span class="pclose-top" onclick="plTogglePanel(null)" title="Close">✕</span></div>' + cityRows + close + '</div>'
       : (plPanel === 'countries')
-        ? '<div class="panel"><div class="pinned">Browse countries<span class="pclose-top" onclick="plTogglePanel(null)" title="Close">✕</span></div><input class="psearch" id="plCountrySearch" placeholder="Type a country…" autocomplete="off" oninput="plFilterCountries(this.value)">'
+        ? '<div class="panel"><div class="pinned" onclick="plShowAllCountries()">Browse countries<span class="pclose-top" onclick="event.stopPropagation(); plTogglePanel(null)" title="Close">✕</span></div><input class="psearch" id="plCountrySearch" placeholder="Type a country…" autocomplete="off" oninput="plFilterCountries(this.value)">'
           + countriesAll.map(c => '<div class="prow' + (c === myListCountry ? ' on' : '') + '" data-country="' + attrStr(c).toLowerCase() + '" onclick="plPickCountry(\'' + attrStr(c) + '\')"><span>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + escapeHtml(c) + '</span><span>' + myListAllCities().filter(x => x.country === c).length + '</span></div>').join('')
           + close + '</div>'
         : '<div class="panel"><div class="pinned">Pick a category to add a place<span class="pclose-top" onclick="plTogglePanel(null)" title="Close">✕</span></div>' + catRows + close + '</div>';
@@ -4869,6 +4857,7 @@ function renderCommunityModal(){
 let viewingUserCities = []; // تفاصيل المدن العامة الكاملة (فئات/أماكن) — تُحمَّل فقط لحظة فتح ملف شخص معيّن (Lazy)
 
 async function viewCommunityUser(uid){
+  communityUserLayer = null;
   viewingUserUid = uid;
   viewingUserData = communityUsers.find(u => u.uid === uid);
   communityViewingCityId = null;
@@ -4900,8 +4889,10 @@ async function viewCommunityUser(uid){
   await loadCommunityUserTrips(uid);
   renderCommunityModal();
 }
+let communityUserLayer = null;
 function backToCommunityList(){
   viewingUserUid = null;
+  communityUserLayer = null;
   renderCommunityModal();
 }
 // v1.37 · المجتمع بكيانيه — الأماكن: الأكثر تفضيلًا (عبر كل المدن اليوم — بطاقة المكان بلا حقل مدينة بالقواعد ٣٫٧؛ التصفية بالمدينة مع معرّف المكان بالمحطة الثالثة)
@@ -4933,30 +4924,33 @@ function renderCommunityUserList(wrap){
     communityViewingCityId = cities[0] ? cities[0].id : null;
   }
 
-  let html = `<button type="button" class="remove-btn" onclick="backToCommunityList()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back</button>
-  <h4 style="text-align:center; margin:4px 0 10px; font-family:'Cairo',sans-serif;">${u.nickname}'s List</h4>`;
-
-  html += `<div style="font-weight:700; font-size:12.5px; margin:6px 0 8px;">🧳 Shared Trips</div>`;
-  if (communityUserTrips.length){
-    html += communityUserTrips.map(t => `
-      <button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="openCommunityTrip('${t.id}')">
-        ${t.customLabel ? `${t.cityName} — ${t.customLabel}` : t.cityName}
-      </button>`).join('');
-  } else {
-    html += `<div class="mp-empty mini">No shared trips yet</div>`;
+  // v1.38 (المرجع ٦/د · القرارات ١ سبتمبر): الهرم — الطبقة ٢ بطاقات قوائم المدن (+ الرحلات العامة)، والطبقة ٣ أماكن القائمة المختارة
+  if (!communityUserLayer){
+    let html = `<button type="button" class="remove-btn" onclick="backToCommunityList()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back</button>
+    <h4 style="text-align:center; margin:4px 0 6px; font-family:'Cairo',sans-serif;">${escapeHtml(u.nickname)}</h4>
+    <div class="ctx" style="text-align:center; margin:0 0 8px;"><b>City lists</b> · ${cities.length}</div>`;
+    if (!cities.length && !communityUserTrips.length){
+      html += `<div class="mp-empty mini">No cities in this list yet</div>`;
+      wrap.innerHTML = html; return;
+    }
+    html += cities.map(c => {
+      let n = 0; Object.keys(c.categories || {}).forEach(k => { const e = c.categories[k]; if (e && e.active === true && Array.isArray(e.places)) n += e.places.filter(p => p.url && p.name).length; });
+      const saves = c.favoriteCount || 0;
+      return `<div class="row rowblock"><div class="pn" dir="auto">${escapeHtml(c.name)}</div>`
+        + `<div class="ps">${n} place${n === 1 ? '' : 's'}</div>`
+        + `<div class="stattext">${saves} saves</div>`
+        + `<div class="rowacts"><span class="act" onclick="communityUserLayer='${c.id}'; communityViewingCityId='${c.id}'; renderCommunityModal();">Open →</span></div></div>`;
+    }).join('');
+    if (communityUserTrips.length){
+      html += `<div class="row rowblock"><div class="pn">🧳 Public trips</div><div class="ps">${communityUserTrips.length} trip${communityUserTrips.length === 1 ? '' : 's'}</div>`
+        + `<div class="rowacts">` + communityUserTrips.map(t => `<span class="act" onclick="openCommunityTrip('${t.id}')">${escapeHtml(t.customLabel ? (t.cityName + ' — ' + t.customLabel) : t.cityName)} →</span>`).join('') + `</div></div>`;
+    }
+    wrap.innerHTML = html; return;
   }
-  html += `<div style="border-top:1px dashed var(--line); margin:12px 0;"></div>`;
-
-  if (!cities.length && !communityUserTrips.length){
-    html += `<div class="mp-empty mini">No cities in this list yet</div>`;
-    wrap.innerHTML = html;
-    return;
-  }
-  if (!cities.length){ wrap.innerHTML = html; return; }
-
-  html += `<div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px;">` +
-    cities.map(c => `<button type="button" class="city-tab ${c.id===communityViewingCityId?'active':''}" style="font-size:11px; padding:6px 10px;" onclick="communityViewingCityId='${c.id}'; renderCommunityModal();">${c.name}</button>`).join('') +
-    `</div>`;
+  if (!cities.find(c => c.id === communityUserLayer)) { communityUserLayer = null; renderCommunityModal(); return; }
+  communityViewingCityId = communityUserLayer;
+  let html = `<button type="button" class="remove-btn" onclick="communityUserLayer=null; renderCommunityModal();" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> ${escapeHtml(u.nickname)}'s lists</button>
+  <h4 style="text-align:center; margin:4px 0 6px; font-family:'Cairo',sans-serif;">${escapeHtml(u.nickname)} · ${escapeHtml((cities.find(c => c.id === communityViewingCityId) || {}).name || '')}</h4>`;
 
   const cityObj = cities.find(c => c.id === communityViewingCityId);
   const cityLinks = cityObj ? cityObj.categories : {};
@@ -5577,6 +5571,7 @@ function openInputModal(title, placeholder, initialValue, options){
     if (Array.isArray(options) && options.length){
       // v1.37 (قرار المالك ١ سبتمبر): قائمة مع حقل كتابة — الحروف الأولى تصفّي؛ لا قائمة منسدلة للنظام
       inputModalOptions = options.slice();
+      inputModalTouched = false;
       f.placeholder = placeholder || 'Type to filter…'; f.value = initialValue || '';
       l.style.display = '';
       inputModalFilter();
@@ -5591,15 +5586,18 @@ function openInputModal(title, placeholder, initialValue, options){
   });
 }
 let inputModalOptions = null;
+let inputModalTouched = false;
 function inputModalFilter(){
   const l = document.getElementById('inputModalList'); if (!l || !inputModalOptions) return;
-  const q = String(document.getElementById('inputModalField').value || '').trim().toLowerCase();
+  const cur = String(document.getElementById('inputModalField').value || '').trim().toLowerCase();
+  const q = inputModalTouched ? cur : '';   // القيمة المسبقة لا تُصفّي — القائمة كاملة حتى يكتب المستخدم
   const rows = inputModalOptions.filter(o => !q || o.toLowerCase().indexOf(q) === 0 || o.toLowerCase().indexOf(' ' + q) >= 0).slice(0, 40);
   l.innerHTML = rows.length
-    ? rows.map(o => '<div class="prow" onclick="inputModalPick(\'' + attrStr(o) + '\')"><span>' + (typeof countryFlag === 'function' && countryFlag(o) ? countryFlag(o) + ' ' : '') + escapeHtml(o) + '</span><span></span></div>').join('')
+    ? rows.map(o => '<div class="prow' + (o.toLowerCase() === cur ? ' on' : '') + '" onclick="inputModalPick(\'' + attrStr(o) + '\')"><span>' + (typeof countryFlag === 'function' && countryFlag(o) ? countryFlag(o) + ' ' : '') + escapeHtml(o) + '</span><span></span></div>').join('')
     : '<div class="prow dim label"><span>No match</span><span></span></div>';
 }
 function inputModalPick(v){
+  inputModalTouched = true;
   document.getElementById('inputModalField').value = v;
   document.getElementById('inputModalError').textContent = '';
   inputModalFilter();
@@ -5691,7 +5689,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r45 (identity corrections batch · third pass: close at the top of every panel, no auto-focus on the country field) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
+logTiming('BUILD: M2-ID-r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
