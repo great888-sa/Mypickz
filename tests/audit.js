@@ -333,9 +333,10 @@ function idGuard(label, s){
     if (cls.includes('label') || cls.includes('cur-shell') || cls.includes('trip-soon')) continue;
     if (/\bon(click|change|input|keydown|submit)=/.test(attrs) || /\bhref=/.test(attrs) || /\bdisabled\b/.test(attrs) || /\bdata-label=/.test(attrs)) continue;
     if (/Soon|Stage \d|Step \d/.test(text)) continue;
-    // قشرة معطَّلة (cur-shell على الحاوية) أو حاوية يحمل ابنها المعالج (صفوف اللوحات)
-    const before = code.slice(Math.max(0, tm.index - 700), tm.index), after = code.slice(tm.index, tm.index + 260);
-    if (tm[1] !== 'button' && (/class=\\?["'][^"']*cur-shell/.test(before) || /\bonclick=/.test(after.slice(tm[0].length)))) continue;
+    // قشرة معطَّلة (cur-shell على الحاوية — تمتد لكل عناصر الصفحة داخل شاشتها) أو حاوية يحمل ابنها المعالج (صفوف اللوحات)
+    const after = code.slice(tm.index, tm.index + 260);
+    const shellIdx = code.lastIndexOf('cur-shell', tm.index), screenIdx = code.lastIndexOf('mp-screen', tm.index);
+    if (tm[1] !== 'button' && (shellIdx > screenIdx || /\bonclick=/.test(after.slice(tm[0].length)))) continue;
     noBehaviour.push('<' + tm[1] + ' class="' + cm[1] + '">' + text.trim().slice(0, 30));
   }
   check(noBehaviour.length === 0, T + 'appearance without behaviour (control classes)', noBehaviour.slice(0, 6).join(' | ') + (noBehaviour.length > 6 ? ' … +' + (noBehaviour.length - 6) : ''));
