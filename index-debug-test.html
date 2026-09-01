@@ -236,7 +236,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .shname button{border:none; cursor:pointer; font-size:11px;}
 
 .panel{border-radius:12px; padding:8px; font-size:11px; text-align:left;}
-.panel .pinned{border-radius:8px; padding:6px 8px; margin:0 0 5px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700;}
+.panel .pinned{border-radius:8px; padding:6px 8px; margin:0 0 5px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; display:flex; justify-content:space-between; align-items:center; gap:8px;}
+.panel .pclose-top{font-size:12px; padding:0 4px; cursor:pointer; flex:none;}
 .panel .prow{display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-radius:8px; cursor:pointer;}
 .panel .pfoot{width:100%; border:none; border-top:1px solid; margin-top:5px; padding:5px 8px 0; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; -webkit-appearance:none; appearance:none;}
 .rowmain{flex:1; min-width:0;}
@@ -482,6 +483,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .shname button{background:none; color:var(--night-2);}
   .panel{background:var(--ivory); color:var(--ink);}
   .panel .pinned{background:var(--ivory-bright); color:var(--ink);}
+  .panel .pclose-top{color:var(--ink-faint);}
   .panel .prow.on{background:var(--ivory-bright);}
   .panel .prow.dim{color:var(--ink-faint);}
   .panel .prow .dim{color:var(--ink-faint);}
@@ -3165,15 +3167,15 @@ function renderAddresses(){
       + (c === cityId ? '<b>' + escapeHtml(cityNameOf(c)) + '</b> ' : escapeHtml(cityNameOf(c)) + ' ') + addrCountOf(c) + '</span>'
       + '<span class="dim" onclick="event.stopPropagation(); removeAddrCity(\'' + c + '\')" title="Delete city">🗑</span></div>').join('');
 
-    panel = '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(addrCurrentCountry || '') + '</div>' + rows + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
+    panel = '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(addrCurrentCountry || '') + '<span class="pclose-top" onclick="addrTogglePanel(null)" title="Close">✕</span></div>' + rows + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
   } else if (addrPanel === 'countries'){
-    panel = '<div class="panel"><input class="psearch" placeholder="Type a country…" autocomplete="off" oninput="plFilterCountries(this.value)"><div class="pinned">Browse countries</div>'
+    panel = '<div class="panel"><div class="pinned">Browse countries<span class="pclose-top" onclick="addrTogglePanel(null)" title="Close">✕</span></div><input class="psearch" placeholder="Type a country…" autocomplete="off" oninput="plFilterCountries(this.value)">'
       + countries.map(c => ({ c: c, n: addrCities.filter(x => countryOfCity(x) === c).length })).filter(o => o.n > 0)
           .map(o => '<div class="prow' + (o.c === addrCurrentCountry ? ' on' : '') + '" data-country="' + attrStr(o.c).toLowerCase() + '" onclick="pickAddrCountry(\'' + attrStr(o.c) + '\')"><span>' + (countryFlag(o.c) ? countryFlag(o.c) + ' ' : '') + escapeHtml(o.c) + '</span><span>' + o.n + '</span></div>').join('')
       + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
   } else if (addrPanel === 'cats' && cityId){
     const cm = (cityId && addrData[cityId]) || {};
-    panel = '<div class="panel"><div class="pinned">Pick a category to add an address</div>'
+    panel = '<div class="panel"><div class="pinned">Pick a category to add an address<span class="pclose-top" onclick="addrTogglePanel(null)" title="Close">✕</span></div>'
       + privateCategoryList().map(c => { const n = ((cm[c.id] && cm[c.id].places) || []).length;
           return '<div class="prow' + (n ? '' : ' dim') + '" onclick="openAddrModal(\'' + cityId + '\',\'' + c.id + '\')"><span>' + c.icon + ' ' + escapeHtml(c.name) + '</span><span>' + (n ? n + ' ' : '') + '＋</span></div>'; }).join('')
       + '<div class="pclose" onclick="addrTogglePanel(null)">✕ Close</div></div>';
@@ -3726,7 +3728,7 @@ function plCountryCode(name){
   return c ? c.code : String(name || '').slice(0, 2).toUpperCase();
 }
 let plPanel = null;                       // 'cities' | 'cats' | null — حالة عرض بحتة
-function plTogglePanel(which){ plPanel = (plPanel === which) ? null : which; renderPlacesMine(); if (which === 'countries'){ const i = document.getElementById('plCountrySearch'); if (i) i.focus(); } }
+function plTogglePanel(which){ plPanel = (plPanel === which) ? null : which; renderPlacesMine(); }
 // v1.37 — محدد الدولة بحقل كتابة: الحروف الأولى تصفّي الصفوف (لا يمس البيانات)
 function plFilterCountries(q){
   const needle = String(q || '').trim().toLowerCase();
@@ -3772,12 +3774,12 @@ function renderPlacesMine(){
 
     const close = '<div class="pclose" onclick="plTogglePanel(null)">✕ Close</div>';
     html += (plPanel === 'cities')
-      ? '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(myListCountry || '') + '</div>' + cityRows + close + '</div>'
+      ? '<div class="panel"><div class="pinned">Browse cities · ' + escapeHtml(myListCountry || '') + '<span class="pclose-top" onclick="plTogglePanel(null)" title="Close">✕</span></div>' + cityRows + close + '</div>'
       : (plPanel === 'countries')
-        ? '<div class="panel"><input class="psearch" id="plCountrySearch" placeholder="Type a country…" autocomplete="off" oninput="plFilterCountries(this.value)"><div class="pinned">Browse countries</div>'
+        ? '<div class="panel"><div class="pinned">Browse countries<span class="pclose-top" onclick="plTogglePanel(null)" title="Close">✕</span></div><input class="psearch" id="plCountrySearch" placeholder="Type a country…" autocomplete="off" oninput="plFilterCountries(this.value)">'
           + countriesAll.map(c => '<div class="prow' + (c === myListCountry ? ' on' : '') + '" data-country="' + attrStr(c).toLowerCase() + '" onclick="plPickCountry(\'' + attrStr(c) + '\')"><span>' + (countryFlag(c) ? countryFlag(c) + ' ' : '') + escapeHtml(c) + '</span><span>' + myListAllCities().filter(x => x.country === c).length + '</span></div>').join('')
           + close + '</div>'
-        : '<div class="panel"><div class="pinned">Pick a category to add a place</div>' + catRows + close + '</div>';
+        : '<div class="panel"><div class="pinned">Pick a category to add a place<span class="pclose-top" onclick="plTogglePanel(null)" title="Close">✕</span></div>' + catRows + close + '</div>';
   }
 
   /* صف النشر والمشاركة */
@@ -5689,7 +5691,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r44 (identity corrections batch · second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
+logTiming('BUILD: M2-ID-r45 (identity corrections batch · third pass: close at the top of every panel, no auto-focus on the country field) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
