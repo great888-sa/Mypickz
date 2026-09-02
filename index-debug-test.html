@@ -285,6 +285,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .stattext{font-size:11px; user-select:none; -webkit-user-select:none;}
 .mp-idchip .sus{font-size:10px; font-weight:700; white-space:nowrap;}
 .fav{font-size:13px; line-height:1;}
+.errline{font-size:12px; min-height:16px; margin-top:6px;}
 .mp-empty .cta,.mp-empty .actn{display:inline-flex; width:auto; margin:8px 4px 0; font-size:12px; padding:8px 14px;}
 .psearch{width:100%; border:1px solid; border-radius:9px; padding:7px 10px; font-size:12px; margin:0 0 6px; font-family:inherit;}
 .tools-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 4px;}
@@ -354,10 +355,14 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .mp-idchip.suspended .mini-av{box-shadow:0 0 0 2px var(--danger-night);}
   .mp-idchip .sus{color:var(--danger-night);}
   .fav{color:var(--ink-faint);}
+  .errline{color:var(--danger);}
   .fav.on{color:var(--danger);}
   .psearch{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
   .tools-tile{background:var(--ivory-bright); color:var(--ink);}
   .tools-tile .dim{color:var(--ink-faint);}
+  .curhead > .pn, .curhead > div .pn{color:var(--on-night);}
+  .curhead > div .ps{color:var(--night-3);}
+  .curhead > .stattext{color:var(--night-2);}
   .mp-chipmenu{background:var(--ivory); border-color:var(--line-ivory); box-shadow:0 10px 26px rgba(0,0,0,.5);}
   .mp-chipmenu button{background:none; color:var(--ink); border-bottom-color:var(--line-ivory);}
   .mp-tabbar{background:var(--bar); border-top-color:var(--line-bar);}
@@ -563,6 +568,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <h3 id="cityDelTitle">🗑 Delete city</h3>
     <p id="cityDelHint" class="flabel"></p>
     <button type="button" class="btn btn-ghost wide" id="cityDelSideBtn" onclick="cityDelSide()"></button>
+    <button type="button" class="btn btn-ghost wide" id="cityDelSideBtn2" onclick="cityDelSide(true)" style="display:none;"></button>
     <button type="button" class="btn btn-danger wide" id="cityDelFullBtn" onclick="cityDelFull()">Delete city everywhere</button>
     <button type="button" class="btn btn-ghost wide" onclick="closeModalById('cityDelBackdrop')">Cancel</button>
   </div></div>
@@ -655,11 +661,11 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   </div><!-- /screenPlaces -->
 
   <!-- خ١: الوجهة ٢ — الرحلات: جسم نافذة "رحلاتي" يُنقل إلى هنا عند أول فتح (الاستضافة بنقل العنصر) -->
-  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">🧳 <b>My Trips</b></span></div><div class="chiprow" id="tripSrcRow"><button type="button" class="pl-src on" onclick="showToast('You are on My trips')">My trips</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">From curators</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">From community</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">My favorites</button></div><div class="chiprow" id="tripTypeRow"><button type="button" class="chip on" onclick="pickTripType(this)">All</button><button type="button" class="chip" onclick="pickTripType(this)">🚶 One day trip</button><button type="button" class="chip" onclick="pickTripType(this)">🏙 Single city</button><button type="button" class="chip" onclick="pickTripType(this)">🌍 Multi-city</button><span class="chip label mini">Soon</span></div><div class="ctx" id="tripCtx"><b>My trips</b> · All</div></div><div id="tripsHost"></div></div></div>
+  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="chiprow" id="tripSrcRow"><button type="button" class="pl-src on" onclick="showToast('You are on My trips')">My trips</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">From curators</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">From community</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">My favorites</button></div><div class="chiprow" id="tripTypeRow"><button type="button" class="chip on" onclick="pickTripType(this)">All</button><button type="button" class="chip" onclick="pickTripType(this)">🚶 One day trip</button><button type="button" class="chip" onclick="pickTripType(this)">🏙 Single city</button><button type="button" class="chip" onclick="pickTripType(this)">🌍 Multi-city</button><span class="chip label mini">Soon</span></div><div class="ctx" id="tripCtx"><b>My trips</b> · All</div></div><div id="tripsHost"></div></div></div>
   <!-- خ١: الوجهة ٣ — المنتقون: مكان محجوز حتى خ٤ -->
   <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">⭐ <b>Curators</b></span><span class="actn label">🔍 Find a curator <span class="dim">Soon</span></span></div><div class="ctx"><b>Curators</b> · Step 4</div></div><div class="curgrid"><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty mini">Curators arrive in step 4 — the page below is the built shell.</div>
      <!-- v1.38 · ٦/هـ٢ — صفحة المنتقي بنيةً كاملة: عرض بلا وظيفة (cur-shell) وبيانات مثال؛ تتفعّل بالخطوة الرابعة -->
-     <div class="cur-shell">
+     <div class="cur-shell curhead">
        <div class="headrow" style="margin-bottom:6px;"><span class="actn">← Curators</span><span class="chip">Following ✓ <span class="dim">Step 4</span></span></div>
        <div style="display:flex; align-items:center; gap:10px; margin:2px 0 4px;"><span class="mini-av" style="width:34px; height:34px; line-height:34px; font-size:14px; background:var(--av-2);">No</span><div><div class="pn" style="font-size:15px;">Nourah ✔</div><div class="ps" dir="auto">أماكن الرياض التي أعود إليها</div></div></div>
        <div class="stattext" style="margin:2px 0 6px;">312 views · 24 places · 5 trips</div>
@@ -668,8 +674,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
        <div class="ctx"><b>Nourah's places</b> · Riyadh</div>
        <div class="headrow" style="margin:4px 0 6px;"><span class="csel">SA ⌄</span><span class="csel grow"><b>Riyadh</b> ⌄</span><span class="actn"><b>＋</b> City</span></div>
        <div class="pl-cathead"><span>☕ Cafes (2)</span></div>
-       <div class="row"><div><div class="pn">Brew92</div><div class="ps">Al Nakheel</div></div><div class="acts"><span class="act">Maps ↗</span><span class="fav">♥</span><span class="act">Save</span></div></div>
-       <div class="row"><div><div class="pn">Camel Step</div><div class="ps">Al Olaya</div></div><div class="acts"><span class="act">Maps ↗</span><span class="fav">♥</span><span class="act">Save</span></div></div>
+       <div class="row"><div><div class="pn">Brew92</div><div class="ps">Al Nakheel</div></div><div class="acts"><span class="act">Maps ↗</span><span class="fav">♥</span><span class="act">Save</span><span class="act">➕</span></div></div>
+       <div class="row"><div><div class="pn">Camel Step</div><div class="ps">Al Olaya</div></div><div class="acts"><span class="act">Maps ↗</span><span class="fav">♥</span><span class="act">Save</span><span class="act">➕</span></div></div>
      </div></div></div>
   <!-- خ١: الوجهة ٤ — المجتمع: جسم نافذة المجتمع يُنقل إلى هنا -->
   <div class="mp-screen" id="screenCommunity"><div class="wrap destbody"><div id="communityHost"></div></div></div>
@@ -692,8 +698,26 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   </div>
 
   <div id="activeTripBar">
-    <div class="atb-head"><span id="activeTripLabel">Adding to: —</span><span class="acts"><button type="button" class="actn" onclick="openActiveTrip()">View trip</button><button type="button" class="actn" onclick="stopAddingToTrip()">Cancel</button><button type="button" class="cta atb-done" onclick="stopAddingToTrip()">Done</button></span></div>
+    <div class="atb-head"><span id="activeTripLabel">Adding to: —</span><span class="acts"><button type="button" class="actn" onclick="openActiveTrip()">View trip</button><button type="button" class="actn" onclick="stopAddingToTrip(true)">Cancel</button><button type="button" class="cta atb-done" onclick="stopAddingToTrip()">Done</button></span></div>
     <div id="activeTripAddedRow" class="chiprow"></div>
+  </div>
+
+  <!-- v1.38 · ٦/ب٢ — إنشاء رحلة بنافذة واحدة: الأنواع عرضًا بموعدها، والمدينة بحقل تصفية، والأيام رقمًا -->
+  <div class="modal-backdrop" id="tripCreateBackdrop">
+    <div class="modal">
+      <h3>New Trip 🧳</h3>
+      <label class="flabel">Trip type <span class="dim">— Soon · step 6 (Single city for now)</span></label>
+      <div class="chiprow" style="margin-bottom:9px;"><span class="chip on">🏙 Single city</span><button type="button" class="chip" onclick="showToast('Trip types — Soon (step 6)')">🚶 One day trip</button><button type="button" class="chip" onclick="showToast('Trip types — Soon (step 6)')">🌍 Multi-city</button></div>
+      <label class="flabel">City</label>
+      <input type="text" id="tcCity" class="modal-input" placeholder="Type a city…" autocomplete="off" oninput="tcFilterCities(true)" onfocus="tcFilterCities()">
+      <div id="tcCityList" class="panel" style="display:none; max-height:30vh; overflow-y:auto; margin:4px 0 8px;"></div>
+      <label class="flabel">Days</label>
+      <input type="number" id="tcDays" class="modal-input" min="1" max="30" value="3" inputmode="numeric">
+      <label class="flabel">Trip label <span class="dim">(optional)</span></label>
+      <input type="text" id="tcLabel" class="modal-input" placeholder="e.g. August 2026" autocomplete="off">
+      <div id="tcError" class="errline"></div>
+      <div style="display:flex; gap:8px;"><button type="button" class="btn wide" onclick="tcCreate()">Create</button><button type="button" class="btn btn-ghost wide" onclick="closeModalById('tripCreateBackdrop')">Cancel</button></div>
+    </div>
   </div>
 
   <div class="modal-backdrop" id="tripPickerBackdrop">
@@ -718,7 +742,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <input type="text" id="inputModalField" class="modal-input" autocomplete="off" oninput="inputModalTouched=true; inputModalFilter()" onkeydown="if(event.key==='Enter') confirmInputModal();">
       <select id="inputModalSelect" class="modal-input" style="display:none;"></select>
       <div id="inputModalList" class="panel" style="display:none; max-height:38vh; overflow-y:auto; margin-top:6px;"></div>
-      <div id="inputModalError" style="color:var(--danger);font-size:12px;min-height:16px;margin-top:6px;"></div>
+      <div id="inputModalError" class="errline"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
         <button class="btn btn-brass" style="flex:1" onclick="confirmInputModal()">Confirm</button>
         <button class="btn btn-ghost" style="flex:1" onclick="closeInputModal()">Cancel</button>
@@ -1741,6 +1765,7 @@ const mpData = (function(){
       }
     },
     trips: {
+      remove: function(tripId){ return col('trips').doc(tripId).delete(); },
       byOwner: function(uid){ return col('trips').where('ownerId', '==', uid).get(); }
     },
     suspensions: {
@@ -2479,7 +2504,19 @@ function openActiveTrip(){                 // من الشريط: يفتح الر
   const id = activeTripId; if (!id) return;
   switchTab('Trips'); openTripDetail(id);
 }
-function stopAddingToTrip(){
+async function stopAddingToTrip(discard){
+  // قرار المالك (١ سبتمبر): إلغاء وضع الإضافة لرحلة أُنشئت توًّا وما زالت بلا أماكن = التخلص منها، لا حفظ رحلة فارغة
+  if (discard && freshTripId && activeTripId === freshTripId){
+    const t = userTrips.find(x => x.id === freshTripId);
+    if (t && tripPlaceCount(t) === 0){
+      try{ await mpData.trips.remove(freshTripId); }catch(e){}
+      userTrips = userTrips.filter(x => x.id !== freshTripId);
+      delete resolvedTripCache[freshTripId];
+      if (currentTripId === freshTripId) currentTripId = null;
+      showToast('Empty trip discarded');
+    }
+  }
+  freshTripId = null;
   activeTripId = null;
   activeTripAdded = [];
   updateActiveTripBanner();
@@ -2604,7 +2641,7 @@ function tripTitle(t){ return t.customLabel ? (t.cityName + ' — ' + t.customLa
 function renderMyTripsModal(){
   const wrap = document.getElementById('myTripsBody');
   if (currentTripId){ renderTripDetail(wrap); return; }
-  let html = '<div class="pl-cathead"><span>🔗 Shared with you (' + sharedTrips.length + ')</span></div>';
+  let html = '<div class="pl-cathead"><span>🔗 Shared with you (' + sharedTrips.length + ') <span class="dim">→ moves into “From community” · step 6</span></span></div>';
   if (sharedTrips.length){
     html += sharedTrips.map(t =>
       '<div class="row rowblock"><div class="pn">' + escapeHtml(tripTitle(t)) + '</div>'
@@ -2613,7 +2650,6 @@ function renderMyTripsModal(){
   } else {
     html += '<div class="mp-empty mini">No trips have been shared with you yet</div>';
   }
-  html += '<div class="pl-cathead"><span>🧳 Your Trips (' + userTrips.length + ')</span></div>';
   if (!userTrips.length){
     html += '<div class="mp-empty">🧳<br>No trips yet.<br><span class="mini">Create one, then add places to it from any source.</span></div>';
   } else {
@@ -2633,26 +2669,45 @@ function renderMyTripsModal(){
 }
 
 async function openCreateTripFlow(){
-  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } // نفس حاجز My List — بدل بناء رحلة وهمية بالذاكرة ثم رفضها عند الحفظ (ملاحظة ميدانية الدفعة ٣)
+  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } // نفس حاجز My List
   const cities = allCities();
   if (!cities.length){ showToast('No cities available yet'); return; }
-  showToast('Trip type — step 6 · creating a Single city trip for now');
-  const cityName = await openInputModal("Which city is this trip for?", "", cities[0].name, cities.map(c => c.name));
-  if (cityName === null) return;
-  const cityObj = cities.find(c => c.name === cityName);
-  if (!cityObj) return;
-  const label = await openInputModal("Trip label (optional)", "e.g. August 2026", "");
-  if (label === null) return;
-  const daysStr = await openInputModal("How many days?", "e.g. 3", "3");
-  if (daysStr === null) return;
-  let numDays = parseInt(daysStr, 10);
+  const f = document.getElementById('tcCity'); if (f) f.value = '';
+  const d = document.getElementById('tcDays'); if (d) d.value = '3';
+  const l = document.getElementById('tcLabel'); if (l) l.value = '';
+  document.getElementById('tcError').textContent = '';
+  document.getElementById('tcCityList').style.display = 'none';
+  openModalById('tripCreateBackdrop');
+}
+function tcFilterCities(fromTyping){
+  const inp = document.getElementById('tcCity'), lst = document.getElementById('tcCityList');
+  const q = fromTyping ? String(inp.value || '').trim().toLowerCase() : '';
+  const rows = allCities().filter(c => !q || c.name.toLowerCase().indexOf(q) === 0).slice(0, 30);
+  lst.innerHTML = rows.map(c => '<div class="prow' + (c.name === inp.value ? ' on' : '') + '" onclick="tcPickCity(\'' + attrStr(c.name) + '\')"><span>' + escapeHtml(c.name) + '</span><span></span></div>').join('') || '<div class="prow dim label"><span>No match</span><span></span></div>';
+  lst.style.display = '';
+}
+function tcPickCity(name){
+  document.getElementById('tcCity').value = name;
+  document.getElementById('tcCityList').style.display = 'none';
+  document.getElementById('tcError').textContent = '';
+}
+let freshTripId = null;   // ٦/ب٢ + قرار المالك: الإلغاء يتخلص من الرحلة الفارغة المنشأة توًّا
+async function tcCreate(){
+  const cities = allCities();
+  const name = String(document.getElementById('tcCity').value || '').trim().toLowerCase();
+  const cityObj = cities.find(c => c.name.toLowerCase() === name);
+  if (!cityObj){ document.getElementById('tcError').textContent = 'Pick a city from the list'; return; }
+  let numDays = parseInt(document.getElementById('tcDays').value, 10);
   if (!numDays || numDays < 1) numDays = 1;
   if (numDays > 30) numDays = 30;
+  const label = String(document.getElementById('tcLabel').value || '');
   const days = [];
   for (let i = 1; i <= numDays; i++) days.push(emptyDay(i));
-  const trip = { id: generateTripId(), cityId: cityObj.id, cityName: cityObj.name, customLabel: (label||'').trim(), public:false, sharedWith:[], sharedWithNames:{}, days };
+  const trip = { id: generateTripId(), cityId: cityObj.id, cityName: cityObj.name, customLabel: label.trim(), public:false, sharedWith:[], sharedWithNames:{}, days };
   userTrips.push(trip);
+  closeModalById('tripCreateBackdrop');
   await saveTrip(trip);
+  freshTripId = trip.id;
   startAddingToTrip(trip.id);
 }
 async function openTripDetail(tripId){
@@ -2733,11 +2788,15 @@ function renderTripDetail(wrap){
   const title = trip.customLabel ? `${trip.cityName} — ${trip.customLabel}` : trip.cityName;
   const readOnly = viewingSharedTrip || tripViewMode || currentUserSuspended; // المُوقَف يُجبَر على View — يخفي كل أزرار التعديل/الحذف/الترتيب دفعة واحدة
 
+  const totalPlaces = resolved.reduce((a, d) => a + Object.values(d.places || {}).reduce((x, arr) => x + (arr ? arr.length : 0), 0), 0);
   let html = `<div class="headrow">
-    <button type="button" class="actn" onclick="backToTripsList()">← All trips</button>
-    <span class="daytitle" style="flex:1">${title}</span>
+    <button type="button" class="actn" onclick="backToTripsList()">← Back</button>
+    <span class="actn label">View: <b>Days</b> · Map <span class="dim">Soon</span></span>
     ${(!viewingSharedTrip && !currentUserSuspended) ? `<button type="button" class="actn" onclick="toggleTripViewMode()">${tripViewMode ? '✏️ Edit' : '👁️ View'}</button>` : ''}
-  </div>`;
+  </div>
+  <div class="pn" style="font-size:15px; margin:2px 0 1px;">${title} — ${resolved.length} ${resolved.length === 1 ? 'day' : 'days'}</div>
+  <div class="ctx" style="margin:0 0 6px;">🏙 Type <span class="dim">Soon</span> · ${totalPlaces} ${totalPlaces === 1 ? 'place' : 'places'}</div>
+  <div class="chiprow" style="margin:0 0 8px;">${resolved.map((d, i) => `<button type="button" class="chip" onclick="document.getElementById('tripday-${i}').scrollIntoView({behavior:'smooth', block:'start'})">Day ${d.dayNumber}</button>`).join('')}</div>`;
 
   if (currentUserSuspended){
     html += `<div style="border:1.5px dashed var(--danger); background:var(--ivory-bright); border-radius:10px; padding:10px 12px; margin-bottom:10px; text-align:center; font-size:11.5px; color:var(--danger); font-weight:700;">🚫 Suspended — can't add or edit places</div>`;
@@ -2760,7 +2819,7 @@ function renderTripDetail(wrap){
   }
 
   resolved.forEach((day, dIdx) => {
-    html += `<div class="dayhead">
+    html += `<div class="dayhead" id="tripday-${dIdx}">
       <span class="daynum">${day.dayNumber}</span>
       <span class="daytitle">DAY ${day.dayNumber}</span>
       <span class="dayline"></span>
@@ -2884,7 +2943,7 @@ async function addTripDay(){
 }
 async function deleteTrip(){
   if (!confirm('Delete this trip? This cannot be undone.')) return;
-  try{ await db.collection('trips').doc(currentTripId).delete(); }catch(e){}
+  try{ await mpData.trips.remove(currentTripId); }catch(e){}
   userTrips = userTrips.filter(t => t.id !== currentTripId);
   delete resolvedTripCache[currentTripId];
   currentTripId = null;
@@ -3309,6 +3368,13 @@ async function openCityDeleteChooser(cityId, from){
   document.getElementById('cityDelSideBtn').textContent = (from === 'addr')
     ? 'Remove my addresses here (' + nAddr + ')'
     : 'Clear my list for this city (' + nList + ')';
+  // المرجع ٦/أ: خيارات بالأسطح — الوجه الآخر يظهر زرًّا ثانيًا حين للمدينة محتوى فيه (قرار المالك ١ سبتمبر)
+  const other = document.getElementById('cityDelSideBtn2');
+  if (other){
+    const n2 = (from === 'addr') ? nList : nAddr;
+    other.style.display = n2 > 0 ? '' : 'none';
+    other.textContent = (from === 'addr') ? 'Clear my list for this city (' + n2 + ')' : 'Remove my addresses here (' + n2 + ')';
+  }
   document.getElementById('cityDelFullBtn').textContent =
     'Delete city everywhere — ' + plural(nList + nAddr, 'item') + ' · cannot be undone';
 }
@@ -3320,8 +3386,9 @@ async function cityCountAddr(cityId){
   try{ const cats = await mpData.privatePlaces.get(currentUser.uid, cityId);
     return Object.values(cats || {}).reduce((a, e) => a + ((e && e.places) ? e.places.length : 0), 0); }catch(e){ return 0; }
 }
-async function cityDelSide(){
-  const { cityId, from } = cityDelCtx || {}; if (!cityId) return;
+async function cityDelSide(other){
+  let { cityId, from } = cityDelCtx || {}; if (!cityId) return;
+  if (other) from = (from === 'addr') ? 'list' : 'addr';   // الزر الثاني = الوجه الآخر
   const n1 = from === 'addr' ? await cityCountAddr(cityId) : await cityCountList(cityId);
   if (!confirm((from === 'addr' ? 'Remove your ' + n1 + ' address' + (n1 === 1 ? '' : 'es') + ' in ' : 'Clear your list of ' + n1 + ' place' + (n1 === 1 ? '' : 's') + ' in ') + cityNameOf(cityId) + '? This cannot be undone.')) return;
   closeModalById('cityDelBackdrop');
@@ -4852,6 +4919,7 @@ function renderCommunityModal(){
   const myCity = myListCityId || currentCityId;                 // شريحة المدينة تتبع ما تتصفّحه فعلًا
   const cityName = (allCities().find(c => c.id === myCity) || {}).name || '';
 
+  if (!cityName) cityName = (typeof plCityName === 'function' && plCityName()) || cityNameOf(myCity) || '';
   if (communityTab === 'places'){ renderCommunityPlaces(wrap, cityName); return; }
   let html = '<div class="stickyhead"><div class="headrow"><span class="csel label">🌍 <b>Community</b></span>'
     + (communityTab === 'all'
@@ -4876,10 +4944,10 @@ function renderCommunityModal(){
   } else {
     html += '<div class="pl-cathead"><span>Public lists (' + usersToShow.length + ')</span></div>';
     html += usersToShow.map(u =>
-      '<div class="row rowblock"><div class="pn">' + escapeHtml(u.nickname) + '</div>'
+      '<div class="row"><div><div class="pn">' + escapeHtml(u.nickname) + '</div>'
       + '<div class="ps" dir="auto">' + u.publicCityIds.length + ' city list' + (u.publicCityIds.length === 1 ? '' : 's') + '</div>'
-      + '<div class="stattext">' + u.viewCount + ' views · ' + u.totalFavoriteCount + ' saves</div>'
-      + '<div class="rowacts"><span class="act" onclick="viewCommunityUser(\'' + u.uid + '\')">View →</span></div></div>').join('');
+      + '<div class="stattext">' + u.viewCount + ' views · ' + u.totalFavoriteCount + ' saves</div></div>'
+      + '<div class="acts"><span class="act" onclick="viewCommunityUser(\'' + u.uid + '\')">View →</span></div></div>').join('');
   }
   wrap.innerHTML = html;
 }
@@ -5721,7 +5789,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r49 (conformance pass over all 23 reference scenes: full curator page structure 6/E2, trip row edit indicator with no heart on own trips, home chooser vector icons, address modal method chips with local share parsing, Become a curator in the drawer) — r48 (structures batch · second pass — scene 6/D2 as drawn: compact rows for the person layers, back at the first row, context line, a row per public trip) — r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
+logTiming('BUILD: M2-ID-r50 (owner field notes on r49: trips header per dB, single create-trip modal 6/B2, cancel discards the fresh empty trip via the nucleus, city-delete side options for both surfaces, community people as compact rows, trip detail header per dC with day chips, curator page night colours and add action) — r49 (conformance pass over all 23 reference scenes: full curator page structure 6/E2, trip row edit indicator with no heart on own trips, home chooser vector icons, address modal method chips with local share parsing, Become a curator in the drawer) — r48 (structures batch · second pass — scene 6/D2 as drawn: compact rows for the person layers, back at the first row, context line, a row per public trip) — r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
