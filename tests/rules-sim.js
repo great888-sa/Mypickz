@@ -1,10 +1,11 @@
 // MyPickz — tests/rules-sim.js
-// يختبر firestore.rules (v3.7) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// يختبر firestore.rules (v3.8) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// v3.8 (٣ سبتمبر ٢٠٢٦ — نشرة القرار المؤسِّس ٠٩، سطور M4.23 أقرّها المالك أولًا): + القسم ٢١ وقلب سبع حالات إعجاب مجمَّدة:
+//   سجل مفكرة القوائم وعدّادها المربوط · سجل حفظ الرحلات وعدّاده · تجميد favoriteCount بالمجموعات الثلاث ·
+//   عدّاد مشاهدات القائمة · قراءة المستند الغائب لصاحب البادئة · خصوصية السجلين (الثابت ١٢ — «كم لا مَن»)
 // v3.7 (٢٦ أغسطس ٢٠٢٦ — دفعة الإطار خ٣): + القسم ٢٠ — ٣٩٠ حالة (٣٤٣ + ٤٧): المتابعة · حقول الملف والفجوات ١٥–١٨ · تفضيل الرحلات
-// v3.6 (٢٥ أغسطس ٢٠٢٦ — الشرط الحاجب، ثلاثة قرارات): + القسم ١٩ — ٣٤٣ حالة (٣١٩ + ٢٤):
-//   (١٢) العدّادات لا تنزل تحت الصفر · (٣-ب) userPrivatePlaces + منع مفاتيح الفئات الخاصة بقوائم المدن · (١) احتجاز المشاركة بالاسم (توثيق سلوك بلا تغيير قواعد)
-// v3.5 (٢٤ أغسطس ٢٠٢٦ — الشرط الحاجب): + القسم ١٨ (تقييد معرّف userCityLists عند الإنشاء) — ٣١٩ حالة،
-//   وتحديث معرّف حالة الإنشاء الذاتي بالقسم ١٠ للصيغة الشرعية uid_cityId (الكود يكتبها هكذا أصلًا).
+// v3.6 (٢٥ أغسطس ٢٠٢٦ — الشرط الحاجب، ثلاثة قرارات): + القسم ١٩ — ٣٤٣ حالة (٣١٩ + ٢٤)
+// v3.5 (٢٤ أغسطس ٢٠٢٦ — الشرط الحاجب): + القسم ١٨ — ٣١٩ حالة
 // يُشغَّل بـ: npx firebase emulators:exec --only firestore --project demo-mypickz "node tests/rules-sim.js"
 // كل حالة تُطبع بسطر PASS/FAIL. أي FAIL ⇒ رمز خروج ١ ⇒ الناشر يتوقف.
 'use strict';
@@ -221,7 +222,7 @@ const no = (label, f) => expect(false, label, f);
   await no('stats_places read by other (B)', () => b.doc('stats_places/cA__0123456789abcdef').get());
   await no('stats_places read guest', () => guest.doc('stats_places/cA__0123456789abcdef').get());
 
-  // ================= ٤-ز-٢) v3.3.1: stats_places — أماكن دليل المالك (owner_{city}__{hash}) =================
+  // ================= ٤-ز-٢) v3.3.1: stats_places — أماكن دليل المالك =================
   await ok('stats_places owner guide create (real city paris)', () => guest.doc('stats_places/owner_paris__0123456789abcdef').set({ open_app: 5, open_total: 5 }));
   await no('stats_places owner guide unknown city', () => guest.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_app: 1 }));
   await no('stats_places owner guide uppercase city (bad id)', () => guest.doc('stats_places/owner_Paris__0123456789abcdef').set({ open_app: 1 }));
@@ -229,12 +230,11 @@ const no = (label, f) => expect(false, label, f);
   await ok('stats_places owner guide read by app owner', () => owner.doc('stats_places/owner_paris__0123456789abcdef').get());
   await no('stats_places owner guide read by user', () => a.doc('stats_places/owner_paris__0123456789abcdef').get());
   await no('stats_places owner guide read guest', () => guest.doc('stats_places/owner_paris__0123456789abcdef').get());
-  // ثغرة مُغلقة بالتدقيق: مستخدم ينشئ userCityLists/owner_paris بنفسه ثم يحاول قراءة عدّادات دليل المالك
   await env.withSecurityRulesDisabled(async (c) => c.firestore().doc('userCityLists/owner_paris').set({ ownerId: B, public: false, sharedWith: [] }));
   await no('stats_places owner guide read by user who forged userCityLists/owner_paris', () => b.doc('stats_places/owner_paris__0123456789abcdef').get());
 
-  // ================= ٤-ح) v3.3: stats_curators / stats_cards (reserved for ج-١أ) =================
-  const CUR = 'abcdefghijklmnopqrstuvwxyz12';            // uid واقعي (٢٨ حرفًا)
+  // ================= ٤-ح) v3.3: stats_curators / stats_cards =================
+  const CUR = 'abcdefghijklmnopqrstuvwxyz12';
   const cur = env.authenticatedContext(CUR).firestore();
   await ok('stats_curators create guest (uid-shaped id)', () => guest.doc('stats_curators/' + CUR).set({ page_view: 1, ref_ig: 1 }));
   await no('stats_curators create short id', () => guest.doc('stats_curators/userA').set({ page_view: 1 }));
@@ -259,7 +259,7 @@ const no = (label, f) => expect(false, label, f);
   await no('stats delete user', () => a.doc('stats/users').delete());
   await ok('stats delete owner', () => owner.doc('stats/new').delete());
 
-  // ================= ٦) placeFavoriteCounts =================
+  // ================= ٦) placeFavoriteCounts (v3.8: عدّاد حفظ المكان — البنية كما هي) =================
   const pfc = { name: 'X', url: 'https://maps.app.goo.gl/y', count: 1 };
   await ok('pfc read guest', () => guest.doc('placeFavoriteCounts/p1').get());
   await no('pfc create guest', () => guest.doc('placeFavoriteCounts/p2').set(pfc));
@@ -294,7 +294,7 @@ const no = (label, f) => expect(false, label, f);
   await ok('userLists write own', () => a.doc(`userLists/${A}`).set({ nickname: 'a2' }, { merge: true }));
   await no('userLists write suspended', () => s.doc(`userLists/${S}`).set({ nickname: 's2' }, { merge: true }));
   await ok('userLists write owner on other', () => owner.doc(`userLists/${A}`).set({ flag: 1 }, { merge: true }));
-  await ok('userLists favoriteCount +1 on public by other', () => a.doc(`userLists/${B}`).update({ favoriteCount: 4 }));
+  await no('v3.8 FROZEN: userLists favoriteCount +1 on public by other (was allow)', () => a.doc(`userLists/${B}`).update({ favoriteCount: 4 }));
   await no('userLists favoriteCount +1 by suspended', () => s.doc(`userLists/${B}`).update({ favoriteCount: 5 }));
   await no('userLists favoriteCount +999', () => a.doc(`userLists/${B}`).update({ favoriteCount: 999 }));
   await no('userLists other field on public by other', () => a.doc(`userLists/${B}`).update({ nickname: 'hack' }));
@@ -336,8 +336,8 @@ const no = (label, f) => expect(false, label, f);
   await ok('ucl update own', () => a.doc('userCityLists/cA').update({ x: 1 }));
   await no('ucl update suspended own', () => s.doc('userCityLists/cS').update({ x: 1 }));
   await ok('ucl update owner', () => owner.doc('userCityLists/cA').update({ suspended: true }));
-  await ok('ucl favoriteCount +1 on public by other', () => a.doc('userCityLists/cBpub').update({ favoriteCount: 3 }));
-  await ok('ucl favoriteCount -1 on public by other', () => a.doc('userCityLists/cBpub').update({ favoriteCount: 2 }));
+  await no('v3.8 FROZEN: ucl favoriteCount +1 on public by other (was allow)', () => a.doc('userCityLists/cBpub').update({ favoriteCount: 3 }));
+  await no('v3.8 FROZEN: ucl favoriteCount -1 on public by other (was allow)', () => a.doc('userCityLists/cBpub').update({ favoriteCount: 1 }));
   await no('ucl favoriteCount +999', () => a.doc('userCityLists/cBpub').update({ favoriteCount: 999 }));
   await no('ucl favoriteCount by suspended', () => s.doc('userCityLists/cBpub').update({ favoriteCount: 3 }));
   await ok('ucl delete own by suspended', () => s.doc('userCityLists/cS').delete());
@@ -403,9 +403,6 @@ const no = (label, f) => expect(false, label, f);
   await ok('dailyStats delete owner', () => owner.doc('dailyStats/2026-08-19').delete());
 
   // ================= ١٥) A3-L3-r1: أشكال كتابة وحدة mpTrack =================
-  // الوحدة تكتب دفعة batch واحدة (set + merge) قد تمس مستندات تجميع متعددة بالدورة الواحدة —
-  // ورفض مستند واحد بالقواعد يُسقط الدفعة كاملة، لذا تُختبر الدفعة نفسها لا المستند المفرد فقط.
-  // (حالة "personal بمدينة حقيقية" قيدُ كودٍ لا قواعد — القواعد تجيزها بنيويًا؛ تُفحص ببند Personal بقائمة الاختبار الميداني.)
   await ok('mp batch: events(multi-field)+hours+sessions in one commit', () => {
     const btch = guest.batch();
     btch.set(guest.doc('analytics/events_2026-08-19__paris__mp15'), { place_open: 3, mylist_open: 1 }, { merge: true });
@@ -424,11 +421,8 @@ const no = (label, f) => expect(false, label, f);
 
 
   // ================= ١٦) M3: إغلاق التغطية — الشبكة والحواف والأعلام التصميمية =================
-  // مصدر الحالات: تشريح النص الحرفي v3.3.1 بندًا بندًا ضد فهرس M2 (٢١ أغسطس).
-  // قرارات الأعلام حُسمت (المالك ٢١ أغسطس عبر الشرط الحاجب): [ACK] = سلوك أُقرّ رسميًا · P3/P4/P5/P7 CLOSED = تضييقات v3.4 (تُنشر بنفس commit هذا الملف).
   await env.withSecurityRulesDisabled(async (c) => {
     const db = c.firestore();
-    // إعادة بذر ما حذفته المجموعات السابقة (لاختبارات "الموقوف يقرأ محتواه" وغيرها)
     await db.doc(`favorites/${S}`).set({ places: [] });
     await db.doc(`userLists/${S}`).set({ public: false, nickname: 's', favoriteCount: 0 });
     await db.doc('trips/tS').set({ ownerId: S, public: false, sharedWith: [], name: 'S private' });
@@ -436,79 +430,64 @@ const no = (label, f) => expect(false, label, f);
     await db.doc(`users/${S}`).set({ email: 's@x', nickname: 's' });
     await db.doc(`communityProfiles/${S}`).set({ hasAnyPublicContent: false, viewCount: 0, totalFavoriteCount: 0 });
     await db.doc(`communityProfiles/${B}`).set({ hasAnyPublicContent: true, viewCount: 5, totalFavoriteCount: 2 });
-    await db.doc('analytics/visits').delete(); // لاختبار حافة الإنشاء الفارغ ثم إعادة البذر
+    await db.doc('analytics/visits').delete();
   });
 
-  // --- settings / cities / suspensions: إكمال شبكة العمليات ---
   await ok('cities create new doc by owner', () => owner.doc('cities/rome').set({ name: 'Rome', published: false }));
   await no('cities delete by user', () => a.doc('cities/rome').delete());
   await ok('cities delete by owner', () => owner.doc('cities/rome').delete());
   await no('suspensions write guest', () => guest.doc(`suspensions/${B}`).set({ at: 1 }));
 
-  // --- analytics/visits: حواف البنية ---
   await no('visits create EMPTY object {} (hasOnly-empty edge)', () => guest.doc('analytics/visits').set({}));
   await env.withSecurityRulesDisabled(async (c) => c.firestore().doc('analytics/visits').set({ count: 1 }));
   await no('visits update count as string', () => guest.doc('analytics/visits').update({ count: '2' }));
   await no('visits delete by user', () => a.doc('analytics/visits').delete());
 
-  // --- errors/events family: حواف مشتركة ---
   await no('errors create EMPTY object {} (size>=1 edge)', () => guest.doc('analytics/errors_2026-08-25').set({}));
   await no('errors update no-op same values (affectedKeys>=1 edge)', () => guest.doc(ED).set({ TypeError: 2 }, { merge: true }));
   await no('events create category over 40 chars', () => guest.doc('analytics/events_2026-08-19__paris__' + 'x'.repeat(41)).set({ place_open: 1 }));
   await no('events create malformed id (missing category segment)', () => guest.doc('analytics/events_2026-08-19__paris').set({ place_open: 1 }));
   await ok('[ACK P1] events update +1 by suspended (measurement anonymous by design — owner-approved)', () => s.doc(EV).update({ favorite_add: 2 }));
 
-  // --- sources/hours/sessions ---
   await ok('hours read owner', () => owner.doc('analytics/hours_2026-08-19__paris').get());
 
-  // --- stats (٥): شبكة + علم ---
   await no('stats update by guest', () => guest.doc('stats/users').update({ count: 6 }));
   await ok('[ACK P2] stats create by suspended (anonymous counters uniform policy — owner-approved)', () => s.doc('stats/new2').set({ count: 1 }));
 
-  // --- placeFavoriteCounts: شبكة + علمان ---
   await no('pfc update by guest', () => guest.doc('placeFavoriteCounts/p1').update({ count: 3 }));
   await no('pfc P3 CLOSED: rename attempt (name+count) rejected — name/url frozen after create', () => a.doc('placeFavoriteCounts/p1').update({ name: 'Renamed', count: 3 }));
   await no('pfc P4 CLOSED: partial create (count only) rejected — all three fields required', () => a.doc('placeFavoriteCounts/p9').set({ count: 1 }));
 
-  // --- favorites ---
   await ok('favorites read own by suspended', () => s.doc(`favorites/${S}`).get());
   await no('favorites write guest', () => guest.doc('favorites/ghost').set({ places: [] }));
 
-  // --- userLists ---
   await ok('userLists read own by suspended', () => s.doc(`userLists/${S}`).get());
-  await ok('userLists favoriteCount -1 on public by other', () => a.doc(`userLists/${B}`).update({ favoriteCount: 3 }));
+  await no('v3.8 FROZEN: userLists favoriteCount -1 on public by other (was allow)', () => a.doc(`userLists/${B}`).update({ favoriteCount: 2 }));
 
-  // --- trips ---
   await ok('trips read own by suspended', () => s.doc('trips/tS').get());
   await no('[ACK P6] trips create by APP OWNER for other user (owner manages, never impersonates)', () => owner.doc('trips/tOwn').set({ ownerId: B, public: false, sharedWith: [] }));
 
-  // --- userCityLists ---
   await ok('ucl read own by suspended', () => s.doc('userCityLists/cS').get());
   await no('[ACK P6] ucl create by APP OWNER for other user (owner manages, never impersonates)', () => owner.doc('userCityLists/cOwn').set({ ownerId: B, public: false, sharedWith: [] }));
 
-  // --- communityProfiles: شبكة + العلم الأبرز ---
   await no('cp viewCount +1 by guest', () => guest.doc(`communityProfiles/${B}`).update({ viewCount: 6 }));
   await no('cp viewCount decrease -1', () => a.doc(`communityProfiles/${B}`).update({ viewCount: 4 }));
   await no('cp P5 CLOSED: suspended cannot update own community profile', () => s.doc(`communityProfiles/${S}`).update({ hasAnyPublicContent: false }));
 
-  // --- nicknames ---
   await no('[ACK P6] nicknames update by APP OWNER on other (delete-only power — owner-approved)', () => owner.doc('nicknames/nick_b').update({ nickname: 'B2' }));
 
-  // --- users ---
   await ok('users read own by suspended', () => s.doc(`users/${S}`).get());
 
-  // --- dailyStats: شبكة + علم ---
   await no('dailyStats read guest', () => guest.doc(`dailyStats/${TODAY}`).get());
   await no('dailyStats P7 CLOSED: seeding large initial values rejected (create bounded 0..1)', () => a.doc('dailyStats/2026-08-25').set({ newSignupsToday: 999, activeToday: 999 }));
 
-  // --- بنود delete المستقلة ببقية كتل stats_* ---
   await ok('stats_trips delete app owner', () => owner.doc('stats_trips/tA').delete());
   await no('stats_places delete by list owner', () => a.doc('stats_places/cA__0123456789abcdef').delete());
   await ok('stats_curators delete app owner', () => owner.doc('stats_curators/' + CUR).delete());
   await no('stats_cards delete by other user', () => a.doc('stats_cards/' + CUR + '__card_0001').delete());
 
 
-  // ================= ١٧) v3.4: أشقاء قرارات الأعلام (اعتمدها المالك ٢١ أغسطس عبر الشرط الحاجب) =================
+  // ================= ١٧) v3.4: أشقاء قرارات الأعلام =================
   await no('pfc P3: url change rejected (link hijack closed)', () => a.doc('placeFavoriteCounts/p1').update({ url: 'https://evil.example', count: 3 }));
   await ok('cp read own by suspended (withdrawal rights intact)', () => s.doc(`communityProfiles/${S}`).get());
   await ok('cp delete own by suspended (withdrawal rights intact)', () => s.doc(`communityProfiles/${S}`).delete());
@@ -516,9 +495,7 @@ const no = (label, f) => expect(false, label, f);
   await ok('dailyStats create with initial values 1 allowed', () => a.doc('dailyStats/2026-08-26').set({ newSignupsToday: 1, activeToday: 1 }));
   await no('dailyStats P7: negative initial value rejected', () => a.doc('dailyStats/2026-08-27').set({ activeToday: -5 }));
 
-  // ================= ١٨) v3.5: تقييد معرّف userCityLists عند الإنشاء (الشرط الحاجب — ٢٤ أغسطس ٢٠٢٦) =================
-  // القاعدة: docId.split('_')[0] == request.auth.uid — الكود الشرعي يكتب uid_cityId أصلًا (myCityListDocId)،
-  // ومعرّفات المصادقة لا تحوي شرطة سفلية. إنشاء فقط — القائم لا يُمس (حالة الانحدار أدناه).
+  // ================= ١٨) v3.5: تقييد معرّف userCityLists عند الإنشاء =================
   await ok('v3.5 ucl create conforming id uid_city', () => a.doc(`userCityLists/${A}_riyadh`).set({ ownerId: A, public: false, sharedWith: [] }));
   await no('v3.5 ucl create with OTHER user prefix', () => a.doc(`userCityLists/${B}_paris9`).set({ ownerId: A, public: false, sharedWith: [] }));
   await no('v3.5 ucl create with owner_ spoof prefix', () => a.doc('userCityLists/owner_rome9').set({ ownerId: A, public: false, sharedWith: [] }));
@@ -526,32 +503,27 @@ const no = (label, f) => expect(false, label, f);
   await ok('v3.5 REGRESSION: legacy bad-id doc still updatable by its owner', () => b.doc('userCityLists/cBpub').update({ note: 1 }));
   await no('v3.5 ucl create suspended with conforming id', () => s.doc(`userCityLists/${S}_paris9`).set({ ownerId: S, public: false, sharedWith: [] }));
 
-  // ================= ١٩) v3.6: القرارات الثلاثة (الشرط الحاجب — ٢٥ أغسطس ٢٠٢٦، أقرّها المالك سطورًا بالمصفوفة) =================
+  // ================= ١٩) v3.6: القرارات الثلاثة =================
   await env.withSecurityRulesDisabled(async (c) => {
     const db = c.firestore();
-    // (١٢) عدّادات عند الصفر
     await db.doc('placeFavoriteCounts/p0').set({ name: 'Zero', url: 'https://maps.app.goo.gl/z', count: 0 });
     await db.doc(`communityProfiles/${B}`).set({ hasAnyPublicContent: true, viewCount: 5, totalFavoriteCount: 0 });
     await db.doc('userCityLists/cBpub').set({ ownerId: B, public: true, sharedWith: [], favoriteCount: 0 });
     await db.doc(`userLists/${B}`).set({ public: true, nickname: 'b', favoriteCount: 0 });
-    // (٣-ب) الفئات الخاصة
     await db.doc(`userPrivatePlaces/${A}_paris`).set({ categories: { personal_home: { active: true, places: [] } } });
     await db.doc(`userPrivatePlaces/${S}_paris`).set({ categories: { others: { active: true, places: [] } } });
     await db.doc('userCityLists/cA').set({ ownerId: A, public: false, sharedWith: [], favoriteCount: 0, categories: { cafes: { active: true, places: [] } } });
     await db.doc('userCityLists/cLegacy').set({ ownerId: A, public: true, sharedWith: [], favoriteCount: 0, categories: { cafes: { places: [] }, personal_home: { places: ['old'] } } });
-    // (١) الاحتجاز — حالة ما بعد الإيقاف كما يكتبها الكود
     await db.doc('trips/tHeld').set({ ownerId: S, public: false, sharedWith: [], sharedWithHeld: [A], name: 'held' });
     await db.doc('userCityLists/cHeld').set({ ownerId: S, public: false, sharedWith: [], sharedWithHeld: [A], favoriteCount: 0 });
   });
 
-  // --- (١٢) لا نزول تحت الصفر ---
   await no('v3.6 (12) pfc count 0 -> -1 denied', () => a.doc('placeFavoriteCounts/p0').update({ count: -1 }));
   await no('v3.6 (12) cp totalFavoriteCount 0 -> -1 denied', () => a.doc(`communityProfiles/${B}`).update({ totalFavoriteCount: -1 }));
   await no('v3.6 (12) ucl favoriteCount 0 -> -1 denied', () => a.doc('userCityLists/cBpub').update({ favoriteCount: -1 }));
   await no('v3.6 (12) userLists favoriteCount 0 -> -1 denied', () => a.doc(`userLists/${B}`).update({ favoriteCount: -1 }));
-  await ok('v3.6 (12) ucl favoriteCount 0 -> +1 still allowed', () => a.doc('userCityLists/cBpub').update({ favoriteCount: 1 }));
+  await no('v3.8 FROZEN: ucl favoriteCount 0 -> +1 denied (was v3.6 allow)', () => a.doc('userCityLists/cBpub').update({ favoriteCount: 1 }));
 
-  // --- (٣-ب) userPrivatePlaces ---
   await ok('v3.6 (3b) upp read self allow', () => a.doc(`userPrivatePlaces/${A}_paris`).get());
   await no('v3.6 (3b) upp read other deny', () => b.doc(`userPrivatePlaces/${A}_paris`).get());
   await no('v3.6 (3b) upp read APP OWNER deny (policy promise)', () => owner.doc(`userPrivatePlaces/${A}_paris`).get());
@@ -569,14 +541,13 @@ const no = (label, f) => expect(false, label, f);
   await ok('v3.6 (3b) LEGACY doc with inherited private key: changing it still allowed (safe before code batch)', () => a.doc('userCityLists/cLegacy').update({ categories: { cafes: { places: [] }, personal_home: { places: ['old', 'new'] } } }));
   await ok('v3.6 (3b) LEGACY doc: removing the private key (migration write) allowed', () => a.doc('userCityLists/cLegacy').update({ categories: { cafes: { places: [] } } }));
 
-  // --- (١) الاحتجاز: القواعد القائمة تكفي — الامتحان يوثّق السلوك ---
   await no('v3.6 (1) trip held-share: recipient denied while owner suspended', () => a.doc('trips/tHeld').get());
   await env.withSecurityRulesDisabled(async (c) => c.firestore().doc('trips/tHeld').update({ sharedWith: [A], sharedWithHeld: [] }));
   await ok('v3.6 (1) trip held-share: recipient allowed after restore', () => a.doc('trips/tHeld').get());
   await no('v3.6 (1) ucl held-share: recipient denied while owner suspended', () => a.doc('userCityLists/cHeld').get());
 
-  // ================= ٢٠) v3.7: المتابعة · حقول الملف المجتمعي والفجوة ١٥ · تفضيل الرحلات (٢٦ أغسطس ٢٠٢٦) =================
-  const C = 'curatorC';   // منتقٍ (ملف عام)
+  // ================= ٢٠) v3.7: المتابعة · حقول الملف والفجوات ١٥–١٨ · تفضيل الرحلات (مجمَّد بـ٣٫٨) =================
+  const C = 'curatorC';
   const c = env.authenticatedContext(C).firestore();
   await env.withSecurityRulesDisabled(async (x) => {
     const db = x.firestore();
@@ -588,7 +559,6 @@ const no = (label, f) => expect(false, label, f);
     await db.doc('trips/tCpriv').set({ ownerId: C, public: false, sharedWith: [], name: 'C private', favoriteCount: 0 });
   });
 
-  // --- (١) المتابعة ---
   await ok('v3.7 follow create self allow', () => a.doc(`follows/${A}_${C}`).set({ followerUid: A, curatorUid: C, at: 1 }));
   await no('v3.7 follow create with OTHER prefix deny', () => a.doc(`follows/${B}_${A}`).set({ followerUid: A, curatorUid: A, at: 1 }));
   await no('v3.7 follow create self-follow deny', () => a.doc(`follows/${A}_${A}`).set({ followerUid: A, curatorUid: A, at: 1 }));
@@ -609,7 +579,6 @@ const no = (label, f) => expect(false, label, f);
   await ok('v3.7 follow delete own by suspended allow (withdrawal)', () => s.doc(`follows/${S}_${C}`).delete());
   await ok('v3.7 follow delete app owner allow', () => owner.doc(`follows/${B}_${C}`).delete());
 
-  // --- (٢)(٣) الملف المجتمعي: عدّاد المتابعين · الشارة · الحقول · الفجوة ١٥ ---
   await ok('v3.7 cp followerCount +1 by other allow', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 1 }));
   await no('v3.7 cp followerCount +2 deny', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 3 }));
   await no('v3.7 cp followerCount 1 -> -1 deny (floor)', () => a.doc(`communityProfiles/${C}`).update({ followerCount: -1 }));
@@ -623,30 +592,115 @@ const no = (label, f) => expect(false, label, f);
   await no('v3.7 cp self contactUrl not https deny', () => c.doc(`communityProfiles/${C}`).update({ contactUrl: 'http://evil.example' }));
   await ok('v3.7 cp self totalFavoriteCount recompute still allowed (documented exception — syncCommunityProfile)', () => c.doc(`communityProfiles/${C}`).update({ totalFavoriteCount: 4 }));
 
-  // --- (٤) تفضيل الرحلات ---
-  await ok('v3.7 trip favoriteCount +1 on public by other allow', () => a.doc('trips/tCpub').update({ favoriteCount: 1 }));
+  await no('v3.8 FROZEN: trip favoriteCount +1 on public by other (was v3.7 allow)', () => a.doc('trips/tCpub').update({ favoriteCount: 1 }));
   await no('v3.7 trip favoriteCount +1 on PRIVATE trip deny', () => a.doc('trips/tCpriv').update({ favoriteCount: 1 }));
   await no('v3.7 trip favoriteCount +2 deny', () => a.doc('trips/tCpub').update({ favoriteCount: 3 }));
   await no('v3.7 trip favoriteCount 1 -> -1 deny (floor)', () => a.doc('trips/tCpub').update({ favoriteCount: -1 }));
   await no('v3.7 trip favoriteCount by suspended deny', () => s.doc('trips/tCpub').update({ favoriteCount: 2 }));
 
-  // --- (٥) الفجوة ١٦: صاحب المحتوى لا يضخّم عدّاد محتواه ---
   await no('v3.7 gap16 ucl OWNER bumps own favoriteCount deny', () => b.doc('userCityLists/cBpub').update({ favoriteCount: 99 }));
-  await ok('v3.7 gap16 ucl owner save with UNCHANGED favoriteCount allow (merge same value)', () => b.doc('userCityLists/cBpub').set({ favoriteCount: 1, note: 2 }, { merge: true }));
+  await ok('v3.7 gap16 ucl owner save with UNCHANGED favoriteCount allow (merge same value)', () => b.doc('userCityLists/cBpub').set({ favoriteCount: 0, note: 2 }, { merge: true }));
   await no('v3.7 gap16 ucl create with favoriteCount 5 deny', () => a.doc(`userCityLists/${A}_milan`).set({ ownerId: A, public: false, sharedWith: [], favoriteCount: 5 }));
   await ok('v3.7 gap16 ucl create with favoriteCount 0 allow', () => a.doc(`userCityLists/${A}_milan`).set({ ownerId: A, public: false, sharedWith: [], favoriteCount: 0 }));
   await no('v3.7 gap16 trip OWNER bumps own favoriteCount deny', () => c.doc('trips/tCpub').update({ favoriteCount: 50 }));
   await no('v3.7 gap16 trip create with favoriteCount 5 deny', () => a.doc('trips/tA5').set({ ownerId: A, public: true, sharedWith: [], favoriteCount: 5 }));
   await no('v3.7 gap16 userLists SELF sets favoriteCount deny', () => b.doc(`userLists/${B}`).update({ favoriteCount: 77 }));
 
-  // --- (٦) الفجوة ١٧: عدّاد المتابعين مربوط بالعلاقة ---
   await no('v3.7 gap17 followerCount +1 by user WITHOUT follow doc deny', () => b.doc(`communityProfiles/${C}`).update({ followerCount: 2 }));
   await no('v3.7 gap17 followerCount -1 by follower WHILE follow doc exists deny', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 0 }));
   await env.withSecurityRulesDisabled(async (x) => x.firestore().doc(`follows/${A}_${C}`).delete());
   await ok('v3.7 gap17 followerCount -1 after unfollow (doc absent) allow', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 0 }));
 
-  // --- (٧) الفجوة ١٨: لا متابعة لمعرّف بلا ملف ---
   await no('v3.7 gap18 follow create to uid without communityProfile deny', () => a.doc(`follows/${A}_nobody123`).set({ followerUid: A, curatorUid: 'nobody123', at: 1 }));
+
+  // ================= ٢١) v3.8: نشرة القرار المؤسِّس ٠٩ — المفكرة والحفظ والتجميد والغائب والمشاهدات =================
+  await env.withSecurityRulesDisabled(async (x) => {
+    const db = x.firestore();
+    // قائمتان عامتان (الثانية بعدّاد إعجاب موروث لاختبار التجميد الصافي) وقائمة خاصة قائمة (cA)
+    await db.doc('userCityLists/cBpub2').set({ ownerId: B, public: true, sharedWith: [], favoriteCount: 2 });
+    // رحلة خاصة إضافية لصاحب آخر
+    await db.doc('trips/tPriv38').set({ ownerId: B, public: false, sharedWith: [], name: 'B private 38' });
+  });
+
+  // --- (السطر ٢) سجل مفكرة القوائم: listBookmarks/{uid}__{listId} ---
+  await ok('v3.8 lb create self on public list allow', () => a.doc(`listBookmarks/${A}__cBpub`).set({ at: 1 }));
+  await no('v3.8 lb create with OTHER prefix deny', () => a.doc(`listBookmarks/${B}__cBpub`).set({ at: 1 }));
+  await no('v3.8 lb create suspended deny', () => s.doc(`listBookmarks/${S}__cBpub`).set({ at: 1 }));
+  await no('v3.8 lb create on PRIVATE list deny', () => b.doc(`listBookmarks/${B}__cA`).set({ at: 1 }));
+  await no('v3.8 lb create on MISSING list deny', () => a.doc(`listBookmarks/${A}__nolist9`).set({ at: 1 }));
+  await no('v3.8 lb create extra field deny', () => a.doc(`listBookmarks/${A}__cBpub2`).set({ at: 1, note: 'x' }));
+  await no('v3.8 lb create guest deny', () => guest.doc(`listBookmarks/g__cBpub`).set({ at: 1 }));
+  await no('v3.8 lb update deny (no update ever)', () => a.doc(`listBookmarks/${A}__cBpub`).update({ at: 2 }));
+  await ok('v3.8 lb read own allow', () => a.doc(`listBookmarks/${A}__cBpub`).get());
+  await no('v3.8 lb read by LIST OWNER deny (invariant 12: kum not man)', () => b.doc(`listBookmarks/${A}__cBpub`).get());
+  await no('v3.8 lb read other user deny', () => s.doc(`listBookmarks/${A}__cBpub`).get());
+  await no('v3.8 lb read guest deny', () => guest.doc(`listBookmarks/${A}__cBpub`).get());
+  await ok('v3.8 lb read app owner allow', () => owner.doc(`listBookmarks/${A}__cBpub`).get());
+
+  // --- (السطر ٣) عدّاد مفكرة القائمة المربوط بالسجل ---
+  await no('v3.8 bookmarkCount +1 WITHOUT bookmark record deny (gap17 pattern)', () => b.doc('userCityLists/cBpub2').update({ bookmarkCount: 1 }));
+  await ok('v3.8 bookmarkCount +1 with record allow', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 1 }));
+  await no('v3.8 bookmarkCount +2 deny', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 3 }));
+  await no('v3.8 bookmarkCount SELF bump by list owner deny (gap16 pattern)', () => b.doc('userCityLists/cBpub').update({ bookmarkCount: 2 }));
+  await no('v3.8 bookmarkCount by suspended deny', () => s.doc('userCityLists/cBpub').update({ bookmarkCount: 2 }));
+  await no('v3.8 bookmarkCount by guest deny', () => guest.doc('userCityLists/cBpub').update({ bookmarkCount: 2 }));
+  await no('v3.8 bookmarkCount on PRIVATE list deny', () => b.doc('userCityLists/cA').update({ bookmarkCount: 1 }));
+  await no('v3.8 bookmarkCount -1 WHILE record exists deny', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 0 }));
+  await no('v3.8 bookmarkCount floor 0 -> -1 deny', () => a.doc('userCityLists/cBpub2').update({ bookmarkCount: -1 }));
+
+  // --- (السطر المعلَّق ق٠١-١٩) عدّاد مشاهدات القائمة العام ---
+  await ok('v3.8 ucl viewCount +1 combined with unchanged bookmarkCount allow', () => a.doc('userCityLists/cBpub').update({ viewCount: 1, bookmarkCount: 1 }));
+  await ok('v3.8 ucl viewCount +1 alone by other allow', () => a.doc('userCityLists/cBpub').update({ viewCount: 2 }));
+  await no('v3.8 ucl viewCount +2 deny', () => a.doc('userCityLists/cBpub').update({ viewCount: 4 }));
+  await no('v3.8 ucl viewCount decrease deny', () => a.doc('userCityLists/cBpub').update({ viewCount: 1 }));
+  await no('v3.8 ucl viewCount SELF by list owner deny (gap15 pattern)', () => b.doc('userCityLists/cBpub').update({ viewCount: 3 }));
+  await no('v3.8 ucl viewCount guest deny', () => guest.doc('userCityLists/cBpub').update({ viewCount: 3 }));
+  await no('v3.8 ucl viewCount on PRIVATE list deny', () => b.doc('userCityLists/cA').update({ viewCount: 1 }));
+
+  // --- فكّ التمييز: الحذف ثم النقص بغياب السجل ---
+  await no('v3.8 lb delete by LIST OWNER deny', () => b.doc(`listBookmarks/${A}__cBpub`).delete());
+  await ok('v3.8 lb delete own allow (unbookmark)', () => a.doc(`listBookmarks/${A}__cBpub`).delete());
+  await ok('v3.8 bookmarkCount -1 after unbookmark (record absent) allow', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 0 }));
+  await no('v3.8 bookmarkCount +1 after unbookmark (record absent) deny', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 1 }));
+
+  // --- (السطران ٣ و١٩ — نمط ١٦ عند الإنشاء) ---
+  await no('v3.8 ucl create with bookmarkCount 5 deny', () => a.doc(`userCityLists/${A}_lyon`).set({ ownerId: A, public: false, sharedWith: [], bookmarkCount: 5 }));
+  await no('v3.8 ucl create with viewCount 7 deny', () => a.doc(`userCityLists/${A}_lyon`).set({ ownerId: A, public: false, sharedWith: [], viewCount: 7 }));
+  await ok('v3.8 ucl create with counters absent allow', () => a.doc(`userCityLists/${A}_lyon`).set({ ownerId: A, public: false, sharedWith: [] }));
+
+  // --- (السطر ٥) التجميد الصافي بلا أرضية (قيمة موروثة ٢) ---
+  await no('v3.8 FROZEN: ucl favoriteCount 2 -> 1 by other deny (pure freeze, no floor involved)', () => a.doc('userCityLists/cBpub2').update({ favoriteCount: 1 }));
+  await no('v3.8 FROZEN: ucl favoriteCount 2 -> 3 by other deny', () => a.doc('userCityLists/cBpub2').update({ favoriteCount: 3 }));
+
+  // --- (السطر المعلَّق ق٠١-٠٧) قراءة المستند الغائب لصاحب البادئة ---
+  await ok('v3.8 absent-doc read with OWN prefix allow (returns not-found)', () => a.doc(`userCityLists/${A}_ghost`).get());
+  await no('v3.8 absent-doc read with OTHER prefix deny', () => a.doc(`userCityLists/${B}_ghost`).get());
+  await no('v3.8 absent-doc read guest deny', () => guest.doc(`userCityLists/${A}_ghost`).get());
+  await ok('v3.8 upp absent-doc read own prefix allow (id-based rule — unchanged)', () => a.doc(`userPrivatePlaces/${A}_ghost`).get());
+
+  // --- (السطر ٤) سجل حفظ الرحلات وعدّاده ---
+  await ok('v3.8 ts create self on public trip allow', () => a.doc(`tripSaves/${A}__tBpub`).set({ at: 1 }));
+  await no('v3.8 ts create with OTHER prefix deny', () => a.doc(`tripSaves/${B}__tBpub`).set({ at: 1 }));
+  await no('v3.8 ts create on PRIVATE trip deny', () => a.doc(`tripSaves/${A}__tPriv38`).set({ at: 1 }));
+  await no('v3.8 ts create on MISSING trip deny', () => a.doc(`tripSaves/${A}__noTrip9`).set({ at: 1 }));
+  await no('v3.8 ts create suspended deny', () => s.doc(`tripSaves/${S}__tBpub`).set({ at: 1 }));
+  await no('v3.8 ts create extra field deny', () => a.doc(`tripSaves/${A}__tCpub`).set({ at: 1, note: 'x' }));
+  await no('v3.8 ts update deny', () => a.doc(`tripSaves/${A}__tBpub`).update({ at: 2 }));
+  await ok('v3.8 ts read own allow', () => a.doc(`tripSaves/${A}__tBpub`).get());
+  await no('v3.8 ts read by TRIP OWNER deny (invariant 12)', () => b.doc(`tripSaves/${A}__tBpub`).get());
+  await no('v3.8 ts read guest deny', () => guest.doc(`tripSaves/${A}__tBpub`).get());
+  await ok('v3.8 ts read app owner allow', () => owner.doc(`tripSaves/${A}__tBpub`).get());
+  await ok('v3.8 saveCount +1 with record allow', () => a.doc('trips/tBpub').update({ saveCount: 1 }));
+  await no('v3.8 saveCount +1 WITHOUT record deny (curatorC has none)', () => c.doc('trips/tBpub').update({ saveCount: 2 }));
+  await no('v3.8 saveCount +2 deny', () => a.doc('trips/tBpub').update({ saveCount: 3 }));
+  await no('v3.8 saveCount SELF by trip owner deny (gap16 pattern)', () => b.doc('trips/tBpub').update({ saveCount: 2 }));
+  await no('v3.8 saveCount by suspended deny', () => s.doc('trips/tBpub').update({ saveCount: 2 }));
+  await no('v3.8 saveCount -1 WHILE record exists deny', () => a.doc('trips/tBpub').update({ saveCount: 0 }));
+  await ok('v3.8 ts delete own allow (unsave)', () => a.doc(`tripSaves/${A}__tBpub`).delete());
+  await ok('v3.8 saveCount -1 after unsave (record absent) allow', () => a.doc('trips/tBpub').update({ saveCount: 0 }));
+  await no('v3.8 trips create with saveCount 5 deny', () => a.doc('trips/t38a').set({ ownerId: A, public: false, sharedWith: [], saveCount: 5 }));
+  await ok('v3.8 trips create with saveCount 0 allow', () => a.doc('trips/t38b').set({ ownerId: A, public: false, sharedWith: [], saveCount: 0 }));
+  await no('v3.8 trip owner self-update touching saveCount deny', () => b.doc('trips/tBpub').update({ name: 'x', saveCount: 1 }));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
