@@ -257,7 +257,8 @@ const KNOWN_UNSTYLED = [];                     // ر43: أُغلق (قاعدة f
 const KNOWN_STRUCT_IN_IDENTITY = [];          // ر43: أُغلق (الحدّان نُقلا إلى كتلة البنية)
 const KNOWN_EMPTY_RULES = [];                  // ر43: أُغلق (القاعدتان الفارغتان حُذفتا)
 const KNOWN_DEAD = ['requestReauth'];          // ر42: مبنية عمدًا قبل موعدها (تأكيد الهوية — تُستدعى بدفعتي كلمة المرور والحذف المتتالي)
-const KNOWN_NO_OUTLET = ['follows', 'stats_curators', 'stats_cards', 'followerCount', 'bio', 'contactUrl', 'showFollowerCount', 'displayName', 'verified']; // الوثيقة الدائمة الثامنة v1.0 — قدرات بُنيت قبل موعدها
+const KNOWN_NO_OUTLET = ['follows', 'stats_curators', 'stats_cards', 'followerCount', 'bio', 'contactUrl', 'showFollowerCount', 'displayName', 'verified',
+  'listBookmarks', 'tripSaves', 'bookmarkCount', 'saveCount']; // v3.8 (٣ سبتمبر — نشرة القرار ٠٩): سجلا المفكرة والحفظ وعدّاداهما — قواعد قبل الكود بالتسلسل الملزم؛ تُنقل من هنا بدفعة كود الأفعال، وصفوفها بالوثيقة الثامنة // الوثيقة الدائمة الثامنة v1.0 — قدرات بُنيت قبل موعدها
 const CAP_COLORS_OUTSIDE_IDENTITY = { [TEST]: 139, [PROD]: 149 }; // ر42 = ١٤٩ (١٤ صريحًا · ١٣٥ متغيرًا) · ر43 = ١٤٠ · ر50 = ١٣٩ (سطر الخطأ صار صنفًا بالهوية) · سقف الإنتاج يُخفَّض عند ترقيته · يُخفَّض ولا يُرفع
 const CONTROL_CLASSES = ['btn', 'chip', 'act', 'actn', 'cta', 'csel', 'pl-src', 'mp-tab', 'dr-item', 'acc-item', 'switch-btn', 'pl-actbtn', 'addr-chip', 'pl-catpick', 'city-tab', 'area-chip', 'hcard', 'remove-btn', 'fav-btn', 'reorder-btn', 'add-place-btn', 'quick-nav-btn', 'action-btn', 'status-toggle', 'mp-burger', 'mp-idchip', 'pw-eye', 'show-more-btn', 'pclose', 'prow', 'addmini'];
 const LIFE_PATHS = [ // مسارات الحياة العشرة — دالة مدخل مسمّاة لكل مسار: معرَّفة ومستدعاة
