@@ -1,39 +1,24 @@
+// firestore rules v3.8 — نشرة القرار المؤسِّس ٠٩ (٣ سبتمبر ٢٠٢٦ — سطور المصفوفة M4.23 أقرّها المالك أولًا): v3.7 + السطور المقرَّة العشرة:
+//   (١) مفكرة المكان: بيان داخل مستندات صاحبها — لا سطح قواعد جديدًا (سطر توثيقي)
+//   (٢) سجل مفكرة القوائم: listBookmarks/{uid}__{listId} — الملكية بالمعرّف (فاصل مزدوج)، القراءة لصاحبها + مالك التطبيق فقط (لا لصاحب القائمة — «كم لا مَن»)،
+//       الإنشاء لمسجَّل غير موقوف على قائمة مدينة عامة قائمة فعلًا، لا تعديل أبدًا، الحذف لصاحبه (والموقوف — انسحاب) ولمالك التطبيق
+//   (٣) عدّاد مفكرة القائمة: userCityLists.bookmarkCount ±١ بأرضية من مسجَّل غير موقوف على العامة — مربوط بالسجل (نمط الفجوة ١٧)، وصاحبها لا يكتبه ويبدأ صفرًا (نمط ١٦)
+//   (٤) سجل حفظ الرحلات وعدّاده: tripSaves/{uid}__{tripId} بنفس أحكام (٢) على الرحلات العامة · trips.saveCount بنفس أحكام (٣)
+//   (٥) تجميد عدّاد الإعجاب (تفكيك المفضلة بلا ترحيل): سحب سماح ±١ من الآخرين على favoriteCount بالمجموعات الثلاث (قوائم المدن · قوائم المستخدمين · الرحلات) — الحقل يتجمد بقيمته ويبقى مقروءًا
+//   (٦) عدّاد المكان لفعل الحفظ: placeFavoriteCounts تُعاد دلالته عدّادَ حفظ المكان — بنيته وقيوده كما هي (توثيقي بالمصفوفة)
+//   (٧) الثابت ١٢ — خصوصية المفكرة والحفظ: السجلان نية خاصة لصاحبهما؛ العلني عدّادهما المجمَّع فقط (امتداد الحد الثالث — قرار المالك أ)
+//   + الثلاثة المعلَّقة سلفًا: قراءة المستند الغائب لصاحب البادئة (ق٢٠٢٦-٠٩-٠١-٠٧ — userCityLists؛ userPrivatePlaces محمية بالمعرّف أصلًا) ·
+//     مصدر الإحداثيات user_paste بالثابت ١١ (ق٠١-١٤ — نص مصفوفة لمجموعة places المقبلة بالمحطة ٣، لا قاعدة حية بعد) ·
+//     عدّاد مشاهدات القائمة العام (ق٠١-١٩): userCityLists.viewCount +١ فقط من الآخرين على العامة، صاحبها لا يكتبه (نمط ١٥)
+//   الامتحان: tests/rules-sim.js — القسم ٢١ بنفس الكوميت · آمنة على الكود القائم (الحفظ يرسل favoriteCount غير متغيّر — لا يُحتسب متأثرًا) ⇒ تُنشر قبل دفعة كود الأفعال
 // firestore rules v3.7 — دفعة الإطار خ٣ (٢٦ أغسطس ٢٠٢٦، أقرّ المالك السطور): v3.6 + أربعة قرارات:
 //   (١) المتابعة: مجموعة follows/{followerUid}_{curatorUid} — الإنشاء والحذف للمتابِع، القراءة لطرفيها (المتابِع والمنتقي بالهوية العلنية) + المالك، لا تعديل. الثابت ١٠.
 //   (٢) الملف المجتمعي: verified للمالك حصرًا · followerCount ±١ بأرضية من الآخرين · bio/contactUrl/displayName/showFollowerCount لصاحبه بحدود
 //   (٣) الفجوة ١٥: التعديل الذاتي لا يمس viewCount ولا followerCount ولا verified (totalFavoriteCount استثناء موثَّق: يعيد صاحبه حسابه من قوائمه — syncCommunityProfile)
-//   (٤) تفضيل الرحلات (بديل "مهتم"): trips.favoriteCount ±١ بأرضية على الرحلات العامة من مسجَّل غير موقوف
+//   (٤) تفضيل الرحلات (بديل "مهتم"): trips.favoriteCount ±١ بأرضية على الرحلات العامة من مسجَّل غير موقوف — جُمِّد بـv3.8 (السطر ٥)
 //   (٥) الفجوة ١٦ (قائمة منذ ٣٫١): صاحب القائمة/الرحلة لا يكتب favoriteCount ذاتيًا (تعديل) ويبدأ بصفر (إنشاء) — قوائم المدن · قوائم المستخدمين · الرحلات
 //   (٦) الفجوة ١٧: عدّاد المتابعين مربوط بالعلاقة — الزيادة بوجود مستند المتابعة للطالب والنقص بغيابه · (٧) الفجوة ١٨: لا متابعة لمعرّف بلا ملف مجتمعي
-//   الامتحان: tests/rules-sim.js — ٣٩٠ حالة (٣٤٣ + ٤٧) بنفس الكوميت · آمنة على الكود القائم (حفظ قائمتي يرسل favoriteCount غير متغيّر) ⇒ تُنشر قبل خ٤
-// firestore rules v3.6 — المحطة ٢ / الشرط الحاجب (٢٥ أغسطس ٢٠٢٦، أقرّ المالك سطور المصفوفة الثلاثة): v3.5 + ثلاثة قرارات:
-//   (١٢) العدّادات العامة لا تنزل تحت الصفر: النقص بواحد مشروط بنتيجة ≥ ٠ — userLists/userCityLists.favoriteCount · communityProfiles.totalFavoriteCount · placeFavoriteCounts.count
-//   (٣-ب) فصل الفئات الخاصة: مجموعة جديدة userPrivatePlaces/{uid}_{cityId} — القراءة والإنشاء والتعديل لصاحبها فقط (لا للمالك)، الحذف له وللمالك، الموقوف يقرأ ويحذف فقط؛
-//        ومستندات userCityLists لا تقبل مفاتيح الفئات الخاصة السبعة عند الإنشاء، ولا إضافتها عند التعديل (الموروث يبقى حتى يرحّله الكود بأول حفظ) — الخصوصية على مستوى المستند
-//   (١) محتوى الموقوف المُشارَك بالاسم: يُحتجز بالكود (sharedWith → sharedWithHeld عند الإيقاف، ويُستعاد عند الرفع) — بلا تغيير قواعد؛ الامتحان يوثّق السلوك
-//   ترتيب النشر: هذه القواعد أولًا باللوحة (الوصفة ك) — آمنة على الكود القائم — ثم دفعة الكود (الاحتجاز · تقسيم الحفظ · أرضية العدّادات بالنواة) التي تحتاج المجموعة الجديدة
-//   الامتحان: tests/rules-sim.js — ٣٤٣ حالة (٣١٩ + ٢٤) بنفس الكوميت
-// firestore rules v3.5 — المحطة ٢ / الشرط الحاجب (٢٤ أغسطس ٢٠٢٦، وقّعه المالك): v3.4 + تقييد معرّف userCityLists عند الإنشاء
-//   (docId يبدأ بمعرّف منشئه: split('_')[0] == uid — الكود يكتبه uid_cityId أصلًا: الدالة myCityListDocId) — يغلق انتحال البادئة owner_ من الجذر
-//   (كان مدافَعًا عنه عند القراءة فقط بـv3.3.1)؛ إنشاء فقط — المستندات القائمة لا تُمس. الامتحان: ٣١٩ حالة (٣١٣ + ٣١٤..٣١٩) بنفس الكوميت
-//   قرارا سلوك موقَّعان بلا تغيير قواعد: بقاء سجل الإيقاف بعد الحذف الذاتي (+سطر إفصاح بالسياسة) · إنقاص عدّادات المفضلة بمسار الحذف
-// firestore rules v3.4 — قرارات الأعلام (٢١ أغسطس ٢٠٢٦، اعتمدها المالك عبر الشرط الحاجب — المصفوفة M4): v3.3.1 + أربعة تضييقات:
-//   (M-P3) placeFavoriteCounts: الاسم والرابط يتجمدان بعد الإنشاء — التحديث لحقل count حصرًا (±١)؛ التصحيح لمالك التطبيق (فرع isOwner جديد بالتحديث)
-//   (M-P4) placeFavoriteCounts: الإنشاء بالحقول الثلاثة كاملة (hasAll) — لا بطاقات ناقصة
-//   (M-P5) communityProfiles: المُوقَف لا ينشئ/يعدّل ملفه المجتمعي (القراءة والحذف باقيان — حق الانسحاب)
-//   (M-P7) dailyStats: الإنشاء بقيم بداية ٠..١ لكل حقل — لا بذر بأرقام ضخمة أو سالبة
-//   المُقر بلا تغيير (M-P1/P2/P6): القياس والعدّادات المجهولة لا تُحجب بالإيقاف · المالك يدير ولا ينتحل
-//   الامتحان: tests/rules-sim.js — ٣١٣ حالة (تُنشر بنفس commit هذا الملف إلزامًا)
-// firestore rules v3.3.1 — أ-٣ الطبقة ٣ (١٩ أغسطس ٢٠٢٦): v3.3 + (١) stats_places يقبل أماكن دليل المالك بمعرّف owner_{city}__{hash} (مدينة حقيقية، القراءة للمالك فقط حتى لو زُوِّر userCityLists/owner_*)
-//   + (٢) أحداث الاستيراد (ب-١) محجوزة الآن: import_run · import_place · import_suggest_kept · import_suggest_changed · reserved_1 = نشر عام (toggle public) · reserved_2/3 احتياط
-//   + (٣) العناوين الشخصية (خاصة دائمًا — لا كيان ولا بصمة ولا مدينة): personal_open · personal_save · personal_place_open بالتجميع اليومي فقط بمدينة all
-// firestore rules v3.3 — أ-٣ الطبقة ٣ "قاعدة القياس" (١٩ أغسطس ٢٠٢٦): v3.2 + ثلاث طبقات قياس مجهول الهوية:
-//   (ج) analytics/errors_*  (ب) analytics/events_* · sources_* · hours_* · sessions_*  (أ) stats_lists · stats_trips · stats_places · stats_curators · stats_cards
-//   الكتابة مجمَّعة بلا مصادقة بنمط visits (حقول من قائمة مغلقة، زيادة ١..٥٠ لكل حقل — الثواني ١..٧٢٠٠، لا إنقاص، لا حذف) — الحارس الجذري App Check (الطبقة ٤)
-//   القراءة: (ب)(ج) للمالك فقط · (أ) لصاحب الكيان + المالك · لا حقل هوية بأي مستند · كل الأسماء محجوزة الآن (لا نشرة جديدة عند تفعيل وظائف ج-١أ/ب-١)
-// v3.2 — أ-٣ الطبقة ١-ب (١٩ أغسطس ٢٠٢٦): v3.1 + (١) isOwner() على قراءة favorites (اتساق مع users/trips/userCityLists)
-//   + (٢) المُوقَف لا يعدّل users/{uid} ولا ينشئ/يعدّل nicknames (الحذف يبقى — حق حذف البيانات لا يسقط بالإيقاف)
-//   المصدر السابق v3.1: أ-٢ الدفعة ٣ (١٧ أغسطس ٢٠٢٦): v2 + suspensions/{uid} + توحيد نمط الحذف + isOwner() على قراءة trips/userCityLists
+// (سلسلة الإصدارات الأقدم v3.6 → v3.1 بنصوصها التاريخية بمصفوفة الأمان وسجل المستودع)
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -320,8 +305,7 @@ service cloud.firestore {
     }
 
     // ===== إصلاح ثغرة ٣ (ب) =====
-    // يكتبه الكود بـ{name, url, count:±1} — نقيّد الحقول والمقدار معًا
-    // + إضافة !isSuspended(): المستخدم المُوقَف لا يؤثر على عدّادات Most Loved
+    // v3.8 (السطر ٦ — توثيقي): هذا العدّاد يقيس فعل «الحفظ» على المكان بالنموذج الجديد (كان التفضيل) — البنية والقيود كما هي، لا ترحيل
     match /placeFavoriteCounts/{docId} {
       allow read: if true;
       // v3.4 (M-P4): الإنشاء بالحقول الثلاثة كاملة إلزامًا — لا بطاقات ناقصة (hasAll + hasOnly)
@@ -331,8 +315,6 @@ service cloud.firestore {
         && request.resource.data.count == 1;
       // v3.4 (M-P3): الاسم والرابط يتجمدان بعد الإنشاء — التحديث يمس حقل العدّاد حصرًا؛
       //   تصحيحهما لمالك التطبيق وحده (فرع isOwner). يغلق إعادة التسمية واختطاف الرابط.
-      // الزيادة (+1) تتطلب حسابًا غير مُوقَف؛ الإنقاص (-1) مسموح للمُوقَف أيضًا
-      // (يستطيع سحب إعجابه أو حذف حسابه، لا إضافة إعجاب جديد) — قرار المالك ١٦ أغسطس
       // v3.6 (١٢): النقص لا ينزل تحت الصفر
       allow update: if isOwner()
         || (isSignedIn()
@@ -343,8 +325,8 @@ service cloud.firestore {
     }
 
     // v3: توحيد نمط الحذف — إنشاء/تعديل تتطلب غير مُوقَف؛ الحذف يتطلب الملكية فقط (حق حذف البيانات لا يسقط بالإيقاف)
+    // v3.8: المفضلة القديمة تُفكَّك بالكود بلا ترحيل — المجموعة تبقى بقواعدها لحق القراءة والحذف حتى إزالة مسارها من الكود (بند متابعة بالمصفوفة)
     match /favorites/{userId} {
-      // v3.2: + isOwner() على القراءة — اتساقًا مع users/trips/userCityLists (لم يكن للاختلاف سبب تصميمي)
       allow read: if isOwner() || (isSignedIn() && request.auth.uid == userId);
       allow create, update: if isSignedIn() && request.auth.uid == userId && !isSuspended();
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
@@ -352,87 +334,84 @@ service cloud.firestore {
 
     match /userLists/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || resource.data.public == true);
-      // v3: الحذف مفصول — نفس المبرر
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
       // v3.7 (الفجوة ١٦): صاحب القائمة لا يكتب favoriteCount ذاتيًا — إنشاء بصفر/غائب، وتعديل لا يمسه
+      // v3.8 (السطر ٥): فرع ±١ من الآخرين سُحب — favoriteCount مجمَّد بقيمته (يبقى مقروءًا، لا ترحيل)
       allow create, update: if isOwner()
         || (isSignedIn() && request.auth.uid == userId && !isSuspended()
-            && request.resource.data.get('favoriteCount', 0) == (resource == null ? 0 : resource.data.get('favoriteCount', 0)))
-        // تقييد المقدار بـ±١ (تدقيق شامل ١٦ أغسطس) — مسار قديم، يبقى محميًا احتياطًا · v3.6 (١٢): النتيجة ≥ ٠
-        || (isSignedIn() && !isSuspended() && resource.data.public == true &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteCount']) &&
-            request.resource.data.favoriteCount >= 0 &&
-            (request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) + 1
-             || request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) - 1));
+            && request.resource.data.get('favoriteCount', 0) == (resource == null ? 0 : resource.data.get('favoriteCount', 0)));
     }
 
     // ===== إصلاح ثغرة ٥ (أ) + التعارض المكتشَف =====
-    // ١) إضافة isOwner() لـupdate/delete — كان موثَّقًا كمُصلَح لكنه غير موجود بالمنشور فعليًا،
-    //    وبدونه لا يستطيع المالك كتابة حقل suspended على رحلات المستخدمين (إصلاح النقطة ١٤ معطَّل عمليًا)
-    // ٢) إضافة !isSuspended() على الكتابة فقط — لا على القراءة (تفاديًا لحادثة النقطة ١٥)
     match /trips/{tripId} {
-      // v3.1: + isOwner() على القراءة — toggleSuspendUser تستعلم عن رحلات المستخدم المُوقَف (where ownerId==uid)
-      //       والاستعلام يُرفض بلا هذا. توسيع للمالك فقط (يقرأ كل شيء بـConsole أصلًا) — ليس تكرارًا للنقطة ١٥.
       allow read: if isOwner() || (isSignedIn() && (resource.data.ownerId == request.auth.uid
         || resource.data.public == true
         || request.auth.uid in resource.data.sharedWith));
+      // v3.8 (السطر ٤ — نمط الفجوة ١٦): saveCount يبدأ صفرًا/غائبًا
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.get('favoriteCount', 0) == 0;
-      // v3.7 (الفجوة ١٦): صاحب الرحلة لا يمس favoriteCount
+        && request.resource.data.get('favoriteCount', 0) == 0
+        && request.resource.data.get('saveCount', 0) == 0;
+      // v3.7 (الفجوة ١٦) + v3.8: صاحب الرحلة لا يمس favoriteCount ولا saveCount
+      // v3.8 (السطر ٥): فرع تفضيل الرحلة (v3.7-٤) سُحب — favoriteCount مجمَّد
+      // v3.8 (السطر ٤): حفظ الرحلة العامة من الآخرين — saveCount ±١ بأرضية، مربوط بسجل tripSaves للطالب (نمط الفجوة ١٧)
       allow update: if isOwner()
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
-            && !('favoriteCount' in request.resource.data.diff(resource.data).affectedKeys()))
-        // v3.7 (٤): تفضيل الرحلة العامة من الآخرين — العدّاد وحده ±١ بأرضية صفر (نمط قوائم المدن)
-        || (isSignedIn() && !isSuspended() && resource.data.public == true &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteCount']) &&
-            request.resource.data.favoriteCount >= 0 &&
-            (request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) + 1
-             || request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) - 1));
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['favoriteCount', 'saveCount']))
+        || (isSignedIn() && !isSuspended() && resource.data.public == true && resource.data.ownerId != request.auth.uid &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['saveCount']) &&
+            request.resource.data.saveCount >= 0 &&
+            ((request.resource.data.saveCount == resource.data.get('saveCount', 0) + 1
+              && exists(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))
+             || (request.resource.data.saveCount == resource.data.get('saveCount', 0) - 1
+              && !exists(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))));
       // ⚠️ delete بلا !isSuspended() عمدًا — حق حذف البيانات لا يسقط بالإيقاف (قرار المالك ١٦ أغسطس).
-      //    أثر جانبي مقبول وموثَّق: المُوقَف يقدر يحذف رحلاته فرادى، لا ضمن حذف الحساب فقط.
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
     }
 
     // ===== إصلاح ثغرة ٥ (ب) =====
-    // نفس المبدأ: isSuspended() على الكتابة حصرًا + إعادة isOwner() للإدارة
     match /userCityLists/{docId} {
-      // v3.1: + isOwner() على القراءة — نفس مبرر trips (كان سبب "Could not update user" عند الإيقاف)
-      allow read: if isOwner() || (isSignedIn() && (resource.data.ownerId == request.auth.uid
+      // v3.1: + isOwner() على القراءة — نفس مبرر trips
+      // v3.8 (السطر المعلَّق ق٢٠٢٦-٠٩-٠١-٠٧): قراءة المستند الغائب لصاحب البادئة — يعود «غير موجود» صراحةً،
+      //   ولا توسيع لأي قراءة على مستند قائم (الفرع مشروط بغياب المستند)
+      allow read: if isOwner() || (isSignedIn() && resource == null && docId.split('_')[0] == request.auth.uid)
+        || (isSignedIn() && (resource.data.ownerId == request.auth.uid
         || resource.data.public == true
         || request.auth.uid in resource.data.sharedWith));
-      // v3.5: المعرّف يبدأ بمعرّف منشئه إلزامًا (uid لا يحوي شرطة سفلية — أول مقطع قبل '_' هو المنشئ حصرًا)
-      //   يغلق انتحال owner_ وأي بادئة غير ذاتية عند المنشأ؛ إنشاء فقط — القائم لا يُمس
-      // v3.6 (٣-ب): مفاتيح الفئات الخاصة السبعة لا تدخل مستند قائمة قابل للنشر — مكانها userPrivatePlaces.
-      //   تُفحص عند الإنشاء دائمًا؛ وعند التعديل تُرفض المفاتيح المضافة فقط (الموروث يبقى حتى يرحّله الكود بأول حفظ) — عدّادات القوائم القائمة لا تتأثر.
-      //   المفاتيح المخصصة داخل الأقسام الخاصة يحكمها الكود (لا تكرار بالقواعد — لا وسيلة لفحص بادئة عبر المفاتيح).
       function noPrivateKeys() {
         return !request.resource.data.get('categories', {}).keys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others']);
       }
-      // عند التعديل: يُرفض ما يُضاف من مفاتيح خاصة فقط (addedKeys) — الموروث بالقوائم القائمة يبقى حتى يرحّله الكود بأول حفظ،
-      //   فتكون هذه القواعد آمنة على الكود القائم وتُنشر قبل دفعة الكود لا بعدها.
       function privateKeysOkOnUpdate() {
         return !('categories' in request.resource.data.diff(resource.data).affectedKeys())
           || !('categories' in request.resource.data)
           || !request.resource.data.categories.diff(resource.data.get('categories', {})).addedKeys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others']);
       }
+      // v3.8 (السطران ٣ و١٩): bookmarkCount وviewCount يبدآن صفرًا/غائبين (نمط ١٦)
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.ownerId == request.auth.uid
         && docId.split('_')[0] == request.auth.uid
         && noPrivateKeys()
-        && request.resource.data.get('favoriteCount', 0) == 0;
-      // v3.7 (الفجوة ١٦): التعديل الذاتي لا يمس favoriteCount (الحفظ يرسله غير متغيّر — لا يُحتسب متأثرًا)
+        && request.resource.data.get('favoriteCount', 0) == 0
+        && request.resource.data.get('bookmarkCount', 0) == 0
+        && request.resource.data.get('viewCount', 0) == 0;
+      // v3.7 (الفجوة ١٦) + v3.8: التعديل الذاتي لا يمس favoriteCount ولا bookmarkCount ولا viewCount (الحفظ يرسلها غير متغيّرة — لا تُحتسب متأثرة)
+      // v3.8 (السطر ٥): فرع ±١ على favoriteCount من الآخرين سُحب — مجمَّد
+      // v3.8 (السطر ٣): مفكرة القائمة العامة من الآخرين — bookmarkCount ±١ بأرضية، مربوط بسجل listBookmarks للطالب (نمط الفجوة ١٧)
+      // v3.8 (السطر المعلَّق ق٠١-١٩): viewCount العام — زيادة بواحد فقط من الآخرين (نمط مشاهدات الملف المجتمعي)
       allow update: if privateKeysOkOnUpdate() && (isOwner()
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
-            && !('favoriteCount' in request.resource.data.diff(resource.data).affectedKeys()))
-        // ===== إصلاح ثغرة ٣ الموسَّعة (تدقيق شامل ١٦ أغسطس): تقييد المقدار بـ±١ · v3.6 (١٢): النتيجة ≥ ٠ =====
-        // كانت تسمح بأي مقدار (مثل favoriteCount: 999999) ⇒ إفساد ترتيب Community Lists
-        || (isSignedIn() && !isSuspended() && resource.data.public == true &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteCount']) &&
-            request.resource.data.favoriteCount >= 0 &&
-            (request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) + 1
-             || request.resource.data.favoriteCount == resource.data.get('favoriteCount', 0) - 1)));
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['favoriteCount', 'bookmarkCount', 'viewCount']))
+        || (isSignedIn() && !isSuspended() && resource.data.public == true && resource.data.ownerId != request.auth.uid &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookmarkCount', 'viewCount']) &&
+            (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
+             || request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0) + 1) &&
+            request.resource.data.get('bookmarkCount', 0) >= 0 &&
+            (request.resource.data.get('bookmarkCount', 0) == resource.data.get('bookmarkCount', 0)
+             || (request.resource.data.get('bookmarkCount', 0) == resource.data.get('bookmarkCount', 0) + 1
+                 && exists(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId)))
+             || (request.resource.data.get('bookmarkCount', 0) == resource.data.get('bookmarkCount', 0) - 1
+                 && !exists(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId))))));
       // ⚠️ delete بلا !isSuspended() عمدًا — نفس مبرر trips أعلاه
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
@@ -440,30 +419,23 @@ service cloud.firestore {
 
     match /communityProfiles/{uid} {
       allow read: if true;
-      // v3.7: حقول الملف — حدودها
       function profileFieldsOk() {
         return (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 200))
           && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 40))
           && (!('contactUrl' in request.resource.data) || (request.resource.data.contactUrl is string && request.resource.data.contactUrl.matches('https://.*') && request.resource.data.contactUrl.size() <= 300))
           && (!('showFollowerCount' in request.resource.data) || request.resource.data.showFollowerCount is bool);
       }
-      // v3.7 (الفجوة ١٥): صاحب الملف لا يكتب المشاهدات ولا المتابعين ولا الشارة — لا عند الإنشاء ولا عند التعديل
       function selfProtectedKeysAbsentOnCreate() {
         return !request.resource.data.keys().hasAny(['verified', 'followerCount', 'viewCount']);
       }
       function selfProtectedKeysUntouched() {
         return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verified', 'followerCount', 'viewCount']);
       }
-      // v3.4 (M-P5): المُوقَف لا ينشئ ولا يعدّل ملفه المجتمعي (أسوة بحسابه واسمه المستعار — اتساق v3.2)؛
-      //   القراءة والحذف يبقيان له (حق الانسحاب الكامل لا يسقط بالإيقاف)
       allow create: if isOwner()
         || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysAbsentOnCreate() && profileFieldsOk());
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == uid);
       allow update: if isOwner()
-        // التعديل الذاتي: الحقول الوصفية وحالة الظهور و totalFavoriteCount (مشتق يعيد صاحبه حسابه من قوائمه — استثناء موثَّق)
         || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysUntouched() && profileFieldsOk())
-        // ===== إصلاح ثغرة ٣ الموسَّعة: تقييد المقدار بـ±١ لكل عدّاد — من الآخرين على ملف له محتوى عام =====
-        // v3.7: + followerCount ±١ بأرضية صفر · v3.6 (١٢): الإجمالي بأرضية صفر
         || (isSignedIn() && !isSuspended() && resource.data.hasAnyPublicContent == true &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount','totalFavoriteCount','followerCount']) &&
             (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
@@ -473,7 +445,6 @@ service cloud.firestore {
              || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) + 1
              || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) - 1) &&
             request.resource.data.get('followerCount', 0) >= 0 &&
-            // v3.7 (الفجوة ١٧): العدّاد مربوط بالعلاقة — الزيادة بوجود مستند متابعة الطالب، والنقص بغيابه
             (request.resource.data.get('followerCount', 0) == resource.data.get('followerCount', 0)
              || (request.resource.data.get('followerCount', 0) == resource.data.get('followerCount', 0) + 1
                  && exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + uid)))
@@ -481,8 +452,7 @@ service cloud.firestore {
                  && !exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + uid)))));
     }
 
-    // ===== v3.7 (١): المتابعة — الثابت ١٠: العلاقة مرئية لطرفيها بالهوية العلنية، لا بيانات خاصة لأي طرف =====
-    // follows/{followerUid}_{curatorUid}: الملكية بالمعرّف؛ الحقلان يطابقان المعرّف؛ لا متابعة للذات؛ لا تعديل أبدًا.
+    // ===== v3.7 (١): المتابعة — الثابت ١٠ =====
     match /follows/{docId} {
       function followerOfDoc() { return docId.split('_')[0]; }
       function curatorOfDoc() { return docId.split('_')[1]; }
@@ -494,16 +464,44 @@ service cloud.firestore {
         && request.resource.data.followerUid == request.auth.uid
         && request.resource.data.curatorUid == curatorOfDoc()
         && request.resource.data.curatorUid != request.auth.uid
-        // v3.7 (الفجوة ١٨): لا متابعة لمعرّف بلا ملف مجتمعي
         && exists(/databases/$(database)/documents/communityProfiles/$(curatorOfDoc()));
       allow update: if false;
       allow delete: if isOwner() || (isSignedIn() && resource.data.followerUid == request.auth.uid);
     }
 
+    // ===== v3.8 (السطر ٢): سجل مفكرة القوائم — الثابت ١٢: نية خاصة لصاحبها، العلني عدّادها المجمَّع فقط =====
+    // listBookmarks/{bookmarkerUid}__{listDocId}: الفاصل مزدوج لأن معرّف القائمة يحوي شرطة مفردة (uid_cityId).
+    // القراءة لصاحب السجل ومالك التطبيق فقط — صاحب القائمة لا يرى مَن (قرار المالك أ · «كم لا مَن»).
+    // الإنشاء على قائمة مدينة عامة قائمة فعلًا · الحقل الوحيد at · لا تعديل أبدًا · الحذف لصاحبه (والموقوف — انسحاب) ولمالك التطبيق.
+    match /listBookmarks/{docId} {
+      function bmOwner() { return docId.split('__')[0]; }
+      function bmTarget() { return docId.split('__')[1]; }
+      allow read: if isOwner() || (isSignedIn() && bmOwner() == request.auth.uid);
+      allow create: if isSignedIn() && !isSuspended()
+        && bmOwner() == request.auth.uid
+        && request.resource.data.keys().hasOnly(['at'])
+        && exists(/databases/$(database)/documents/userCityLists/$(bmTarget()))
+        && get(/databases/$(database)/documents/userCityLists/$(bmTarget())).data.public == true;
+      allow update: if false;
+      allow delete: if isOwner() || (isSignedIn() && bmOwner() == request.auth.uid);
+    }
+
+    // ===== v3.8 (السطر ٤): سجل حفظ الرحلات — نفس أحكام سجل المفكرة حرفيًّا على الرحلات العامة =====
+    match /tripSaves/{docId} {
+      function tsOwner() { return docId.split('__')[0]; }
+      function tsTarget() { return docId.split('__')[1]; }
+      allow read: if isOwner() || (isSignedIn() && tsOwner() == request.auth.uid);
+      allow create: if isSignedIn() && !isSuspended()
+        && tsOwner() == request.auth.uid
+        && request.resource.data.keys().hasOnly(['at'])
+        && exists(/databases/$(database)/documents/trips/$(tsTarget()))
+        && get(/databases/$(database)/documents/trips/$(tsTarget())).data.public == true;
+      allow update: if false;
+      allow delete: if isOwner() || (isSignedIn() && tsOwner() == request.auth.uid);
+    }
+
     // ===== v3.6 (٣-ب): الفئات الخاصة — مجموعة مستقلة، الخصوصية على مستوى المستند =====
-    // userPrivatePlaces/{uid}_{cityId}: الفئات الخاصة (مستشفيات وعيادات · شخصي · أخرى · العناوين الشخصية) لصاحبها وحده.
-    // لا علم public ولا sharedWith أصلًا. مالك التطبيق: حذف فقط (حذف الحساب والإساءة) — لا قراءة ولا تعديل (وعد السياسة).
-    // الموقوف: قراءة وحذف (حق الانسحاب) — لا إنشاء ولا تعديل. الملكية بالمعرّف لا بحقل يُكتب.
+    // (قراءة الغائب: قاعدة القراءة هنا بالمعرّف أصلًا فلا تمس بيانات المستند — السطر المعلَّق ق٠١-٠٧ لا يلزمها تعديلًا)
     match /userPrivatePlaces/{docId} {
       function isMine() { return isSignedIn() && docId.split('_')[0] == request.auth.uid; }
       allow read: if isMine();
@@ -513,13 +511,8 @@ service cloud.firestore {
     }
 
     // ===== إصلاح ثغرة ٤ =====
-    // الثغرة: القاعدة القديمة تفحص resource.data.uid (القيمة الحالية) فقط، ولا تفحص
-    //         request.resource.data.uid (القيمة الجديدة) — فيقدر أي مستخدم ينشئ اسمًا
-    //         مستعارًا وينسبه لحساب شخص آخر.
-    // الحل: فصل create/update/delete + فحص القيمة الجديدة صراحةً بالحالتين
     match /nicknames/{nickId} {
       allow read: if true;
-      // v3.2: + !isSuspended() على الإنشاء/التعديل — المُوقَف لا يغيّر اسمه المستعار (قرار المالك ١٩ أغسطس)
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.uid == request.auth.uid;
       allow update: if isSignedIn() && !isSuspended()
@@ -530,25 +523,16 @@ service cloud.firestore {
     }
 
     // ===== إصلاح ثغرة ١ =====
-    // غياب delete تمامًا = منعه تلقائيًا: لا المالك ولا المستخدم نفسه يقدر يحذف حسابًا،
-    // ولو بطلب صريح — فجوة قانونية فعلية (حق حذف البيانات).
-    // ⚠️ هذا يفتح الصلاحية فقط. واجهة "احذف حسابي" والحذف المتتالي عبر المجموعات السبع
-    //    تُنفَّذ بالمرحلة أ-٢ مع سياسة الخصوصية (قرار موثَّق).
     match /users/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isOwner());
       allow create: if isSignedIn() && request.auth.uid == userId;
-      // v3: أُزيل شرط "suspended لا يتغير" — الحقل لم يعد مصدر الحقيقة (انتقل إلى suspensions/{uid})،
-      //     وبقاؤه كان سيرفض تحديثات المستخدم لنفسه بعد اختفاء الحقل من المستندات الجديدة
-      // v3.2: + !isSuspended() على تعديل المستخدم لنفسه — المُوقَف لا يعدّل بياناته (قرار المالك ١٩ أغسطس)؛ الحذف يبقى
       allow update: if isOwner() || (isSignedIn() && request.auth.uid == userId && !isSuspended());
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
     }
 
     // ===== إصلاح ثغرة ٣ (ج) =====
-    // العدّادات اليومية: الحقول محدَّدة، والقيم لا تنقص أبدًا (منع التصفير/التخريب)
     match /dailyStats/{date} {
       allow read: if isOwner();
-      // v3.4 (M-P7): قيم البداية ٠ أو ١ حصرًا لكل حقل (تعميم نمط visits) — يمنع بذر يوم بأرقام ضخمة/سالبة
       allow create: if isSignedIn()
         && request.resource.data.keys().hasOnly(['newSignupsToday','activeToday'])
         && request.resource.data.get('newSignupsToday', 0) >= 0
@@ -564,7 +548,6 @@ service cloud.firestore {
 
 
     // ===== v3.3 (أ) عدّادات الكيانات — stats_lists =====
-    // معرّف القائمة (userCityLists) أو معرّف القائمة__يوم · القراءة لصاحب القائمة + المالك · الإنشاء فقط لقائمة موجودة فعلًا
     match /stats_lists/{docId} {
       function keysOk() { return request.resource.data.keys().hasOnly(['open_ulist', 'open_community', 'open_curator', 'open_trip', 'open_direct', 'open_total', 'save_from', 'copy_from', 'place_open_total']) && request.resource.data.keys().size() >= 1; }
       function createOk() { return keysOk() && bumpC('open_ulist')
@@ -591,7 +574,6 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
     // ===== v3.3 (أ) عدّادات الكيانات — stats_trips =====
-    // معرّف الرحلة (trips) أو معرّف الرحلة__يوم · القراءة لصاحب الرحلة + المالك
     match /stats_trips/{docId} {
       function keysOk() { return request.resource.data.keys().hasOnly(['view_shared', 'view_community', 'view_curator', 'view_direct', 'view_total', 'copy', 'interested']) && request.resource.data.keys().size() >= 1; }
       function createOk() { return keysOk() && bumpC('view_shared')
@@ -614,8 +596,6 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
     // ===== v3.3 (أ) عدّادات الكيانات — stats_places =====
-    // معرّف القائمة__بصمة الرابط (١٦ خانة سداسية تُحسب بالمتصفح — لا رابط نصًّا) · مدى الحياة فقط · القراءة لصاحب القائمة + المالك · تُرحَّل إلى معرّف المكان بب-١
-    // v3.3.1: + أماكن دليل المالك بمعرّف owner_{city}__{hash} — المدينة يجب أن تكون حقيقية (cities)، لا مستند userCityLists؛ قراءتها للمالك (isOwner بقاعدة القراءة)
     match /stats_places/{docId} {
       function keysOk() { return request.resource.data.keys().hasOnly(['open_app', 'open_ulist', 'open_trip', 'open_community', 'open_curator', 'open_total', 'save_from', 'trip_add']) && request.resource.data.keys().size() >= 1; }
       function createOk() { return keysOk() && bumpC('open_app')
@@ -634,7 +614,6 @@ service cloud.firestore {
         && bumpU('open_total')
         && bumpU('save_from')
         && bumpU('trip_add'); }
-      // v3.3.1: المعرّفات owner_* يقرؤها المالك فقط — ولو أنشأ مستخدم مستند userCityLists باسم owner_{city} (معرّفات userCityLists غير مقيَّدة بالقواعد القديمة) فلا يكسب قراءتها
       allow read: if isOwner() || (isSignedIn() && !docId.matches('owner_.*') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && get(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])).data.ownerId == request.auth.uid);
       function ownerPlaceOk() {
         return docId.matches('owner_[a-z0-9_-]{1,40}__[a-f0-9]{16}')
@@ -649,7 +628,6 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
     // ===== v3.3 (أ) عدّادات الكيانات — stats_curators =====
-    // معرّف المنسِّق (uid) أو uid__يوم · القراءة للمنسِّق نفسه + المالك · وظائفها تُبنى بج-١أ (صفحة المنسِّق، روابط الحملات) — محجوزة الآن
     match /stats_curators/{docId} {
       function keysOk() { return request.resource.data.keys().hasOnly(['page_view', 'contact_click', 'follow', 'ref_ig', 'ref_tt', 'ref_sc', 'ref_card', 'ref_qr', 'ref_link', 'ref_direct']) && request.resource.data.keys().size() >= 1; }
       function createOk() { return keysOk() && bumpC('page_view')
@@ -678,7 +656,6 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
     // ===== v3.3 (أ) عدّادات الكيانات — stats_cards =====
-    // uid الصانع__معرّف البطاقة (الملكية بالمعرّف لا بحقل يُكتب) · العدّادات يزيدها أي زائر · القراءة لصانعها + المالك · تُبنى بج-١أ (بطاقة المشاركة) — محجوزة الآن
     match /stats_cards/{docId} {
       function keysOk() { return request.resource.data.keys().hasOnly(['view_ig', 'view_tt', 'view_sc', 'view_other', 'view_total']) && request.resource.data.keys().size() >= 1; }
       function createOk() { return keysOk() && bumpC('view_ig')
