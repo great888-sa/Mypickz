@@ -850,7 +850,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <div class="modal" style="text-align:center;">
       <div class="steps"><span class="stepdot on" id="delDot1"></span><span class="stepdot" id="delDot2"></span><span class="stepdot" id="delDot3"></span></div>
       <div id="delStep1">
-        <h3>Delete Account 🗑 <span class="soon-tag">Soon</span></h3>
+        <h3>Delete Account 🗑</h3>
         <p style="font-size:13px; color:var(--ink-soft); margin:0 0 10px;">This will permanently delete your account and <b>all</b> your data. This cannot be undone.</p>
         <div class="receipt"><ul>
           <li><span>📝 My List places</span><b id="delCntPlaces">—</b></li>
@@ -867,7 +867,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
         <h3>Final confirmation</h3>
         <p style="font-size:13px; color:var(--ink-soft); margin:0 0 10px;">Type <b>DELETE</b> to confirm permanent deletion.</p>
         <input id="delWord" class="modal-input" oninput="checkDelWord()" placeholder="Type DELETE" style="text-align:center; letter-spacing:2px;">
-        <button class="btn btn-danger" id="delGo" style="margin-top:10px;"  disabled>Delete my account forever <span class="soon-tag" style="color:var(--ivory-bright); border-color:var(--ivory-bright);">Soon</span></button>
+        <button class="btn btn-danger" id="delGo" style="margin-top:10px;" onclick="doAccountDelete()" disabled>Delete my account forever</button>
         <button class="btn btn-ghost" style="margin-top:8px;"  onclick="delStep(1)">Back</button>
       </div>
       <div id="delStep3" style="display:none;">
@@ -1733,11 +1733,13 @@ const mpData = (function(){
       }
     },
     userLists: {
+      remove: function(uid){ return col('userLists').doc(uid).delete(); },
       merge: function(uid, data){ return col('userLists').doc(uid).set(data, { merge: true }); },
       // خ٢: فهرس المدن التي فيها عناوين خاصة — قراءة واحدة بدل مسح المدن كلها
       addPrivateCity: function(uid, cityId){ return col('userLists').doc(uid).set({ privateCities: firebase.firestore.FieldValue.arrayUnion(cityId) }, { merge: true }); }
     },
     users: {
+      remove: function(uid){ return col('users').doc(uid).delete(); }, // ر٥٩
       flag: function(uid, field){
         const d = {}; d[field] = true;
         return col('users').doc(uid).set(d, { merge: true });
@@ -1752,7 +1754,16 @@ const mpData = (function(){
       }
     },
     profiles: {
-      merge: function(uid, data){ return col('communityProfiles').doc(uid).set(data, { merge: true }); }
+      merge: function(uid, data){ return col('communityProfiles').doc(uid).set(data, { merge: true }); },
+      remove: function(uid){ return col('communityProfiles').doc(uid).delete(); }
+    },
+    // ر٥٩ — الحذف التسلسلي: متابعاتي (القراءة بشرط حقل المتابع — استعلام قابل للإثبات)
+    follows: {
+      mineAsFollower: async function(uid){
+        const snap = await col('follows').where('followerUid', '==', uid).get();
+        const ids = []; snap.forEach(function(d){ ids.push(d.id); }); return ids;
+      },
+      remove: function(id){ return col('follows').doc(id).delete(); }
     },
     // ٢/أ (٢٦ أغسطس): المصادقة عبر النواة — لا نداء مصادقة مباشرًا خارجها (الحارس يعدّها بسقف صفر)
     auth: {
@@ -1760,6 +1771,7 @@ const mpData = (function(){
       signUp: function(email, pass){ return auth.createUserWithEmailAndPassword(email, pass); },
       sendReset: function(email){ return auth.sendPasswordResetEmail(email); },
       signOut: function(){ return auth.signOut(); },
+      deleteSelf: function(){ return auth.currentUser.delete(); }, // ر٥٩ — خاتمة التتالي (بعد إعادة التوثيق)
       onChange: function(cb){ return auth.onAuthStateChanged(cb); },
       // تأكيد الهوية بكلمة السر (المسار الأول) — المسار الثاني (المزوّد) يُضاف بـ٢/و
       reauthWithPassword: function(pass){
@@ -1789,9 +1801,11 @@ const mpData = (function(){
       }
     },
     nicknames: { // خ٥/م٢-ب (هجرة انتهازية — التصور المعتمد): قراءة اسم مستعار للمشاركة بالاسم
-      get: function(key){ return col('nicknames').doc(key).get(); }
+      get: function(key){ return col('nicknames').doc(key).get(); },
+      remove: function(key){ return col('nicknames').doc(key).delete(); } // ر٥٩ (نشرة التنظيف: حذف ذاتي بحقل الهوية)
     },
     cityLists: {
+      remove: function(uid, cityId){ return col('userCityLists').doc(uid + '_' + cityId).delete(); }, // ر٥٩ (نشرة التنظيف: حذف ذاتي بالبادئة)
       get: async function(uid, cityId){
         const d = await col('userCityLists').doc(uid + '_' + cityId).get();
         return d.exists ? d.data() : null;
@@ -3684,11 +3698,68 @@ function openDeletePreview(){
   document.getElementById('delCntFav').textContent = String(Object.keys(placeBmMap()).length + Object.keys(listBookmarksMap || {}).length + Object.keys(tripSavesMap || {}).length);
   delStep(1); openModalById('delBackdrop');
 }
+/* ر٥٩ · الحذف التسلسلي (القرار: تقديمه قبل الميداني — البند ١٣):
+   الترتيب: سجلاتي على محتوى الآخرين بدفعاتها المربوطة (تُنقص عدّاداتهم، وبديل degraded عند غياب الأصل)
+   ← متابعاتي ← محتواي (رحلات · قوائم مدن · عناوين) ← هويتي (الملف · حجز الاسم · السجل · المستند الأم)
+   ← حساب المصادقة بإعادة التوثيق. لا صمت: أي توقف يظهر برسالته. */
+async function doAccountDelete(){
+  const btn = document.getElementById('delGo'); if (!btn || btn.disabled) return;
+  if (!currentUser) return;
+  const ok = await requestReauth();
+  if (!ok){ showToast('Identity not confirmed — nothing was deleted'); return; }
+  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Deleting…';
+  const uid = currentUser.uid;
+  try{
+    // ١ — سجلاتي على محتوى الآخرين (العدّادات تتراجع بالدفعة المربوطة)
+    await ensureListBookmarks(); await ensureTripSaves();
+    for (const listId of Object.keys(listBookmarksMap || {})){
+      const r = listBookmarksMap[listId];
+      try{ await mpData.bookmarks.toggleList(uid, r.ownerUid, r.cityId, false); }
+      catch(e){ try{ await mpData.bookmarks.removeRecord(uid, listId); }catch(_){ } }
+    }
+    for (const tripId of Object.keys(tripSavesMap || {})){
+      try{ await mpData.tripSaves.toggle(uid, tripId, false); }
+      catch(e){ try{ await mpData.tripSaves.removeRecord(uid, tripId); }catch(_){ } }
+    }
+    // ٢ — متابعاتي
+    try{
+      const fids = await mpData.follows.mineAsFollower(uid);
+      for (const id of fids){ try{ await mpData.follows.remove(id); }catch(_){ } }
+    }catch(_){ }
+    // ٣ — محتواي: الرحلات (تُترك حفوظ الآخرين لها صفوف degraded بتصميمها) ثم قوائم المدن والعناوين لكل مدينة معروفة
+    for (const t of (userTrips || []).slice()){ try{ await mpData.trips.remove(t.id); }catch(_){ } }
+    const cityIds = [...new Set(
+      (typeof myListAllCities === 'function' ? myListAllCities() : []).map(c => c && c.id)
+        .concat(((userListData && userListData.privateCities) || []))
+        .filter(Boolean)
+    )];
+    for (const cid of cityIds){
+      try{ await mpData.cityLists.remove(uid, cid); }catch(_){ }
+      try{ await mpData.privatePlaces.remove(uid, cid); }catch(_){ }
+    }
+    // ٤ — هويتي (المستند الأم أخيرًا — المرايا والفهارس تسكنه)
+    try{ await mpData.profiles.remove(uid); }catch(_){ }
+    const nick = (userListData && userListData.nickname) || '';
+    if (nick){ try{ await mpData.nicknames.remove(nick.toLowerCase()); }catch(_){ } }
+    try{ await mpData.users.remove(uid); }catch(_){ }
+    try{ await mpData.userLists.remove(uid); }catch(_){ }
+    // ٥ — حساب المصادقة
+    await mpData.auth.deleteSelf();
+    delStep(3);
+  }catch(e){
+    btn.disabled = false; btn.textContent = label;
+    showToast('Deletion stopped: ' + ((e && e.code) || 'error') + ' — nothing else was removed');
+  }
+}
 function delStep(n){
   [1,2,3].forEach(i => { document.getElementById('delStep' + i).style.display = (i === n) ? '' : 'none'; document.getElementById('delDot' + i).classList.toggle('on', i <= n); });
   if (n === 2){ const w = document.getElementById('delWord'); w.value = ''; setTimeout(() => w.focus(), 50); }
 }
-function checkDelWord(){ /* ٢/د: يُفعَّل الزر عند مطابقة الكلمة — الآن معاينة فقط (الزر يبقى معطَّلًا) */ }
+function checkDelWord(){ // ر٥٩: المطابقة تفعّل الزر — والتنفيذ الحي مشروط بنشر نشرة التنظيف (سطور الحذف الذاتي)
+  const w = document.getElementById('delWord');
+  const b = document.getElementById('delGo');
+  if (b) b.disabled = String((w && w.value) || '').trim().toUpperCase() !== 'DELETE';
+}
 
 let signUpInProgress = false; // يمنع فحص onAuthStateChanged من إظهار نافذة اسم زائفة قبل اكتمال حجز الاسم أثناء التسجيل
 let nicknameFlowActive = false; // يمنع تداخل حلقتي اختيار الاسم
@@ -6157,7 +6228,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r58 (record-mirror batch: bookmark and trip-save ids mirrored in the own userLists document inside the same atomic three-write batch since docId-split read rules are provably unqueryable by design, loaders now build from the boot-loaded mirror with zero queries, the dead documentId-range queries removed, degraded removals clear the mirror key in one batch, plus the approved source-chip reorder yours-then-marked-then-outside across Places, Trips and Community) \u2014 r57 (guide rewrite batch with two merged dues per the accountability rule: the Bookmarked lists community chip \u2014 approved in the r51 statement but dropped during that large batch, now built in full with its live-origin rows, degraded row and undo \u2014 the leftover Arabic retired-favorites guide entry removed, and the bilingual guide rewritten on the four-actions and metrics lexicons with new entries for Bookmark, Save, the community pyramid, trip types and the signed 📤 send, marketing rules kept) \u2014 r56 (guard batch side-effect: the new migration needle caught its first catch before being pinned \u2014 renderSavedTrips from r51 held one direct platform call, now routed through mpData.trips.getDoc, so the pinned legacy ledger starts clean at 34 functions and 71 calls) \u2014 r55 (trip-type statement per decision 30-05 and scene 6/B: a type field on the trip document written at creation through the single create modal where One-day and Single-city are selectable and Multi-city stays disabled until its step-6 fields exist, the type line replaces Type-Soon on all five row surfaces with untyped legacy trips shown without a segment, and the type chips now actually filter My trips with All as a filter not a type and a live context line) \u2014 r54 (curator-surface verification batch per owner note: the greedy curhead identity selector no longer reaches place rows so their names return to card ink at 5.5 contrast instead of 1.06, cur-shell dimming recalibrated from .55 to .74 keeping every composited pair at 4.5 or better with saffron-on-paper as the governing pair, full inline background-and-colour pair scan came back clean, and a new guard needle computes the dimmed-shell contrast pairs and forbids the greedy selector \u2014 mutation-tested) \u2014 r53 (sort statement per metric-lexicon decision 02-06 and scene 6/D: people layer Sort control with Most viewed live as default and Most saved disabled until its attributed-saves feed lands in stage 3 \u2014 approved temporary deviation to be mirrored in the reference, person card shows views only with the frozen totalFavoriteCount figure and its loader field removed per the merged owner item, retired Most loved button and its heart glyph deleted, sorting applied on both people tabs) \u2014 r52 (conformance-fix batch over r51 per M4.23 read verbatim: bookmark and trip-save records carry the single at field with identity in the doc id, own records queried by documentId range, frozen saves figure removed from the person list row, generic degraded saved-trip row, plus owner-approved text-export buttons generalising the live sendAddr path: place row, city list header, trip screen, one signed composer) — r51 (four-actions batch — founding decision 09 in code: hearts retired on every surface, place bookmark on your own rows with no counter, Bookmarked places chip with its in-destination browser, list bookmark with bound counter and record, trip Save with bound counter plus the Saved trips chip with degraded rows, placeFavoriteCounts re-semanticised as the save counter, frozen favoriteCount writers removed, list viewCount opened, one transient Undo toast for all three unmark points, absent-read classification tightened to rules 3.8) — r50 (owner field notes on r49: trips header per dB, single create-trip modal 6/B2, cancel discards the fresh empty trip via the nucleus, city-delete side options for both surfaces, community people as compact rows, trip detail header per dC with day chips, curator page night colours and add action) — r49 (conformance pass over all 23 reference scenes: full curator page structure 6/E2, trip row edit indicator with no heart on own trips, home chooser vector icons, address modal method chips with local share parsing, Become a curator in the drawer) — r48 (structures batch · second pass — scene 6/D2 as drawn: compact rows for the person layers, back at the first row, context line, a row per public trip) — r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
+logTiming('BUILD: M2-ID-r59 (cascade account deletion brought forward by owner decision for field-test item 13: full self-cascade through the nucleus in safe order \u2014 bound-batch record removals that walk back the counters of others with the degraded fallback, follows, own trips and city lists and private addresses, then identity docs with the parent document last, then the auth account behind the existing reauth gate \u2014 the final button is now armed by the typed word and its live run requires the five-change cleanup rules publication delivered alongside) \u2014 r58 (record-mirror batch: bookmark and trip-save ids mirrored in the own userLists document inside the same atomic three-write batch since docId-split read rules are provably unqueryable by design, loaders now build from the boot-loaded mirror with zero queries, the dead documentId-range queries removed, degraded removals clear the mirror key in one batch, plus the approved source-chip reorder yours-then-marked-then-outside across Places, Trips and Community) \u2014 r57 (guide rewrite batch with two merged dues per the accountability rule: the Bookmarked lists community chip \u2014 approved in the r51 statement but dropped during that large batch, now built in full with its live-origin rows, degraded row and undo \u2014 the leftover Arabic retired-favorites guide entry removed, and the bilingual guide rewritten on the four-actions and metrics lexicons with new entries for Bookmark, Save, the community pyramid, trip types and the signed 📤 send, marketing rules kept) \u2014 r56 (guard batch side-effect: the new migration needle caught its first catch before being pinned \u2014 renderSavedTrips from r51 held one direct platform call, now routed through mpData.trips.getDoc, so the pinned legacy ledger starts clean at 34 functions and 71 calls) \u2014 r55 (trip-type statement per decision 30-05 and scene 6/B: a type field on the trip document written at creation through the single create modal where One-day and Single-city are selectable and Multi-city stays disabled until its step-6 fields exist, the type line replaces Type-Soon on all five row surfaces with untyped legacy trips shown without a segment, and the type chips now actually filter My trips with All as a filter not a type and a live context line) \u2014 r54 (curator-surface verification batch per owner note: the greedy curhead identity selector no longer reaches place rows so their names return to card ink at 5.5 contrast instead of 1.06, cur-shell dimming recalibrated from .55 to .74 keeping every composited pair at 4.5 or better with saffron-on-paper as the governing pair, full inline background-and-colour pair scan came back clean, and a new guard needle computes the dimmed-shell contrast pairs and forbids the greedy selector \u2014 mutation-tested) \u2014 r53 (sort statement per metric-lexicon decision 02-06 and scene 6/D: people layer Sort control with Most viewed live as default and Most saved disabled until its attributed-saves feed lands in stage 3 \u2014 approved temporary deviation to be mirrored in the reference, person card shows views only with the frozen totalFavoriteCount figure and its loader field removed per the merged owner item, retired Most loved button and its heart glyph deleted, sorting applied on both people tabs) \u2014 r52 (conformance-fix batch over r51 per M4.23 read verbatim: bookmark and trip-save records carry the single at field with identity in the doc id, own records queried by documentId range, frozen saves figure removed from the person list row, generic degraded saved-trip row, plus owner-approved text-export buttons generalising the live sendAddr path: place row, city list header, trip screen, one signed composer) — r51 (four-actions batch — founding decision 09 in code: hearts retired on every surface, place bookmark on your own rows with no counter, Bookmarked places chip with its in-destination browser, list bookmark with bound counter and record, trip Save with bound counter plus the Saved trips chip with degraded rows, placeFavoriteCounts re-semanticised as the save counter, frozen favoriteCount writers removed, list viewCount opened, one transient Undo toast for all three unmark points, absent-read classification tightened to rules 3.8) — r50 (owner field notes on r49: trips header per dB, single create-trip modal 6/B2, cancel discards the fresh empty trip via the nucleus, city-delete side options for both surfaces, community people as compact rows, trip detail header per dC with day chips, curator page night colours and add action) — r49 (conformance pass over all 23 reference scenes: full curator page structure 6/E2, trip row edit indicator with no heart on own trips, home chooser vector icons, address modal method chips with local share parsing, Become a curator in the drawer) — r48 (structures batch · second pass — scene 6/D2 as drawn: compact rows for the person layers, back at the first row, context line, a row per public trip) — r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
