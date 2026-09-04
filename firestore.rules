@@ -101,7 +101,7 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly(['TypeError', 'ReferenceError', 'SyntaxError', 'NetworkError', 'UnhandledRejection', 'Other', 'total']) && request.resource.data.keys().size() >= 1;
     }
     function eventKeysOk() {
-      return request.resource.data.keys().hasOnly(['visit_source', 'signup_start', 'signup_done', 'place_open', 'favorites_open', 'favorite_add', 'mylist_open', 'mylist_save', 'trip_open', 'trip_save', 'community_open', 'share_link', 'share_card', 'curator_view', 'curator_contact', 'curator_follow', 'session_depth', 'import_run', 'import_place', 'import_suggest_kept', 'import_suggest_changed', 'personal_open', 'personal_save', 'personal_place_open', 'reserved_1', 'reserved_2', 'reserved_3'])
+      return request.resource.data.keys().hasOnly(['visit_source', 'signup_start', 'signup_done', 'place_open', 'bookmark_add', 'mylist_open', 'mylist_save', 'trip_open', 'trip_save', 'community_open', 'share_link', 'share_card', 'curator_view', 'curator_contact', 'curator_follow', 'session_depth', 'import_run', 'import_place', 'import_suggest_kept', 'import_suggest_changed', 'personal_open', 'personal_save', 'personal_place_open', 'reserved_2', 'reserved_3'])
         && request.resource.data.keys().size() >= 1;
     }
     function errorsCreateOk() {
@@ -131,8 +131,7 @@ service cloud.firestore {
         && bumpC('signup_start')
         && bumpC('signup_done')
         && bumpC('place_open')
-        && bumpC('favorites_open')
-        && bumpC('favorite_add')
+        && bumpC('bookmark_add')
         && bumpC('mylist_open')
         && bumpC('mylist_save')
         && bumpC('trip_open')
@@ -151,7 +150,6 @@ service cloud.firestore {
         && bumpC('personal_open')
         && bumpC('personal_save')
         && bumpC('personal_place_open')
-        && bumpC('reserved_1')
         && bumpC('reserved_2')
         && bumpC('reserved_3');
     }
@@ -162,8 +160,7 @@ service cloud.firestore {
         && bumpU('signup_start')
         && bumpU('signup_done')
         && bumpU('place_open')
-        && bumpU('favorites_open')
-        && bumpU('favorite_add')
+        && bumpU('bookmark_add')
         && bumpU('mylist_open')
         && bumpU('mylist_save')
         && bumpU('trip_open')
@@ -182,7 +179,6 @@ service cloud.firestore {
         && bumpU('personal_open')
         && bumpU('personal_save')
         && bumpU('personal_place_open')
-        && bumpU('reserved_1')
         && bumpU('reserved_2')
         && bumpU('reserved_3');
     }
@@ -325,12 +321,7 @@ service cloud.firestore {
     }
 
     // v3: توحيد نمط الحذف — إنشاء/تعديل تتطلب غير مُوقَف؛ الحذف يتطلب الملكية فقط (حق حذف البيانات لا يسقط بالإيقاف)
-    // v3.8: المفضلة القديمة تُفكَّك بالكود بلا ترحيل — المجموعة تبقى بقواعدها لحق القراءة والحذف حتى إزالة مسارها من الكود (بند متابعة بالمصفوفة)
-    match /favorites/{userId} {
-      allow read: if isOwner() || (isSignedIn() && request.auth.uid == userId);
-      allow create, update: if isSignedIn() && request.auth.uid == userId && !isSuspended();
-      allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
-    }
+
 
     match /userLists/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || resource.data.public == true);
