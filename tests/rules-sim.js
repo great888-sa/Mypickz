@@ -1,5 +1,7 @@
 // MyPickz — tests/rules-sim.js
-// يختبر firestore.rules (v3.8) على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// يختبر firestore.rules على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// M4.24 (٤ سبتمبر ٢٠٢٦ — نشرة التنظيف الثنائية): اجتثاث مجموعة favorites بحدثَيها (حالاتها العشر صارت حالتَي
+//   حراسة رفض افتراضي) · bookmark_add محل reserved_1 وfavorite_add بحالات الأحداث — المجموع ٤٤٧ حالة.
 // v3.8 (٣ سبتمبر ٢٠٢٦ — نشرة القرار المؤسِّس ٠٩، سطور M4.23 أقرّها المالك أولًا): + القسم ٢١ وقلب سبع حالات إعجاب مجمَّدة:
 //   سجل مفكرة القوائم وعدّادها المربوط · سجل حفظ الرحلات وعدّاده · تجميد favoriteCount بالمجموعات الثلاث ·
 //   عدّاد مشاهدات القائمة · قراءة المستند الغائب لصاحب البادئة · خصوصية السجلين (الثابت ١٢ — «كم لا مَن»)
@@ -49,8 +51,6 @@ const no = (label, f) => expect(false, label, f);
     await db.doc('settings/app').set({ ownerUid: OWNER });
     await db.doc('cities/paris').set({ name: 'Paris', published: true, links: {} });
     await db.doc(`suspensions/${S}`).set({ at: 1, by: OWNER, email: 's@x' });
-    await db.doc(`favorites/${A}`).set({ places: [] });
-    await db.doc(`favorites/${S}`).set({ places: [] });
     await db.doc(`userLists/${A}`).set({ public: false, nickname: 'a', favoriteCount: 0 });
     await db.doc(`userLists/${B}`).set({ public: true, nickname: 'b', favoriteCount: 3 });
     await db.doc(`userLists/${S}`).set({ public: false, nickname: 's', favoriteCount: 0 });
@@ -156,14 +156,15 @@ const no = (label, f) => expect(false, label, f);
   await ok('events create reserved future key (share_card, curator_view)', () => guest.doc('analytics/events_2026-08-19__paris__all').set({ share_card: 1, curator_view: 2 }));
   await no('events create unknown key', () => guest.doc('analytics/events_2026-08-19__paris__bars').set({ hack: 1 }));
   await ok('events create import keys (reserved for ب-١)', () => guest.doc('analytics/events_2026-08-19__paris__import').set({ import_run: 1, import_place: 30, import_suggest_kept: 20, import_suggest_changed: 10 }));
-  await ok('events create reserved_1 (public toggle)', () => guest.doc('analytics/events_2026-08-19__all__lists').set({ reserved_1: 1 }));
+  await ok('events create bookmark_add (نشرة التنظيف — محل reserved_1)', () => guest.doc('analytics/events_2026-08-19__all__lists').set({ bookmark_add: 1 }));
+  await no('events create reserved_1 (استُهلك — خرج من القائمة)', () => guest.doc('analytics/events_2026-08-19__all__list2').set({ reserved_1: 1 }));
   await ok('events create personal_* (aggregate only, city all)', () => guest.doc('analytics/events_2026-08-19__all__personal').set({ personal_open: 3, personal_save: 1, personal_place_open: 2 }));
   await no('events create uppercase city (bad id)', () => guest.doc('analytics/events_2026-08-19__Paris__cafes').set({ place_open: 1 }));
   await no('events create with uid field', () => guest.doc('analytics/events_2026-08-19__paris__hotels').set({ place_open: 1, uid: 'x' }));
   await ok('events update +50 user', () => a.doc(EV).update({ place_open: 53 }));
   await no('events update +51', () => guest.doc(EV).update({ place_open: 104 }));
   await no('events update decrease', () => guest.doc(EV).update({ place_open: 1 }));
-  await ok('events update add second key +1', () => guest.doc(EV).update({ favorite_add: 1 }));
+  await ok('events update add second key +1 (bookmark_add)', () => guest.doc(EV).update({ bookmark_add: 1 }));
   await no('events read user (owner-only)', () => a.doc(EV).get());
   await ok('events read owner', () => owner.doc(EV).get());
   await no('events delete owner', () => owner.doc(EV).delete());
@@ -274,17 +275,10 @@ const no = (label, f) => expect(false, label, f);
   await no('pfc delete user', () => a.doc('placeFavoriteCounts/p1').delete());
   await ok('pfc delete owner', () => owner.doc('placeFavoriteCounts/p2').delete());
 
-  // ================= ٧) favorites =================
-  await no('favorites read guest', () => guest.doc(`favorites/${A}`).get());
-  await ok('favorites read own', () => a.doc(`favorites/${A}`).get());
-  await no('favorites read other user', () => b.doc(`favorites/${A}`).get());
-  await ok('favorites read owner (v3.2)', () => owner.doc(`favorites/${A}`).get());
-  await ok('favorites write own', () => a.doc(`favorites/${A}`).set({ places: ['x'] }, { merge: true }));
-  await no('favorites write other', () => b.doc(`favorites/${A}`).set({ places: [] }, { merge: true }));
-  await no('favorites write suspended', () => s.doc(`favorites/${S}`).set({ places: ['x'] }, { merge: true }));
-  await ok('favorites delete own by suspended', () => s.doc(`favorites/${S}`).delete());
-  await no('favorites delete other user', () => b.doc(`favorites/${A}`).delete());
-  await ok('favorites delete owner', () => owner.doc(`favorites/${A}`).delete());
+  // ================= ٧) favorites — المجموعة مجتثة (نشرة التنظيف ٤ سبتمبر) =================
+  // نشرة التنظيف ٤ سبتمبر: الكتلة اجتُثت — الرفض الافتراضي يحكم الجميع (حراسة الاجتثاث)
+  await no('favorites create own — block removed, default deny', () => a.doc(`favorites/${A}`).set({ places: ['x'] }));
+  await no('favorites read own — block removed, default deny', () => a.doc(`favorites/${A}`).get());
 
   // ================= ٨) userLists =================
   await no('userLists read guest (public)', () => guest.doc(`userLists/${B}`).get());
@@ -423,7 +417,6 @@ const no = (label, f) => expect(false, label, f);
   // ================= ١٦) M3: إغلاق التغطية — الشبكة والحواف والأعلام التصميمية =================
   await env.withSecurityRulesDisabled(async (c) => {
     const db = c.firestore();
-    await db.doc(`favorites/${S}`).set({ places: [] });
     await db.doc(`userLists/${S}`).set({ public: false, nickname: 's', favoriteCount: 0 });
     await db.doc('trips/tS').set({ ownerId: S, public: false, sharedWith: [], name: 'S private' });
     await db.doc('userCityLists/cS').set({ ownerId: S, public: false, sharedWith: [], favoriteCount: 0 });
@@ -447,7 +440,7 @@ const no = (label, f) => expect(false, label, f);
   await no('errors update no-op same values (affectedKeys>=1 edge)', () => guest.doc(ED).set({ TypeError: 2 }, { merge: true }));
   await no('events create category over 40 chars', () => guest.doc('analytics/events_2026-08-19__paris__' + 'x'.repeat(41)).set({ place_open: 1 }));
   await no('events create malformed id (missing category segment)', () => guest.doc('analytics/events_2026-08-19__paris').set({ place_open: 1 }));
-  await ok('[ACK P1] events update +1 by suspended (measurement anonymous by design — owner-approved)', () => s.doc(EV).update({ favorite_add: 2 }));
+  await ok('[ACK P1] events update +1 by suspended (measurement anonymous by design — owner-approved)', () => s.doc(EV).update({ bookmark_add: 2 }));
 
   await ok('hours read owner', () => owner.doc('analytics/hours_2026-08-19__paris').get());
 
@@ -458,7 +451,7 @@ const no = (label, f) => expect(false, label, f);
   await no('pfc P3 CLOSED: rename attempt (name+count) rejected — name/url frozen after create', () => a.doc('placeFavoriteCounts/p1').update({ name: 'Renamed', count: 3 }));
   await no('pfc P4 CLOSED: partial create (count only) rejected — all three fields required', () => a.doc('placeFavoriteCounts/p9').set({ count: 1 }));
 
-  await ok('favorites read own by suspended', () => s.doc(`favorites/${S}`).get());
+  await no('favorites read by suspended — block removed, default deny (نشرة التنظيف)', () => s.doc(`favorites/${S}`).get());
   await no('favorites write guest', () => guest.doc('favorites/ghost').set({ places: [] }));
 
   await ok('userLists read own by suspended', () => s.doc(`userLists/${S}`).get());
