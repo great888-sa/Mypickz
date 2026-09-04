@@ -121,11 +121,12 @@ const MP_EXPECTED = [
   ["mpTrack.hit('mylist_open'", 1],
   ["mpTrack.hit('mylist_save')", 1],
   ["mpTrack.hit('trip_open'", 1],
-  ["mpTrack.hit('trip_save')", 1],
-  ["mpTrack.hit('favorites_open'", 1],
+  ["mpTrack.hit('trip_save')", { prod: 1, test: 2 }], // ر٥٢: + حفظ رحلة الآخرين (toggleTripSave) بجانب حدث saveTrip القائم
+  ["mpTrack.hit('favorites_open'", { prod: 1, test: 0 }], // ر٥٢: تقاعد بنسخة الاختبار — يُصفَّر بالإنتاج عند ترقيته
   ["mpTrack.hit('community_open'", 1],
-  ["mpTrack.hit('share_link')", { prod: 4, test: 5 }], // خ٢-r3: + إرسال العنوان بتوقيع من وجهة العناوين (نسخة الاختبار حتى ترقية الإطار)
-  ["mpTrack.hit('favorite_add')", 1],
+  ["mpTrack.hit('share_link')", { prod: 4, test: 6 }], // ر٥٢: + المركّب الموقَّع الموحَّد mpSendText (تصدير المكان والقائمة والرحلة نصًّا)
+  ["mpTrack.hit('favorite_add')", { prod: 1, test: 0 }], // ر٥٢: تقاعد
+  ["mpTrack.hit('bookmark_add')", { prod: 0, test: 2 }], // ر٥٢: مفكرة المكان ومفكرة القائمة
   ["mpTrack.hit('signup_start')", 1],
   ["mpTrack.hit('signup_done')", 1],
   ["mpTrack.hit('reserved_1')", 2],
@@ -137,7 +138,7 @@ const MP_EXPECTED = [
   ["window.addEventListener('unhandledrejection'", 1],
   // خ٢ (٢٧ أغسطس): وجهة العناوين الشخصية تعرض روابطها بسماتها (data-mpsrc="app" · data-mppersonal="1") — إبرة إضافية بنسخة الاختبار
   //   حتى ترقية الإطار للإنتاج (حينها يصير العدد ٨/٣ بالملفين وتُوحَّد القيمة). القيمة إما رقم واحد للملفين أو {prod, test}.
-  ['data-mpsrc=', { prod: 7, test: 8 }],
+  ['data-mpsrc=', { prod: 7, test: 7 }], // ر٥٢: رابط نافذة My Favorites المتقاعدة كان يحمل السمة — زال معها
   ['data-mppersonal=', { prod: 2, test: 3 }],
   ['data-mpowner="1"', 1]
 ];
@@ -257,27 +258,130 @@ const KNOWN_UNSTYLED = [];                     // ر43: أُغلق (قاعدة f
 const KNOWN_STRUCT_IN_IDENTITY = [];          // ر43: أُغلق (الحدّان نُقلا إلى كتلة البنية)
 const KNOWN_EMPTY_RULES = [];                  // ر43: أُغلق (القاعدتان الفارغتان حُذفتا)
 const KNOWN_DEAD = ['requestReauth'];          // ر42: مبنية عمدًا قبل موعدها (تأكيد الهوية — تُستدعى بدفعتي كلمة المرور والحذف المتتالي)
-const KNOWN_NO_OUTLET = ['follows', 'stats_curators', 'stats_cards', 'followerCount', 'bio', 'contactUrl', 'showFollowerCount', 'displayName', 'verified',
-  'listBookmarks', 'tripSaves', 'bookmarkCount', 'saveCount']; // v3.8 (٣ سبتمبر — نشرة القرار ٠٩): سجلا المفكرة والحفظ وعدّاداهما — قواعد قبل الكود بالتسلسل الملزم؛ تُنقل من هنا بدفعة كود الأفعال، وصفوفها بالوثيقة الثامنة // الوثيقة الدائمة الثامنة v1.0 — قدرات بُنيت قبل موعدها
+const KNOWN_NO_OUTLET = ['follows', 'stats_curators', 'stats_cards', 'followerCount', 'bio', 'contactUrl', 'showFollowerCount', 'displayName', 'verified']; // ر٥٢ (٣ سبتمبر): قدرات ٣٫٨ الأربع (listBookmarks · tripSaves · bookmarkCount · saveCount) فُتح مخرجها بدفعة كود الأفعال — أزيلت بمرآة الثامنة v1.4 // الوثيقة الدائمة الثامنة — قدرات بُنيت قبل موعدها
 const CAP_COLORS_OUTSIDE_IDENTITY = { [TEST]: 139, [PROD]: 149 }; // ر42 = ١٤٩ (١٤ صريحًا · ١٣٥ متغيرًا) · ر43 = ١٤٠ · ر50 = ١٣٩ (سطر الخطأ صار صنفًا بالهوية) · سقف الإنتاج يُخفَّض عند ترقيته · يُخفَّض ولا يُرفع
-const CONTROL_CLASSES = ['btn', 'chip', 'act', 'actn', 'cta', 'csel', 'pl-src', 'mp-tab', 'dr-item', 'acc-item', 'switch-btn', 'pl-actbtn', 'addr-chip', 'pl-catpick', 'city-tab', 'area-chip', 'hcard', 'remove-btn', 'fav-btn', 'reorder-btn', 'add-place-btn', 'quick-nav-btn', 'action-btn', 'status-toggle', 'mp-burger', 'mp-idchip', 'pw-eye', 'show-more-btn', 'pclose', 'prow', 'addmini'];
+const CONTROL_CLASSES = ['btn', 'chip', 'act', 'actn', 'cta', 'csel', 'pl-src', 'mp-tab', 'dr-item', 'acc-item', 'switch-btn', 'pl-actbtn', 'addr-chip', 'pl-catpick', 'city-tab', 'area-chip', 'hcard', 'remove-btn', 'bmk-btn', 'reorder-btn', 'add-place-btn', 'quick-nav-btn', 'action-btn', 'status-toggle', 'mp-burger', 'mp-idchip', 'pw-eye', 'show-more-btn', 'pclose', 'prow', 'addmini'];
 const LIFE_PATHS = [ // مسارات الحياة العشرة — دالة مدخل مسمّاة لكل مسار: معرَّفة ومستدعاة
   ['signup', ['doSignUp']], ['signin', ['doSignIn']], ['save place', ['savePlPlace', 'saveMyCityList']],
   ['publish & share', ['plTogglePublic', 'shareMyListWithSomeone']], ['trip', ['openCreateTripFlow', 'saveTrip']],
-  ['private address', ['saveAddr']], ['favorite', ['toggleFavorite']], ['suspend', ['toggleSuspendUser']],
+  ['private address', ['saveAddr']], ['bookmark', ['togglePlaceBookmark']], ['suspend', ['toggleSuspendUser']],
   ['delete', ['deleteTrip', 'plDeleteRow', 'deleteAddr', 'openDeletePreview']], ['sign out', ['doSignOut', 'confirmLogout']]
 ];
 // عقود مسارات الكتابة على بيانات المستخدم — الحرّاس الثلاثة (مصفوفة الأمان M4.19 · دليل التشغيل v1.21)
 const WRITE_CONTRACTS = [
   ['if (myCityListLoadedFor !== myListCityId){', 1, 'حارس التطابق داخل saveMyCityList'],
   ['myCityListLoadFailed = true; myCityListLoadedFor = null;', 1, 'حارس فشل القراءة: تبقى غير محمَّلة'],
-  ["if (code === 'permission-denied'){", 1, 'تصنيف permission-denied: مستند غائب لا فشل'],
+  ["permission denied (rules 3.8", 1, 'تصنيف قراءة الغائب ٣٫٨: الرفض حقيقي لا غيابًا (ق٠١-٠٧ — ر٥٢)'],
   ['myCityListLoadFailed = false; myCityListLoadedFor = null;', 1, 'إعادة المحاولة الصريحة تصفّر العلمين معًا'],
   ['backfillPlaceIds(myCityListData.categories) && !currentUserSuspended && Object.keys(myCityListData.categories).length', 1, 'الكتابة الخلفية لا تعمل على محتوى فارغ'],
   ['if (!currentUser || !userListData || userListLoadFailed) return;', 1, 'التنقية بعد تحقق التحميل'],
   ['if (!live.size) return;', 1, 'لا تنقية بلا مدن محمَّلة'],
   ['if (currentUserSuspended){ showToast(\'Your account is suspended — you can\\\'t save changes\'); return; }', 3, 'الموقوف لا يحفظ (القائمة · الرحلة · البيانات العامة)']
 ];
+
+// §10-م (ر٥٤ — ملاحظة المالك على واجهة المنتقي): إبرة تباين القشرة المعتَّمة
+// تغلق عمى الفحص الثلاثي: قواعد اللون بلا خلفية · الأزواج المضمّنة · تركيب opacity.
+function curatorContrastGuard(label, s){
+  const T = '§10-م ' + label + ': ';
+  const vals = {}; for (const m of s.matchAll(/--([a-z0-9-]+):\s*(#[0-9A-Fa-f]{6})/g)) vals[m[1]] = m[2];
+  const hx = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
+  const mixc = (a,b,t) => a.map((v,i)=>v*t+b[i]*(1-t));
+  const lum = c => { const f = u => { u/=255; return u<=0.03928 ? u/12.92 : Math.pow((u+0.055)/1.055,2.4); };
+    const [r,g,b] = c.map(f); return 0.2126*r+0.7152*g+0.0722*b; };
+  const cr = (a,b) => { let la=lum(a), lb=lum(b); if (la<lb) [la,lb]=[lb,la]; return (la+0.05)/(lb+0.05); };
+  const need = ['paper','ivory-bright','ink','on-night','night-2','night-3','saffron'];
+  if (!need.every(k => vals[k])){ fail(T + 'identity vars present', 'missing: ' + need.filter(k=>!vals[k]).join(',')); return; }
+  const om = s.match(/\.cur-shell\{[^}]*opacity:\s*([0-9.]+)/);
+  check(!!om, T + 'cur-shell dim value found');
+  if (!om) return;
+  const O = parseFloat(om[1]);
+  const P = hx(vals['paper']), IVB = hx(vals['ivory-bright']);
+  const pairsList = [
+    ['on-night/paper', mixc(hx(vals['on-night']),P,O), P],
+    ['night-3/paper',  mixc(hx(vals['night-3']),P,O),  P],
+    ['night-2/paper',  mixc(hx(vals['night-2']),P,O),  P],
+    ['saffron/paper',  mixc(hx(vals['saffron']),P,O),  P],
+    ['ink/card',       mixc(hx(vals['ink']),P,O),      mixc(IVB,P,O)]
+  ];
+  const low = pairsList.filter(([n,f,b]) => cr(f,b) < 4.5).map(([n,f,b]) => n + '=' + cr(f,b).toFixed(2));
+  check(low.length === 0, T + 'dimmed shell pairs \u2265 4.5 (opacity ' + O + ')', 'below: ' + low.join(' | '));
+  // المحدد الجامح: تجاوزات curhead يجب ألا تبلغ صفوف الأماكن
+  check(!/\.curhead\s*>\s*div\s+\.(pn|ps)/.test(s), T + 'no greedy curhead override reaching rows');
+  check(s.includes('.curhead > div:not(.row) .pn') && s.includes('.curhead > div:not(.row) .ps'), T + 'tightened curhead selectors present');
+  // الأزواج المضمّنة: ترقية من رصدٍ لفحص — نفس قاعدة تباين §10
+  const NIGHT_S = new Set(NIGHT_SURF), IVORY_S = new Set(IVORY_SURF), INK_F = new Set(INK_FAMILY), NIGHT_F = new Set(NIGHT_FAMILY);
+  const bad = [];
+  for (const m of s.matchAll(/style="([^"]*)"/g)){
+    const st = m[1];
+    const bg = st.match(/background(?:-color)?:\s*var\(--([a-z0-9-]+)\)/);
+    const fg = st.match(/(?:^|[^a-z-])color:\s*var\(--([a-z0-9-]+)\)/);
+    if (!bg || !fg) continue;
+    const b = bg[1], f = fg[1];
+    if ((b === 'saffron' && f !== 'ink') || (NIGHT_S.has(b) && INK_F.has(f)) || (IVORY_S.has(b) && NIGHT_F.has(f) && f !== 'saffron' && f !== 'danger')) bad.push(b + '+' + f);
+  }
+  check(bad.length === 0, T + 'inline background+colour pairs conform', 'violations: ' + bad.slice(0,6).join(' | '));
+}
+
+// ═══ دفعة الحارس (ر٥٦ · ٣ سبتمبر مساءً) — ثلاث إبر جديدة، كلٌّ اختُبرت بطفرات عند زرعها ═══
+
+// §١١ — إبرة «فتحتَها ولم تُهاجرها»: دوال خارج النواتين (mpData · mpTrack) بنداء منصة مباشر.
+// القائمة الإرثية لقطة ر٥٦ مثبَّتة — تتناقص ولا تزيد (كسقف الألوان): اسم جديد أو زيادة عدٍّ = دالة فُتحت بلا هجرة.
+const KNOWN_DIRECT = [["addCity", 1], ["chooseNickname", 7], ["doSignUp", 6], ["initFirebase", 6], ["linkOwnerUid", 2], ["loadAllCityStatus", 3], ["loadCategoryTemplate", 1], ["loadCity", 2], ["loadCommunityLists", 1], ["loadCommunityUserTrips", 1], ["loadCustomCities", 1], ["loadCustomCountries", 1], ["loadOwnerUid", 1], ["loadSharedCityLists", 1], ["loadUserList", 3], ["loadUserTrips", 2], ["loadVisitCount", 1], ["openCommunityTrip", 2], ["openUsersModal", 3], ["registerUserRecord", 6], ["removeCity", 1], ["removeMyListCountry", 1], ["renderMpErrorsCard", 1], ["renderMpEventsCard", 2], ["saveCategoryTemplate", 1], ["saveCity", 1], ["saveCityStatusSummary", 1], ["saveCustomCountries", 1], ["saveTrip", 1], ["saveUserListGeneral", 1], ["shareTripWithSomeone", 1], ["syncCommunityProfileFor", 3], ["trackVisit", 2], ["viewCommunityUser", 3]];
+function migrationGuard(label, s){
+  const T = '§11 ' + label + ': ';
+  const script = (s.match(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/) || [,''])[1];
+  const code = stripComments(script);
+  function span(needle){ const i = code.indexOf(needle); if (i < 0) return null; const j = code.indexOf('})();', i); return [i, j < 0 ? code.length : j + 5]; }
+  const allowedSpans = [span('const mpData = (function(){'), span('const mpTrack = (function(){')].filter(Boolean);
+  const inAllowed = pos => allowedSpans.some(([a,b]) => pos >= a && pos < b);
+  const fns = [];
+  for (const m of code.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) fns.push([m.index, m[1]]);
+  const owner = pos => { let n = '(top-level)'; for (const [i, name] of fns){ if (i <= pos) n = name; else break; } return n; };
+  const counts = {};
+  for (const m of code.matchAll(/(?<![\w$.'"])(?:db|auth|firebase)\s*\./g)){
+    if (inAllowed(m.index)) continue;
+    const n = owner(m.index); counts[n] = (counts[n] || 0) + 1;
+  }
+  const baseline = Object.fromEntries(KNOWN_DIRECT);
+  const newcomers = Object.keys(counts).filter(n => !(n in baseline));
+  const grown = Object.keys(counts).filter(n => (n in baseline) && counts[n] > baseline[n]);
+  check(newcomers.length === 0, T + 'no NEW function with direct platform calls', 'opened without migration: ' + newcomers.join(' | '));
+  check(grown.length === 0, T + 'no legacy function grew its direct calls', grown.map(n => n + ' ' + baseline[n] + '\u2192' + counts[n]).join(' | '));
+  const shrunk = KNOWN_DIRECT.filter(([n,c]) => (counts[n] || 0) < c);
+  if (shrunk.length) console.log('INFO  ' + T + 'legacy shrank (تُحدَّث اللقطة): ' + shrunk.map(([n]) => n).join(', '));
+}
+
+// §١٢ + §١٣ — فحصا ملف المرجع: توازن حاويات كل مشهد (ق٠٢-٠٢ — درس حاوية ٦/د٢) وسقف وسم mk ≤ ٤٥ (ق٠٣-٠٦).
+// المرجع يُلتقط بنمط الاسم (يصمد أمام ترقيات النسخ) من الجذر أو docs/ — وبغيابه تحذير صريح لا فشل زائف.
+const MK_LEGACY = [
+  "Day plan: زر معطَّل بالخطوة الخامسة · يُفعَّل بالخطوة السادسة",
+  "v1.38 — قسم مستقل؛ الاسم نفسه للوحة المنتقي بالخطوة الرابعة",
+  "مبنية بالنص المعتمد — باب مغلق حتى دفعة نشر السياسة",
+  "إدارة المستخدمين ونافذة الحالة: كما هما داخلها"
+]; // إرث ما قبل ق٠٣-٠٦ («أي وسم جديد») — يتناقص بإعادة الصياغة للنوت ولا يزيد
+function referenceGuard(){
+  const T = '§12/13 reference: ';
+  let refPath = null;
+  for (const dir of [ROOT, path.join(ROOT, 'docs')]){
+    if (!fs.existsSync(dir)) continue;
+    const c = fs.readdirSync(dir).filter(f => /^Mypickz-STEPS-marked-v.*\.html$/.test(f)).sort();
+    if (c.length){ refPath = path.join(dir, c[c.length - 1]); break; }
+  }
+  if (!refPath){ console.log('WARN  ' + T + 'reference file not in repo \u2014 container-balance and mk-cap checks skipped'); return; }
+  const r = fs.readFileSync(refPath, 'utf8');
+  pass(T + 'found ' + path.basename(refPath));
+  const scenes = [...r.matchAll(/<section class="scene"[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g)];
+  check(scenes.length >= 20, T + 'scenes detected (' + scenes.length + ')');
+  const unbalanced = scenes.filter(([, id, body]) => (body.match(/<div\b/g) || []).length !== (body.match(/<\/div>/g) || []).length).map(([, id]) => id);
+  check(unbalanced.length === 0, T + 'every scene div-balanced', 'unbalanced: ' + unbalanced.join(' | '));
+  check((r.match(/<section class="scene"/g) || []).length === (r.match(/<\/section>/g) || []).length, T + 'sections open = close');
+  const tags = [...r.matchAll(/<span class="mk[^"]*"[^>]*>([\s\S]*?)<\/span>/g)]
+    .map(m => m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
+  const over = tags.filter(t => t.length > 45 && !MK_LEGACY.includes(t));
+  check(over.length === 0, T + 'mk tags \u2264 45 chars (legacy list excepted)', 'over: ' + over.map(t => t.slice(0, 30) + '\u2026(' + t.length + ')').join(' | '));
+  const gone = MK_LEGACY.filter(t => !tags.includes(t));
+  if (gone.length) console.log('INFO  ' + T + 'legacy mk reworded (\u062a\u064f\u0634\u0637\u0628 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629): ' + gone.length);
+}
 function idGuard(label, s){
   const code = stripComments(s);
   const structure = styleBlock(s, 'structure'), identity = styleBlock(s, 'identity');
@@ -428,8 +532,12 @@ function idGuard(label, s){
   console.log('INFO  ' + T + 'colour literals outside identity = ' + lit + ' · colour variables in inline styles/templates = ' + (colours - lit));
 }
 idGuard(TEST, test);
+curatorContrastGuard(TEST, test);
+migrationGuard(TEST, test);
+referenceGuard();
 if (styleBlock(prod, 'identity')) {
   idGuard(PROD, prod);
+  curatorContrastGuard(PROD, prod);
 } else {
   console.log('INFO  prod not yet promoted to the identity batch (no <style id="identity">) — §10 applied to test only');
 }
