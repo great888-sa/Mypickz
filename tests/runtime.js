@@ -16,11 +16,18 @@ catch (e) { console.log('FAIL  puppeteer-core not installed  →  npm i --no-sav
 
 const ROOT = path.resolve(__dirname, '..');
 const FILES = ['index.html', 'index-debug-test.html'];
-const KEY_FUNCTIONS = [
+// ر٥٨ (٣ سبتمبر ٢٠٢٦): القائمة انفصلت مشتركًا وخاصًّا بكل ملف — الإنتاج قبل نموذج الأفعال (القرار ٠٩)
+// ونسخة الاختبار بعده: loadFavorites تقاعدت بها وحلّت مداخل المفكرة والحفظ والمركّب الموقَّع.
+// عند ترقية الإنتاج لنموذج الأفعال: تُنقل قائمة الاختبار لتصير المشتركة ويُحذف سطر الإنتاج.
+const KEY_COMMON = [
   'initFirebase', 'render', 'loadCity', 'openAuthModal', 'closeAuthModal', 'doSignIn', 'doSignUp',
-  'enforceNickname', 'syncOwnerMode', 'updateUserUI', 'loadUserList', 'loadUserTrips', 'loadFavorites',
+  'enforceNickname', 'syncOwnerMode', 'updateUserUI', 'loadUserList', 'loadUserTrips',
   'saveTrip', 'toggleSuspendUser', 'openUsersModal', 'closeTripPickerModal', 'withAuthRetry', 'trackVisit'
 ];
+const KEY_PER_FILE = {
+  'index.html': ['loadFavorites'],
+  'index-debug-test.html': ['togglePlaceBookmark', 'toggleListBookmark', 'toggleTripSave', 'mpSendText']
+};
 
 function findChrome(){
   const cands = [
@@ -71,7 +78,7 @@ const fail = (n, w) => { fails++; console.log('FAIL  ' + n + (w ? '  →  ' + w 
           missing: [...new Set(missing)],
           missingKeys
         };
-      }, KEY_FUNCTIONS);
+      }, KEY_COMMON.concat(KEY_PER_FILE[f] || []));
 
       state.bannerShown && /Firebase load\/init failed/.test(state.bannerText || '')
         ? pass('graceful init fallback ' + f)
