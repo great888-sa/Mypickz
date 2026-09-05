@@ -126,7 +126,7 @@ const MP_EXPECTED = [
   ["mpTrack.hit('community_open'", 1],
   ["mpTrack.hit('share_link')", { prod: 4, test: 6 }], // ر٥٢: + المركّب الموقَّع الموحَّد mpSendText (تصدير المكان والقائمة والرحلة نصًّا)
   ["mpTrack.hit('favorite_add')", { prod: 1, test: 0 }], // ر٥٢: تقاعد
-  ["mpTrack.hit('bookmark_add')", { prod: 0, test: 3 }] // ر٦١: + مفكرة رحلتك الذاتية, // ر٥٢: مفكرة المكان ومفكرة القائمة
+  ["mpTrack.hit('bookmark_add')", { prod: 0, test: 3 }], // ر٥٢: مفكرة المكان والقائمة · ر٦١: + مفكرة رحلتك الذاتية
   ["mpTrack.hit('signup_start')", 1],
   ["mpTrack.hit('signup_done')", 1],
   ["mpTrack.hit('reserved_1')", 2],
