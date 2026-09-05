@@ -561,8 +561,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <div class="stickyhead"><div class="pl-srcrow" id="plSrcRow">
     <button type="button" class="pl-src on" data-src="mine" onclick="selectPlacesSource('mine')">My places</button>
     <button type="button" class="pl-src" data-src="bookmarked" onclick="selectPlacesSource('bookmarked')">🔖 Bookmarked places</button>
-    <button type="button" class="pl-src" data-src="curators" onclick="selectPlacesSource('curators')">From curators</button>
-    <button type="button" class="pl-src" data-src="community" onclick="selectPlacesSource('community')">From community</button>
+    <button type="button" class="pl-src" data-src="curators" disabled title="Your copies from curators — fills with Save (stage 3)">Saved from Curators</button>
+    <button type="button" class="pl-src" data-src="community" disabled title="Your copies from community — fills with Save (stage 3)">Saved from Community</button>
   </div><div class="ctx" id="plCtx"><b>My places</b></div></div>
   <div id="plBody"></div>
   </div><!-- /غلاف الأماكن -->
@@ -603,6 +603,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <textarea id="plNote" class="modal-input" rows="2" placeholder="e.g. best pancakes before 11"></textarea>
     <div style="display:flex; gap:6px; margin-top:10px;">
       <button type="button" class="btn btn-brass" style="flex:1;" onclick="savePlPlace()">Save</button>
+      <button type="button" class="btn btn-ghost" id="plDeleteBtn" style="display:none; color:var(--night-danger); border-color:var(--night-danger);" onclick="plModalDelete()">🗑 Delete</button>
       <button type="button" class="btn btn-ghost" onclick="closePlPlaceModal()">Cancel</button>
       <button type="button" class="btn btn-ghost" id="plDeleteBtn" style="display:none; color:var(--danger);" onclick="deletePlPlaceFromModal()">🗑 Delete</button>
     </div>
@@ -664,10 +665,12 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   </div><!-- /screenPlaces -->
 
   <!-- خ١: الوجهة ٢ — الرحلات: جسم نافذة "رحلاتي" يُنقل إلى هنا عند أول فتح (الاستضافة بنقل العنصر) -->
-  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="chiprow" id="tripSrcRow"><button type="button" class="pl-src on" data-tsrc="mine" onclick="selectTripsSource('mine')">My trips</button><button type="button" class="pl-src" data-tsrc="saved" onclick="selectTripsSource('saved')">🔖 Saved trips</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">From curators</button><button type="button" class="pl-src" onclick="showToast('Trip sources — Soon (step 6)')">From community</button></div><div class="chiprow" id="tripTypeRow"><button type="button" class="chip on" data-ttype="all" onclick="pickTripType('all')">All</button><button type="button" class="chip" data-ttype="day" onclick="pickTripType('day')">🚶 One day trip</button><button type="button" class="chip" data-ttype="city" onclick="pickTripType('city')">🏙 Single city</button><button type="button" class="chip" data-ttype="multi" onclick="pickTripType('multi')">🌍 Multi-city</button></div><div class="ctx" id="tripCtx"><b>My trips</b> · All</div></div><div id="tripsHost"></div></div></div>
+  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="chiprow" id="tripSrcRow"><button type="button" class="pl-src on" data-tsrc="mine" onclick="selectTripsSource('mine')">My trips</button><button type="button" class="pl-src" data-tsrc="saved" onclick="selectTripsSource('saved')">🔖 Bookmarked trips</button><button type="button" class="pl-src" disabled title="Fills with trip copy — stage 3 or 6">Saved from Curators</button><button type="button" class="pl-src" disabled title="Fills with trip copy — stage 3 or 6">Saved from Community</button></div><div class="chiprow" id="tripTypeRow"><button type="button" class="chip on" data-ttype="all" onclick="pickTripType('all')">All</button><button type="button" class="chip" data-ttype="day" onclick="pickTripType('day')">🚶 One day trip</button><button type="button" class="chip" data-ttype="city" onclick="pickTripType('city')">🏙 Single city</button><button type="button" class="chip" data-ttype="multi" onclick="pickTripType('multi')">🌍 Multi-city</button></div><div class="ctx" id="tripCtx"><b>My trips</b> · All</div></div><div id="tripsHost"></div></div></div>
   <!-- خ١: الوجهة ٣ — المنتقون: مكان محجوز حتى خ٤ -->
-  <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">⭐ <b>Curators</b></span><span class="actn label">🔍 Find a curator <span class="dim">Soon</span></span></div><div class="ctx"><b>Curators</b> · Step 4</div></div><div class="curgrid"><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty mini">Curators arrive in step 4 — the page below is the built shell.</div>
-     <!-- v1.38 · ٦/هـ٢ — صفحة المنتقي بنيةً كاملة: عرض بلا وظيفة (cur-shell) وبيانات مثال؛ تتفعّل بالخطوة الرابعة -->
+  <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">⭐ <b>Curators</b></span><span class="actn label">🔍 Find a curator <span class="dim">Soon</span></span></div><div class="ctx"><b>Curators</b> · Step 4</div></div><div id="curGrid"><div class="curgrid"><span class="curcell" onclick="curOpenPage()"><span class="avatar">No</span><span class="curname">Nourah ✔ <span class="dim">preview</span></span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty mini">Curators arrive in step 4 — tap the preview to open the curator page (v1.41: two separate pages).</div></div>
+     <!-- ر٦١ (v1.41): الصفحتان منفصلتان — الشبكة أولى، والقشرة صفحة المنتقي تُفتح بالضغط -->
+     <div id="curPage" style="display:none;">
+     <div class="headrow" style="margin:2px 0 8px;"><span class="actn" onclick="curBackToGrid()">← Curators</span><span class="chiprow" style="margin:0;"><button type="button" class="chip on">Places</button><button type="button" class="chip" disabled title="Curator trips — with the shared market template (step 4)">Trips</button></span></div>
      <div class="cur-shell curhead">
        <div class="headrow" style="margin-bottom:6px;"><span class="actn">← Curators</span><span class="chip">Following ✓ <span class="dim">Step 4</span></span></div>
        <div style="display:flex; align-items:center; gap:10px; margin:2px 0 4px;"><span class="mini-av" style="width:34px; height:34px; line-height:34px; font-size:14px; background:var(--av-2);">No</span><div><div class="pn" style="font-size:15px;">Nourah ✔</div><div class="ps" dir="auto">أماكن الرياض التي أعود إليها</div></div></div>
@@ -679,7 +682,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
        <div class="pl-cathead"><span>☕ Cafes (2)</span></div>
        <div class="row"><div><div class="pn">Brew92</div><div class="ps">Al Nakheel</div></div><div class="acts"><span class="act">Maps ↗</span><span class="act">Save</span><span class="act">➕</span></div></div>
        <div class="row"><div><div class="pn">Camel Step</div><div class="ps">Al Olaya</div></div><div class="acts"><span class="act">Maps ↗</span><span class="act">Save</span><span class="act">➕</span></div></div>
-     </div></div></div>
+     </div>
+</div></div></div>
   <!-- خ١: الوجهة ٤ — المجتمع: جسم نافذة المجتمع يُنقل إلى هنا -->
   <div class="mp-screen" id="screenCommunity"><div class="wrap destbody"><div id="communityHost"></div></div></div>
   <!-- خ١: الوجهة ٥ — العناوين الشخصية: تُبنى كاملة بخ٢ -->
@@ -828,6 +832,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <input id="addrPhone" class="modal-input" placeholder="e.g. +966 5x xxx xxxx" inputmode="tel" autocomplete="off" >
       <div id="addrError" style="color:var(--danger); font-size:12px; min-height:16px; margin-top:6px;"></div>
       <button class="btn btn-brass" style="margin-top:8px;"  onclick="saveAddr()">Save</button>
+      <button class="btn btn-ghost" id="addrDeleteBtn" style="margin-top:8px; display:none; color:var(--night-danger); border-color:var(--night-danger);" onclick="addrModalDelete()">🗑 Delete</button>
       <button class="btn btn-ghost" style="margin-top:6px;"  onclick="closeModalById('addrBackdrop')">Cancel</button>
     </div>
   </div>
@@ -855,7 +860,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
         <div class="receipt"><ul>
           <li><span>📝 My List places</span><b id="delCntPlaces">—</b></li>
           <li><span>🧳 Trips</span><b id="delCntTrips">—</b></li>
-          <li><span>🔖 Bookmarks &amp; saved trips</span><b id="delCntFav">—</b></li>
+          <li><span>🔖 Bookmarks (places · lists · trips)</span><b id="delCntFav">—</b></li>
           <li><span>🌍 Community profile</span><b>1</b></li>
           <li><span>🏷 Nickname</span><b>freed</b></li>
         </ul></div>
@@ -1702,6 +1707,12 @@ const mpData = (function(){
         b.set(col('userLists').doc(uid), mirror, { merge: true });
         return b.commit().catch(function(e){ return swallowFloor(e, on ? 1 : -1); });
       },
+      // ر٦١ (التسوية): مفكرة رحلتك الذاتية — خريطة بمستندك، بلا عدّاد وبلا سجل (نمط مفكرة المكان)
+      setSelf: function(uid, tripId, on){
+        const patch = { tripSelfBookmarks: {} };
+        patch.tripSelfBookmarks[tripId] = on ? true : firebase.firestore.FieldValue.delete();
+        return col('userLists').doc(uid).set(patch, { merge: true });
+      },
       removeRecord: function(uid, tripId){
         const b = db.batch();
         b.delete(col('tripSaves').doc(uid + '__' + tripId));
@@ -1805,6 +1816,11 @@ const mpData = (function(){
       remove: function(key){ return col('nicknames').doc(key).delete(); } // ر٥٩ (نشرة التنظيف: حذف ذاتي بحقل الهوية)
     },
     cityLists: {
+      // ر٦١ (السوق): القوائم العامة — شرط العلنية قابل الإثبات بقاعدة القراءة نصًّا
+      publicLists: async function(){
+        const snap = await col('userCityLists').where('public', '==', true).limit(100).get();
+        const rows = []; snap.forEach(function(d){ rows.push({ id: d.id, ...d.data() }); }); return rows;
+      },
       get: async function(uid, cityId){
         const d = await col('userCityLists').doc(uid + '_' + cityId).get();
         return d.exists ? d.data() : null;
@@ -1830,8 +1846,12 @@ const mpData = (function(){
       }
     },
     trips: {
-      // ر٥٦: استفتاء الأصل الحي للرحلة المحفوظة (متصفح Saved trips)
+      // ر٥٦: استفتاء الأصل الحي للرحلة المحفوظة (متصفح Bookmarked trips)
       getDoc: function(tripId){ return col('trips').doc(tripId).get(); },
+      publicTrips: async function(){
+        const snap = await col('trips').where('public', '==', true).limit(100).get();
+        const rows = []; snap.forEach(function(d){ rows.push({ id: d.id, ...d.data() }); }); return rows;
+      },
       remove: function(tripId){ return col('trips').doc(tripId).delete(); },
       byOwner: function(uid){ return col('trips').where('ownerId', '==', uid).get(); }
     },
@@ -2456,6 +2476,61 @@ async function toggleListBookmark(ownerUid, cityId){
   if (!on) showUndoToast('Removed from your bookmarks', function(){ toggleListBookmark(ownerUid, cityId); });
 }
 // حفظ الرحلة — على رحلات الآخرين بعدّاده؛ المحفوظة مؤشر لأصل حي (التملك بالنسخ — المحطة ٤)
+function isSelfTripBookmarked(id){ return !!(userListData && userListData.tripSelfBookmarks && userListData.tripSelfBookmarks[id]); }
+function plModalDelete(){ if (!plEdit) return; const c = plEdit.catId, i = plEdit.index; closePlPlaceModal(); plDeleteRow(c, i); }
+function addrModalDelete(){ if (!addrEditRef) return; const r = addrEditRef; closeAddrModal(); deleteAddr(r.cityId, r.catId, r.index); }
+async function toggleTripSelfBookmark(tripId){
+  if (!currentUser){ openAuthModal(); return; }
+  if (currentUserSuspended){ showToast("Your account is suspended — you can't save changes"); return; }
+  const map = (userListData.tripSelfBookmarks = userListData.tripSelfBookmarks || {});
+  const was = !!map[tripId];
+  if (was) delete map[tripId]; else map[tripId] = true;
+  renderTripsBody();
+  try{ await mpData.tripSaves.setSelf(currentUser.uid, tripId, !was); mpTrack.hit('bookmark_add'); }
+  catch(e){ if (was) map[tripId] = true; else delete map[tripId]; renderTripsBody(); showToast('Could not update bookmark'); return; }
+  if (was) showUndoToast('Removed from your bookmarks', function(){ toggleTripSelfBookmark(tripId); });
+}
+function exportOwnTripRow(id){ currentTripId = id; viewingSharedTrip = false; openTripDetail(id).then(function(){ exportTripText(); }).catch(function(){ exportTripText(); }); }
+// ر٦١ · التصدير على العام: نسبة المصدر باسم صاحبه ثم توقيع التطبيق — المركّب الموقَّع نفسه
+async function exportOtherList(ownerUid, cityId){
+  try{
+    const d = await mpData.cityLists.get(ownerUid, cityId);
+    if (!d){ showToast('List is no longer available'); return; }
+    let out = '📍 ' + (d.cityName || cityId) + ' — a MyPickz list by ' + (d.nickname || 'a MyPickz user') + '\n';
+    Object.keys(d.categories || {}).forEach(function(catId){
+      const entry = d.categories[catId];
+      const all = ((entry && entry.places) || []).filter(function(q){ return q && (q.name || q.url); });
+      if (!all.length) return;
+      out += '\n' + catId + '\n';
+      all.forEach(function(q){
+        out += '• ' + (q.name || 'Place') + (q.area ? ' — ' + q.area : '') + '\n';
+        if (q.url) out += '  ' + q.url + '\n';
+      });
+    });
+    mpSendText(out + '\nSent via MyPickz · mypickz.app');
+  }catch(e){ showToast('Could not build the message'); }
+}
+async function exportOtherTrip(tripId){
+  try{
+    const doc = await mpData.trips.getDoc(tripId);
+    if (!doc.exists){ showToast('Trip is no longer available'); return; }
+    const t = { id: tripId, ...doc.data() };
+    const days = await resolveTripPlaces(t);
+    let out = '🧳 ' + (t.customLabel ? (t.cityName + ' — ' + t.customLabel) : (t.cityName || 'Trip')) + ' — a MyPickz trip\n';
+    (days || []).forEach(function(day){
+      out += '\nDay ' + day.dayNumber + '\n';
+      Object.keys(day.places || {}).forEach(function(cat){
+        (day.places[cat] || []).forEach(function(pl){
+          out += '• ' + ((pl && pl._available) ? (pl.name || 'Place') : 'Place no longer available') + '\n';
+          if (pl && pl._available && pl.url) out += '  ' + pl.url + '\n';
+        });
+      });
+    });
+    mpSendText(out + '\nSent via MyPickz · mypickz.app');
+  }catch(e){ showToast('Could not build the message'); }
+}
+function curOpenPage(){ const g = document.getElementById('curGrid'); const p = document.getElementById('curPage'); if (g) g.style.display = 'none'; if (p) p.style.display = ''; }
+function curBackToGrid(){ const g = document.getElementById('curGrid'); const p = document.getElementById('curPage'); if (p) p.style.display = 'none'; if (g) g.style.display = ''; }
 async function toggleTripSave(tripId){
   if (!currentUser){ openAuthModal(); return; }
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
@@ -2473,9 +2548,9 @@ async function toggleTripSave(tripId){
     if (on) delete tripSavesMap[tripId]; else tripSavesMap[tripId] = { tripId: tripId };
     if (typeof viewingUserUid !== 'undefined' && viewingUserUid) renderCommunityModal();
     if (currentTab === 'Trips') renderTripsBody();
-    showToast('Could not update saved trips'); return;
+    showToast('Could not update bookmark'); return;
   }
-  if (!on) showUndoToast('Removed from your saved trips', function(){ toggleTripSave(tripId); });
+  if (!on) showUndoToast('Removed from your bookmarked trips', function(){ toggleTripSave(tripId); });
 }
 
 /* =========================================================
@@ -2787,14 +2862,14 @@ function pickTripType(id){
   renderTripsBody();
 }
 function tripTitle(t){ return t.customLabel ? (t.cityName + ' — ' + t.customLabel) : t.cityName; }
-/* v1.40 · شريحة «Saved trips» (القرار ٠٩): المتصفح يقرأ سجلاتك ثم يستفتي الأصل الحي —
+/* v1.40 · شريحة «Bookmarked trips» (القرار ٠٩): المتصفح يقرأ سجلاتك ثم يستفتي الأصل الحي —
    المتدهور («لم تعد متاحة») وحده يحمل ✕ · «Saved ✓» يُفَك بضغطه + «تراجع» */
 let tripsSource = 'mine';
 function selectTripsSource(src){
   tripsSource = src;
   document.querySelectorAll('#tripSrcRow .pl-src').forEach(b => b.classList.toggle('on', b.getAttribute('data-tsrc') === src));
   const ctx = document.getElementById('tripCtx');
-  if (ctx) ctx.innerHTML = (src === 'saved') ? '<b>Saved trips</b> · All' : '<b>My trips</b> · All';
+  if (ctx) ctx.innerHTML = (src === 'saved') ? '<b>Bookmarked trips</b> · All' : '<b>My trips</b> · All';
   const typeRow = document.getElementById('tripTypeRow');
   if (typeRow) typeRow.style.display = (src === 'saved') ? 'none' : '';
   renderTripsBody();
@@ -2805,7 +2880,10 @@ function renderTripsBody(){
 }
 async function renderSavedTrips(){
   const wrap = document.getElementById('myTripsBody'); if (!wrap) return;
-  if (!currentUser){ wrap.innerHTML = '<div class="mp-empty">Sign in to see your saved trips.</div>'; return; }
+  return renderBookmarkedTripsInto(wrap);
+}
+async function renderBookmarkedTripsInto(wrap){ // ر٦١: القالب المشترك — وجهة الرحلات وشريحة السوق
+  if (!currentUser){ wrap.innerHTML = '<div class="mp-empty">Sign in to see your bookmarked trips.</div>'; return; }
   wrap.innerHTML = '<div class="mp-empty mini">Loading…</div>';
   await ensureTripSaves();
   const recs = Object.keys(tripSavesMap || {}).map(k => tripSavesMap[k]);
@@ -2832,12 +2910,11 @@ async function renderSavedTrips(){
       const dc = (t.days && t.days.length) || 0;
       html += '<div class="row rowblock"><div class="pn" dir="auto">' + escapeHtml(title) + '</div>'
         + '<div class="ps">' + (tripTypeLine(t) ? tripTypeLine(t) + ' · ' : '') + pc + ' ' + (pc === 1 ? 'place' : 'places') + ' · ' + dc + ' ' + (dc === 1 ? 'day' : 'days') + '</div>'
-        + '<div class="stattext">saved by ' + (t.saveCount || 0) + '</div>'
-        + '<div class="rowacts"><span class="act on" onclick="toggleTripSave(\'' + r.tripId + '\')" title="Saved — tap to remove">Saved ✓</span>'
+        + '<div class="rowacts"><button type="button" class="bmk-btn on" onclick="toggleTripSave(\'' + r.tripId + '\')" title="Bookmarked — tap to remove">' + bmkSvg(true) + '<span class="bmk-cnt">' + (t.saveCount || 0) + '</span></button>'
         + '<span class="act" onclick="openSavedTripInCommunity(\'' + ((t.ownerId || '')) + '\', \'' + r.tripId + '\')">Open →</span></div></div>';
     } else {
       // الصف المتدهور — وحده يحمل ✕ (جولة ٢)
-      html += '<div class="row rowblock" style="opacity:.55;"><div class="pn" dir="auto">Saved trip</div>'
+      html += '<div class="row rowblock" style="opacity:.55;"><div class="pn" dir="auto">Bookmarked trip</div>'
         + '<div class="ps">No longer available — hidden by its owner, or the account was suspended</div>'
         + '<div class="rowacts"><span class="act" onclick="removeDegradedTripSave(\'' + r.tripId + '\')">✕ Remove</span></div></div>';
     }
@@ -2883,6 +2960,8 @@ function renderMyTripsModal(){
       '<div class="row rowblock"><div class="pn">' + escapeHtml(tripTitle(t)) + '</div>'
       + '<div class="ps" dir="auto">' + (tripTypeLine(t) ? tripTypeLine(t) + ' · ' : '') + tripPlaceCount(t) + ' places · ' + t.days.length + ' day' + (t.days.length > 1 ? 's' : '') + (t.public ? ' · 🌐 Public' : '') + ((t.sharedWith && t.sharedWith.length) ? ' · 🔗 Shared' : '') + '</div>'
       + '<div class="rowacts"><span class="act" onclick="openTripDetail(\'' + t.id + '\')">View trip →</span>'
+      + '<button type="button" class="bmk-btn' + (isSelfTripBookmarked(t.id) ? ' on' : '') + '" onclick="toggleTripSelfBookmark(\'' + t.id + '\')" title="' + (isSelfTripBookmarked(t.id) ? 'Bookmarked — tap to remove' : 'Bookmark') + '">' + bmkSvg(isSelfTripBookmarked(t.id)) + '</button>'
+      + '<span class="act" onclick="exportOwnTripRow(\'' + t.id + '\')" title="Send this trip">📤</span>'
       + '<span class="act" onclick="startAddingToTrip(\'' + t.id + '\')">＋ Add places</span>'
       + '<span class="act" onclick="showToast(\'Edit trip — Soon (step 6)\')">✏️</span></div></div>').join('');
   }
@@ -3506,7 +3585,7 @@ function renderAddresses(){
           + (p.phone ? '<a href="tel:' + String(p.phone).replace(/[^+\d]/g,'') + '" title="Call">📞</a>' : '')
           + '<button type="button" onclick="sendAddr(\'' + cityId + '\',\'' + cat.id + '\',' + i + ')" title="Send via MyPickz">📤</button>'
           + '<button type="button" onclick="openAddrModal(\'' + cityId + '\',\'' + cat.id + '\',' + i + ')" title="Edit">✏️</button>'
-          + '<button type="button" onclick="deleteAddr(\'' + cityId + '\',\'' + cat.id + '\',' + i + ')" title="Delete">🗑</button>'
+
           + '</span></div>';
       });
     });
@@ -3586,6 +3665,7 @@ function openAddrModal(cityId, catId, index){
   const existing = addrEditRef ? ((addrData[cityId][catId].places || [])[index] || {}) : {};
   addrModalCat = catId || (cats[0] && cats[0].id);
   document.getElementById('addrModalTitle').textContent = addrEditRef ? '✏️ Edit address' : '🔒 Add address';
+  const adb = document.getElementById('addrDeleteBtn'); if (adb) adb.style.display = addrEditRef ? '' : 'none'; // ر٦١
   addrFillCountries(cityId || addrCurrentCity);
   document.getElementById('addrModalCats').innerHTML = cats.map(c => `<button type="button" class="addr-chip ${c.id === addrModalCat ? 'on' : ''}" onclick="addrModalCat='${c.id}'; this.parentNode.querySelectorAll('.addr-chip').forEach(b=>b.classList.remove('on')); this.classList.add('on');">${c.icon} ${c.name}</button>`).join('');
   document.getElementById('addrName').value = existing.name || '';
@@ -4244,7 +4324,7 @@ function renderPlacesMine(){
         + ((activeTripId && pl.id) ? '<button type="button" class="trip-on" onclick="addPlaceToTrip(\'mylist\', \'' + myListCityId + '\', \'' + cat.id + '\', \'' + pl.id + '\', null, \'' + attrStr(pl.name) + '\')" title="Add to active trip">🧳</button>' : '<button type="button" class="trip-soon" onclick="showToast(\'Trips — the new engine arrives in step 6\')" title="Add to trip — Soon">🧳<span class="mini">Soon</span></button>')
         + '<button type="button" onclick="plSendPlace(\'' + cat.id + '\', ' + i + ')" title="Send this place">📤</button>'
         + '<button type="button" onclick="openPlPlaceModal(\'' + cat.id + '\', ' + i + ')" title="Edit">✏️</button>'
-        + '<button type="button" onclick="plDeleteRow(\'' + cat.id + '\', ' + i + ')" title="Delete">🗑</button>'
+
         + '</span></div>';
     });
   });
@@ -4306,6 +4386,7 @@ function openPlPlaceModal(catId, index){
 }
 function plFillModal(pasteMode){
   document.getElementById('plPlaceTitle').textContent = plEdit ? '✏️ Edit place' : '➕ Add a place';
+  const delBtn = document.getElementById('plDeleteBtn'); if (delBtn) delBtn.style.display = plEdit ? '' : 'none'; // ر٦١: الحذف داخل التحرير
   plSetMethod(pasteMode !== false);
   document.getElementById('plShareText').value = '';
   document.getElementById('plModalCity').textContent = '🏙 ' + plCityName() + ' — change the city from the chips above';
@@ -5213,7 +5294,9 @@ function renderMyListModal(){
    تصفح قوائم المستخدمين الآخرين (Community Lists)
    ========================================================= */
 let communityUsers = [];
-let communityTab = 'city';   // 'city' | 'all'
+let communityTab = 'places';            // ر٦١ (السوق): places | trips
+let communityMarkedOnly = false;
+let communityCityFilter = '';   // 'city' | 'all'
 // ر٥٣ (بيان الفرز · ق٠٢-٠٦ والمشهد ٦/د): الفرز الحي الوحيد اليوم المشاهدة؛ «Most saved» (مجموع الحفظات المنسوبة) يُفعَّل بمصدره الحي بالمرحلة ٣
 let viewingUserUid = null;
 let viewingUserData = null;
@@ -5241,7 +5324,7 @@ async function openCommunityModal(){
   document.getElementById('communityBody').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   showBackdropUnlessHosted('communityBackdrop', 'Community'); // خ١
   await loadCommunityLists();
-  communityTab = 'city';
+  communityTab = 'places'; communityMarkedOnly = false; communityCityFilter = '';
   viewingUserUid = null;
   renderCommunityModal();
 }
@@ -5259,38 +5342,85 @@ function switchCommunityTab(tab){
 function renderCommunityModal(){
   const wrap = document.getElementById('communityBody');
   if (viewingUserUid){ renderCommunityUserList(wrap); return; }
-  let usersToShow = communityUsers;
-  const myCity = myListCityId || currentCityId;                 // شريحة المدينة تتبع ما تتصفّحه فعلًا
-  let cityName = (allCities().find(c => c.id === myCity) || {}).name || ''; // صيد المحاكاة (ر٦٠+): كانت const والرقعة الشرطية أدناه تسند إليها — انفجار كامل للعارض حين تكون المدينة خارج القاموس
-  if (!cityName) cityName = (typeof plCityName === 'function' && plCityName()) || cityNameOf(myCity) || '';
-  if (communityTab === 'places'){ renderCommunityPlaces(wrap, cityName); return; }
-  if (communityTab === 'bookmarked'){ renderBookmarkedLists(wrap, cityName); return; }
+  // ر٦١ · التسوية: المجتمع سوق الاستعراض بشريحتيه (المرجع v1.41 — ٦/د المعاد رسمه)
+  const tabT = communityTab === 'trips';
+  const cityOpts = allCities().map(function(c){ return '<option value="' + c.id + '"' + (communityCityFilter === c.id ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>'; }).join('');
   let html = '<div class="stickyhead"><div class="headrow"><span class="csel label">🌍 <b>Community</b></span>'
-    + '<span class="actn label">Search <span class="dim">Soon</span></span>'
-    + '<span class="acts"><span class="actn label" title="People are sorted by views">Sort: <b>Most viewed</b></span>'
-    + '<button type="button" class="actn" disabled title="Most saved arrives with the Save action">Most saved <span class="dim">Stage 3</span></button></span>'
-    + '</div>'
-    + '<div class="chiprow"><button type="button" class="chip' + (communityTab === 'city' ? ' on' : '') + '" onclick="switchCommunityTab(\'city\')">' + escapeHtml(cityName || 'This city') + '</button>'
-    + '<button type="button" class="chip" onclick="switchCommunityTab(\'bookmarked\')">🔖 Bookmarked lists</button>'
-    + '<button type="button" class="chip' + (communityTab === 'all' ? ' on' : '') + '" onclick="switchCommunityTab(\'all\')">All users</button>'
-    + '<button type="button" class="chip" onclick="switchCommunityTab(\'places\')">Places · Most saved</button></div>'
-    + '<div class="ctx"><b>People</b> · ' + escapeHtml(communityTab === 'city' ? (cityName || 'This city') : 'All users') + '</div></div>';
-
-  // ر٥٣: الفرز بالمشاهدة (المقياس الحي — المشاهدة على الشخص بالمعجم) بالتبويبين معًا
-  usersToShow = [...(communityTab === 'city' ? communityUsers.filter(u => u.publicCityIds.includes(myCity)) : communityUsers)]
-    .sort((a, b) => b.viewCount - a.viewCount);
-
-  if (!usersToShow.length){
-    html += '<div class="mp-empty">🌍<br>No public lists yet' + (communityTab === 'city' && cityName ? ' for ' + escapeHtml(cityName) : '') + '.<br><span class="mini">Publish one of your city lists and it shows up here.</span></div>';
-  } else {
-    html += '<div class="pl-cathead"><span>Public lists (' + usersToShow.length + ')</span></div>';
-    html += usersToShow.map(u =>
-      '<div class="row"><div><div class="pn">' + escapeHtml(u.nickname) + '</div>'
-      + '<div class="ps" dir="auto">' + u.publicCityIds.length + ' city list' + (u.publicCityIds.length === 1 ? '' : 's') + '</div>'
-      + '<div class="stattext">' + u.viewCount + ' view' + (u.viewCount === 1 ? '' : 's') + '</div></div>'
-      + '<div class="acts"><span class="act" onclick="viewCommunityUser(\'' + u.uid + '\')">View →</span></div></div>').join('');
-  }
+    + '<span class="acts"><span class="actn label" title="' + (tabT ? 'Trips are sorted by bookmarks' : 'Lists are sorted by views') + '">Sort: <b>' + (tabT ? 'Most bookmarked' : 'Most viewed') + '</b></span></span></div>'
+    + '<div class="chiprow"><button type="button" class="chip' + (!tabT ? ' on' : '') + '" onclick="switchCommunityTab(\'places\')">Places</button>'
+    + '<button type="button" class="chip' + (tabT ? ' on' : '') + '" onclick="switchCommunityTab(\'trips\')">Trips</button>'
+    + '<button type="button" class="chip' + (communityMarkedOnly ? ' on' : '') + '" onclick="cmToggleMarked()" title="Your bookmarked ' + (tabT ? 'trips' : 'lists') + '">🔖 Bookmarked</button></div>'
+    + '<div class="headrow"><input id="cmSearch" class="csel" style="flex:1;" placeholder="🔍 Search by username" onkeydown="if(event.key===\'Enter\')cmSearchGo()">'
+    + '<button type="button" class="actn" onclick="cmSearchGo()">Go</button>'
+    + '<select id="cmCity" class="csel" onchange="cmCityChanged(this.value)"><option value="">All cities</option>' + cityOpts + '</select></div>'
+    + '<div class="ctx"><b>Community · ' + (tabT ? 'Trips' : 'Places') + (communityMarkedOnly ? ' · 🔖' : '') + '</b> · ' + (communityCityFilter ? escapeHtml((allCities().find(function(c){ return c.id === communityCityFilter; }) || {}).name || communityCityFilter) : 'All cities') + '</div></div>'
+    + '<div id="cmMarket"><div class="mp-empty mini">Loading…</div></div>';
   wrap.innerHTML = html;
+  cmLoadMarket();
+}
+function cmToggleMarked(){ communityMarkedOnly = !communityMarkedOnly; renderCommunityModal(); }
+function cmCityChanged(v){ communityCityFilter = v || ''; renderCommunityModal(); }
+async function cmSearchGo(){
+  const el = document.getElementById('cmSearch');
+  const q = ((el && el.value) || '').trim().toLowerCase();
+  if (!q) return;
+  try{
+    const d = await mpData.nicknames.get(q);
+    if (d.exists && d.data().uid){ viewCommunityUser(d.data().uid); return; }
+  }catch(e){}
+  showToast('No user with that exact username — partial search arrives in step 7');
+}
+async function cmLoadMarket(){
+  const host = document.getElementById('cmMarket'); if (!host) return;
+  const tabT = communityTab === 'trips';
+  try{
+    if (communityMarkedOnly){
+      if (tabT) await renderBookmarkedTripsInto(host);
+      else await renderBookmarkedLists(host, '');
+      return;
+    }
+    if (!tabT){
+      let rows = await mpData.cityLists.publicLists();
+      if (communityCityFilter) rows = rows.filter(function(r){ return r.cityId === communityCityFilter; });
+      rows.sort(function(a, b){ return (b.viewCount || 0) - (a.viewCount || 0); });
+      if (!rows.length){ host.innerHTML = '<div class="mp-empty">No public lists yet' + (communityCityFilter ? ' in this city' : '') + '.</div>'; return; }
+      host.innerHTML = rows.map(function(r){
+        const owner = r.ownerId || (r.id || '').split('_')[0];
+        const mine = currentUser && owner === currentUser.uid;
+        const cnt = r.bookmarkCount || 0;
+        const places = Object.values(r.categories || {}).reduce(function(a, e){ return a + ((e && e.places) || []).length; }, 0);
+        const bmOn = !!(listBookmarksMap && listBookmarksMap[owner + '_' + r.cityId]);
+        return '<div class="row"><div>'
+          + '<div class="pn" dir="auto">' + escapeHtml(r.cityName || r.cityId) + ' — <span class="linklike" onclick="viewCommunityUser(\'' + owner + '\')">' + escapeHtml(r.nickname || 'user') + '</span></div>'
+          + '<div class="ps">' + places + ' places</div><div class="stattext">' + (r.viewCount || 0) + ' views</div></div>'
+          + '<div class="acts">' + (mine
+            ? '<span class="actn label" title="Bookmarks on your list — the counter counts others">' + bmkSvg(false) + '<span class="bmk-cnt">' + cnt + '</span></span>'
+            : '<button type="button" class="bmk-btn' + (bmOn ? ' on' : '') + '" onclick="toggleListBookmark(\'' + owner + '\', \'' + r.cityId + '\')" title="' + (bmOn ? 'Bookmarked — tap to remove' : 'Bookmark') + '">' + bmkSvg(bmOn) + '<span class="bmk-cnt">' + cnt + '</span></button>')
+          + '<span class="act" onclick="exportOtherList(\'' + owner + '\', \'' + r.cityId + '\')" title="Send this list">📤</span>'
+          + '<span class="act" onclick="viewCommunityUser(\'' + owner + '\')">Open →</span></div></div>';
+      }).join('');
+    } else {
+      let rows = await mpData.trips.publicTrips();
+      if (communityCityFilter) rows = rows.filter(function(r){ return r.cityId === communityCityFilter; });
+      rows.sort(function(a, b){ return (b.saveCount || 0) - (a.saveCount || 0); });
+      if (!rows.length){ host.innerHTML = '<div class="mp-empty">No public trips yet' + (communityCityFilter ? ' in this city' : '') + '.</div>'; return; }
+      const nick = {}; (communityUsers || []).forEach(function(u){ nick[u.uid] = u.nickname; });
+      host.innerHTML = rows.map(function(t){
+        const mine = currentUser && t.ownerId === currentUser.uid;
+        const tOn = !!(tripSavesMap && tripSavesMap[t.id]);
+        const cnt = t.saveCount || 0;
+        const title = t.customLabel ? (t.cityName + ' — ' + t.customLabel) : (t.cityName || 'Trip');
+        return '<div class="row"><div>'
+          + '<div class="pn" dir="auto">' + escapeHtml(title) + '</div>'
+          + '<div class="ps">' + (tripTypeLine(t) ? tripTypeLine(t) + ' · ' : '') + 'by <span class="linklike" onclick="viewCommunityUser(\'' + (t.ownerId || '') + '\')">' + escapeHtml(nick[t.ownerId] || 'user') + '</span></div></div>'
+          + '<div class="acts">' + (mine
+            ? '<span class="actn label" title="Bookmarks on your trip — the counter counts others">' + bmkSvg(false) + '<span class="bmk-cnt">' + cnt + '</span></span>'
+            : '<button type="button" class="bmk-btn' + (tOn ? ' on' : '') + '" onclick="toggleTripSave(\'' + t.id + '\')" title="' + (tOn ? 'Bookmarked — tap to remove' : 'Bookmark this trip') + '">' + bmkSvg(tOn) + '<span class="bmk-cnt">' + cnt + '</span></button>')
+          + '<span class="act" onclick="exportOtherTrip(\'' + t.id + '\')" title="Send this trip">📤</span>'
+          + '<span class="act" onclick="openCommunityTrip(\'' + t.id + '\')">Open →</span></div></div>';
+      }).join('');
+    }
+  }catch(e){ host.innerHTML = '<div class="mp-empty">Could not load — try again.</div>'; }
 }
 
 let viewingUserCities = []; // تفاصيل المدن العامة الكاملة (فئات/أماكن) — تُحمَّل فقط لحظة فتح ملف شخص معيّن (Lazy)
@@ -5370,7 +5500,7 @@ async function renderCommunityPlaces(wrap, cityName){
 
 /* ر٥٧ · شريحة «Bookmarked lists» (بند ر٥١/٤ — نُفِّذ هنا بإقرار السقوط):
    سجلاتك هوية فقط ← الأصل الحي يعطي الاسم والعدّادات؛ تجميع دولة ← مدينة (روح المحدد بالمرجع)؛
-   القائمة التي لم تعد عامة صف degraded بـ✕ — نمط Saved trips نفسه */
+   القائمة التي لم تعد عامة صف degraded بـ✕ — نمط Bookmarked trips نفسه */
 async function renderBookmarkedLists(wrap, cityName){
   let head = '<div class="stickyhead"><div class="headrow"><span class="csel label">🌍 <b>Community</b></span><span class="actn label">Search <span class="dim">Soon</span></span></div>'
     + '<div class="chiprow"><button type="button" class="chip" onclick="switchCommunityTab(\'city\')">' + escapeHtml(cityName || 'This city') + '</button>'
@@ -5480,8 +5610,10 @@ function renderCommunityUserList(wrap){
           // v1.40 (٦/د٢): فعل الحفظ بعدّاده على رحلات الآخرين — «Saved ✓» يُفَك بضغطه + «تراجع»
           return `<div class="row"><div><div class="pn" dir="auto">${escapeHtml(tTitle)}</div>`
           + `<div class="ps">${tripTypeLine(t) ? tripTypeLine(t) + ' · ' : ''}${tripPlaceCount(t)} ${tripPlaceCount(t) === 1 ? 'place' : 'places'} · ${t.days.length} ${t.days.length === 1 ? 'day' : 'days'}</div>`
-          + `<div class="stattext">saved by ${tCnt}</div></div>`
-          + `<div class="acts">${(currentUser && u.uid === currentUser.uid) ? '' : `<span class="act${tOn ? ' on' : ''}" onclick="toggleTripSave('${t.id}')" title="${tOn ? 'Saved — tap to remove' : 'Save this trip'}">${tOn ? 'Saved ✓' : 'Save'}</span>`}<span class="act" onclick="openCommunityTrip('${t.id}')">Open →</span></div></div>`;
+          + `</div>`
+          + `<div class="acts">${(currentUser && u.uid === currentUser.uid)
+              ? `<span class="actn label" title="Bookmarks on your trip — the counter counts others">${bmkSvg(false)}<span class="bmk-cnt">${tCnt}</span></span>`
+              : `<button type="button" class="bmk-btn${tOn ? ' on' : ''}" onclick="toggleTripSave('${t.id}')" title="${tOn ? 'Bookmarked — tap to remove' : 'Bookmark this trip'}">${bmkSvg(tOn)}<span class="bmk-cnt">${tCnt}</span></button>`}<span class="act" onclick="exportOtherTrip('${t.id}')" title="Send this trip">📤</span><span class="act" onclick="openCommunityTrip('${t.id}')">Open →</span></div></div>`;
         }).join('');
     }
     wrap.innerHTML = html; return;
@@ -5543,9 +5675,9 @@ const HELP_CONTENT = {
       { h: 'كيف تضيف رابطًا بشكل صحيح', b: '1. افتح المكان في خرائط جوجل<br>2. اضغط Share ← Copy<br>3. عد إلى هنا واضغط زر اللصق 📋 المجاور لخانة الرابط — تجنّب اللصق اليدوي، فهذه الطريقة أكثر ضمانًا<br>4. الروابط المقبولة فقط من خرائط جوجل (google.com/maps، maps.app.goo.gl...)' },
       { h: 'الاستفادة من خانة اسم المنطقة', b: 'يسهّل تمييز المنطقة التي يقع فيها المكان (مثال: مقهى)، خصوصًا في المدن الكبيرة أو الجزر حيث تجد قائمة طويلة من الأماكن ضمن نفس التصنيف.' },
       { h: 'الاستفادة من خانة Note', b: 'تجنّب الأوصاف العامة، واكتب ما جعل المكان يستحق الزيارة فعلًا. عبارة مثل <i>"أجمل إطلالة غروب من الجلسة الخارجية"</i> أفيد بكثير من <i>"مكان جميل."</i> تقدر تكتب أكثر من نقطة بأسطر منفصلة، وأي رابط Google Maps تلصقه بالنص يتحول تلقائيًا لرابط قابل للضغط.' },
-      { h: '🔖 Bookmark — مفكرتك', b: 'على مكانٍ <b>بقائمتك</b>: تمييز خاص بك بلا أي عدّاد — وأماكنك المميَّزة تتجمع بشريحة <b>Bookmarked places</b> بوجهة الأماكن، مرتّبةً بالمدينة.<br>وعلى <b>قائمة مدينة لشخص</b> بالمجتمع: Bookmark بعدّاد — <b>صاحب القائمة يرى العدد لا الأسماء</b>، وقوائمك المميَّزة تتجمع بشريحة <b>Bookmarked lists</b>.<br>فكّ التمييز بضغط الأيقونة المصمتة نفسها، ومعه زر Undo إن غيّرت رأيك.' },
-      { h: 'Save — الحفظ', b: 'على <b>رحلات الآخرين العامة</b>: زر Save يحفظ الرحلة عندك بشريحة <b>Saved trips</b> ويرفع عدّادها («saved by»). المحفوظة مؤشر لأصلها الحي — فإن أخفاها صاحبها ظهرت لديك «No longer available» مع ✕ لإزالتها.<br>وSave على <b>الأماكن</b> — نسخ مكان من قائمة شخص إلى قائمتك بمدينته وتصنيفه مع ذكر مصدره — يفتح مع تصفح المصادر بوجهة الأماكن.' },
-      { h: '🌍 المجتمع بطبقاته الثلاث', b: 'أشخاص ← قوائم الشخص ← أماكن القائمة. الأشخاص مرتّبون بالمشاهدات، وكل قائمة بعدّاد Bookmark ومشاهداتها، وشريحة <b>Places · Most saved</b> تعرض الأماكن الأكثر حفظًا عبر المدن.' },
+      { h: '🔖 Bookmark — مفكرتك', b: 'على مكانٍ <b>بقائمتك</b>: تمييز خاص بك بلا أي عدّاد — وأماكنك المميَّزة تتجمع بشريحة <b>Bookmarked places</b> بوجهة الأماكن، مرتّبةً بالمدينة.<br>وعلى <b>قائمة مدينة أو رحلة لشخص</b> بالسوق: Bookmark بعدّادٍ يعدّ «كم لا مَن» — والمميَّز يتجمع بشريحة 🔖 بوجهته (Bookmarked places · Bookmarked trips)، ومنه صفوف متدهورة بـ✕ إن أخفى صاحبها الأصل.<br>وعلى <b>رحلتك أنت</b>: مفكرة ذاتية بلا عدّاد — كمكانك تمامًا.' },
+      { h: 'Save — الحفظ', b: 'Save = <b>نسخ</b> حصرًا: مكانٌ من قائمة شخص يُنسخ لقائمتك بإسناد مصدره (يصل بالمرحلة الثالثة — ويملأ شريحتَي Saved from Curators وSaved from Community). أمّا فعل الرحلات فصار <b>Bookmark</b> بعدّاده — انظر بند المفكرة.' },
+      { h: '🌍 المجتمع بطبقاته الثلاث', b: 'سوق الاستعراض بشريحتين: <b>Places</b> قوائم المدن العامة (الافتراضي: الأكثر مشاهدة) و<b>Trips</b> الرحلات العامة (الافتراضي: الأكثر تمييزًا) — مع بحث باسم المستخدم، ومرشِّح المدينة، وشريحة 🔖 لمعلَّماتك. واسم صاحب أي بطاقة بابٌ لصفحته وطبقاتها.' },
       { h: '🧳 نوع الرحلة وترشيحها', b: 'عند إنشاء الرحلة تختار نوعها: 🚶 One day trip أو 🏙 Single city (و🌍 Multi-city يصل لاحقًا بخاناته الخاصة). وشرائح النوع أعلى «My trips» ترشّح رحلاتك — وAll تعرضها كلها.' },
       { h: '📤 الإرسال خارج التطبيق', b: 'زر 📤 على صف المكان بقائمتك، وبرأس قائمة المدينة، وبشاشة الرحلة، وعلى صف العنوان — يجهّز نصًّا موقَّعًا «Sent via MyPickz» ويفتح ورقة مشاركة النظام (أو ينسخه إن لم تتوفر).' },
       { h: 'الفرق بين My places وFrom community', b: '<b>My places</b> = أماكنك الخاصة، وأنت وحدك من يعدّلها.<br><b>From community</b> = تصفّح قوائم الآخرين العامة — على أماكنهم Maps ↗ وSave، ولا تعديل على محتوى غيرك.' },
@@ -5564,9 +5696,9 @@ const HELP_CONTENT = {
       { h: 'How to add a link correctly', b: "1. Open the place in Google Maps<br>2. Tap Share → Copy<br>3. Come back here and tap the 📋 paste button next to the link field — don't paste manually, it's more reliable<br>4. Only Google Maps links are accepted (google.com/maps, maps.app.goo.gl...)" },
       { h: 'Using the Area field', b: "Makes it easier to tell where a place is located (e.g. a café), especially in large cities or islands where you'll find a long list of places under the same category." },
       { h: 'Using the Note field', b: 'Skip generic descriptions — share what made the place worth it. <i>"Best sunset view from the outdoor seating"</i> is more useful than <i>"nice cafe."</i> You can write more than one point on separate lines, and any Google Maps link you paste in automatically becomes clickable.' },
-      { h: '🔖 Bookmark', b: "On a place <b>in your own list</b>: a private marker with no counter — your bookmarked places gather under the <b>Bookmarked places</b> chip in the Places destination, grouped by city.<br>On <b>someone's city list</b> in the community: a bookmark with a counter — <b>the owner sees a count, not names</b> — and your bookmarked lists gather under the <b>Bookmarked lists</b> chip.<br>Tap the solid icon again to remove, with an Undo button if you change your mind." },
-      { h: 'Save', b: "On <b>public trips by others</b>: Save keeps the trip under your <b>Saved trips</b> chip and raises its counter (\u201csaved by\u201d). A saved trip points at its live original — if the owner hides it, it shows as \u201cNo longer available\u201d with \u2715 to remove.<br>Save on <b>places</b> — copying a place from someone's list into yours, with its city, category and source — opens with source browsing in the Places destination." },
-      { h: '🌍 Community, three layers deep', b: "People → a person's city lists → the places of a list. People are sorted by views, each list shows its bookmark count and views, and the <b>Places · Most saved</b> chip shows the most-saved places across cities." },
+      { h: '🔖 Bookmark', b: "On a place <b>in your list</b> or on <b>your own trip</b>: a private marker with no counter. On <b>someone else's city list or public trip</b> in the market: Bookmark with a counter that counts <i>how many, never who</i>. Your marks gather under the 🔖 chip of each destination (Bookmarked places · Bookmarked trips); if an owner hides the original you get a dimmed row with ✕." },
+      { h: 'Save', b: "Save means <b>copy</b> — only. A place from someone's list is copied into yours with its source credited (arrives in stage 3, filling Saved from Curators and Saved from Community). The trip action is now <b>Bookmark</b> with its counter — see the Bookmark entry." },
+      { h: '🌍 Community — the market', b: "A browsing market with two main chips: <b>Places</b> — public city lists (default: most viewed) and <b>Trips</b> — public trips (default: most bookmarked), with username search, a city filter and a 🔖 chip for your marks. Any card owner\'s name opens their page and layers." },
       { h: '🧳 Trip types and filtering', b: "When creating a trip you pick its type: 🚶 One day trip or 🏙 Single city (🌍 Multi-city arrives later with its own fields). The type chips above \u201cMy trips\u201d filter your trips — All shows everything." },
       { h: '📤 Sending outside the app', b: "The 📤 button on a place row in your list, on the city-list header, on the trip screen, and on an address row — composes a signed text (\u201cSent via MyPickz\u201d) and opens the system share sheet (or copies it)." },
       { h: 'My places vs. From community', b: "<b>My places</b> = your own places, only you can edit them.<br><b>From community</b> = browse other people's public lists — on their places you get Maps \u2197 and Save, and you never edit someone else's content." },
@@ -6255,7 +6387,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r60 (first field-triage batch: decision 28-01 finally executed so the guide branch left the resolver with its stale add button, a diagnostics lens prints the exact broken link for any degraded trip row, bookmark and save actions hidden on your own content with an honest guard message, optimistic state now rolls back on any batch failure, the city line removed from the bookmarked-places browser, Done and Cancel return you to Trips, and the duplicated nucleus key cleaned) \u2014 r59 (cascade account deletion brought forward by owner decision for field-test item 13: full self-cascade through the nucleus in safe order \u2014 bound-batch record removals that walk back the counters of others with the degraded fallback, follows, own trips and city lists and private addresses, then identity docs with the parent document last, then the auth account behind the existing reauth gate \u2014 the final button is now armed by the typed word and the audit round proved the three self-delete rule lines already live so the button needs no publication \u2014 the two-change cleanup publication ships alongside for the dead favorites block and the bookmark_add event) \u2014 r58 (record-mirror batch: bookmark and trip-save ids mirrored in the own userLists document inside the same atomic three-write batch since docId-split read rules are provably unqueryable by design, loaders now build from the boot-loaded mirror with zero queries, the dead documentId-range queries removed, degraded removals clear the mirror key in one batch, plus the approved source-chip reorder yours-then-marked-then-outside across Places, Trips and Community) \u2014 r57 (guide rewrite batch with two merged dues per the accountability rule: the Bookmarked lists community chip \u2014 approved in the r51 statement but dropped during that large batch, now built in full with its live-origin rows, degraded row and undo \u2014 the leftover Arabic retired-favorites guide entry removed, and the bilingual guide rewritten on the four-actions and metrics lexicons with new entries for Bookmark, Save, the community pyramid, trip types and the signed 📤 send, marketing rules kept) \u2014 r56 (guard batch side-effect: the new migration needle caught its first catch before being pinned \u2014 renderSavedTrips from r51 held one direct platform call, now routed through mpData.trips.getDoc, so the pinned legacy ledger starts clean at 34 functions and 71 calls) \u2014 r55 (trip-type statement per decision 30-05 and scene 6/B: a type field on the trip document written at creation through the single create modal where One-day and Single-city are selectable and Multi-city stays disabled until its step-6 fields exist, the type line replaces Type-Soon on all five row surfaces with untyped legacy trips shown without a segment, and the type chips now actually filter My trips with All as a filter not a type and a live context line) \u2014 r54 (curator-surface verification batch per owner note: the greedy curhead identity selector no longer reaches place rows so their names return to card ink at 5.5 contrast instead of 1.06, cur-shell dimming recalibrated from .55 to .74 keeping every composited pair at 4.5 or better with saffron-on-paper as the governing pair, full inline background-and-colour pair scan came back clean, and a new guard needle computes the dimmed-shell contrast pairs and forbids the greedy selector \u2014 mutation-tested) \u2014 r53 (sort statement per metric-lexicon decision 02-06 and scene 6/D: people layer Sort control with Most viewed live as default and Most saved disabled until its attributed-saves feed lands in stage 3 \u2014 approved temporary deviation to be mirrored in the reference, person card shows views only with the frozen totalFavoriteCount figure and its loader field removed per the merged owner item, retired Most loved button and its heart glyph deleted, sorting applied on both people tabs) \u2014 r52 (conformance-fix batch over r51 per M4.23 read verbatim: bookmark and trip-save records carry the single at field with identity in the doc id, own records queried by documentId range, frozen saves figure removed from the person list row, generic degraded saved-trip row, plus owner-approved text-export buttons generalising the live sendAddr path: place row, city list header, trip screen, one signed composer) — r51 (four-actions batch — founding decision 09 in code: hearts retired on every surface, place bookmark on your own rows with no counter, Bookmarked places chip with its in-destination browser, list bookmark with bound counter and record, trip Save with bound counter plus the Saved trips chip with degraded rows, placeFavoriteCounts re-semanticised as the save counter, frozen favoriteCount writers removed, list viewCount opened, one transient Undo toast for all three unmark points, absent-read classification tightened to rules 3.8) — r50 (owner field notes on r49: trips header per dB, single create-trip modal 6/B2, cancel discards the fresh empty trip via the nucleus, city-delete side options for both surfaces, community people as compact rows, trip detail header per dC with day chips, curator page night colours and add action) — r49 (conformance pass over all 23 reference scenes: full curator page structure 6/E2, trip row edit indicator with no heart on own trips, home chooser vector icons, address modal method chips with local share parsing, Become a curator in the drawer) — r48 (structures batch · second pass — scene 6/D2 as drawn: compact rows for the person layers, back at the first row, context line, a row per public trip) — r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
+logTiming('BUILD: M2-ID-r61 (settlement batch on reference v1.41: the trip action rewords to Bookmark with its icon and counter everywhere while its records, bound counter and mirror stay untouched, a self bookmark with no counter lands on your own trips through a map on your document, both source rows carry the literal four chips with the two origin chips disabled until Save ships, the community modal is rebuilt as the browsing market with Places and Trips main chips over provable public queries sorted client-side by views and bookmarks, exact username search through the nickname doc with partial search tagged for step 7, a city filter, the marked chip reusing both bookmark browsers as shared templates, card owners opening their person layers, signed exports with source attribution on the lists and trips of others, the curators screen split into a grid page and a curator page behind a tap, trash gone from place and address rows into their edit modals, and the bilingual guide rewritten on the settlement lexicon) \u2014 r60 (first field-triage batch: decision 28-01 finally executed so the guide branch left the resolver with its stale add button, a diagnostics lens prints the exact broken link for any degraded trip row, bookmark and save actions hidden on your own content with an honest guard message, optimistic state now rolls back on any batch failure, the city line removed from the bookmarked-places browser, Done and Cancel return you to Trips, and the duplicated nucleus key cleaned) \u2014 r59 (cascade account deletion brought forward by owner decision for field-test item 13: full self-cascade through the nucleus in safe order \u2014 bound-batch record removals that walk back the counters of others with the degraded fallback, follows, own trips and city lists and private addresses, then identity docs with the parent document last, then the auth account behind the existing reauth gate \u2014 the final button is now armed by the typed word and the audit round proved the three self-delete rule lines already live so the button needs no publication \u2014 the two-change cleanup publication ships alongside for the dead favorites block and the bookmark_add event) \u2014 r58 (record-mirror batch: bookmark and trip-save ids mirrored in the own userLists document inside the same atomic three-write batch since docId-split read rules are provably unqueryable by design, loaders now build from the boot-loaded mirror with zero queries, the dead documentId-range queries removed, degraded removals clear the mirror key in one batch, plus the approved source-chip reorder yours-then-marked-then-outside across Places, Trips and Community) \u2014 r57 (guide rewrite batch with two merged dues per the accountability rule: the Bookmarked lists community chip \u2014 approved in the r51 statement but dropped during that large batch, now built in full with its live-origin rows, degraded row and undo \u2014 the leftover Arabic retired-favorites guide entry removed, and the bilingual guide rewritten on the four-actions and metrics lexicons with new entries for Bookmark, Save, the community pyramid, trip types and the signed 📤 send, marketing rules kept) \u2014 r56 (guard batch side-effect: the new migration needle caught its first catch before being pinned \u2014 renderSavedTrips from r51 held one direct platform call, now routed through mpData.trips.getDoc, so the pinned legacy ledger starts clean at 34 functions and 71 calls) \u2014 r55 (trip-type statement per decision 30-05 and scene 6/B: a type field on the trip document written at creation through the single create modal where One-day and Single-city are selectable and Multi-city stays disabled until its step-6 fields exist, the type line replaces Type-Soon on all five row surfaces with untyped legacy trips shown without a segment, and the type chips now actually filter My trips with All as a filter not a type and a live context line) \u2014 r54 (curator-surface verification batch per owner note: the greedy curhead identity selector no longer reaches place rows so their names return to card ink at 5.5 contrast instead of 1.06, cur-shell dimming recalibrated from .55 to .74 keeping every composited pair at 4.5 or better with saffron-on-paper as the governing pair, full inline background-and-colour pair scan came back clean, and a new guard needle computes the dimmed-shell contrast pairs and forbids the greedy selector \u2014 mutation-tested) \u2014 r53 (sort statement per metric-lexicon decision 02-06 and scene 6/D: people layer Sort control with Most viewed live as default and Most saved disabled until its attributed-saves feed lands in stage 3 \u2014 approved temporary deviation to be mirrored in the reference, person card shows views only with the frozen totalFavoriteCount figure and its loader field removed per the merged owner item, retired Most loved button and its heart glyph deleted, sorting applied on both people tabs) \u2014 r52 (conformance-fix batch over r51 per M4.23 read verbatim: bookmark and trip-save records carry the single at field with identity in the doc id, own records queried by documentId range, frozen saves figure removed from the person list row, generic degraded saved-trip row, plus owner-approved text-export buttons generalising the live sendAddr path: place row, city list header, trip screen, one signed composer) — r51 (four-actions batch — founding decision 09 in code: hearts retired on every surface, place bookmark on your own rows with no counter, Bookmarked places chip with its in-destination browser, list bookmark with bound counter and record, trip Save with bound counter plus the Bookmarked trips chip with degraded rows, placeFavoriteCounts re-semanticised as the save counter, frozen favoriteCount writers removed, list viewCount opened, one transient Undo toast for all three unmark points, absent-read classification tightened to rules 3.8) — r50 (owner field notes on r49: trips header per dB, single create-trip modal 6/B2, cancel discards the fresh empty trip via the nucleus, city-delete side options for both surfaces, community people as compact rows, trip detail header per dC with day chips, curator page night colours and add action) — r49 (conformance pass over all 23 reference scenes: full curator page structure 6/E2, trip row edit indicator with no heart on own trips, home chooser vector icons, address modal method chips with local share parsing, Become a curator in the drawer) — r48 (structures batch · second pass — scene 6/D2 as drawn: compact rows for the person layers, back at the first row, context line, a row per public trip) — r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
