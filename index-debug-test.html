@@ -97,6 +97,7 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 .place-row-view{display:flex; align-items:center; gap:6px;}
 .place-row-view .place-link{flex:1;}
 .bmk-btn{border:none; background:none; cursor:pointer; padding:2px 4px; flex:none; display:inline-flex; align-items:center; gap:3px;}
+.linklike{cursor:pointer; text-decoration:underline; text-underline-offset:2px;} /* ر٦١: اسم صاحب البطاقة بابًا */
 .bmk-cnt{font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px;}
 .toast-undo{border:none; background:none; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; margin-inline-start:8px; padding:0;}
 .stats-row{display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid;}
@@ -670,7 +671,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   <div class="mp-screen" id="screenCurators"><div class="wrap destbody"><div class="stickyhead"><div class="headrow"><span class="csel label">⭐ <b>Curators</b></span><span class="actn label">🔍 Find a curator <span class="dim">Soon</span></span></div><div class="ctx"><b>Curators</b> · Step 4</div></div><div id="curGrid"><div class="curgrid"><span class="curcell" onclick="curOpenPage()"><span class="avatar">No</span><span class="curname">Nourah ✔ <span class="dim">preview</span></span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span><span class="curcell"><span class="avatar">··</span><span class="curname">Soon</span></span></div><div class="mp-empty mini">Curators arrive in step 4 — tap the preview to open the curator page (v1.41: two separate pages).</div></div>
      <!-- ر٦١ (v1.41): الصفحتان منفصلتان — الشبكة أولى، والقشرة صفحة المنتقي تُفتح بالضغط -->
      <div id="curPage" style="display:none;">
-     <div class="headrow" style="margin:2px 0 8px;"><span class="actn" onclick="curBackToGrid()">← Curators</span><span class="chiprow" style="margin:0;"><button type="button" class="chip on">Places</button><button type="button" class="chip" disabled title="Curator trips — with the shared market template (step 4)">Trips</button></span></div>
+     <div class="headrow" style="margin:2px 0 8px;"><span class="actn" onclick="curBackToGrid()">← Curators</span><span class="chiprow" style="margin:0;"><button type="button" class="chip on" disabled title="Curator places — preview shell (step 4)">Places</button><button type="button" class="chip" disabled title="Curator trips — with the shared market template (step 4)">Trips</button></span></div>
      <div class="cur-shell curhead">
        <div class="headrow" style="margin-bottom:6px;"><span class="actn">← Curators</span><span class="chip">Following ✓ <span class="dim">Step 4</span></span></div>
        <div style="display:flex; align-items:center; gap:10px; margin:2px 0 4px;"><span class="mini-av" style="width:34px; height:34px; line-height:34px; font-size:14px; background:var(--av-2);">No</span><div><div class="pn" style="font-size:15px;">Nourah ✔</div><div class="ps" dir="auto">أماكن الرياض التي أعود إليها</div></div></div>
@@ -5478,25 +5479,8 @@ function backToCommunityList(){
   renderCommunityModal();
 }
 // v1.37 · المجتمع بكيانيه — الأماكن: الأكثر تفضيلًا (عبر كل المدن اليوم — بطاقة المكان بلا حقل مدينة بالقواعد ٣٫٧؛ التصفية بالمدينة مع معرّف المكان بالمحطة الثالثة)
-async function renderCommunityPlaces(wrap, cityName){
-  let html = '<div class="stickyhead"><div class="headrow"><span class="csel label">🌍 <b>Community</b></span><span class="actn label">Search <span class="dim">Soon</span></span></div>'
-    + '<div class="chiprow"><button type="button" class="chip" onclick="switchCommunityTab(\'city\')">' + escapeHtml(cityName || 'This city') + '</button>'
-    + '<button type="button" class="chip" onclick="switchCommunityTab(\'bookmarked\')">🔖 Bookmarked lists</button>'
-    + '<button type="button" class="chip" onclick="switchCommunityTab(\'all\')">All users</button>'
-    + '<button type="button" class="chip on" onclick="switchCommunityTab(\'places\')">Places · Most saved</button></div>'
-    + '<div class="ctx"><b>Places</b> · Most saved · All cities</div></div>';
-  wrap.innerHTML = html + '<div class="mp-empty">Loading…</div>';
-  let rows = [];
-  try{ rows = await mpData.placeCounts.top(30); }catch(e){ rows = null; }
-  if (communityTab !== 'places') return;
-  if (rows === null){ html += '<div class="mp-empty mini">Could not load places</div>'; }
-  else if (!rows.length){ html += '<div class="mp-empty mini">No saved places yet</div>'; }
-  else {
-    html += rows.map((d, i) => '<div class="row"><div><div class="pn" dir="auto">' + (i + 1) + '. ' + escapeHtml(d.name || 'Place') + '</div><div class="stattext">saved by ' + (d.count || 0) + '</div></div>'
-      + '<div class="acts"><a class="act" href="' + String(d.url || '#').replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">Maps ↗</a></div></div>').join('');
-  }
-  wrap.innerHTML = html;
-}
+// ر٦١: عارض «الأماكن الأكثر حفظًا» تقاعد — السوق بشريحتيه حلّ محله (v1.41)
+
 
 /* ر٥٧ · شريحة «Bookmarked lists» (بند ر٥١/٤ — نُفِّذ هنا بإقرار السقوط):
    سجلاتك هوية فقط ← الأصل الحي يعطي الاسم والعدّادات؛ تجميع دولة ← مدينة (روح المحدد بالمرجع)؛
