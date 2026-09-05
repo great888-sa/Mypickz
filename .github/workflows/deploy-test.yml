@@ -25,6 +25,8 @@ jobs:
         run: node tests/runtime.js
       - name: Run Firestore rules tests (official emulator)
         run: npx firebase emulators:exec --only firestore --project demo-mypickz "node tests/rules-sim.js"
+      - name: Run user journey (full simulation, no browser)
+        run: node tests/journey.js
 
   deploy:
     needs: audit
