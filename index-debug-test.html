@@ -2557,6 +2557,7 @@ async function saveTrip(trip){
   mpTrack.hit('trip_save');
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   try{
+    trip.ownerId = trip.ownerId || currentUser.uid; // صيد المحاكاة (ر٦٠+): الحل يقرأ المالك من الكائن المحلي — رحلة منشأة توًّا كانت تتدهور حتى أول إعادة تحميل
     await db.collection('trips').doc(trip.id).set({ ...trip, ownerId: currentUser.uid }, { merge:true });
   }catch(e){ showToast('Could not save trip'); }
 }
@@ -5260,8 +5261,7 @@ function renderCommunityModal(){
   if (viewingUserUid){ renderCommunityUserList(wrap); return; }
   let usersToShow = communityUsers;
   const myCity = myListCityId || currentCityId;                 // شريحة المدينة تتبع ما تتصفّحه فعلًا
-  const cityName = (allCities().find(c => c.id === myCity) || {}).name || '';
-
+  let cityName = (allCities().find(c => c.id === myCity) || {}).name || ''; // صيد المحاكاة (ر٦٠+): كانت const والرقعة الشرطية أدناه تسند إليها — انفجار كامل للعارض حين تكون المدينة خارج القاموس
   if (!cityName) cityName = (typeof plCityName === 'function' && plCityName()) || cityNameOf(myCity) || '';
   if (communityTab === 'places'){ renderCommunityPlaces(wrap, cityName); return; }
   if (communityTab === 'bookmarked'){ renderBookmarkedLists(wrap, cityName); return; }
