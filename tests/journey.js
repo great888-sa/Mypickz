@@ -1,4 +1,5 @@
-// MyPickz — tests/journey.js (ر٦٠)
+// MyPickz — tests/journey.js (ر٦١ — محدَّثة على تسوية الأفعال: فعل الرحلة مفكرةً بعدّاده،
+//   ومفكرة رحلتك الذاتية بلا عدّاد محطةً وقدرةً، ورسائل الفعل بمعجم التسوية — ٢٧ محطة · ٤٧ قدرة)
 // محاكاة رحلة المستخدم الكاملة على كود التطبيق الحقيقي حرفيًّا — بلا متصفح ولا شبكة:
 //   هيكل صفحة صناعي متسامح + منصة بيانات ذاكرية بخطّاف قواعد يفرض السلوكات الحساسة من M4.24
 //   (رفض عدّاد الفعل الذاتي — المبدأ التاسع · قائمة أحداث القياس · اجتثاث favorites · رفض المشاهدة الذاتية).
@@ -17,7 +18,7 @@ const CAPS = [
   'bookmark.list.selfRejected.rollback', 'bookmark.list.off.undo', 'bookmark.list.browser', 'bookmark.list.degraded',
   'view.bump.other', 'view.self.rejected',
   'trip.create.typed', 'trip.addPlaces.refs', 'trip.resolve.available', 'trip.resolve.degradedOnDelete',
-  'trip.filter.byType', 'trip.save.other.batch3', 'trip.save.counter', 'trip.save.selfHidden',
+  'trip.filter.byType', 'trip.save.other.batch3', 'trip.save.counter', 'trip.save.selfHidden', 'bookmark.trip.self',
   'trip.saved.browser', 'trip.saved.degraded', 'trip.save.off.undo',
   'share.trip.byName', 'export.place.signed', 'export.cityList.signed', 'export.trip.signed', 'export.address.signed',
   'events.bookmark_add.allowed', 'events.retired.rejected', 'favorites.blockRemoved',
@@ -427,11 +428,22 @@ function citiesSeed(){
     ok('١٥ · السجل والعدّاد ١ والمرآة', !!rec && Object.keys(rec).length === 1 && cnt === 1 && mir === true, JSON.stringify({ cnt, mir }));
   }, ['trip.save.other.batch3', 'trip.save.counter']);
 
-  await must('١٦ · متصفح Saved trips من المرآة', async () => {
+  await must('١٦ب · مفكرة رحلتك الذاتية بلا عدّاد (التسوية)', async () => {
+    B.set('userTrips', [{ id: 'trip_own_b2', type: 'city', cityId: 'paris', cityName: 'Paris', customLabel: 'Own', public: false, sharedWith: [], sharedWithNames: {}, days: [{ dayNumber: 1, places: {} }] }]);
+    await B.x('saveTrip(userTrips[0])');
+    await B.x("toggleTripSelfBookmark('trip_own_b2')");
+    const on = ((store.get('userLists/' + U2) || {}).tripSelfBookmarks || {})['trip_own_b2'] === true;
+    const cnt = (store.get('trips/trip_own_b2') || {}).saveCount || 0;
+    await B.x("toggleTripSelfBookmark('trip_own_b2')");
+    const off = !(((store.get('userLists/' + U2) || {}).tripSelfBookmarks || {})['trip_own_b2']);
+    ok('١٦ب · الخريطة بمستندك تشتغل وتنطفئ وصفر عدّاد', on && off && cnt === 0, JSON.stringify({ on, off, cnt }));
+  }, ['bookmark.trip.self']);
+
+  await must('١٦ · متصفح Bookmarked trips من المرآة', async () => {
     B.set('tripSavesMap', null);
     B.set('userListData', clone(store.get('userLists/' + U2)));
     await B.x('ensureTripSaves()');
-    ok('١٦ · الخريطة تحمل الرحلة', B.x("Object.keys(tripSavesMap).join(',')") === 'trip_j1', '');
+    ok('١٦ · خريطة المتصفح تحمل الرحلة', B.x("Object.keys(tripSavesMap).join(',')") === 'trip_j1', '');
   }, ['trip.saved.browser']);
 
   await must('١٧ · الفعل الذاتي يُرفض ويرتد التفاؤل (المبدأ التاسع + شاهد ر٦٠)', async () => {
@@ -448,7 +460,7 @@ function citiesSeed(){
     captured.toasts.length = 0;
     await B.x("toggleTripSave('trip_self')");
     const rolledBack = !B.x("tripSavesMap && ('trip_self' in tripSavesMap)");
-    const toldUser = captured.toasts.some(t => /Could not update saved trips/.test(t));
+    const toldUser = captured.toasts.some(t => /Could not update bookmark/.test(t));
     ok('١٧ · حارس أمامي + رفض قواعد بلا سجل شبح + ارتداد التفاؤل برسالته', guarded && denied && !recGhost && rolledBack && toldUser, JSON.stringify({ guarded, denied, rolledBack, toldUser }));
   }, ['bookmark.list.selfRejected.rollback']);
 
@@ -481,9 +493,9 @@ function citiesSeed(){
     (store.get('trips/trip_j1')).public = true;
   }, ['bookmark.list.degraded', 'trip.saved.degraded']);
 
-  await must('٢٠ · حفظ الذات مخفي بالواجهة (شاهد الشرط بالقالب)', async () => {
+  await must('٢٠ · فعل الذات سلبي بالواجهة (شاهد الشرط بالقالب)', async () => {
     const tpl = fs.readFileSync(appFile, 'utf8');
-    ok('٢٠ · شرط الإخفاء حاضر بقالبي الطبقة الثانية', tpl.includes("u.uid === currentUser.uid) ? ''") && tpl.includes('Bookmarks on your list'), '');
+    ok('٢٠ · شرطا الذات السلبية حاضران (قائمة ورحلة)', tpl.includes('Bookmarks on your list') && tpl.includes('Bookmarks on your trip'), '');
   }, ['trip.save.selfHidden']);
 
   await must('٢١ · أحداث القياس: الجديد يمر والمتقاعد يُرفض وfavorites موصدة', async () => {
