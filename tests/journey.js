@@ -1,5 +1,5 @@
-// MyPickz — tests/journey.js (ر٦١ — محدَّثة على تسوية الأفعال: فعل الرحلة مفكرةً بعدّاده،
-//   ومفكرة رحلتك الذاتية بلا عدّاد محطةً وقدرةً، ورسائل الفعل بمعجم التسوية — ٢٧ محطة · ٤٧ قدرة)
+// MyPickz — tests/journey.js (ر٦٤ — محطات مشتقة من المواصفة لا من الكود: مكان بلا رابط · شريحة المميَّزة على ملكك ·
+//   اسم بوسوم مهرَّب · المنتقون صفحتان — ٣١ محطة · ٥١ قدرة)
 // محاكاة رحلة المستخدم الكاملة على كود التطبيق الحقيقي حرفيًّا — بلا متصفح ولا شبكة:
 //   هيكل صفحة صناعي متسامح + منصة بيانات ذاكرية بخطّاف قواعد يفرض السلوكات الحساسة من M4.24
 //   (رفض عدّاد الفعل الذاتي — المبدأ التاسع · قائمة أحداث القياس · اجتثاث favorites · رفض المشاهدة الذاتية).
@@ -24,6 +24,7 @@ const CAPS = [
   'events.bookmark_add.allowed', 'events.retired.rejected', 'favorites.blockRemoved',
   'sort.people.byViews', 'guide.bilingual.loaded',
   'cascade.records.withCounters', 'cascade.content', 'cascade.identity', 'cascade.auth', 'cascade.zeroResidue', 'cascade.othersCountersWalkedBack',
+  'bookmark.place.urlLessIsolated', 'bookmark.trip.selfListedInChip', 'security.nicknameEscaped', 'curators.twoPages',
 ];
 const covered = new Set();
 function cap(id){ if (!CAPS.includes(id)) throw new Error('قدرة غير معلنة: ' + id); covered.add(id); }
@@ -317,6 +318,15 @@ function citiesSeed(){
     ok('٤ · تشغيل وإطفاء بلا أي عدّاد وبمرآة المستند', on && mirrored && off && undoOffered, '');
   }, ['bookmark.place.on', 'bookmark.place.off.undo']);
 
+  await must('٤ب · مكان بلا رابط يُميَّز وحده (المواصفة: الهوية بمعرّفه لا ببصمة الفراغ)', async () => {
+    B.x('myCityListData.categories[' + JSON.stringify(CAT2) + '].places.push({ id: "pN1", name: "No-link A", url: "", area: "", note: "" }, { id: "pN2", name: "No-link B", url: "", area: "", note: "" })');
+    await B.x("togglePlaceBookmark('id:pN1', 'No-link A', " + JSON.stringify(CAT2) + ", 'paris', '')");
+    const on1 = B.x("isBookmarked('id:pN1')"), on2 = B.x("isBookmarked('id:pN2')");
+    await B.x("togglePlaceBookmark('id:pN1', 'No-link A', " + JSON.stringify(CAT2) + ", 'paris', '')");
+    ok('٤ب · الأول مضاء والثاني مطفأ — لا هوية مشتركة', on1 === true && on2 === false, JSON.stringify({ on1, on2 }));
+    B.x('myCityListData.categories[' + JSON.stringify(CAT2) + '].places.splice(-2, 2)');
+  }, ['bookmark.place.urlLessIsolated']);
+
   await must('٥ · نشر القائمة عامة', async () => {
     B.x("myCityListData.public = true");
     await B.x('saveMyCityList()');
@@ -438,6 +448,31 @@ function citiesSeed(){
     const off = !(((store.get('userLists/' + U2) || {}).tripSelfBookmarks || {})['trip_own_b2']);
     ok('١٦ب · الخريطة بمستندك تشتغل وتنطفئ وصفر عدّاد', on && off && cnt === 0, JSON.stringify({ on, off, cnt }));
   }, ['bookmark.trip.self']);
+
+  await must('١٦ج · شريحة Bookmarked trips تعرض رحلتي المميَّزة (المواصفة: مؤشرك على ملكك)', async () => {
+    await B.x("toggleTripSelfBookmark('trip_own_b2')");
+    const listed = B.x("(userTrips || []).filter(t => isSelfTripBookmarked(t.id)).map(t => t.id).join(',')");
+    await B.x("toggleTripSelfBookmark('trip_own_b2')");
+    ok('١٦ج · الشريحة ترشّح رحلاتي بخريطة الذاتية', listed === 'trip_own_b2', listed);
+  }, ['bookmark.trip.selfListedInChip']);
+
+  await must('١٦د · اسم بوسوم لا يُنفَّذ كسكربت (المواصفة: الأمان أولًا)', async () => {
+    store.set('userCityLists/uXSS_paris', { ownerId: 'uXSS', cityId: 'paris', cityName: 'Paris', nickname: '<img src=x onerror=alert(1)>', public: true, viewCount: 1, categories: {} });
+    B.set('communityTab', 'places'); B.set('communityMarkedOnly', false); B.set('communityCityFilter', '');
+    B.x('renderCommunityModal()');
+    await new Promise(r => setTimeout(r, 30));
+    const html = documentStub.getElementById('cmMarket').innerHTML;
+    ok('١٦د · الاسم مهرَّب بالبطاقة', html.includes('&lt;img') && !html.includes('<img src=x'), html.slice(0, 120));
+    store.delete('userCityLists/uXSS_paris');
+  }, ['security.nicknameEscaped']);
+
+  await must('١٦هـ · المنتقون صفحتان بضغطة (المواصفة ٦/هـ)', async () => {
+    B.x('curOpenPage()');
+    const pageShown = documentStub.getElementById('curPage').style.display === '' && documentStub.getElementById('curGrid').style.display === 'none';
+    B.x('curBackToGrid()');
+    const gridBack = documentStub.getElementById('curGrid').style.display === '';
+    ok('١٦هـ · الشبكة تنطوي وتعود', pageShown && gridBack, '');
+  }, ['curators.twoPages']);
 
   await must('١٦ · متصفح Bookmarked trips من المرآة', async () => {
     B.set('tripSavesMap', null);
