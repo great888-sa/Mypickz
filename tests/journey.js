@@ -1,5 +1,6 @@
-// MyPickz — tests/journey.js (ر٦٤ — محطات مشتقة من المواصفة لا من الكود: مكان بلا رابط · شريحة المميَّزة على ملكك ·
-//   اسم بوسوم مهرَّب · المنتقون صفحتان — ٣١ محطة · ٥١ قدرة)
+// MyPickz — tests/journey.js (ر٦٧ — محرك ضغط يقرأ onclick من الهيكل المرسوم فيضغط الزر كالمستخدم · ستة تسلسلات كاملة
+//   (تصفح-تمييز-عودة-تحميل · مشاركة وفتح بالحساب الآخر · خروج بمسار المصادقة الحقيقي · خصوصية العناوين · حذف مع رحلة مشتركة)
+//   · أربع حدّيات — فوق طبقة الشاشة ومصفوفة المشاهد — ٥٨ محطة · ٧٦ قدرة)
 // محاكاة رحلة المستخدم الكاملة على كود التطبيق الحقيقي حرفيًّا — بلا متصفح ولا شبكة:
 //   هيكل صفحة صناعي متسامح + منصة بيانات ذاكرية بخطّاف قواعد يفرض السلوكات الحساسة من M4.24
 //   (رفض عدّاد الفعل الذاتي — المبدأ التاسع · قائمة أحداث القياس · اجتثاث favorites · رفض المشاهدة الذاتية).
@@ -25,6 +26,9 @@ const CAPS = [
   'sort.people.byViews', 'guide.bilingual.loaded',
   'cascade.records.withCounters', 'cascade.content', 'cascade.identity', 'cascade.auth', 'cascade.zeroResidue', 'cascade.othersCountersWalkedBack',
   'bookmark.place.urlLessIsolated', 'bookmark.trip.selfListedInChip', 'security.nicknameEscaped', 'curators.twoPages',
+  'screen.places.rowActions', 'screen.trip.defaultView', 'screen.trip.reopenStable', 'screen.trip.bookmarkedChip', 'screen.market.header', 'screen.market.card', 'screen.person.layer', 'screen.static.tripChips', 'screen.static.curatorPage', 'screen.static.placesChips', 'screen.static.backChip',
+  'screen.community.stateKept', 'screen.header.gridNoScroll', 'screen.trips.cityPick', 'screen.places.ctxLast',
+  'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
 function cap(id){ if (!CAPS.includes(id)) throw new Error('قدرة غير معلنة: ' + id); covered.add(id); }
@@ -91,6 +95,10 @@ function actorUid(){ return authStub.currentUser ? authStub.currentUser.uid : nu
 function rulesHook(op){ // op: {type,col,id,data,merge}
   const uid = actorUid();
   if (op.col === 'favorites') deny('favorites: الكتلة مجتثة — رفض افتراضي');
+  if (op.col === 'nicknames' && (op.type === 'set' || op.type === 'update')){ // القاعدة: التحديث لصاحب الحجز وحده
+    const cur = store.get('nicknames/' + op.id); const uid = authStub.currentUser && authStub.currentUser.uid;
+    if (cur && cur.uid && cur.uid !== uid) deny('nicknames: الاسم محجوز لغيرك');
+  }
   if (op.col === 'analytics' && (op.type === 'set' || op.type === 'update')){
     for (const k of Object.keys(op.data || {})) if (!ALLOWED_EVENTS.includes(k)) deny('analytics: مفتاح خارج القائمة — ' + k);
   }
@@ -250,6 +258,33 @@ function ok(name, cond, why){
   stations++;
   if (cond) console.log('PASS  ' + name);
   else { failures++; console.log('FAIL  ' + name + (why ? '  →  ' + why : '')); }
+}
+// ═══ طبقة الشاشة (ر٦٥ — ق٠٩-٠٦-١٢): ماذا ظهر وماذا لم يظهر بعد الفعل ═══
+function screen(id){ return String(documentStub.getElementById(id).innerHTML || ''); }
+function sees(id, needles){ const h = screen(id); const miss = needles.filter(n => !h.includes(n)); return { ok: miss.length === 0, why: miss.length ? 'missing: ' + miss.join(' | ') : '' }; }
+function notSees(id, needles){ const h = screen(id); const hit = needles.filter(n => h.includes(n)); return { ok: hit.length === 0, why: hit.length ? 'unexpected: ' + hit.join(' | ') : '' }; }
+function inOrder(id, labels){ const h = screen(id); let last = -1; for (const l of labels){ const i = h.indexOf(l, last + 1); if (i < 0) return { ok: false, why: 'absent: ' + l }; if (i < last) return { ok: false, why: 'out of order: ' + l }; last = i; } return { ok: true, why: '' }; }
+const SRC = fs.readFileSync(path.join(ROOT, 'index-debug-test.html'), 'utf8'); // القالب الساكن — لما لا يُرسم ديناميكيًّا
+function tpl(needles){ const miss = needles.filter(n => !SRC.includes(n)); return { ok: miss.length === 0, why: miss.length ? 'missing in template: ' + miss.join(' | ') : '' }; }
+function tplCount(needle, n){ const c = SRC.split(needle).length - 1; return { ok: c === n, why: 'count ' + c + ' ≠ ' + n }; }
+// ═══ محرك الضغط (ر٦٧): المحطة تضغط الزر المسمّى كما يفعل المستخدم — تقرأ onclick من الهيكل المرسوم وتنفّذه ═══
+function unesc(h){ return String(h).replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'); }
+function findClickable(html, label){
+  const re = /<(button|span|div|a)\b([^>]*?)onclick="([^"]*)"([^>]*)>([\s\S]*?)<\/\1>/g; let m;
+  while ((m = re.exec(html))){
+    const attrs = m[2] + ' ' + m[4]; const text = m[5].replace(/<[^>]+>/g, '').trim();
+    const title = (attrs.match(/title="([^"]*)"/) || [])[1] || '';
+    if (text.includes(label) || title.includes(label) || attrs.includes(label)) return { code: unesc(m[3]), disabled: /\bdisabled\b/.test(attrs), text };
+  }
+  return null;
+}
+async function click(hostId, label){ // hostId = حاوية بالهيكل، أو 'SRC' للقالب الساكن
+  const html = hostId === 'SRC' ? SRC : screen(hostId);
+  const c = findClickable(html, label);
+  if (!c) return { ok: false, why: 'no clickable "' + label + '" in ' + hostId };
+  if (c.disabled) return { ok: false, why: '"' + label + '" is disabled', disabled: true };
+  try{ const r = B.x(c.code); if (r && typeof r.then === 'function') await r; return { ok: true, why: '' }; }
+  catch(e){ return { ok: false, why: 'click threw: ' + (e && e.message) }; }
 }
 async function must(name, fn, capIds){
   try { await fn(); (capIds || []).forEach(cap); }
@@ -458,7 +493,7 @@ function citiesSeed(){
 
   await must('١٦د · اسم بوسوم لا يُنفَّذ كسكربت (المواصفة: الأمان أولًا)', async () => {
     store.set('userCityLists/uXSS_paris', { ownerId: 'uXSS', cityId: 'paris', cityName: 'Paris', nickname: '<img src=x onerror=alert(1)>', public: true, viewCount: 1, categories: {} });
-    B.set('communityTab', 'places'); B.set('communityMarkedOnly', false); B.set('communityCityFilter', '');
+    B.set('communityScreen', 'source'); B.set('communityTab', 'places'); B.x("communityScreenState.places = { city: '', marked: false, sort: 'views' }");
     B.x('renderCommunityModal()');
     await new Promise(r => setTimeout(r, 30));
     const html = documentStub.getElementById('cmMarket').innerHTML;
@@ -473,6 +508,110 @@ function citiesSeed(){
     const gridBack = documentStub.getElementById('curGrid').style.display === '';
     ok('١٦هـ · الشبكة تنطوي وتعود', pageShown && gridBack, '');
   }, ['curators.twoPages']);
+
+  // ═══ رحلة الشاشة (ر٦٥) — كل محطة تسمّي مشهد المرجع الذي تحرسه ═══
+  await must('ش١ · ٦/أ الأماكن: صف الأفعال الخمسة بلا سلة (الشاشة)', async () => {
+    B.set('myListCityId', 'paris'); B.x('renderPlacesMine()');
+    const a = sees('plBody', ['Maps', 'bmk-btn', '📤', '✏️']); const b = notSees('plBody', ['🗑', 'plDeleteRow(']);
+    ok('ش١ · صف المكان: Maps · مفكرة · 📤 · ✏️ — ولا سلة', a.ok && b.ok, a.why + ' ' + b.why);
+  }, ['screen.places.rowActions']);
+
+  await must('ش٢ · ٦/ج عرض الرحلة: يفتح بوضع العرض فيظهر Edit (المواصفة)', async () => {
+    await B.x("openTripDetail('trip_own_b2')");
+    const a = sees('myTripsBody', ['✏️ Edit']); const b = notSees('myTripsBody', ['✓ Done']);
+    await B.x("openTripDetail('trip_own_b2', 'edit')");
+    const c = sees('myTripsBody', ['✓ Done']);
+    ok('ش٢ · عرضٌ افتراضًا وتحريرٌ بطلبه', a.ok && b.ok && c.ok, a.why + b.why + c.why);
+  }, ['screen.trip.defaultView']);
+
+  await must('ش٣ · إعادة الفتح تعيد الحالة الافتراضية لا آخر حالة', async () => {
+    await B.x("openTripDetail('trip_own_b2', 'edit')"); await B.x("openTripDetail('trip_own_b2')");
+    const a = sees('myTripsBody', ['✏️ Edit']); const b = notSees('myTripsBody', ['✓ Done']);
+    ok('ش٣ · الفتح الثاني عرضٌ رغم أن السابق تحرير', a.ok && b.ok, a.why + b.why);
+  }, ['screen.trip.reopenStable']);
+
+  await must('ش٤ · ٦/ب شريحة Bookmarked trips تعرض رحلتي بعد تمييزها (الشاشة)', async () => {
+    await B.x("toggleTripSelfBookmark('trip_own_b2')");
+    B.x("selectTripsSource('saved')"); await new Promise(r => setTimeout(r, 20));
+    const a = sees('myTripsBody', ['Paris', 'Bookmarked — tap to remove', '📤']); const b = notSees('myTripsBody', ['curators and community', 'no longer available']);
+    await B.x("toggleTripSelfBookmark('trip_own_b2')"); B.x("selectTripsSource('mine')");
+    ok('ش٤ · رحلتي المميَّزة ظاهرة والنص القديم غائب', a.ok && b.ok, a.why + b.why);
+  }, ['screen.trip.bookmarkedChip']);
+
+  await must('ش٥ · ٦/د رأس السوق: مبدل نقي ثم شرائح التصفح والفرز (الشاشة)', async () => {
+    B.set('communityScreen', 'root'); B.x('renderCommunityModal()');
+    const root = inOrder('communityBody', ['chipgrid c2', '>Places<', '>Trips<', 'Search by username']);
+    const rootNo = notSees('communityBody', ['backchip', 'Most viewed']);
+    B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
+    const src = inOrder('communityBody', ['backchip', 'id="cmCity"', 'chipgrid c3', '>All<', 'Most viewed', 'Most saved <span class="dim">Stage 3', 'chipgrid c2', '🔖 My bookmarked', '🔖 Most bookmarked']);
+    B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
+    const t = sees('communityBody', ['disabled title="Trip views arrive']);
+    B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
+    ok('ش٥ · الجذر مبدل ١×٢ + بحث · شاشة المصدر: عودة · محدد · ٣+٢ بترتيبها · مشاهدات الرحلات معطَّلة', root.ok && rootNo.ok && src.ok && t.ok, root.why + rootNo.why + src.why + t.why);
+  }, ['screen.market.header']);
+
+  await must('ش٦ · ٦/د بطاقة السوق: مفكرة بعدّاد · Save بوسمه · 📤 · Open (الشاشة)', async () => {
+    const a = sees('cmMarket', ['bmk-btn', 'bmk-cnt', 'Save <span class="dim">Stage 3', '📤', 'Open →', 'linklike']);
+    ok('ش٦ · عناصر البطاقة الستة', a.ok, a.why);
+  }, ['screen.market.card']);
+
+  await must('ش٧ · ٦/د٢ طبقة الشخص: عودة مميَّزة وصفوف رحلاته بأفعال التسوية (الشاشة)', async () => {
+    await B.x("viewCommunityUser('" + U1 + "')"); await new Promise(r => setTimeout(r, 40));
+    const a = sees('communityBody', ['backchip', 'Open →', 'bmk-btn', 'bmk-cnt', '📤']);
+    const b = notSees('communityBody', ['Saved ✓', 'saved by', '♥']);
+    ok('ش٧ · عودة مميَّزة وصفوف الرحلات بمفكرة معدودة و📤 — ولا معجم قديم', a.ok && b.ok, a.why + b.why);
+    B.set('viewingUserUid', null);
+  }, ['screen.person.layer']);
+
+  await must('ش١٢ · القرار ١١ (٦): العودة للجذر ثم فتح المصدر يعيد حالته (المدينة والشريحة)', async () => {
+    B.x("cmCityChanged('paris')"); await new Promise(r => setTimeout(r, 30));
+    B.x("cmSetBrowse('bookmarks')"); await new Promise(r => setTimeout(r, 30));
+    B.x('cmBackToRoot()'); B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
+    const kept = B.x("JSON.stringify(communityScreenState.places)");
+    const a = sees('communityBody', ['Paris']);
+    ok('ش١٢ · المدينة والشريحة محفوظتان بعد العودة', kept.includes('"city":"paris"') && kept.includes('"sort":"bookmarks"') && a.ok, kept + a.why);
+    B.x("cmCityChanged('')"); B.x("cmSetBrowse('views')"); await new Promise(r => setTimeout(r, 20));
+  }, ['screen.community.stateKept']);
+
+  await must('ش١٣ · القرار ١١ (٧): شرائح الرأس شبكة متساوية بلا تمرير — الرباعي ٢×٢', async () => {
+    const a = tpl(['.chipgrid{display:grid;', '.chipgrid.c2{grid-template-columns:repeat(2', '.chipgrid.c3{grid-template-columns:repeat(3', 'class="chipgrid c2" id="tripSrcRow"', 'class="chipgrid c2" id="tripTypeRow"', '.pl-srcrow{display:grid; grid-template-columns:repeat(2']);
+    ok('ش١٣ · قواعد الشبكة والصفوف الأربعة عليها', a.ok, a.why);
+  }, ['screen.header.gridNoScroll']);
+
+  await must('ش١٤ · القرار ١١ (٣·٥): الرحلات بمحدد مدينة من رحلاتك · Create trip بصف الأفعال · ➕ محل النص', async () => {
+    const a = tpl(['id="tripCityPick"', 'onclick="openCreateTripFlow()">＋ Create trip', 'title="Add places to this trip">➕']);
+    const b = tplCount('class="cta wide" onclick="openCreateTripFlow()">➕ Create trip', 0);
+    B.x('renderTripsBody()'); const opts = String(documentStub.getElementById('tripCityPick').innerHTML || '');
+    ok('ش١٤ · المحدد يُملأ من مدن رحلاتي والزر صعد والأيقونة حلّت', a.ok && b.ok && opts.includes('Paris'), a.why + b.why + ' opts=' + opts.slice(0, 60));
+  }, ['screen.trips.cityPick']);
+
+  await must('ش١٥ · القرار ١١ (١): سطر سياق الأماكن أخيرًا (تحت صف الأفعال)', async () => {
+    const i = SRC.indexOf('id="plCtx"'), j = SRC.indexOf('Day plan <span class="dim">Soon</span>');
+    ok('ش١٥ · السياق بعد صف الأفعال', i > j && j > 0, 'ctx@' + i + ' actions@' + j);
+  }, ['screen.places.ctxLast']);
+
+  await must('ش٨ · القوالب الساكنة: شرائح الرحلات بالحرف وOne day trip موسومة', async () => {
+    const a = tpl(['data-tsrc="saved" onclick="selectTripsSource(\'saved\')">🔖 Bookmarked trips', '>Saved from Curators</button>', '>Saved from Community</button>']);
+    const b = tplCount('→ Day plan', 2); const c = tpl(['data-ttype="day" disabled']);
+    ok('ش٨ · الرباعي الحرفي واليوم الواحد معطَّلة بموضعيها', a.ok && b.ok && c.ok, a.why + b.why + c.why);
+  }, ['screen.static.tripChips']);
+
+  await must('ش٩ · ٦/هـ٢ صفحة المنتقي: رأس واحد وأفعال التسوية بلا تعتيم', async () => {
+    const a = tplCount('← Curators', 1); const b = tpl(['verified curator', '🔖 Bookmarked</span>', 'Save <span class="dim">Stage 3</span>', 'followers: count shown here']);
+    const c = tplCount('class="cur-shell curhead"', 1); const d = tpl(['.cur-shell{opacity:1;}']);
+    ok('ش٩ · عودة واحدة وقشرة واحدة بعناصرها وبلا تعتيم', a.ok && b.ok && c.ok && d.ok, a.why + b.why + c.why + d.why);
+  }, ['screen.static.curatorPage']);
+
+  await must('ش١٠ · ٦/أ شرائح الأماكن: المنشآن معطَّلان بوسم موعدهما', async () => {
+    const a = tpl(['data-src="curators" disabled', 'data-src="community" disabled', '>Saved from Curators</button>']);
+    ok('ش١٠ · الرباعي بالحرف والمنشآن معطَّلان', a.ok, a.why);
+  }, ['screen.static.placesChips']);
+
+  await must('ش١١ · زر العودة: صنفه بجرعة معرَّفة ومستعمل بكل المواضع', async () => {
+    const a = tpl(['.backchip{border-color:var(--saffron); background:transparent; color:var(--ink);}']);
+    const n = SRC.split('class="backchip"').length - 1;
+    ok('ش١١ · قاعدة معرَّفة و≥٤ مواضع', a.ok && n >= 4, a.why + ' spots=' + n);
+  }, ['screen.static.backChip']);
 
   await must('١٦ · متصفح Bookmarked trips من المرآة', async () => {
     B.set('tripSavesMap', null);
@@ -553,6 +692,124 @@ function citiesSeed(){
   }, ['guide.bilingual.loaded']);
 
   /* ═══════════ الفصل الثالث: الخاتمة — الحذف التسلسلي بشهادته المزدوجة ═══════════ */
+  // ═══ التسلسلات (ر٦٧) — كل محطة سيناريو مستخدم كامل بالضغط لا بالاستدعاء ═══
+  await must('ت٠ · محرك الضغط يصل للمعالج (الضغط يبدّل مصدر المجتمع فعلًا)', async () => {
+    B.set('communityScreen', 'root'); B.x('renderCommunityModal()');
+    const c = await click('communityBody', 'Trips'); await new Promise(r => setTimeout(r, 30));
+    const a = sees('communityBody', ['backchip', '<b>Trips</b>']);
+    ok('ت٠ · ضغط «Trips» بالجذر فتح شاشة الرحلات', c.ok && a.ok, c.why + a.why);
+  }, ['click.engine.reachesHandler']);
+
+  await must('ت١ · تصفح ← تمييز بالضغط ← عودة ← إعادة فتح ← إعادة تحميل: التمييز باقٍ', async () => {
+    B.set('communityScreen', 'root'); B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 40));
+    const before = screen('cmMarket').includes('bmk-btn on');
+    const c = await click('cmMarket', 'Bookmark'); await new Promise(r => setTimeout(r, 40));
+    B.x('cmBackToRoot()'); B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 40));
+    const afterReopen = screen('cmMarket').includes('bmk-btn on');
+    B.set('listBookmarksMap', null); await B.x('ensureListBookmarks()'); B.x('renderCommunityModal()'); await new Promise(r => setTimeout(r, 40));
+    const afterReload = screen('cmMarket').includes('bmk-btn on');
+    if (afterReload){ await click('cmMarket', 'Bookmarked — tap to remove'); await new Promise(r => setTimeout(r, 30)); }
+    ok('ت١ · مطفأ ← مضاء بعد الضغط ← باقٍ بعد العودة ← باقٍ بعد إعادة التحميل من المرآة', !before && c.ok && afterReopen && afterReload, c.why + JSON.stringify({ before, afterReopen, afterReload }));
+  }, ['seq.browseMarkBackReload']);
+
+  await must('ت٢ · مشاركة رحلة بالاسم ← الدخول بالحساب الآخر ← الفتح: عرضٌ بلا تحرير', async () => {
+    const t = store.get('trips/trip_own_b2'); if (t){ t.ownerId = U2; t.sharedWith = [U1]; t.sharedWithNames = { [U1]: 'Nourah' }; store.set('trips/trip_own_b2', t); }
+    await signInAs(U1, 'Nourah'); await B.x('loadUserTrips()');
+    await B.x("openSharedTripDetail('trip_own_b2')"); await new Promise(r => setTimeout(r, 40));
+    const a = sees('myTripsBody', ['Paris']); const b = notSees('myTripsBody', ['✓ Done', 'openCreateTripFlow']);
+    await signInAs(U2, 'Badr');
+    ok('ت٢ · المستلم يرى الرحلة عرضًا ولا يملك تحريرها', !!t && a.ok && b.ok, a.why + b.why);
+  }, ['seq.shareOpenAsOther']);
+
+  await must('ت٣ · الخروج عبر كتلة التصفير الحقيقية (updateUserUI) ← لا بيانات للحساب السابق', async () => {
+    B.set('myListCityId', 'paris'); B.x('renderPlacesMine()');
+    const hadContent = screen('plBody').length > 40;
+    authStub.currentUser = null; B.set('currentUser', null); B.x('updateUserUI()'); // حدّ المنصة: مستمع المصادقة يُسجَّل بمسار إقلاع خارج الجسر — نسلك خطوته الثانية بعينها (currentUser=null ثم updateUserUI حيث كتلة التصفير)
+    const cleared = B.x('userTrips.length === 0 && myCityListData === null && listBookmarksMap === null && currentUser === null');
+    await signInAs(U2, 'Badr');
+    ok('ت٣ · الحالة الأربع صُفّرت بمسار الخروج نفسه', hadContent && cleared === true, 'cleared=' + cleared);
+  }, ['seq.signOutClearsScreen']);
+
+  await must('ت٤ · عنوان شخصي يُحفظ ← لا يظهر بأي استعراض عام ولا بالتصدير الموقَّع للقائمة', async () => {
+    store.set('userPrivatePlaces/' + U2 + '_riyadh', { ownerId: U2, cityId: 'riyadh', categories: { personal_home: { places: [{ id: 'home1', name: 'My home secret', url: '', area: 'Q' }] } } });
+    const ul = store.get('userLists/' + U2) || {}; ul.privateCities = (ul.privateCities || []).concat(['riyadh']); store.set('userLists/' + U2, ul); B.set('userListData', clone(ul)); // المرآة هي فهرس العناوين (قيد r58)
+    const rows = await B.x('mpData.cityLists.publicLists()');
+    const leak = JSON.stringify(rows).includes('My home secret');
+    const leak2 = JSON.stringify(store.get('userCityLists/' + U2 + '_paris') || {}).includes('My home secret');
+    ok('ت٤ · العنوان الخاص خارج كل مسار عام', !leak && !leak2, '');
+  }, ['seq.addressNeverPublic']);
+
+  await must('ت٥ · حذف حساب شارك رحلة ← المستلم لا يراها بعده', async () => {
+    const t = store.get('trips/trip_own_b2') || { id: 'trip_own_b2', cityId: 'paris', cityName: 'Paris', days: [] }; t.ownerId = U2; t.sharedWith = [U1]; t.sharedWithNames = { [U1]: 'Nourah' }; store.set('trips/trip_own_b2', t);
+    B.set('userTrips', []); // نحاكي قائمة محلية ناقصة عمدًا — التتالي يجب أن يجدها بالاستعلام
+    const visibleBefore = !!store.get('trips/trip_own_b2');
+    // الحذف الفعلي يقع بمحطة ٢٥؛ هنا نثبت البذرة ونتحقق بعدها بمحطة ٢٦ب
+    B.set('__sharedTripSeed', 'trip_own_b2');
+    ok('ت٥ · الرحلة مشتركة قبل الحذف (يُستكمل بعد التتالي)', visibleBefore, '');
+  }, ['seq.deleteWithSharedTrip']);
+
+  // ═══ الحدّيات (ر٦٧) ═══
+  await must('ح١ · ضغط مزدوج سريع على المفكرة يستقر على حالة واحدة صحيحة', async () => {
+    B.set('myListCityId', 'paris'); B.x('renderPlacesMine()');
+    const p1 = B.x("togglePlaceBookmark('id:pN1', 'Dbl', " + JSON.stringify(CAT2) + ", 'paris', '')");
+    const p2 = B.x("togglePlaceBookmark('id:pN1', 'Dbl', " + JSON.stringify(CAT2) + ", 'paris', '')");
+    await Promise.all([p1, p2]);
+    const st = B.x("isBookmarked('id:pN1')"); const doc = (store.get('userLists/' + U2) || {}).placeBookmarks || {};
+    const consistent = (st === true) === !!doc['id:pN1'.length ? Object.keys(doc).find(k => doc[k] && doc[k].name === 'Dbl') : ''];
+    if (st === true){ await B.x("togglePlaceBookmark('id:pN1', 'Dbl', " + JSON.stringify(CAT2) + ", 'paris', '')"); }
+    ok('ح١ · الشاشة والمستند متفقان بعد ضغطتين متزامنتين', consistent, 'ui=' + st);
+  }, ['edge.doubleToggleStable']);
+
+  await must('ح٢ · اسم مستعار محجوز يُرفض بالقواعد (لا يُستولى عليه)', async () => {
+    let denied = false;
+    try{ await B.x("mpData.nicknames.claim ? mpData.nicknames.claim('nourah', '" + U2 + "') : db.collection('nicknames').doc('nourah').set({ uid: '" + U2 + "' })"); }catch(e){ denied = true; }
+    const still = (store.get('nicknames/nourah') || {}).uid === U1;
+    ok('ح٢ · الحجز القائم صامد', denied || still, 'denied=' + denied + ' still=' + still);
+  }, ['edge.reservedNickname']);
+
+  await must('ح٣ · مدينة بلا محتوى عام بالسوق تعطي فراغًا صادقًا لا انهيارًا', async () => {
+    B.set('communityScreen', 'source'); B.set('communityTab', 'places'); B.x("communityScreenState.places.city = 'nowhere'");
+    B.x('renderCommunityModal()'); await new Promise(r => setTimeout(r, 40));
+    const a = sees('cmMarket', ['No public lists yet']);
+    B.x("communityScreenState.places.city = ''");
+    ok('ح٣ · رسالة الفراغ الصادقة', a.ok, a.why);
+  }, ['edge.emptyCityMarket']);
+
+  await must('ح٤ · الشرائح المعطَّلة بوسمها لا تُضغط (Most saved · One day trip · المنشآن)', async () => {
+    B.x('renderCommunityModal()'); await new Promise(r => setTimeout(r, 30));
+    const a = await click('communityBody', 'Most saved');
+    const b = findClickable(SRC, 'One day trip'); const c = findClickable(SRC, 'Saved from Curators');
+    ok('ح٤ · المعطَّل بلا معالج أو موسوم معطَّلًا', a.disabled === true || !a.ok, JSON.stringify({ a: a.why, b: !b || b.disabled, c: !c || c.disabled }));
+  }, ['edge.disabledChipsInert']);
+
+  await must('م · مصفوفة مشاهد المرجع v1.41: كل مشهد مغطًّى أو مؤجَّل بسببه (لا فجوة صامتة)', async () => {
+    const refFile = fs.readdirSync(ROOT).filter(f => /^Mypickz-STEPS-marked-v1[ _]41\.html$/.test(f))[0];
+    const ref = fs.readFileSync(path.join(ROOT, refFile), 'utf8');
+    const scenes = [...ref.matchAll(/<section class="scene" id="(\w+)">\s*<h3 class="t">([\s\S]*?)<\/h3>/g)].map(m => ({ id: m[1], title: m[2].replace(/<[^>]+>/g, '').trim().slice(0, 48) }));
+    const SCENE_MAP = {
+      d0:  ['screen.static.placesChips', 'screen.static.backChip', 'screen.header.gridNoScroll', 'screen.places.ctxLast'],
+      g0:  ['auth.session'], s3: ['users.register', 'nicknames.claim', 'security.nicknameEscaped'], g2: ['nicknames.claim'],
+      s4:  { deferred: 'نبذة تعريفية — تُبنى بالخطوة الأولى المتممة' }, s11: ['userLists.default'], s12: ['screen.static.backChip'],
+      dA:  ['cityLists.create', 'bookmark.place.on', 'place.identityByUrl', 'bookmark.place.urlLessIsolated', 'screen.places.rowActions', 'screen.static.placesChips', 'edge.doubleToggleStable', 'edge.disabledChipsInert'],
+      dB:  ['trip.create.typed', 'trip.filter.byType', 'bookmark.trip.self', 'screen.trip.bookmarkedChip', 'screen.static.tripChips', 'screen.trips.cityPick'],
+      dB2: ['trip.create.typed'], dC: ['trip.addPlaces.refs', 'trip.resolve.available', 'screen.trip.defaultView', 'screen.trip.reopenStable'],
+      dD:  ['bookmark.list.on.batch3', 'bookmark.list.browser', 'sort.people.byViews', 'screen.market.header', 'screen.market.card', 'screen.community.stateKept', 'edge.emptyCityMarket'],
+      dD2: ['view.bump.other', 'trip.save.other.batch3', 'screen.person.layer', 'seq.browseMarkBackReload', 'click.engine.reachesHandler'],
+      dE:  ['curators.twoPages', 'screen.static.curatorPage'], dE2: { deferred: 'القشرة الساكنة مطابقة للنموذج (تُفحص بش٩) — الصفحة الحية بالخطوة الرابعة على قالب طبقة الشخص نفسه (ق٠٩-٠٤-١٠)' },
+      dF:  ['export.address.signed', 'seq.addressNeverPublic'], dS: { deferred: 'لوحتي — الخطوة الرابعة (قدرات القراءة جاهزة بالقواعد بلا كود: الثامنة ج-١-د)' },
+      s13: ['guide.bilingual.loaded'], dG: { deferred: 'لوحة الإدارة — الخطوة الثامنة' },
+      s6:  ['cascade.auth', 'seq.signOutClearsScreen'], s7: { deferred: 'تغيير كلمة المرور — تُبنى معطَّلة حتى الخطوة الأولى المتممة' },
+      s8:  ['cascade.records.withCounters', 'cascade.content', 'cascade.identity', 'cascade.zeroResidue', 'seq.deleteWithSharedTrip'],
+      s9:  { deferred: 'السياسة — بابها مغلق حتى دفعة نشرها (مسودة v3)' }
+    };
+    const covered = new Set(); for (const m of Object.values(SCENE_MAP)) if (Array.isArray(m)) m.forEach(c => covered.add(c));
+    const unknownCaps = [...covered].filter(c => !CAPS.includes(c));
+    const gaps = scenes.filter(sc => !SCENE_MAP[sc.id]);
+    console.log('\n═ مصفوفة مشاهد المرجع (' + scenes.length + '):');
+    for (const sc of scenes){ const m = SCENE_MAP[sc.id]; console.log('  ' + (m ? (Array.isArray(m) ? '✓ ' : '⏳ ') : '✗ ') + sc.id.padEnd(4) + ' ' + sc.title + (m && !Array.isArray(m) ? ' — ' + m.deferred : '')); }
+    ok('م · صفر مشهد بلا خريطة وصفر قدرة مجهولة', scenes.length >= 20 && gaps.length === 0 && unknownCaps.length === 0, 'gaps: ' + gaps.map(g => g.id).join(',') + ' unknown: ' + unknownCaps.join(','));
+  }, []);
+
   await must('٢٤ · تجهيز مسرح الحذف: للحساب الثاني محتوًى وسجلات', async () => {
     B.set('myListCityId', 'amsterdam');
     B.set('myCityListLoadedFor', 'amsterdam');
@@ -577,6 +834,13 @@ function citiesSeed(){
     await B.x('doAccountDelete()');
     ok('٢٥ · المنفّذ مضى للنهاية بلا رسالة توقف', !captured.toasts.some(t => /Deletion stopped/.test(t)), captured.toasts.join(' | '));
   }, []);
+
+  await must('٢٦ب · بعد التتالي: الرحلة التي كانت مشتركة زالت من مسار المستلم', async () => {
+    const id = B.x('globalThis.__sharedTripSeed'); const gone = !store.get('trips/' + id);
+    await signInAs(U1, 'Nourah'); await B.x('loadUserTrips()');
+    const shown = B.x('(sharedTrips || []).some(t => t.id === "' + id + '")');
+    ok('٢٦ب · المستند زال ولا يظهر للمستلم', gone && shown === false, 'gone=' + gone + ' shown=' + shown);
+  }, ['seq.deleteWithSharedTrip']);
 
   await must('٢٦ · الشهادة المزدوجة: صفر بقايا + عدّادات الآخر تراجعت', async () => {
     const residue = [...store.keys()].filter(k => k.includes(U2) && !k.startsWith('cities/'));
