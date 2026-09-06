@@ -129,7 +129,8 @@ const MP_EXPECTED = [
   ["mpTrack.hit('bookmark_add')", { prod: 0, test: 3 }], // ر٥٢: مفكرة المكان والقائمة · ر٦١: + مفكرة رحلتك الذاتية
   ["mpTrack.hit('signup_start')", 1],
   ["mpTrack.hit('signup_done')", 1],
-  ["mpTrack.hit('reserved_1')", 2],
+  ["mpTrack.hit('reserved_1')", { prod: 2, test: 0 }], // ر٦٣: الاختبار انتقل لـreserved_2 (reserved_1 خارج قائمة M4.24)
+  ["mpTrack.hit('reserved_2')", { prod: 0, test: 2 }],
   ["mpTrack.statsList(docId, 'open_ulist')", 1],
   ["mpTrack.statsTrip(tripId, 'view_shared')", 1],
   ["mpTrack.statsTrip(tripId, 'view_community')", 1],
@@ -151,6 +152,49 @@ function mpGuard(label, content){
   }
 }
 mpGuard(TEST, test);
+
+// ═══ §14–§18 (ر٦٣ — إبر المراجعة الشاملة) ═══
+(function reviewNeedles(){
+  const T = '§14 index-debug-test.html: ';
+  const cssAll = (test.match(/<style[^>]*>([\s\S]*?)<\/style>/g) || []).join('\n');
+  // §14 · كل متغيّر لوني مستعمَل معرَّف فعلًا
+  const usedVars = new Set([...test.matchAll(/var\(--([\w-]+)/g)].map(m => m[1]));
+  const definedVars = new Set([...cssAll.matchAll(/--([\w-]+)\s*:/g)].map(m => m[1]));
+  const undefinedVars = [...usedVars].filter(v => !definedVars.has(v));
+  check(undefinedVars.length === 0, T + 'every var(--x) used is defined', 'undefined: ' + undefinedVars.join(', '));
+  // §15 · لا معرّف HTML مكرر
+  const idCounts = {};
+  for (const m of test.matchAll(/\sid="([^"]+)"/g)) idCounts[m[1]] = (idCounts[m[1]] || 0) + 1;
+  const dupIds = Object.keys(idCounts).filter(k => idCounts[k] > 1);
+  check(dupIds.length === 0, '§15 index-debug-test.html: no duplicate element ids', 'dup: ' + dupIds.join(', '));
+  // §16 · حقول المستخدمين الآخرين لا تدخل قالبًا بلا تهريب
+  const js = (test.match(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g) || []).join('\n');
+  const SENSITIVE = ['nickname', 'customLabel', 'cityName', 'displayName', 'bio', 'contactUrl'];
+  const leaks = [];
+  for (const m of js.matchAll(/\$\{([^}]*)\}/g)) {
+    const expr = m[1];
+    if (SENSITIVE.some(f => expr.includes('.' + f) || expr.includes(f + ' ||')) && !/escapeHtml|encodeURI|JSON\.stringify|\.length|\.trim\(\)\s*\?|\?\s*'/.test(expr)) leaks.push(expr.slice(0, 50));
+  }
+  check(leaks.length === 0, '§16 index-debug-test.html: other-user fields escaped in templates', 'unescaped: ' + leaks.slice(0, 4).join(' | '));
+  // §17 · ألفاظ محظورة بعد التسوية بنصوص الواجهة (لا التعليقات)
+  const uiOnly = test.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->/g, '');
+  const BANNED = ['My favorites', '🔖 Saved trips', '>From community<', '>From curators<', 'Most Loved', 'People &amp; lists'];
+  const hits = BANNED.filter(b => uiOnly.includes(b));
+  check(hits.length === 0, '§17 index-debug-test.html: no pre-settlement lexicon in UI text', 'found: ' + hits.join(', '));
+  // §18 · كل مفتاح قياس يرسله الكود موجود بقائمة القواعد (إن وُجد ملف القواعد)
+  const rulesPath = path.join(ROOT, 'firestore.rules');
+  if (fs.existsSync(rulesPath)) {
+    const rules = fs.readFileSync(rulesPath, 'utf8');
+    const line = (rules.split('\n').find(l => l.includes("hasOnly(['visit_source'")) || '');
+    const allowed = new Set([...line.matchAll(/'(\w+)'/g)].map(m => m[1]));
+    const fired = new Set([...js.matchAll(/mpTrack\.hit\('(\w+)'\)/g)].map(m => m[1]));
+    const rejected = [...fired].filter(k => allowed.size && !allowed.has(k));
+    check(rejected.length === 0, '§18 index-debug-test.html: every mpTrack key is in the rules whitelist', 'silently rejected: ' + rejected.join(', '));
+  } else {
+    console.log('INFO  §18 skipped — firestore.rules not present');
+  }
+})();
+
 if (countOcc(prod, 'const mpTrack') > 0) {
   mpGuard(PROD, prod);
   check(!/mpTrack\._diag/.test(prod), 'prod has no mpTrack diagnostics hook (_diag)');
