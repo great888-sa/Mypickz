@@ -23,6 +23,15 @@ jobs:
         run: node tests/audit.js
       - name: Run runtime smoke (real Chrome, offline)
         run: node tests/runtime.js
+      - name: Run visual contract (real Chrome — computed contrast, clipping, deferred, field-notes register)
+        run: node tests/visual.js
+      - name: Upload screenshots (visual-out)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-screenshots
+          path: visual-out/
+          if-no-files-found: ignore
       - name: Run Firestore rules tests (official emulator)
         run: npx firebase emulators:exec --only firestore --project demo-mypickz "node tests/rules-sim.js"
       - name: Run user journey (full simulation, no browser)
