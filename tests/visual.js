@@ -14,6 +14,10 @@ const OUT = path.join(ROOT, 'visual-out'); fs.mkdirSync(OUT, { recursive: true }
 const NOTES = fs.existsSync(path.join(__dirname, 'notes.json')) ? JSON.parse(fs.readFileSync(path.join(__dirname, 'notes.json'), 'utf8')) : [];
 function findChrome(){ return [process.env.CHROME_PATH, process.env.PUPPETEER_EXECUTABLE_PATH, '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'].filter(Boolean).find(p => fs.existsSync(p)); }
 let fails = 0; const pass = n => console.log('PASS  ' + n); const fail = (n, w) => { fails++; console.log('FAIL  ' + n + (w ? '  →  ' + w : '')); };
+let STAGE = 'start'; const at = s => { STAGE = s; };
+const WATCHDOG = setTimeout(() => { console.log('FAIL  watchdog: visual.js exceeded 120s while at «' + STAGE + '»'); console.log('\n❌ VISUAL FAILED (hung)'); process.exit(1); }, 120000);
+const withTimeout = (p, ms, what) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout ' + ms + 'ms at ' + what)), ms))]);
+const armPage = pg => { pg.setDefaultTimeout(15000); pg.setDefaultNavigationTimeout(20000); pg.on('dialog', d => { console.log('INFO  dialog auto-dismissed: ' + String(d.message()).slice(0, 80)); d.dismiss().catch(() => {}); }); };
 
 // الشاشات: اسم · كيف تُظهَر (كود يُنفَّذ بالصفحة) · الحاوية التي تُقاس
 const SCREENS = [
@@ -52,10 +56,10 @@ const PAGE_EVAL = `(function(){
   const chrome = findChrome(); if (!chrome) { fail('chrome executable', 'set CHROME_PATH'); return finish(); }
   const browser = await puppeteer.launch({ executablePath: chrome, headless: true, args: ['--no-sandbox', '--disable-gpu'] });
   try {
-    const page = await browser.newPage(); await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+    const page = await browser.newPage(); armPage(page); await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
     const errs = []; page.on('pageerror', e => errs.push(String(e && e.message || e)));
     await page.setRequestInterception(true); page.on('request', r => r.url().startsWith('file:') ? r.continue() : r.abort());
-    await page.goto('file://' + path.join(ROOT, FILE), { waitUntil: 'load' }); await new Promise(r => setTimeout(r, 4500));
+    at('load app'); await page.goto('file://' + path.join(ROOT, FILE), { waitUntil: 'load' }); await new Promise(r => setTimeout(r, 4500));
     // تجاوز بوابة الدخول للقياس: إخفاء الطبقة وبذر حالة عرض دنيا (بلا شبكة لا مستندات — نقيس الرؤوس والقوالب والحالات الفارغة)
     // بذر بيانات عرض صناعية (بالأشكال ذاتها التي تبذرها المحاكاة) — فتُرسم الشاشات بمحتواها لا فارغة
     const seeded = await page.evaluate(`(function(){
@@ -72,11 +76,11 @@ const PAGE_EVAL = `(function(){
     })()`);
     seeded === 'ok' ? pass('synthetic display data seeded (list · 3 places · 2 trips)') : fail('seed', seeded);
     for (const sc of SCREENS){
-      let shown = true; try { await page.evaluate(sc.show); } catch (e) { shown = false; fail('screen ' + sc.id + ' shows', String(e.message).slice(0, 80)); }
+      at('show ' + sc.id); let shown = true; try { await withTimeout(page.evaluate(sc.show), 15000, 'show ' + sc.id); } catch (e) { shown = false; fail('screen ' + sc.id + ' shows', String(e.message).slice(0, 80)); }
       await new Promise(r => setTimeout(r, 300));
       try { const shot = path.join(OUT, sc.id + '.png'); await page.screenshot({ path: shot, type: 'png', fullPage: false }); fs.existsSync(shot) ? pass('screenshot ' + sc.id + '.png written') : fail('screenshot ' + sc.id, 'file missing after capture'); } catch (e) { fail('screenshot ' + sc.id, String(e && e.message || e).slice(0, 120)); }
       if (!shown) continue;
-      const out = await page.evaluate(PAGE_EVAL.replace('ROOT_SEL', JSON.stringify(sc.root)).replace('MEASURE_SEL', JSON.stringify(MEASURE)));
+      at('measure ' + sc.id); const out = await withTimeout(page.evaluate(PAGE_EVAL.replace('ROOT_SEL', JSON.stringify(sc.root)).replace('MEASURE_SEL', JSON.stringify(MEASURE))), 15000, 'measure ' + sc.id);
       const T = 'visual ' + sc.id + ' (' + out.count + ' measured): ';
       out.contrast.length === 0 ? pass(T + 'computed contrast ≥ 4.5 text / 3 icons') : fail(T + 'computed contrast', out.contrast.slice(0, 6).join(' | '));
       out.clipped.length === 0 ? pass(T + 'nothing clipped beyond viewport') : fail(T + 'clipped', out.clipped.slice(0, 6).join(' | '));
@@ -87,13 +91,13 @@ const PAGE_EVAL = `(function(){
     const refFile = fs.readdirSync(ROOT).filter(f => /^Mypickz-STEPS-marked-v1[ _]\d+\.html$/.test(f)).sort().pop();
     if (!refFile) fail('reference present in repo root'); else {
       pass('reference: ' + refFile);
-      const ref = await browser.newPage(); await ref.setViewport({ width: 900, height: 1400, deviceScaleFactor: 2 });
+      at('load reference'); const ref = await browser.newPage(); armPage(ref); await ref.setViewport({ width: 900, height: 1400, deviceScaleFactor: 2 });
       await ref.setRequestInterception(true); ref.on('request', r => r.url().startsWith('file:') ? r.continue() : r.abort());
       await ref.goto('file://' + path.join(ROOT, refFile), { waitUntil: 'load' }); await new Promise(r => setTimeout(r, 800));
       const SCENE_OF = { places: 'dA', trips: 'dB', community: 'dD', 'template-source': 'dD2', curators: 'dE2', addresses: 'dF' };
-      const compose = await browser.newPage(); await compose.setViewport({ width: 1200, height: 1700, deviceScaleFactor: 1 });
+      const compose = await browser.newPage(); armPage(compose); await compose.setViewport({ width: 1200, height: 1700, deviceScaleFactor: 1 });
       for (const [scr, scene] of Object.entries(SCENE_OF)){
-        try {
+        try { at('compare ' + scr);
           const phone = await ref.$('#' + scene + ' .phone'); if (!phone) { fail('reference scene ' + scene + ' phone found'); continue; }
           const refShot = await phone.screenshot({ type: 'png', encoding: 'base64' });
           const appPath = path.join(OUT, scr + '.png'); if (!fs.existsSync(appPath)) continue;
@@ -114,7 +118,7 @@ const PAGE_EVAL = `(function(){
       ];
       const PROPS = ['color', 'backgroundColor', 'borderTopColor', 'borderTopStyle', 'borderTopLeftRadius', 'fontSize', 'fontWeight'];
       const read = (pg, sel) => pg.evaluate((sel, PROPS) => { const el = document.querySelector(sel); if (!el) return null; const s = getComputedStyle(el); const o = {}; PROPS.forEach(p => o[p] = s[p]); return o; }, sel, PROPS);
-      for (const m of MAP){
+      for (const m of MAP){ at('token ' + m.name);
         const a = await read(ref, m.ref), b = await read(page, m.app);
         if (!a) { fail('token ' + m.name, 'not drawn in reference: ' + m.ref); continue; }
         if (!b) { fail('token ' + m.name, 'not found in app: ' + m.app); continue; }
@@ -130,10 +134,10 @@ const PAGE_EVAL = `(function(){
       await ref.close(); await compose.close();
     }
     // سجل الملاحظات الميدانية: كل ملاحظة فحص بالمتصفح الحقيقي
-    for (const n of NOTES){
+    for (const n of NOTES){ at('note ' + n.id);
       if (!n.check) { console.log('NOTE  ' + n.id + ' (' + n.first + '): ' + n.text + '  →  ' + (n.status || 'OPEN — بلا فحص بعد')); continue; }
       let ok = false, why = '';
-      try { ok = await page.evaluate(n.check); } catch (e) { why = String(e.message).slice(0, 80); }
+      try { ok = await withTimeout(page.evaluate(n.check), 10000, 'note ' + n.id); } catch (e) { why = String(e.message).slice(0, 80); }
       console.log((ok ? 'CLOSED' : 'OPEN  ') + '  ' + n.id + ' (منذ ' + n.first + '): ' + n.text + (ok ? '' : '  →  ' + (why || 'الفحص أحمر')));
       if (!ok && n.mustClose) fails++;
     }
@@ -142,4 +146,4 @@ const PAGE_EVAL = `(function(){
   } catch (e) { fail('visual harness', String(e && e.message || e)); } finally { await browser.close(); }
   finish();
 })();
-function finish(){ console.log('\n' + (fails === 0 ? '✅ VISUAL PASSED' : '❌ VISUAL FAILED (' + fails + ')')); process.exit(fails === 0 ? 0 : 1); }
+function finish(){ clearTimeout(WATCHDOG); console.log('\n' + (fails === 0 ? '✅ VISUAL PASSED' : '❌ VISUAL FAILED (' + fails + ')')); process.exit(fails === 0 ? 0 : 1); }
