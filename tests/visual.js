@@ -57,7 +57,20 @@ const PAGE_EVAL = `(function(){
     await page.setRequestInterception(true); page.on('request', r => r.url().startsWith('file:') ? r.continue() : r.abort());
     await page.goto('file://' + path.join(ROOT, FILE), { waitUntil: 'load' }); await new Promise(r => setTimeout(r, 4500));
     // تجاوز بوابة الدخول للقياس: إخفاء الطبقة وبذر حالة عرض دنيا (بلا شبكة لا مستندات — نقيس الرؤوس والقوالب والحالات الفارغة)
-    await page.evaluate(() => { const a = document.getElementById('authBackdrop'); if (a) a.classList.remove('show'); try { window.currentUser = { uid: 'visual', displayName: 'Visual' }; } catch (e) {} });
+    // بذر بيانات عرض صناعية (بالأشكال ذاتها التي تبذرها المحاكاة) — فتُرسم الشاشات بمحتواها لا فارغة
+    const seeded = await page.evaluate(`(function(){
+      try {
+        var a = document.getElementById('authBackdrop'); if (a) a.classList.remove('show');
+        currentUser = { uid: 'visual', displayName: 'Visual', email: 'visual@t.t' };
+        myListCityId = 'paris'; myCityListLoadedFor = 'paris';
+        myCityListData = { public: true, sharedWith: [], sharedWithNames: {}, bookmarkCount: 2, categories: {
+          breakfast: { active: true, places: [ { id: 'v1', name: 'Holybelly', url: 'https://maps.app.goo.gl/AAA1', area: 'Canal', note: 'Pancakes · early' }, { id: 'v2', name: 'Cafe Oberkampf', url: 'https://maps.app.goo.gl/BBB2', area: 'Oberkampf', note: '' } ] },
+          lunch: { active: true, places: [ { id: 'v3', name: 'Le Bouchon', url: 'https://maps.app.goo.gl/CCC3', area: 'Presqu\'île', note: '' } ] } } };
+        if (typeof emptyDay === 'function') { userTrips = [ { id: 'vt1', type: 'city', cityId: 'paris', cityName: 'Paris', customLabel: 'Spring weekend', public: true, sharedWith: [], sharedWithNames: {}, days: [emptyDay(1), emptyDay(2)] }, { id: 'vt2', type: 'city', cityId: 'paris', cityName: 'Paris', customLabel: 'Food crawl', public: false, sharedWith: [], sharedWithNames: {}, days: [emptyDay(1)] } ]; }
+        return 'ok';
+      } catch (e) { return 'seed error: ' + e.message; }
+    })()`);
+    seeded === 'ok' ? pass('synthetic display data seeded (list · 3 places · 2 trips)') : fail('seed', seeded);
     for (const sc of SCREENS){
       let shown = true; try { await page.evaluate(sc.show); } catch (e) { shown = false; fail('screen ' + sc.id + ' shows', String(e.message).slice(0, 80)); }
       await new Promise(r => setTimeout(r, 300));
@@ -69,6 +82,52 @@ const PAGE_EVAL = `(function(){
       out.clipped.length === 0 ? pass(T + 'nothing clipped beyond viewport') : fail(T + 'clipped', out.clipped.slice(0, 6).join(' | '));
       out.silent.length === 0 ? pass(T + 'no silent disabled+title') : fail(T + 'silent deferred', out.silent.join(' | '));
       out.untagged.length === 0 ? pass(T + 'every .soon carries a visible tag') : fail(T + 'untagged .soon', out.untagged.join(' | '));
+    }
+    // ═══ الأصل: المرجع الحاكم يُرسم بكروم السير نفسه ويُقارن به التطبيق (لا جدول من الذاكرة) ═══
+    const refFile = fs.readdirSync(ROOT).filter(f => /^Mypickz-STEPS-marked-v1[ _]\d+\.html$/.test(f)).sort().pop();
+    if (!refFile) fail('reference present in repo root'); else {
+      pass('reference: ' + refFile);
+      const ref = await browser.newPage(); await ref.setViewport({ width: 900, height: 1400, deviceScaleFactor: 2 });
+      await ref.setRequestInterception(true); ref.on('request', r => r.url().startsWith('file:') ? r.continue() : r.abort());
+      await ref.goto('file://' + path.join(ROOT, refFile), { waitUntil: 'load' }); await new Promise(r => setTimeout(r, 800));
+      const SCENE_OF = { places: 'dA', trips: 'dB', community: 'dD', 'template-source': 'dD2', curators: 'dE2', addresses: 'dF' };
+      const compose = await browser.newPage(); await compose.setViewport({ width: 1200, height: 1700, deviceScaleFactor: 1 });
+      for (const [scr, scene] of Object.entries(SCENE_OF)){
+        try {
+          const phone = await ref.$('#' + scene + ' .phone'); if (!phone) { fail('reference scene ' + scene + ' phone found'); continue; }
+          const refShot = await phone.screenshot({ type: 'png', encoding: 'base64' });
+          const appPath = path.join(OUT, scr + '.png'); if (!fs.existsSync(appPath)) continue;
+          const appShot = fs.readFileSync(appPath).toString('base64');
+          await compose.setContent('<body style="margin:0;background:#111;display:flex;gap:16px;padding:12px;font:700 14px sans-serif;color:#eee"><div><div style="padding:6px">المرجع v1.42 — ' + scene + '</div><img style="width:390px" src="data:image/png;base64,' + refShot + '"></div><div><div style="padding:6px">التطبيق — ' + scr + '</div><img style="width:390px" src="data:image/png;base64,' + appShot + '"></div></body>');
+          await compose.screenshot({ path: path.join(OUT, 'compare-' + scr + '.png'), type: 'png', fullPage: true });
+          pass('compare-' + scr + '.png (reference ' + scene + ' | app) written');
+        } catch (e) { fail('compare ' + scr, String(e.message).slice(0, 100)); }
+      }
+      // مطابقة الرموز المحسوبة: العنصر بالمرجع (مرسومًا) هو الأصل — ونظيره بالتطبيق يُقرأ بجدول ربط الأصناف
+      const MAP = [
+        { name: 'back chip',      ref: '#dD2 .backchip',                          app: '.backchip' },
+        { name: 'chip inactive',  ref: '#dD2 .srcgrid > .src:not(.on):not(.soon)', app: '#__tplSource .chip:not(.on):not(.soon), .chipgrid .pl-src:not(.on):not(.soon)' },
+        { name: 'chip active',    ref: '#dD2 .srcgrid > .src.on',                 app: '#__tplSource .chip.on, .chipgrid .pl-src.on' },
+        { name: 'chip deferred',  ref: '#dD2 .srcgrid > .src.soon',               app: '#__tplSource .chip.soon, .chipgrid .pl-src.soon' },
+        { name: 'city selector',  ref: '#dD2 .csel',                              app: '#__tplSource .csel, .csel' },
+        { name: 'context line',   ref: '#dD2 .ctx',                               app: '#__tplSource .ctx, .ctx' },
+      ];
+      const PROPS = ['color', 'backgroundColor', 'borderTopColor', 'borderTopStyle', 'borderTopLeftRadius', 'fontSize', 'fontWeight'];
+      const read = (pg, sel) => pg.evaluate((sel, PROPS) => { const el = document.querySelector(sel); if (!el) return null; const s = getComputedStyle(el); const o = {}; PROPS.forEach(p => o[p] = s[p]); return o; }, sel, PROPS);
+      for (const m of MAP){
+        const a = await read(ref, m.ref), b = await read(page, m.app);
+        if (!a) { fail('token ' + m.name, 'not drawn in reference: ' + m.ref); continue; }
+        if (!b) { fail('token ' + m.name, 'not found in app: ' + m.app); continue; }
+        const diffs = PROPS.filter(p => { if (/Radius|fontSize/.test(p)) return Math.abs(parseFloat(a[p]) - parseFloat(b[p])) > 2; return String(a[p]) !== String(b[p]); }).map(p => p + ': ref ' + a[p] + ' ≠ app ' + b[p]);
+        diffs.length === 0 ? pass('token ' + m.name + ' matches reference (computed)') : fail('token ' + m.name, diffs.join(' | '));
+      }
+      // الجرد النصي: شرائح شاشة المصدر بالمرجع (ترتيبًا) = شرائح القالب بالتطبيق
+      const norm = t => String(t || '').replace(/[·\s]+/g, ' ').replace(/stage 3|later|soon/gi, '').trim().toLowerCase();
+      const refChips = await ref.evaluate(() => [...document.querySelectorAll('#dD2 .phone .srcgrid > .src')].slice(0, 6).map(e => e.textContent));
+      const appChips = await page.evaluate(() => [...document.querySelectorAll('#__tplSource .chipgrid .chip')].map(e => e.textContent));
+      const same = refChips.length === 6 && appChips.length === 6 && refChips.every((t, i) => norm(t) === norm(appChips[i]));
+      same ? pass('six source chips — same labels and order as the reference') : fail('six source chips vs reference', 'ref: ' + refChips.map(norm).join(' | ') + '  ⇄  app: ' + appChips.map(norm).join(' | '));
+      await ref.close(); await compose.close();
     }
     // سجل الملاحظات الميدانية: كل ملاحظة فحص بالمتصفح الحقيقي
     for (const n of NOTES){
