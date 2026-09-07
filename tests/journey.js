@@ -782,8 +782,8 @@ function citiesSeed(){
     ok('ح٤ · المعطَّل بلا معالج أو موسوم معطَّلًا', a.disabled === true || !a.ok, JSON.stringify({ a: a.why, b: !b || b.disabled, c: !c || c.disabled }));
   }, ['edge.disabledChipsInert']);
 
-  await must('م · مصفوفة مشاهد المرجع v1.41: كل مشهد مغطًّى أو مؤجَّل بسببه (لا فجوة صامتة)', async () => {
-    const refFile = fs.readdirSync(ROOT).filter(f => /^Mypickz-STEPS-marked-v1[ _]41\.html$/.test(f))[0];
+  await must('م · مصفوفة مشاهد المرجع v1.42: كل مشهد مغطًّى أو مؤجَّل بسببه (لا فجوة صامتة)', async () => {
+    const refFile = fs.readdirSync(ROOT).filter(f => /^Mypickz-STEPS-marked-v1[ _]42\.html$/.test(f))[0];
     const ref = fs.readFileSync(path.join(ROOT, refFile), 'utf8');
     const scenes = [...ref.matchAll(/<section class="scene" id="(\w+)">\s*<h3 class="t">([\s\S]*?)<\/h3>/g)].map(m => ({ id: m[1], title: m[2].replace(/<[^>]+>/g, '').trim().slice(0, 48) }));
     const SCENE_MAP = {
