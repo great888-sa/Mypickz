@@ -61,7 +61,7 @@ const PAGE_EVAL = `(function(){
     for (const sc of SCREENS){
       let shown = true; try { await page.evaluate(sc.show); } catch (e) { shown = false; fail('screen ' + sc.id + ' shows', String(e.message).slice(0, 80)); }
       await new Promise(r => setTimeout(r, 300));
-      try { await page.screenshot({ path: path.join(OUT, sc.id + '.png'), fullPage: false }); } catch (e) {}
+      try { const shot = path.join(OUT, sc.id + '.png'); await page.screenshot({ path: shot, type: 'png', fullPage: false }); fs.existsSync(shot) ? pass('screenshot ' + sc.id + '.png written') : fail('screenshot ' + sc.id, 'file missing after capture'); } catch (e) { fail('screenshot ' + sc.id, String(e && e.message || e).slice(0, 120)); }
       if (!shown) continue;
       const out = await page.evaluate(PAGE_EVAL.replace('ROOT_SEL', JSON.stringify(sc.root)).replace('MEASURE_SEL', JSON.stringify(MEASURE)));
       const T = 'visual ' + sc.id + ' (' + out.count + ' measured): ';
@@ -79,6 +79,7 @@ const PAGE_EVAL = `(function(){
       if (!ok && n.mustClose) fails++;
     }
     errs.length === 0 ? pass('no uncaught errors while rendering screens') : fail('uncaught errors', errs.slice(0, 3).join(' | '));
+    const shots = fs.readdirSync(OUT).filter(f => f.endsWith('.png')); shots.length > 0 ? pass('screenshots on disk: ' + shots.length + ' (' + shots.join(', ') + ') → uploaded as artifact visual-screenshots') : fail('screenshots on disk', 'none written');
   } catch (e) { fail('visual harness', String(e && e.message || e)); } finally { await browser.close(); }
   finish();
 })();
