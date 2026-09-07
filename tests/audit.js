@@ -419,7 +419,7 @@ function referenceGuard(){
   const unbalanced = scenes.filter(([, id, body]) => (body.match(/<div\b/g) || []).length !== (body.match(/<\/div>/g) || []).length).map(([, id]) => id);
   check(unbalanced.length === 0, T + 'every scene div-balanced', 'unbalanced: ' + unbalanced.join(' | '));
   check((r.match(/<section class="scene"/g) || []).length === (r.match(/<\/section>/g) || []).length, T + 'sections open = close');
-  const tags = [...r.matchAll(/<span class="mk[^"]*"[^>]*>([\s\S]*?)<\/span>/g)]
+  const tags = [...r.matchAll(/<(?:span|div) class="mk[^"]*"[^>]*>([\s\S]*?)<\/(?:span|div)>/g)] // ر٦٨: يشمل div.mk الغلاف (درس لافتة ٧ سبتمبر)
     .map(m => m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
   const over = tags.filter(t => t.length > 45 && !MK_LEGACY.includes(t));
   check(over.length === 0, T + 'mk tags \u2264 45 chars (legacy list excepted)', 'over: ' + over.map(t => t.slice(0, 30) + '\u2026(' + t.length + ')').join(' | '));
@@ -575,8 +575,55 @@ function idGuard(label, s){
   check(colours <= cap, T + 'colours outside identity block = ' + colours + ' (cap ' + cap + ')');
   console.log('INFO  ' + T + 'colour literals outside identity = ' + lit + ' · colour variables in inline styles/templates = ' + (colours - lit));
 }
+// ---------- §19 (ر٦٨ — ق٠٩-٠٦-١٩ · ق٠٩-٠٧-٠١): عقد العنصر المؤجل — لا disabled صامت ولا تلميح وحيد ----------
+function deferredContractGuard(label, s){
+  const T = '§19 ' + label + ': ';
+  const btns = [...s.matchAll(/<button\b[^>]*>/g)].map(m => m[0]);
+  const silent = btns.filter(b => /\bdisabled\b/.test(b) && !/onclick=/.test(b) && /title=/.test(b));
+  check(silent.length === 0, T + 'no disabled+title button without a handler (deferred = soonChip)', 'found ' + silent.length + ': ' + silent.map(b=>b.slice(0,60)).join(' | '));
+  const soonNoHandler = [...s.matchAll(/<button\b[^>]*class="(?:[^"]*\s)?soon(?:\s[^"]*)?"[^>]*>/g)].map(m=>m[0]).filter(b => !/onclick=/.test(b));
+  check(soonNoHandler.length === 0, T + 'every .soon element responds (onclick present)', 'silent: ' + soonNoHandler.length);
+  const soonNoTag = [...s.matchAll(/<button\b[^>]*class="(?:[^"]*\s)?soon(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/button>/g)].filter(m => !/<span class="(?:dim|soon|mini)">/.test(m[1]));
+  check(soonNoTag.length === 0, T + 'every .soon element carries a visible tag', 'untagged: ' + soonNoTag.length);
+  check(/function soonChip\(/.test(s) && /function showSoon\(/.test(s), T + 'soonChip()/showSoon() builders present');
+}
+// ---------- §20 (ر٦٨): أزواج الأصناف بحل السطح من جدول SURFACES المسمّى بالكود ----------
+function surfaceContrastGuard(label, s){
+  const T = '§20 ' + label + ': ';
+  const vals = {}; for (const m of s.matchAll(/--([a-z0-9-]+):\s*(#[0-9A-Fa-f]{6})/g)) vals[m[1]] = m[2];
+  const alpha = {}; for (const m of s.matchAll(/--([a-z0-9-]+):\s*rgba\((\d+),\s*(\d+),\s*(\d+),\s*([0-9.]+)\)/g)) alpha[m[1]] = [[+m[2],+m[3],+m[4]], parseFloat(m[5])];
+  const tbl = s.match(/const SURFACES = (\{[^;]*\});/);
+  check(!!tbl, T + 'SURFACES table present in code'); if (!tbl) return;
+  let SURF; try { SURF = Function('return ' + tbl[1])(); } catch(e){ fail(T + 'SURFACES parses'); return; }
+  const hx = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
+  const lum = c => { const f = u => { u/=255; return u<=0.03928 ? u/12.92 : Math.pow((u+0.055)/1.055,2.4); }; const [r,g,b]=c.map(f); return 0.2126*r+0.7152*g+0.0722*b; };
+  const cr = (a,b) => { let la=lum(a), lb=lum(b); if (la<lb) [la,lb]=[lb,la]; return (la+0.05)/(lb+0.05); };
+  const identity = (s.match(/<style id="identity">([\s\S]*?)<\/style>/) || [])[1] || '';
+  const bad = [];
+  for (const [cls, surf] of Object.entries(SURF)){
+    const host = vals[surf]; if (!host) { bad.push(cls + ': unknown surface ' + surf); continue; }
+    const re = new RegExp('([^{}]*)\\.' + cls.replace(/[-]/g,'\\-') + '(?:\\.[a-z-]+)?\\{([^}]*)\\}', 'g');
+    for (const m of identity.matchAll(re)){
+      const selector = m[1].split(',').pop(); const body = m[2];
+      const scopedIvory = /\.(?:modal|panel|drawer|dpanel)\b/.test(selector);
+      const scopedNight = /\.(?:pl-ownerpanel|stickyhead|mp-empty|pl-cathead|topbar|tabbar|chipgrid)\b/.test(selector); // نطاق ليلي صريح يغلب سطح الصنف
+      const fg = (body.match(/(?:^|[;\s])color:\s*var\(--([a-z0-9-]+)\)/) || [])[1]; if (!fg) continue;
+      const bgv = (body.match(/background(?:-color)?:\s*var\(--([a-z0-9-]+)\)/) || [])[1];
+      const H = bgv && vals[bgv] ? hx(vals[bgv]) : hx(scopedIvory ? vals['ivory'] : (scopedNight ? vals['paper'] : host));
+      let F = vals[fg] ? hx(vals[fg]) : null;
+      if (!F && alpha[fg]) { const [c,t] = alpha[fg]; F = c.map((v,i)=>v*t+H[i]*(1-t)); }
+      if (!F) continue;
+      const need = /bmk|icon|act\b/.test(cls) ? 3 : 4.5;
+      const ratio = cr(F, H);
+      if (ratio < need) bad.push(cls + ' ' + fg + ' on ' + (bgv || surf) + ' = ' + ratio.toFixed(2));
+    }
+  }
+  check(bad.length === 0, T + 'every identity class pair ≥ 4.5 text / ≥ 3 icons on its declared surface', bad.join(' | '));
+}
 idGuard(TEST, test);
 curatorContrastGuard(TEST, test);
+deferredContractGuard(TEST, test);
+surfaceContrastGuard(TEST, test);
 migrationGuard(TEST, test);
 referenceGuard();
 if (styleBlock(prod, 'identity')) {
