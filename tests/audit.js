@@ -638,6 +638,42 @@ if (styleBlock(prod, 'identity')) {
 finish();
 
 function finish(){
+  referenceConformanceGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
   process.exit(fails === 0 ? 0 : 1);
+}
+
+// ---------- §21 (ر٦٩): تطابق الواجهات الخمس بالمرجع الحاكم v1.42 — نسبة تُطبع بكل تشغيل ولا تنخفض ----------
+function referenceConformanceGuard(label, s){
+  const T = '§21 ' + label + ': ';
+  const has = (...ps) => ps.every(p => p.test(s)); const none = (...ps) => !ps.some(p => p.test(s));
+  const C = [
+    ['٦/أ المبدل الرباعي شبكة ٢×٢', has(/class="chipgrid c2" id="plSrcRow"/, /Saved from Curators <span class="dim">stage 3/)],
+    ['٦/أ المحدد بالمنسدلتين + ＋ City', has(/plToggle\w*Country|plPickCountry|plCountryBtn/, /＋<\/b> City|＋ City/)],
+    ['٦/أ صف الأفعال: Add place · Day plan موسوم · View', has(/Add place/, /Day plan <span class="dim">Soon/, /View: <b>List<\/b>/)],
+    ['٦/أ سطر السياق أخيرًا', s.indexOf('View: <b>List</b>') > 0 && s.indexOf('id="plCtx"') > s.indexOf('View: <b>List</b>')],
+    ['٦/أ المشاركة الصادرة «Share my list with…»', has(/Share my list with/)],
+    ['٦/أ لا قسم Shared with you بالوجهتين', none(/Shared with you \(' \+ shared/, /moves into/)],
+    ['٦/أ نافذة مفكرتي مجمَّعة بالمدينة', has(/bmCity|groupByCity|Bookmarked places[^\n]{0,400}cityName/)],
+    ['٦/أ نافذة المخططات بنوعيها', has(/City Route/, /Outside city trip/)],
+    ['٦/ب المبدل الرباعي شبكة ٢×٢', has(/data-tsrc="saved"/, /Saved from Community <span class="dim">stage 3<\/span><\/button>/)],
+    ['٦/ب صف واحد: Create trip أولًا يسارًا ثم All cities', s.indexOf('openCreateTripFlow()">＋ Create trip') > 0 && s.indexOf('openCreateTripFlow()">＋ Create trip') < s.indexOf('id="tripCityPick"')],
+    ['٦/ب أنواع الرحلات اثنان', none(/One day trip/, /data-ttype="day"/)],
+    ['٦/ب عرض الرحلة: غلاف ومحطات وأرجل', has(/tcover|stopcard|legrow/)],
+    ['٦/د الجذر: مبدل + بحث الاسم + محدد المدينة', has(/communityScreen = 'root'/, /Search by username|cmSearch/) && has(/rootCity|cmRootCity/)],
+    ['٦/د شاشة المصدر على القالب المشترك', has(/sourceScreen\(\{[^\n]*backHandler: 'cmBackToRoot/)],
+    ['٦/د الشرائح الست ٣+٣', has(/Most bookmarked<\/button><\/div>'\n?\s*\+ '<div class="chipgrid c3"><button[^\n]*Shared with you/)],
+    ['٦/د بطاقات بصفين', has(/class="row rowblock"><div>[^\n]{0,400}Save <span class="dim">stage 3/)],
+    ['٦/د المحدد لوحة اختيار لا منسدلة', none(/<select id="cmCity"/)],
+    ['٦/هـ الشبكة بلا بحث ظاهر', has(/class="csel" hidden[^>]*>🔍 Find a curator/) || none(/Find a curator/)],
+    ['٦/هـ٢ رأس الثقة: Contact/Following مؤجلان بلا 📤', has(/✉ Contact/, /Following <span class="dim">/) && none(/Send this curator page/)],
+    ['٦/هـ٢ المبدل بلا Bookmarked بمستواه + الشرائح الست', none(/>🔖 Bookmarked<\/span>/) && has(/Shared with you <span class="dim">later/)],
+    ['٦/هـ٢ لا وسوم متقادمة', none(/Preview · step 4/, /Curators<\/b> · Step 4/)],
+    ['٦/و الرأس الثلاثي + Add address', has(/Add address/, /addrCountry|addrCity|addr[^\n]{0,300}City/)],
+    ['٦/و لافتة الإيقاف', has(/Account [sS]uspended/)],
+    ['٦/و المحدد لوحة اختيار لا منسدلة', none(/<select[^>]*id="addr/)],
+  ];
+  const n = C.filter(x => x[1]).length;
+  console.log('INFO  ' + T + 'reference conformance ' + n + '/' + C.length + ' — open: ' + C.filter(x => !x[1]).map(x => x[0]).join(' | '));
+  check(n >= 13, T + 'conformance never drops below the r69 baseline (13)', n + '/' + C.length);
 }
