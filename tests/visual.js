@@ -65,7 +65,7 @@ const PAGE_EVAL = `(function(){
         myListCityId = 'paris'; myCityListLoadedFor = 'paris';
         myCityListData = { public: true, sharedWith: [], sharedWithNames: {}, bookmarkCount: 2, categories: {
           breakfast: { active: true, places: [ { id: 'v1', name: 'Holybelly', url: 'https://maps.app.goo.gl/AAA1', area: 'Canal', note: 'Pancakes · early' }, { id: 'v2', name: 'Cafe Oberkampf', url: 'https://maps.app.goo.gl/BBB2', area: 'Oberkampf', note: '' } ] },
-          lunch: { active: true, places: [ { id: 'v3', name: 'Le Bouchon', url: 'https://maps.app.goo.gl/CCC3', area: 'Presqu\'île', note: '' } ] } } };
+          lunch: { active: true, places: [ { id: 'v3', name: 'Le Bouchon', url: 'https://maps.app.goo.gl/CCC3', area: 'Presqu’île', note: '' } ] } } };
         if (typeof emptyDay === 'function') { userTrips = [ { id: 'vt1', type: 'city', cityId: 'paris', cityName: 'Paris', customLabel: 'Spring weekend', public: true, sharedWith: [], sharedWithNames: {}, days: [emptyDay(1), emptyDay(2)] }, { id: 'vt2', type: 'city', cityId: 'paris', cityName: 'Paris', customLabel: 'Food crawl', public: false, sharedWith: [], sharedWithNames: {}, days: [emptyDay(1)] } ]; }
         return 'ok';
       } catch (e) { return 'seed error: ' + e.message; }
