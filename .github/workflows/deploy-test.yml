@@ -31,7 +31,7 @@ jobs:
         with:
           name: visual-screenshots
           path: visual-out/
-          if-no-files-found: ignore
+          if-no-files-found: error
       - name: Run Firestore rules tests (official emulator)
         run: npx firebase emulators:exec --only firestore --project demo-mypickz "node tests/rules-sim.js"
       - name: Run user journey (full simulation, no browser)
