@@ -600,22 +600,24 @@ function surfaceContrastGuard(label, s){
   const cr = (a,b) => { let la=lum(a), lb=lum(b); if (la<lb) [la,lb]=[lb,la]; return (la+0.05)/(lb+0.05); };
   const identity = (s.match(/<style id="identity">([\s\S]*?)<\/style>/) || [])[1] || '';
   const bad = [];
-  for (const [cls, surf] of Object.entries(SURF)){
-    const host = vals[surf]; if (!host) { bad.push(cls + ': unknown surface ' + surf); continue; }
-    const re = new RegExp('([^{}]*)\\.' + cls.replace(/[-]/g,'\\-') + '(?:\\.[a-z-]+)?\\{([^}]*)\\}', 'g');
-    for (const m of identity.matchAll(re)){
-      const selector = m[1].split(',').pop(); const body = m[2];
-      const scopedIvory = /\.(?:modal|panel|drawer|dpanel)\b/.test(selector);
-      const scopedNight = /\.(?:pl-ownerpanel|stickyhead|mp-empty|pl-cathead|topbar|tabbar|chipgrid)\b/.test(selector); // نطاق ليلي صريح يغلب سطح الصنف
-      const fg = (body.match(/(?:^|[;\s])color:\s*var\(--([a-z0-9-]+)\)/) || [])[1]; if (!fg) continue;
-      const bgv = (body.match(/background(?:-color)?:\s*var\(--([a-z0-9-]+)\)/) || [])[1];
+  // ر٦٨ب: كل قاعدة تُقسَّم بمحدداتها (بالفاصلة) ويُقيَّم كل محدد وحده — فلا يفلت `.actn b,.x b{…}` لأن آخر محدد خارج الجدول
+  for (const rule of identity.matchAll(/([^{}]+)\{([^}]*)\}/g)){
+    const body = rule[2];
+    const fg = (body.match(/(?:^|[;\s])color:\s*var\(--([a-z0-9-]+)\)/) || [])[1]; if (!fg) continue;
+    const bgv = (body.match(/background(?:-color)?:\s*var\(--([a-z0-9-]+)\)/) || [])[1];
+    for (const selector of rule[1].split(',').map(x => x.trim())){
+      const m = selector.match(/\.([a-z0-9-]+)(?:\.[a-z-]+)?(?:\s+(?:b|span|\.dim))?$/); if (!m) continue;
+      const cls = m[1]; const surf = SURF[cls]; if (!surf) continue;
+      const host = vals[surf]; if (!host) { bad.push(cls + ': unknown surface ' + surf); continue; }
+      const scopedIvory = /\.(?:modal|panel|drawer|dpanel|pl-row|row|card)\b/.test(selector);
+      const scopedNight = /\.(?:pl-ownerpanel|stickyhead|mp-empty|pl-cathead|topbar|tabbar|chipgrid|curhead|place-row-view|block)\b/.test(selector);
       const H = bgv && vals[bgv] ? hx(vals[bgv]) : hx(scopedIvory ? vals['ivory'] : (scopedNight ? vals['paper'] : host));
       let F = vals[fg] ? hx(vals[fg]) : null;
       if (!F && alpha[fg]) { const [c,t] = alpha[fg]; F = c.map((v,i)=>v*t+H[i]*(1-t)); }
       if (!F) continue;
       const need = /bmk|icon|act\b/.test(cls) ? 3 : 4.5;
       const ratio = cr(F, H);
-      if (ratio < need) bad.push(cls + ' ' + fg + ' on ' + (bgv || surf) + ' = ' + ratio.toFixed(2));
+      if (ratio < need) bad.push(cls + ' [' + selector + '] ' + fg + ' on ' + (bgv || (scopedIvory ? 'ivory' : (scopedNight ? 'paper' : surf))) + ' = ' + ratio.toFixed(2));
     }
   }
   check(bad.length === 0, T + 'every identity class pair ≥ 4.5 text / ≥ 3 icons on its declared surface', bad.join(' | '));
