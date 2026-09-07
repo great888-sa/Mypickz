@@ -577,7 +577,7 @@ function citiesSeed(){
     const root = inOrder('communityBody', ['chipgrid c2', '>Places<', '>Trips<', 'Search by username']);
     const rootNo = notSees('communityBody', ['backchip', 'Most viewed']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
-    const src = inOrder('communityBody', ['backchip', 'id="cmCity"', 'chipgrid c3', '>All<', 'Most viewed', 'Most saved <span class="dim">stage 3', 'chipgrid c2', '🔖 My bookmarked', '🔖 Most bookmarked']);
+    const src = inOrder('communityBody', ['backchip', 'id="cmCity"', 'chipgrid c3', '>All<', 'Most viewed', 'Most bookmarked', 'chipgrid c3', 'Shared with you', '🔖 My bookmarked', 'Most saved <span class="dim">stage 3']);
     B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
     const t = sees('communityBody', ['class="chip soon"']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
@@ -608,7 +608,7 @@ function citiesSeed(){
   }, ['screen.community.stateKept']);
 
   await must('ش١٣ · القرار ١١ (٧): شرائح الرأس شبكة متساوية بلا تمرير — الرباعي ٢×٢', async () => {
-    const a = tpl(['.chipgrid{display:grid;', '.chipgrid.c2{grid-template-columns:repeat(2', '.chipgrid.c3{grid-template-columns:repeat(3', 'class="chipgrid c2" id="tripSrcRow"', 'class="chipgrid c2" id="tripTypeRow"', '.pl-srcrow{display:grid; grid-template-columns:repeat(2']);
+    const a = tpl(['.chipgrid{display:grid;', '.chipgrid.c2{grid-template-columns:repeat(2', '.chipgrid.c3{grid-template-columns:repeat(3', 'class="chipgrid c2" id="tripSrcRow"', 'class="chipgrid c3" id="tripTypeRow"', 'class="chipgrid c2" id="plSrcRow"']);
     ok('ش١٣ · قواعد الشبكة والصفوف الأربعة عليها', a.ok, a.why);
   }, ['screen.header.gridNoScroll']);
 
@@ -626,14 +626,14 @@ function citiesSeed(){
 
   await must('ش٨ · القوالب الساكنة: شرائح الرحلات بالحرف وOne day trip موسومة', async () => {
     const a = tpl(['data-tsrc="saved" onclick="selectTripsSource(\'saved\')">🔖 Bookmarked trips', 'Saved from Curators <span class=\"dim\">stage 3</span></button>', 'Saved from Community <span class=\"dim\">stage 3</span></button>']);
-    const b = tplCount('→ Day plan', 2); const c = tpl(['data-ttype="day" onclick="showSoon(']);
-    ok('ش٨ · الرباعي الحرفي والمنشآن واليوم الواحد مؤجلات مستجيبة (ر٦٨)', a.ok && b.ok && c.ok, a.why + b.why + c.why);
+    const b = tplCount('data-ttype="day"', 0); const c = tpl(['data-ttype="city"', 'data-ttype="multi"']);
+    ok('ش٨ · الرباعي الحرفي والمنشآن مؤجلان — والأنواع اثنان بلا يوم واحد (ر٦٩ · N-009)', a.ok && b.ok && c.ok, a.why + b.why + c.why);
   }, ['screen.static.tripChips']);
 
   await must('ش٩ · ٦/هـ٢ صفحة المنتقي: رأس واحد وأفعال التسوية بلا تعتيم', async () => {
-    const a = tplCount('← Curators', 1); const b = tpl(['verified curator', '🔖 Bookmarked</span>', 'Save <span class="dim">stage 3</span>', 'followers: count shown here']);
+    const a = tplCount('← Curators', 1); const b = tpl(['verified curator', '🔖 My bookmarked <span class="dim">later</span>', 'Save <span class="dim">stage 3</span>', 'followers: count shown here']); const bNo = tplCount('>🔖 Bookmarked</span>', 0);
     const c = tplCount('class="cur-shell curhead"', 1); const d = tpl(['.cur-shell{opacity:1;}']);
-    ok('ش٩ · عودة واحدة وقشرة واحدة بعناصرها وبلا تعتيم', a.ok && b.ok && c.ok && d.ok, a.why + b.why + c.why + d.why);
+    ok('ش٩ · عودة واحدة وقشرة واحدة بعناصرها وبلا تعتيم — والشرائح الست بلا Bookmarked بمستوى المبدل (ر٦٩ · N-007)', a.ok && b.ok && bNo.ok && c.ok && d.ok, a.why + b.why + bNo.why + c.why + d.why);
   }, ['screen.static.curatorPage']);
 
   await must('ش١٠ · ٦/أ شرائح الأماكن: المنشآن معطَّلان بوسم موعدهما', async () => {
@@ -815,8 +815,8 @@ function citiesSeed(){
     const a = await click('communityBody', 'Most saved');
     const toasted = captured.toasts.some(t => /stage 3/.test(t));
     const same = B.x('JSON.stringify([communitySort, communityMarkedOnly])') === before;
-    const b = findClickable(SRC, 'One day trip'); const c = findClickable(SRC, 'Saved from Curators');
-    ok('ح٤ · الضغط يُنتج رسالة الخطوة والحالة ثابتة والمؤجلات الساكنة تحمل showSoon', a.ok && toasted && same && !!b && /showSoon/.test(b.code) && !!c && /showSoon/.test(c.code), JSON.stringify({ a: a.why, toasted, same, b: !!b, c: !!c }));
+    const b = { ok: !/One day trip/.test(SRC), why: 'One day trip still present' }; const c = findClickable(SRC, 'Saved from Curators');
+    ok('ح٤ · الضغط يُنتج رسالة الخطوة والحالة ثابتة والمؤجلات الساكنة تحمل showSoon', a.ok && toasted && same && b.ok && !!c && /showSoon/.test(c.code), JSON.stringify({ a: a.why, toasted, same, noDayChip: b.ok, c: !!c }));
   }, ['edge.disabledChipsInert']);
 
   await must('م · مصفوفة مشاهد المرجع v1.42: كل مشهد مغطًّى أو مؤجَّل بسببه (لا فجوة صامتة)', async () => {
