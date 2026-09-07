@@ -362,6 +362,40 @@ function citiesSeed(){
     B.x('myCityListData.categories[' + JSON.stringify(CAT2) + '].places.splice(-2, 2)');
   }, ['bookmark.place.urlLessIsolated']);
 
+  // ═══ ر٦٨ — الشواهد الثلاثة (ق٠٩-٠٦-١٩ الإغلاق المزدوج): عزل المفكرة بروابط متطابقة · لا مؤجل صامت (ساكنًا ومرسومًا) · مطابقة قالب شاشة المصدر للمواصفة ═══
+  await must('ع٣ · مكانان برابط متطابق لا يتشاركان المفكرة (المفتاح هوية العنصر — ر٦٨)', async () => {
+    const same = 'https://maps.app.goo.gl/SAME1';
+    B.x('myCityListData.categories[' + JSON.stringify(CAT2) + '].places.push({ id: "pS1", name: "Same A", url: "' + same + '", area: "", note: "" }, { id: "pS2", name: "Same B", url: "' + same + '", area: "", note: "" })');
+    await B.x("plToggleBm(" + JSON.stringify(CAT2) + ", myCityListData.categories[" + JSON.stringify(CAT2) + "].places.length - 2)");
+    const on1 = B.x("isBookmarkedPlace(myCityListData.categories[" + JSON.stringify(CAT2) + "].places.slice(-2)[0])");
+    const on2 = B.x("isBookmarkedPlace(myCityListData.categories[" + JSON.stringify(CAT2) + "].places.slice(-1)[0])");
+    B.x('renderPlacesMine()'); const rendered = screen('plBody');
+    const onCount = (rendered.match(/bmk-btn on/g) || []).length;
+    ok('ع٣ · الأول مضاء والثاني مطفأ رغم تطابق الرابط', on1 === true && on2 === false, JSON.stringify({ on1, on2 }));
+    ok('ع٣ · الشاشة تُظهر مفكرة واحدة مضاءة لا اثنتين', onCount === 1, 'on=' + onCount);
+    await B.x("plToggleBm(" + JSON.stringify(CAT2) + ", myCityListData.categories[" + JSON.stringify(CAT2) + "].places.length - 2)");
+    B.x('myCityListData.categories[' + JSON.stringify(CAT2) + '].places.splice(-2, 2)');
+  }, ['bookmark.place.urlLessIsolated']);
+
+  await must('ع٢ · لا عنصر مؤجل صامت — بالترميز الساكن وبالشاشات المرسومة (ر٦٨)', async () => {
+    const silentStatic = (SRC.match(/<button\b[^>]*\bdisabled\b[^>]*title=[^>]*>/g) || []).filter(b => !/onclick=/.test(b));
+    ok('ع٢ · الترميز الساكن: صفر disabled بتلميح بلا معالج', silentStatic.length === 0, 'found ' + silentStatic.length);
+    const screens = ['plBody', 'tripsBody', 'communityBody', 'cmMarket', 'curPage'].map(id => { try { return screen(id); } catch (e) { return ''; } }).join('');
+    const silentRendered = (screens.match(/<button\b[^>]*\bdisabled\b[^>]*title=[^>]*>/g) || []).filter(b => !/onclick=/.test(b));
+    const soonNoTag = (screens.match(/<button\b[^>]*class="(?:[^"]*\s)?soon(?:\s[^"]*)?"[^>]*>[\s\S]*?<\/button>/g) || []).filter(b => !/<span class="(?:dim|soon|mini)">/.test(b));
+    ok('ع٢ · الشاشات المرسومة: صفر مؤجل صامت وكل .soon بوسم ظاهر', silentRendered.length === 0 && soonNoTag.length === 0, 'silent=' + silentRendered.length + ' untagged=' + soonNoTag.length);
+  }, []);
+
+  await must('ع٤ · قالب شاشة المصدر يطابق المواصفة ٦/د٢ (الشرائح الست بترتيبها · عودة · محدد · Save موسومًا) — ر٦٨', async () => {
+    const html = B.x("window.__mpTemplates.sourceScreen({ title: 'Places', backLabel: '← Community', backHandler: 'cmBackToRoot()', countryLabel: 'SA', cityLabel: 'Riyadh', active: 'all', onChip: 'cmSetBrowse', cards: [] })");
+    const order = ['backchip', '← Community', 'csel', 'Riyadh', 'chipgrid c3', '>All<', 'Most viewed', 'Most bookmarked', 'Shared with you', '🔖 My bookmarked', 'Most saved <span class="dim">stage 3</span>', 'class="ctx"'];
+    let pos = -1, okOrder = true, missing = [];
+    for (const t of order) { const i = html.indexOf(t, pos + 1); if (i < 0) { missing.push(t); okOrder = false; } else pos = i; }
+    ok('ع٤ · الترتيب الحرفي: عودة ← محدد ← ٣+٣ بالست ← سطر السياق', okOrder, 'missing/disordered: ' + missing.join(' | '));
+    const panel = B.x("window.__mpTemplates.pickerPanel({ title: 'Cities', items: [{ id: 'riyadh', name: 'Riyadh', count: 12, selected: true }, { id: 'jeddah', name: 'Jeddah', count: 4 }], canAdd: true, onPick: 'pickCity', onAdd: 'openAddCity()' })");
+    ok('ع٤ · لوحة الاختيار: المختار زعفراني بنقطة · عدّاد · ＋ Add city فعلًا رئيسًا', /prow sel/.test(panel) && /class="dot"/.test(panel) && /cnt-num">12/.test(panel) && /＋ Add city/.test(panel), '');
+  }, []);
+
   await must('٥ · نشر القائمة عامة', async () => {
     B.x("myCityListData.public = true");
     await B.x('saveMyCityList()');
@@ -543,15 +577,15 @@ function citiesSeed(){
     const root = inOrder('communityBody', ['chipgrid c2', '>Places<', '>Trips<', 'Search by username']);
     const rootNo = notSees('communityBody', ['backchip', 'Most viewed']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
-    const src = inOrder('communityBody', ['backchip', 'id="cmCity"', 'chipgrid c3', '>All<', 'Most viewed', 'Most saved <span class="dim">Stage 3', 'chipgrid c2', '🔖 My bookmarked', '🔖 Most bookmarked']);
+    const src = inOrder('communityBody', ['backchip', 'id="cmCity"', 'chipgrid c3', '>All<', 'Most viewed', 'Most saved <span class="dim">stage 3', 'chipgrid c2', '🔖 My bookmarked', '🔖 Most bookmarked']);
     B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
-    const t = sees('communityBody', ['disabled title="Trip views arrive']);
+    const t = sees('communityBody', ['class="chip soon"']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
     ok('ش٥ · الجذر مبدل ١×٢ + بحث · شاشة المصدر: عودة · محدد · ٣+٢ بترتيبها · مشاهدات الرحلات معطَّلة', root.ok && rootNo.ok && src.ok && t.ok, root.why + rootNo.why + src.why + t.why);
   }, ['screen.market.header']);
 
   await must('ش٦ · ٦/د بطاقة السوق: مفكرة بعدّاد · Save بوسمه · 📤 · Open (الشاشة)', async () => {
-    const a = sees('cmMarket', ['bmk-btn', 'bmk-cnt', 'Save <span class="dim">Stage 3', '📤', 'Open →', 'linklike']);
+    const a = sees('cmMarket', ['bmk-btn', 'bmk-cnt', 'Save <span class="dim">stage 3', '📤', 'Open →', 'linklike']);
     ok('ش٦ · عناصر البطاقة الستة', a.ok, a.why);
   }, ['screen.market.card']);
 
@@ -591,24 +625,24 @@ function citiesSeed(){
   }, ['screen.places.ctxLast']);
 
   await must('ش٨ · القوالب الساكنة: شرائح الرحلات بالحرف وOne day trip موسومة', async () => {
-    const a = tpl(['data-tsrc="saved" onclick="selectTripsSource(\'saved\')">🔖 Bookmarked trips', '>Saved from Curators</button>', '>Saved from Community</button>']);
-    const b = tplCount('→ Day plan', 2); const c = tpl(['data-ttype="day" disabled']);
-    ok('ش٨ · الرباعي الحرفي واليوم الواحد معطَّلة بموضعيها', a.ok && b.ok && c.ok, a.why + b.why + c.why);
+    const a = tpl(['data-tsrc="saved" onclick="selectTripsSource(\'saved\')">🔖 Bookmarked trips', 'Saved from Curators <span class=\"dim\">stage 3</span></button>', 'Saved from Community <span class=\"dim\">stage 3</span></button>']);
+    const b = tplCount('→ Day plan', 2); const c = tpl(['data-ttype="day" onclick="showSoon(']);
+    ok('ش٨ · الرباعي الحرفي والمنشآن واليوم الواحد مؤجلات مستجيبة (ر٦٨)', a.ok && b.ok && c.ok, a.why + b.why + c.why);
   }, ['screen.static.tripChips']);
 
   await must('ش٩ · ٦/هـ٢ صفحة المنتقي: رأس واحد وأفعال التسوية بلا تعتيم', async () => {
-    const a = tplCount('← Curators', 1); const b = tpl(['verified curator', '🔖 Bookmarked</span>', 'Save <span class="dim">Stage 3</span>', 'followers: count shown here']);
+    const a = tplCount('← Curators', 1); const b = tpl(['verified curator', '🔖 Bookmarked</span>', 'Save <span class="dim">stage 3</span>', 'followers: count shown here']);
     const c = tplCount('class="cur-shell curhead"', 1); const d = tpl(['.cur-shell{opacity:1;}']);
     ok('ش٩ · عودة واحدة وقشرة واحدة بعناصرها وبلا تعتيم', a.ok && b.ok && c.ok && d.ok, a.why + b.why + c.why + d.why);
   }, ['screen.static.curatorPage']);
 
   await must('ش١٠ · ٦/أ شرائح الأماكن: المنشآن معطَّلان بوسم موعدهما', async () => {
-    const a = tpl(['data-src="curators" disabled', 'data-src="community" disabled', '>Saved from Curators</button>']);
-    ok('ش١٠ · الرباعي بالحرف والمنشآن معطَّلان', a.ok, a.why);
+    const a = tpl(['data-src="curators" onclick="showSoon(', 'data-src="community" onclick="showSoon(', 'Saved from Curators <span class="dim">stage 3</span></button>']);
+    ok('ش١٠ · الرباعي بالحرف والمنشآن مؤجلان مستجيبان (ر٦٨)', a.ok, a.why);
   }, ['screen.static.placesChips']);
 
   await must('ش١١ · زر العودة: صنفه بجرعة معرَّفة ومستعمل بكل المواضع', async () => {
-    const a = tpl(['.backchip{border-color:var(--saffron); background:transparent; color:var(--ink);}']);
+    const a = tpl(['.backchip{border-color:var(--saffron); background:transparent; color:var(--on-night);}']); // ر٦٨: حبر الليل
     const n = SRC.split('class="backchip"').length - 1;
     ok('ش١١ · قاعدة معرَّفة و≥٤ مواضع', a.ok && n >= 4, a.why + ' spots=' + n);
   }, ['screen.static.backChip']);
@@ -775,11 +809,14 @@ function citiesSeed(){
     ok('ح٣ · رسالة الفراغ الصادقة', a.ok, a.why);
   }, ['edge.emptyCityMarket']);
 
-  await must('ح٤ · الشرائح المعطَّلة بوسمها لا تُضغط (Most saved · One day trip · المنشآن)', async () => {
+  await must('ح٤ · المؤجل يستجيب برسالة خطوته ولا يغيّر الحالة (Most saved · One day trip · المنشآن) — ر٦٨', async () => {
     B.x('renderCommunityModal()'); await new Promise(r => setTimeout(r, 30));
+    const before = B.x('JSON.stringify([communitySort, communityMarkedOnly])'); captured.toasts.length = 0;
     const a = await click('communityBody', 'Most saved');
+    const toasted = captured.toasts.some(t => /stage 3/.test(t));
+    const same = B.x('JSON.stringify([communitySort, communityMarkedOnly])') === before;
     const b = findClickable(SRC, 'One day trip'); const c = findClickable(SRC, 'Saved from Curators');
-    ok('ح٤ · المعطَّل بلا معالج أو موسوم معطَّلًا', a.disabled === true || !a.ok, JSON.stringify({ a: a.why, b: !b || b.disabled, c: !c || c.disabled }));
+    ok('ح٤ · الضغط يُنتج رسالة الخطوة والحالة ثابتة والمؤجلات الساكنة تحمل showSoon', a.ok && toasted && same && !!b && /showSoon/.test(b.code) && !!c && /showSoon/.test(c.code), JSON.stringify({ a: a.why, toasted, same, b: !!b, c: !!c }));
   }, ['edge.disabledChipsInert']);
 
   await must('م · مصفوفة مشاهد المرجع v1.42: كل مشهد مغطًّى أو مؤجَّل بسببه (لا فجوة صامتة)', async () => {
