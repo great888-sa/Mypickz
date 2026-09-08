@@ -339,7 +339,7 @@ const no = (label, f) => expect(false, label, f);
   await ok('ucl delete owner', () => owner.doc(`userCityLists/${A}_paris2`).delete());
 
   // ================= ١١) communityProfiles =================
-  await ok('cp read guest', () => guest.doc(`communityProfiles/${B}`).get());
+  await no('cp read guest (M4.24.1 بند ١٤: الملفات للمسجلين — كان يُسمح)', () => guest.doc(`communityProfiles/${B}`).get());
   await ok('cp query hasAnyPublicContent user', () => a.collection('communityProfiles').where('hasAnyPublicContent', '==', true).get());
   await ok('cp create own (new user)', () => env.authenticatedContext('newC').firestore().doc('communityProfiles/newC').set({ hasAnyPublicContent: false }));
   await no('cp create for other uid', () => a.doc('communityProfiles/newD').set({ hasAnyPublicContent: false }));
