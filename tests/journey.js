@@ -25,7 +25,7 @@ const CAPS = [
   'events.bookmark_add.allowed', 'events.retired.rejected', 'favorites.blockRemoved',
   'sort.people.byViews', 'guide.bilingual.loaded',
   'cascade.records.withCounters', 'cascade.content', 'cascade.identity', 'cascade.auth', 'cascade.zeroResidue', 'cascade.othersCountersWalkedBack',
-  'bookmark.place.urlLessIsolated', 'bookmark.trip.selfListedInChip', 'security.nicknameEscaped', 'curators.twoPages',
+  'bookmark.place.urlLessIsolated', 'bookmark.trip.selfListedInChip', 'bookmark.mirrors.loadedOnSignIn', 'security.nicknameEscaped', 'curators.twoPages',
   'screen.places.rowActions', 'screen.trip.defaultView', 'screen.trip.reopenStable', 'screen.trip.bookmarkedChip', 'screen.market.header', 'screen.market.card', 'screen.person.layer', 'screen.static.tripChips', 'screen.static.curatorPage', 'screen.static.placesChips', 'screen.static.backChip',
   'screen.community.stateKept', 'screen.header.gridNoScroll', 'screen.trips.cityPick', 'screen.places.ctxLast',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
@@ -361,6 +361,22 @@ function citiesSeed(){
     ok('٤ب · الأول مضاء والثاني مطفأ — لا هوية مشتركة', on1 === true && on2 === false, JSON.stringify({ on1, on2 }));
     B.x('myCityListData.categories[' + JSON.stringify(CAT2) + '].places.splice(-2, 2)');
   }, ['bookmark.place.urlLessIsolated']);
+
+  // ═══ ر٦٩س (N-048): مرايا المفكرة والحفظ تُحمَّل عند الدخول — الجذر الفعلي لكل «التمييز يختفي بعد إعادة الدخول» ═══
+  await must('ع٥ · إعادة الدخول تُعيد كل حالات المفكرة والحفظ من مرآة المستند (ر٦٩س)', async () => {
+    const uid = B.x('currentUser.uid');
+    await B.x("mpData.bookmarks.setPlace(currentUser.uid, hashUrl('id:pM1'), { url: 'id:pM1', name: 'M', category: '', cityId: 'paris', area: '' })");
+    await B.x("mpData.tripSaves.setSelf(currentUser.uid, 'trip_own_b1', true)");
+    await B.x("db.collection('userLists').doc(currentUser.uid).set({ listBookmarkIds: { 'uA_paris': true }, tripSaveIds: { 'tA1': true } }, { merge: true })");
+    B.x('userListData = null; listBookmarksMap = null; tripSavesMap = null');
+    await B.x('loadUserList()');
+    const place = B.x("isBookmarked('id:pM1')"); const trip = B.x("isSelfTripBookmarked('trip_own_b1')");
+    await B.x('ensureListBookmarks()'); await B.x('ensureTripSaves()');
+    const list = B.x("!!(listBookmarksMap && listBookmarksMap['uA_paris'])"); const save = B.x("!!(tripSavesMap && tripSavesMap['tA1'])");
+    ok('ع٥ · الأربع محمَّلة بعد إعادة التحميل (مكان · رحلتي · قائمة الآخرين · رحلة الآخرين)', place && trip && list && save, JSON.stringify({ place, trip, list, save }));
+    await B.x("mpData.bookmarks.setPlace(currentUser.uid, hashUrl('id:pM1'), null)"); await B.x("mpData.tripSaves.setSelf(currentUser.uid, 'trip_own_b1', false)");
+    await B.x("db.collection('userLists').doc(currentUser.uid).set({ listBookmarkIds: {}, tripSaveIds: {} }, { merge: true })"); B.x('listBookmarksMap = null; tripSavesMap = null'); await B.x('loadUserList()');
+  }, ['bookmark.mirrors.loadedOnSignIn']);
 
   // ═══ ر٦٨ — الشواهد الثلاثة (ق٠٩-٠٦-١٩ الإغلاق المزدوج): عزل المفكرة بروابط متطابقة · لا مؤجل صامت (ساكنًا ومرسومًا) · مطابقة قالب شاشة المصدر للمواصفة ═══
   await must('ع٣ · مكانان برابط متطابق لا يتشاركان المفكرة (المفتاح هوية العنصر — ر٦٨)', async () => {
