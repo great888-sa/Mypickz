@@ -612,8 +612,8 @@ function citiesSeed(){
     ok('ش١٣ · قواعد الشبكة والصفوف الأربعة عليها', a.ok, a.why);
   }, ['screen.header.gridNoScroll']);
 
-  await must('ش١٤ · القرار ١١ (٣·٥): الرحلات بمحدد مدينة من رحلاتك · Create trip بصف الأفعال · ➕ محل النص', async () => {
-    const a = tpl(['id="tripCityPick"', 'onclick="openCreateTripFlow()">＋ Create trip', 'title="Add places to this trip">➕']);
+  await must('ش١٤ · القرار ١١ (٣·٥) + N-024: الرحلات بمحدد مدينة من رحلاتك · Create trip بصف الأفعال · بطاقة الرحلة بأفعالها الستة (عرض · عام/خاص · مشاركة · مفكرة · تصدير · تحرير) و➕ داخل التحرير', async () => {
+    const a = tpl(['id="tripCityPick"', 'onclick="openCreateTripFlow()">＋ Create trip', 'toggleTripPublicFor(', 'shareTripFor(', "openTripDetail(\\'' + t.id + '\\', \\'edit\\')"]);
     const b = tplCount('class="cta wide" onclick="openCreateTripFlow()">➕ Create trip', 0);
     B.x('renderTripsBody()'); const opts = String(documentStub.getElementById('tripCityPick').innerHTML || '');
     ok('ش١٤ · المحدد يُملأ من مدن رحلاتي والزر صعد والأيقونة حلّت', a.ok && b.ok && opts.includes('Paris'), a.why + b.why + ' opts=' + opts.slice(0, 60));
