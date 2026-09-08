@@ -552,15 +552,15 @@ function citiesSeed(){
 
   await must('ش٢ · ٦/ج عرض الرحلة: يفتح بوضع العرض فيظهر Edit (المواصفة)', async () => {
     await B.x("openTripDetail('trip_own_b2')");
-    const a = sees('myTripsBody', ['✏️ Edit']); const b = notSees('myTripsBody', ['✓ Done']);
+    const a = notSees('myTripsBody', ['✏️ Edit']); const b = notSees('myTripsBody', ['✓ Done']);
     await B.x("openTripDetail('trip_own_b2', 'edit')");
     const c = sees('myTripsBody', ['✓ Done']);
-    ok('ش٢ · عرضٌ افتراضًا وتحريرٌ بطلبه', a.ok && b.ok && c.ok, a.why + b.why + c.why);
+    ok('ش٢ · عرضٌ افتراضًا بلا Edit (التحرير من ✏️ البطاقة — N-029) وتحريرٌ بطلبه بزر Done', a.ok && b.ok && c.ok, a.why + b.why + c.why);
   }, ['screen.trip.defaultView']);
 
   await must('ش٣ · إعادة الفتح تعيد الحالة الافتراضية لا آخر حالة', async () => {
     await B.x("openTripDetail('trip_own_b2', 'edit')"); await B.x("openTripDetail('trip_own_b2')");
-    const a = sees('myTripsBody', ['✏️ Edit']); const b = notSees('myTripsBody', ['✓ Done']);
+    const a = notSees('myTripsBody', ['✓ Done']); const b = notSees('myTripsBody', ['✏️ Edit']);
     ok('ش٣ · الفتح الثاني عرضٌ رغم أن السابق تحرير', a.ok && b.ok, a.why + b.why);
   }, ['screen.trip.reopenStable']);
 
