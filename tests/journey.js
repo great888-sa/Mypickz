@@ -804,7 +804,7 @@ function citiesSeed(){
   await must('ح٣ · مدينة بلا محتوى عام بالسوق تعطي فراغًا صادقًا لا انهيارًا', async () => {
     B.set('communityScreen', 'source'); B.set('communityTab', 'places'); B.x("communityScreenState.places.city = 'nowhere'");
     B.x('renderCommunityModal()'); await new Promise(r => setTimeout(r, 40));
-    const a = sees('cmMarket', ['No public lists yet']);
+    const a = sees('cmMarket', ['lists yet', 'in this city']);
     B.x("communityScreenState.places.city = ''");
     ok('ح٣ · رسالة الفراغ الصادقة', a.ok, a.why);
   }, ['edge.emptyCityMarket']);
