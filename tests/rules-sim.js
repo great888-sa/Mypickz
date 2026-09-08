@@ -695,6 +695,41 @@ const no = (label, f) => expect(false, label, f);
   await ok('v3.8 trips create with saveCount 0 allow', () => a.doc('trips/t38b').set({ ownerId: A, public: false, sharedWith: [], saveCount: 0 }));
   await no('v3.8 trip owner self-update touching saveCount deny', () => b.doc('trips/tBpub').update({ name: 'x', saveCount: 1 }));
 
+
+  // ================= M4.24.1 (٨ سبتمبر ٢٠٢٦) — النشرة المصغّرة: الدفعة الذرّية كما يكتبها العميل · بند ١٨ · قراءة الملفات والأسماء للمسجلين =================
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await db.doc('userCityLists/cBpub2').set({ ownerId: B, public: true, sharedWith: [], bookmarkCount: 0, viewCount: 0, categories: {} });
+    await db.doc('userCityLists/cBshared').set({ ownerId: B, public: false, sharedWith: [A], bookmarkCount: 0, viewCount: 0, categories: {} });
+    await db.doc('userCityLists/cBpriv2').set({ ownerId: B, public: false, sharedWith: [], bookmarkCount: 0, viewCount: 0, categories: {} });
+    await db.doc('trips/tBpub2').set({ ownerId: B, public: true, sharedWith: [], saveCount: 0, name: 'B public 2' });
+    await db.doc('communityProfiles/pB').set({ nickname: 'b', uid: B });
+    await db.doc('nicknames/nickb').set({ uid: B });
+  });
+  const bmBatch = (who, uid, listId, on, count) => () => { const btch = who.batch();
+    if (on) btch.set(who.doc(`listBookmarks/${uid}__${listId}`), { at: 1 }); else btch.delete(who.doc(`listBookmarks/${uid}__${listId}`));
+    btch.set(who.doc(`userCityLists/${listId}`), { bookmarkCount: count }, { merge: true });
+    btch.set(who.doc(`userLists/${uid}`), { listBookmarkIds: { [listId]: on ? true : false } }, { merge: true });
+    return btch.commit(); };
+  await ok('M4.24.1 lb BATCH (record+counter+mirror) on public list allow — existsAfter', bmBatch(a, A, 'cBpub2', true, 1));
+  await ok('M4.24.1 lb BATCH unsave on public list allow', bmBatch(a, A, 'cBpub2', false, 0));
+  await ok('M4.24.1 lb BATCH on PRIVATE list SHARED with me allow (بند ١٨)', bmBatch(a, A, 'cBshared', true, 1));
+  await no('M4.24.1 lb BATCH on PRIVATE list NOT shared deny', bmBatch(a, A, 'cBpriv2', true, 1));
+  await no('M4.24.1 lb BATCH by suspended deny', bmBatch(s, S, 'cBpub2', true, 1));
+  const tsBatch = (who, uid, tripId, on, count) => () => { const btch = who.batch();
+    if (on) btch.set(who.doc(`tripSaves/${uid}__${tripId}`), { at: 1 }); else btch.delete(who.doc(`tripSaves/${uid}__${tripId}`));
+    btch.set(who.doc(`trips/${tripId}`), { saveCount: count }, { merge: true });
+    btch.set(who.doc(`userLists/${uid}`), { tripSaveIds: { [tripId]: on ? true : false } }, { merge: true });
+    return btch.commit(); };
+  await ok('M4.24.1 ts BATCH on public trip allow — existsAfter', tsBatch(a, A, 'tBpub2', true, 1));
+  await ok('M4.24.1 ts BATCH unsave on public trip allow', tsBatch(a, A, 'tBpub2', false, 0));
+  await ok('M4.24.1 ts BATCH on PRIVATE trip SHARED with me allow (بند ١٨)', tsBatch(a, A, 'tB', true, 1));
+  await no('M4.24.1 ts BATCH on PRIVATE trip NOT shared deny', tsBatch(a, A, 'tBpriv', true, 1));
+  await no('M4.24.1 communityProfiles read GUEST deny (بند ١٤)', () => guest.doc('communityProfiles/pB').get());
+  await ok('M4.24.1 communityProfiles read signed-in allow', () => a.doc('communityProfiles/pB').get());
+  await no('M4.24.1 nicknames read GUEST deny (no public name→uid map)', () => guest.doc('nicknames/nickb').get());
+  await ok('M4.24.1 nicknames read signed-in allow (share by name)', () => a.doc('nicknames/nickb').get());
+
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail === 0 ? 0 : 1);
