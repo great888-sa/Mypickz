@@ -1,4 +1,4 @@
-// firestore rules v3.8 — نشرة القرار المؤسِّس ٠٩ (٣ سبتمبر ٢٠٢٦ — سطور المصفوفة M4.23 أقرّها المالك أولًا): v3.7 + السطور المقرَّة العشرة:
+// firestore rules v3.8.1 (M4.24.1 — النشرة المصغّرة ٨ سبتمبر ٢٠٢٦: existsAfter بالعدّادين · المفكرة والحفظ على المشارَك بالاسم (بند ١٨) · قراءة communityProfiles وnicknames للمسجلين) فوق v3.8 — نشرة القرار المؤسِّس ٠٩ (٣ سبتمبر ٢٠٢٦ — سطور المصفوفة M4.23 أقرّها المالك أولًا): v3.7 + السطور المقرَّة العشرة:
 //   (١) مفكرة المكان: بيان داخل مستندات صاحبها — لا سطح قواعد جديدًا (سطر توثيقي)
 //   (٢) سجل مفكرة القوائم: listBookmarks/{uid}__{listId} — الملكية بالمعرّف (فاصل مزدوج)، القراءة لصاحبها + مالك التطبيق فقط (لا لصاحب القائمة — «كم لا مَن»)،
 //       الإنشاء لمسجَّل غير موقوف على قائمة مدينة عامة قائمة فعلًا، لا تعديل أبدًا، الحذف لصاحبه (والموقوف — انسحاب) ولمالك التطبيق
@@ -349,13 +349,13 @@ service cloud.firestore {
       allow update: if isOwner()
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['favoriteCount', 'saveCount']))
-        || (isSignedIn() && !isSuspended() && resource.data.public == true && resource.data.ownerId != request.auth.uid &&
+        || (isSignedIn() && !isSuspended() && (resource.data.public == true || request.auth.uid in resource.data.get('sharedWith', [])) && resource.data.ownerId != request.auth.uid && // M4.24.1 بند ١٨
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['saveCount']) &&
             request.resource.data.saveCount >= 0 &&
             ((request.resource.data.saveCount == resource.data.get('saveCount', 0) + 1
-              && exists(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))
+              && existsAfter(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))
              || (request.resource.data.saveCount == resource.data.get('saveCount', 0) - 1
-              && !exists(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))));
+              && !existsAfter(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))));
       // ⚠️ delete بلا !isSuspended() عمدًا — حق حذف البيانات لا يسقط بالإيقاف (قرار المالك ١٦ أغسطس).
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
@@ -393,23 +393,23 @@ service cloud.firestore {
       allow update: if privateKeysOkOnUpdate() && (isOwner()
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['favoriteCount', 'bookmarkCount', 'viewCount']))
-        || (isSignedIn() && !isSuspended() && resource.data.public == true && resource.data.ownerId != request.auth.uid &&
+        || (isSignedIn() && !isSuspended() && (resource.data.public == true || request.auth.uid in resource.data.get('sharedWith', [])) && resource.data.ownerId != request.auth.uid && // M4.24.1 بند ١٨
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookmarkCount', 'viewCount']) &&
             (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
              || request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0) + 1) &&
             request.resource.data.get('bookmarkCount', 0) >= 0 &&
             (request.resource.data.get('bookmarkCount', 0) == resource.data.get('bookmarkCount', 0)
              || (request.resource.data.get('bookmarkCount', 0) == resource.data.get('bookmarkCount', 0) + 1
-                 && exists(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId)))
+                 && existsAfter(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId)))
              || (request.resource.data.get('bookmarkCount', 0) == resource.data.get('bookmarkCount', 0) - 1
-                 && !exists(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId))))));
+                 && !existsAfter(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId))))));
       // ⚠️ delete بلا !isSuspended() عمدًا — نفس مبرر trips أعلاه
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
     }
 
     match /communityProfiles/{uid} {
-      allow read: if true;
+      allow read: if isSignedIn(); // M4.24.1 بند ١٤
       function profileFieldsOk() {
         return (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 200))
           && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 40))
@@ -472,7 +472,8 @@ service cloud.firestore {
         && bmOwner() == request.auth.uid
         && request.resource.data.keys().hasOnly(['at'])
         && exists(/databases/$(database)/documents/userCityLists/$(bmTarget()))
-        && get(/databases/$(database)/documents/userCityLists/$(bmTarget())).data.public == true;
+        && (get(/databases/$(database)/documents/userCityLists/$(bmTarget())).data.public == true
+            || request.auth.uid in get(/databases/$(database)/documents/userCityLists/$(bmTarget())).data.get('sharedWith', [])); // M4.24.1 بند ١٨: المشارَك معك بالاسم
       allow update: if false;
       allow delete: if isOwner() || (isSignedIn() && bmOwner() == request.auth.uid);
     }
@@ -486,7 +487,8 @@ service cloud.firestore {
         && tsOwner() == request.auth.uid
         && request.resource.data.keys().hasOnly(['at'])
         && exists(/databases/$(database)/documents/trips/$(tsTarget()))
-        && get(/databases/$(database)/documents/trips/$(tsTarget())).data.public == true;
+        && get(/databases/$(database)/documents/trips/$(tsTarget())).data.public == true
+            || request.auth.uid in get(/databases/$(database)/documents/trips/$(tsTarget())).data.get('sharedWith', [])); // M4.24.1 بند ١٨
       allow update: if false;
       allow delete: if isOwner() || (isSignedIn() && tsOwner() == request.auth.uid);
     }
@@ -503,7 +505,7 @@ service cloud.firestore {
 
     // ===== إصلاح ثغرة ٤ =====
     match /nicknames/{nickId} {
-      allow read: if true;
+      allow read: if isSignedIn(); // M4.24.1: تمهيد الدخول بالاسم — لا خريطة عامة
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.uid == request.auth.uid;
       allow update: if isSignedIn() && !isSuspended()
