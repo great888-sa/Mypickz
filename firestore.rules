@@ -1,4 +1,4 @@
-// firestore rules v3.8.1 (M4.24.1 — النشرة المصغّرة ٨ سبتمبر ٢٠٢٦: existsAfter بالعدّادين · المفكرة والحفظ على المشارَك بالاسم (بند ١٨) · قراءة communityProfiles وnicknames للمسجلين) فوق v3.8 — نشرة القرار المؤسِّس ٠٩ (٣ سبتمبر ٢٠٢٦ — سطور المصفوفة M4.23 أقرّها المالك أولًا): v3.7 + السطور المقرَّة العشرة:
+// firestore rules v3.8.1 (M4.24.1 — النشرة المصغّرة ٨ سبتمبر ٢٠٢٦: existsAfter بالعدّادين · المفكرة والحفظ على المشارَك بالاسم (بند ١٨) · قراءة communityProfiles للمسجلين — nicknames تبقى عامة لفحص التوافر قبل المصادقة) فوق v3.8 — نشرة القرار المؤسِّس ٠٩ (٣ سبتمبر ٢٠٢٦ — سطور المصفوفة M4.23 أقرّها المالك أولًا): v3.7 + السطور المقرَّة العشرة:
 //   (١) مفكرة المكان: بيان داخل مستندات صاحبها — لا سطح قواعد جديدًا (سطر توثيقي)
 //   (٢) سجل مفكرة القوائم: listBookmarks/{uid}__{listId} — الملكية بالمعرّف (فاصل مزدوج)، القراءة لصاحبها + مالك التطبيق فقط (لا لصاحب القائمة — «كم لا مَن»)،
 //       الإنشاء لمسجَّل غير موقوف على قائمة مدينة عامة قائمة فعلًا، لا تعديل أبدًا، الحذف لصاحبه (والموقوف — انسحاب) ولمالك التطبيق
@@ -487,7 +487,7 @@ service cloud.firestore {
         && tsOwner() == request.auth.uid
         && request.resource.data.keys().hasOnly(['at'])
         && exists(/databases/$(database)/documents/trips/$(tsTarget()))
-        && get(/databases/$(database)/documents/trips/$(tsTarget())).data.public == true
+        && (get(/databases/$(database)/documents/trips/$(tsTarget())).data.public == true
             || request.auth.uid in get(/databases/$(database)/documents/trips/$(tsTarget())).data.get('sharedWith', [])); // M4.24.1 بند ١٨
       allow update: if false;
       allow delete: if isOwner() || (isSignedIn() && tsOwner() == request.auth.uid);
@@ -505,7 +505,7 @@ service cloud.firestore {
 
     // ===== إصلاح ثغرة ٤ =====
     match /nicknames/{nickId} {
-      allow read: if isSignedIn(); // M4.24.1: تمهيد الدخول بالاسم — لا خريطة عامة
+      allow read: if true; // يبقى عامًّا: فحص توافر الاسم بالتسجيل يجري قبل المصادقة (doSignUp) — الدخول بالاسم يُحلّ خادميًّا بالمرحلة هـ (ق٠٩-٠٧-٢١)؛ المستند يحمل uid فقط لا بريدًا
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.uid == request.auth.uid;
       allow update: if isSignedIn() && !isSuspended()
