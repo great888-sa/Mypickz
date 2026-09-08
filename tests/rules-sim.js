@@ -727,7 +727,7 @@ const no = (label, f) => expect(false, label, f);
   await no('M4.24.1 ts BATCH on PRIVATE trip NOT shared deny', tsBatch(a, A, 'tBpriv', true, 1));
   await no('M4.24.1 communityProfiles read GUEST deny (بند ١٤)', () => guest.doc('communityProfiles/pB').get());
   await ok('M4.24.1 communityProfiles read signed-in allow', () => a.doc('communityProfiles/pB').get());
-  await no('M4.24.1 nicknames read GUEST deny (no public name→uid map)', () => guest.doc('nicknames/nickb').get());
+  await ok('M4.24.1 nicknames read GUEST allow (availability check before auth — login-by-name is server-side later)', () => guest.doc('nicknames/nickb').get());
   await ok('M4.24.1 nicknames read signed-in allow (share by name)', () => a.doc('nicknames/nickb').get());
 
   await env.cleanup();
