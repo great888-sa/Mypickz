@@ -593,7 +593,7 @@ function citiesSeed(){
     const root = inOrder('communityBody', ['chipgrid c2', '>Places<', '>Trips<', 'Search by username']);
     const rootNo = notSees('communityBody', ['backchip', 'Most viewed']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
-    const src = inOrder('communityBody', ['backchip', 'id="cmCity"', 'chipgrid c3', 'All users’ lists', 'Users’ most viewed', 'Users’ most bookmarked', 'chipgrid c3', 'Shared with me', '🔖 My bookmarks', 'Most saved <span class="dim">stage 3']); // ر٦٩ذ: مسميات بسياق الآخرين
+    const src = inOrder('communityBody', ['backchip', 'id="cmCity"', 'chipgrid c3', 'All users’ lists', 'Users’ most viewed', 'Users’ most bookmarked', 'chipgrid c3', 'Shared with me', '🔖 My bookmarked from users', 'Most saved from users <span class="dim">stage 3']); // ر٦٩ض: مسميات بسياق الآخرين
     B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
     const t = sees('communityBody', ['class="chip soon"']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
