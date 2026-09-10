@@ -31,6 +31,7 @@ const CAPS = [
   'picker.filter.normalized', 'picker.edit.deleteOwnOnly', 'picker.memory.lastPick', 'picker.add.belowResults',
   'picker.places.wired', 'picker.didYouMean',
   'picker.gazetteer.optionsByCountry', 'picker.gazetteer.offlineSafe',
+  'picker.addresses.wired', 'picker.tripCreate.wired', 'city.savedAtOnce',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -477,6 +478,42 @@ function citiesSeed(){
     ok('ع٧ · Confirm: المختار من المعجم يعود باسمه القانوني · الغائب يُقبل نصًّا حرًّا · الدولة خارج القائمة تُرفض كما كانت', c1 === 'Jeddah' && c2 === 'Wadi Lajab' && c3 === 'null|Pick one from the list', 'got: ' + c1 + ' / ' + c2 + ' / ' + c3);
     cap('picker.gazetteer.offlineSafe');
     B.x("inputModalOptions = null; document.getElementById('inputModalField').value = ''");
+  }, []);
+
+  await must('ش١٧ · ٦/و العناوين و٦/ب٢ إنشاء الرحلة على اللوحة المشتركة · المدينة الجديدة تُخلَّد فورًا بعدّاد صفر — ر٧٠د', async () => {
+    const prev = B.x("JSON.stringify({ c: myListCityId, k: myListCountry, p: plPanel, ap: addrPanel })");
+    // ١) المدينة الجديدة تُخلَّد فورًا (قرار المالك ب) — نافذة الإدخال تُستبدل مؤقتًا بمجيب ثابت
+    const before = B.x("(userListData.customCities || []).length");
+    const added = await B.x("(async function(){ var o = openInputModal, r = renderMyListModal; openInputModal = async function(t){ return String(t).indexOf('Country') === 0 ? 'France' : 'Lyon Test'; }; renderMyListModal = function(){}; /* النافذة القديمة خارج الهيكل الصناعي */ try { await addMyListCity(); } catch(e){ return 'ERR ' + (e && e.stack || e); } finally { openInputModal = o; renderMyListModal = r; } var c = (userListData.customCities || []).find(function(x){ return x.name === 'Lyon Test'; }); return JSON.stringify({ found: !!c, pending: pendingCity, cur: myListCityId === (c && c.id), country: myListCountry }); })()");
+    const stored = store.get('userLists/' + B.x('currentUser.uid')) || {}; const persisted = (stored.customCities || []).some(c => c.name === 'Lyon Test');
+    ok('ش١٧ · بعد التأكيد مباشرة: المدينة بمدني (لا تعليق) · مختارة · دولتها بالشريحة · محفوظة بالمستند', /"found":true/.test(added) && /"pending":null/.test(added) && /"cur":true/.test(added) && /"country":"France"/.test(added) && persisted && B.x("(userListData.customCities || []).length") === before + 1, 'got: ' + added + ' persisted=' + persisted);
+    cap('city.savedAtOnce');
+    B.x("plPanel = 'cities'; renderPlacesMine()");
+    ok('ش١٧ · تظهر بلوحة المدن فورًا بعدّاد صفر', screen('plBody').includes('Lyon Test</span><span><span class="cnt-num">0</span>'), '');
+    // ٢) العناوين على اللوحة
+    B.x("addrCurrentCountry = 'France'; addrPanel = 'countries'; renderAddresses()");
+    const h1 = String(documentStub.getElementById('addrPanel').innerHTML || '');
+    B.x("addrPanel = 'cities'; renderAddresses()");
+    const h2 = String(documentStub.getElementById('addrPanel').innerHTML || '');
+    const trio = String(documentStub.getElementById('addrTrio').innerHTML || '');
+    ok('ش١٧ · العناوين: لوحة الدول واللوحة المدن بالقالب المشترك · ＋ City فعلًا رئيسًا بثلث الصف · لا لوحة قديمة', h1.includes('id="pk_addrCountries"') && h2.includes('id="pk_addrCities"') && h2.includes('＋ Add city') && !h1.includes('class="pinned"') && !h2.includes('✕ Close') && trio.includes('class="actn primary hact" onclick="addAddrCity()"'), 'h1=' + h1.slice(0, 60) + ' h2=' + h2.slice(0, 60));
+    B.x("addrPanel = null; renderAddresses()");
+    const lyonId0 = B.x("((userListData.customCities || []).find(function(x){ return x.name === 'Lyon Test'; }) || {}).id");
+    B.x("addrFillCountries('" + lyonId0 + "')");
+    const am = String(documentStub.getElementById('addrModalCityHost').innerHTML || '');
+    ok('ش١٧ · نافذة العنوان (٦/و٢): مدينة واحدة بلوحة مشتركة بلا زر إغلاق · المختارة مسبقًا مدينة العناوين · ＋ Add city · لا منسدلة', am.includes('id="pk_addrModalCity"') && !am.includes('class="x"') && am.includes('＋ Add city') && am.includes('prow sel" onclick="addrModalPickCity(\'' + lyonId0 + '\')"') && tplCount('<select id="addr', 0).ok, 'am=' + am.slice(0, 160));
+    cap('picker.addresses.wired');
+    // ٣) إنشاء الرحلة: اللوحة داخل النافذة والاختيار بالمعرّف
+    B.x("tcCityId = null; delete __pk.tcCity; tcRenderCityPanel()");
+    const tc = String(documentStub.getElementById('tcCityHost').innerHTML || '');
+    const lyonId = B.x("((userListData.customCities || []).find(function(x){ return x.name === 'Lyon Test'; }) || {}).id");
+    B.x("tcPickCity('" + lyonId + "')");
+    const picked = B.x("document.getElementById('tcCity').value + '|' + tcCityId");
+    ok('ش١٧ · نافذة الرحلة: لوحة بلا زر إغلاق · مدني بعلم دولتها · ＋ Add city · الاختيار يملأ الحقل المخفي بالاسم والمعرّف', tc.includes('id="pk_tcCity"') && !tc.includes('class="x"') && tc.includes('＋ Add city') && tc.includes('Lyon Test') && picked === 'Lyon Test|' + lyonId, 'tc=' + tc.slice(0, 80) + ' picked=' + picked);
+    cap('picker.tripCreate.wired');
+    // استعادة الحالة
+    B.x("(function(){ var s = " + prev + "; userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.name !== 'Lyon Test'; }); myListCityId = s.c; myListCountry = s.k; plPanel = s.p; addrPanel = s.ap; tcCityId = null; delete __pk.plCities; delete __pk.tcCity; renderPlacesMine(); })()");
+    const ul = store.get('userLists/' + B.x('currentUser.uid')); if (ul){ ul.customCities = (ul.customCities || []).filter(c => c.name !== 'Lyon Test'); store.set('userLists/' + B.x('currentUser.uid'), ul); }
   }, []);
 
   await must('٥ · نشر القائمة عامة', async () => {
