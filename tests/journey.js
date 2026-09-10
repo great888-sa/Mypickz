@@ -691,10 +691,15 @@ function citiesSeed(){
   }, ['screen.header.gridNoScroll']);
 
   await must('ش١٤ · القرار ١١ (٣·٥) + N-024: الرحلات بمحدد مدينة من رحلاتك · Create trip بصف الأفعال · بطاقة الرحلة بأفعالها الستة (عرض · عام/خاص · مشاركة · مفكرة · تصدير · تحرير) و➕ داخل التحرير', async () => {
-    const a = tpl(['id="tripCityPick"', 'onclick="openCreateTripFlow()">＋ Create trip', 'toggleTripPublicFor(', 'shareTripFor(', "openTripDetail(\\'' + t.id + '\\', \\'edit\\')"]);
+    const a = tpl(['id="tripCityPick" onclick="tripToggleCityPanel()"', 'onclick="openCreateTripFlow()">＋ Create trip', 'toggleTripPublicFor(', 'shareTripFor(', "openTripDetail(\\'' + t.id + '\\', \\'edit\\')"]);
     const b = tplCount('class="cta wide" onclick="openCreateTripFlow()">➕ Create trip', 0);
-    B.x('renderTripsBody()'); const opts = String(documentStub.getElementById('tripCityPick').innerHTML || '');
-    ok('ش١٤ · المحدد يُملأ من مدن رحلاتي والزر صعد والأيقونة حلّت', a.ok && b.ok && opts.includes('Paris'), a.why + b.why + ' opts=' + opts.slice(0, 60));
+    const b2 = tplCount('<select id="tripCityPick"', 0); // ر٧٠ج: المنسدلة الأصلية زالت من الرحلات (المعرّف باقٍ على الشريحة لإبرة §٢١)
+    B.x('tripToggleCityPanel(true)'); const panel = String(documentStub.getElementById('tripCityPanel').innerHTML || '');
+    const btn = String(documentStub.getElementById('tripCityPick').innerHTML || '');
+    ok('ش١٤ · المحدد لوحة اختيار مشتركة تُملأ من مدن رحلاتي بعدّادها (Paris) · «All cities» مختارة بنقطة · لا منسدلة أصلية · الزر صعد والأيقونة حلّت', a.ok && b.ok && b2.ok && panel.includes('id="pk_tripCity"') && panel.includes('Paris') && /prow sel"[^>]*onclick="pickTripCity\(''\)"/.test(panel) && panel.includes('cnt-num') && btn.includes('All cities'), a.why + b.why + b2.why + ' panel=' + panel.slice(0, 80));
+    B.x("pickTripCity('paris')"); const btn2 = String(documentStub.getElementById('tripCityPick').innerHTML || ''); const closed = String(documentStub.getElementById('tripCityPanel').innerHTML || '') === '';
+    ok('ش١٤ · الاختيار يغلق اللوحة ويعرض المدينة بالشريحة', btn2.includes('Paris') && closed, 'btn=' + btn2 + ' closed=' + closed);
+    B.x("pickTripCity('')");
   }, ['screen.trips.cityPick']);
 
   await must('ش١٥ · القرار ١١ (١): سطر سياق الأماكن أخيرًا (تحت صف الأفعال)', async () => {
