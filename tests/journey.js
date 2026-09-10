@@ -29,6 +29,7 @@ const CAPS = [
   'screen.places.rowActions', 'screen.trip.defaultView', 'screen.trip.reopenStable', 'screen.trip.bookmarkedChip', 'screen.market.header', 'screen.market.card', 'screen.person.layer', 'screen.static.tripChips', 'screen.static.curatorPage', 'screen.static.placesChips', 'screen.static.backChip',
   'screen.community.stateKept', 'screen.header.gridNoScroll', 'screen.trips.cityPick', 'screen.places.ctxLast',
   'picker.filter.normalized', 'picker.edit.deleteOwnOnly', 'picker.memory.lastPick', 'picker.add.belowResults',
+  'picker.places.wired', 'picker.didYouMean',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -434,6 +435,28 @@ function citiesSeed(){
     cap('picker.memory.lastPick');
   }, []);
 
+  await must('ش١٦ · ٦/أ الأماكن: اللوحات الثلاث على لوحة الاختيار المشتركة (دول بعلم · مدن بعدّاد ونقطة وحذف بالتحرير على مدني · تصنيفات) و«هل تقصد؟» — ر٧٠ب', async () => {
+    const prev = B.x("JSON.stringify({ c: myListCityId, k: myListCountry, p: plPanel })"); // تُستعاد بآخر المحطة — لا تسرّب حالة للمحطات التالية
+    B.x("userListData.customCities = (userListData.customCities || []).concat([{ id: 'mylist_77', name: 'Lyon', country: 'France' }])"); B.set('myListCityId', 'mylist_77'); B.set('myListCountry', 'France');
+    B.x("plPanel = 'countries'; renderPlacesMine()");
+    const a = sees('plBody', ['id="pk_plCountries"', 'class="search psearch"', 'Browse countries', 'France']); const a2 = notSees('plBody', ['plFilterCountries', '✕ Close']);
+    ok('ش١٦ · لوحة الدول بالقالب المشترك بحقل تصفية حي ولا لوحة قديمة', a.ok && a2.ok, a.why + ' ' + a2.why);
+    B.x("plPanel = 'cities'; renderPlacesMine()");
+    const c = sees('plBody', ['id="pk_plCities"', 'cnt-num', '＋ Add city', 'class="dot"', 'Type a city…', 'Browse cities · France']); const d = notSees('plBody', ['🗑', '✕ Close', 'class="pinned"']);
+    ok('ش١٦ · لوحة المدن: عدّاد بعمود · المختارة بنقطة · ＋ Add city · لا سلة خارج التحرير · لا رأس قديم', c.ok && d.ok, c.why + ' ' + d.why);
+    B.x("__pk.plCities.edit = true; renderPlacesMine()");
+    const h = screen('plBody');
+    ok('ش١٦ · وضع التحرير: سلة على مدينتي الخاصة وحدها (Lyon) والرأس يعرض Done', (h.match(/class="del"/g) || []).length === 1 && h.includes("plRemoveCity('mylist_77')") && h.includes('Done</span>'), 'dels=' + (h.match(/class="del"/g) || []).length);
+    B.x("__pk.plCities.edit = false; userListData.customCities = userListData.customCities.filter(c => c.id !== 'mylist_77'); plPanel = 'cats'; renderPlacesMine()");
+    const e = sees('plBody', ['id="pk_plCats"', "plPickCat('", 'Pick a category to add a place']); const e2 = notSees('plBody', ['＋ Add city']);
+    ok('ش١٦ · لوحة التصنيفات بالقالب نفسه: كل صف يفتح نافذة الإضافة بتصنيفه ولا زر إضافة مدينة', e.ok && e2.ok, e.why + ' ' + e2.why);
+    B.x("(function(){ var s = " + prev + "; myListCityId = s.c; myListCountry = s.k; plPanel = s.p; userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'mylist_77'; }); delete __pk.plCities; renderPlacesMine(); })()");
+    cap('picker.places.wired');
+    const near = B.x("(window.__mpTemplates.pickerNearest('Jiddah', [{ name: 'Jeddah' }, { name: 'Riyadh' }]) || {}).name + '|' + String(window.__mpTemplates.pickerNearest('Jeddah', [{ name: 'Jeddah' }])) + '|' + String(window.__mpTemplates.pickerNearest('Rome', [{ name: 'Milan' }]))");
+    ok('ش١٦ · «هل تقصد؟»: Jiddah ← Jeddah · المطابق تمامًا لا يُسأل عنه · البعيد لا اقتراح', near === 'Jeddah|null|null', 'got: ' + near);
+    cap('picker.didYouMean');
+  }, []);
+
   await must('٥ · نشر القائمة عامة', async () => {
     B.x("myCityListData.public = true");
     await B.x('saveMyCityList()');
@@ -631,7 +654,7 @@ function citiesSeed(){
     await B.x("viewCommunityUser('" + U1 + "')"); await new Promise(r => setTimeout(r, 40));
     const a = sees('communityBody', ['backchip', 'Open →', 'bmk-btn', 'bmk-cnt', '📤']);
     const b = notSees('communityBody', ['Saved ✓', 'saved by', '♥']);
-    ok('ش٧ · عودة مميَّزة وصفوف الرحلات بمفكرة معدودة و📤 — ولا معجم قديم', a.ok && b.ok, a.why + b.why);
+    ok('ش١١ · عودة مميَّزة وصفوف الرحلات بمفكرة معدودة و📤 — ولا معجم قديم', a.ok && b.ok, a.why + b.why);
     B.set('viewingUserUid', null);
   }, ['screen.person.layer']);
 
