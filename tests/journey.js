@@ -32,6 +32,7 @@ const CAPS = [
   'picker.places.wired', 'picker.didYouMean',
   'picker.gazetteer.optionsByCountry', 'picker.gazetteer.offlineSafe',
   'picker.addresses.wired', 'picker.tripCreate.wired', 'city.savedAtOnce',
+  'picker.community.wired',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -428,7 +429,7 @@ function citiesSeed(){
     ok('ع٦ · التطبيع: «Al-Khobar» و«Al Khobar» و«Alkhobar» مفتاح واحد · Alexandria لا تُشوَّه · «khobar» يجد Al-Khobar بالصيغة الثانية · «ar-riy» يجد الرياض · «Jiddah» يجد جدة', f1 === 'riyadh' && f2 === 'jeddah' && f3 === 'mylist_1' && n1 === 'alkhobar|alkhobar|alkhobar|alexandria|alkhobar+khobar', 'got: ' + f1 + ' / ' + f2 + ' / ' + f3 + ' / ' + n1);
     cap('picker.filter.normalized');
     const pq = B.x("window.__mpTemplates.pickerPanel(Object.assign(" + spec + ", { query: 'zzz' }))");
-    ok('ع٦ · لا مطابقة: صف «No match» و＋ Add city يبقى (الإضافة أسفل النتائج لا بدلها)', /prow dim">No match/.test(pq) && /＋ Add city/.test(pq), '');
+    ok('ع٦ · لا مطابقة: صف «No match» و＋ Add city يبقى (الإضافة أسفل النتائج لا بدلها)', /prow dim label">No match/.test(pq) && /＋ Add city/.test(pq), '');
     const pe = B.x("window.__mpTemplates.pickerPanel(Object.assign(" + spec + ", { query: '', edit: true }))");
     ok('ع٦ · وضع التحرير: زر الحذف على المدينة الخاصة وحدها (١ من ٣) والرأس يعرض Done', (pe.match(/class="del"/g) || []).length === 1 && /Done<\/span>/.test(pe) && /mylist_1/.test(pe.slice(pe.indexOf('class="del"') - 400, pe.indexOf('class="del"'))), '');
     cap('picker.edit.deleteOwnOnly');
@@ -501,19 +502,38 @@ function citiesSeed(){
     const lyonId0 = B.x("((userListData.customCities || []).find(function(x){ return x.name === 'Lyon Test'; }) || {}).id");
     B.x("addrFillCountries('" + lyonId0 + "')");
     const am = String(documentStub.getElementById('addrModalCityHost').innerHTML || '');
-    ok('ش١٧ · نافذة العنوان (٦/و٢): مدينة واحدة بلوحة مشتركة بلا زر إغلاق · المختارة مسبقًا مدينة العناوين · ＋ Add city · لا منسدلة', am.includes('id="pk_addrModalCity"') && !am.includes('class="x"') && am.includes('＋ Add city') && am.includes('prow sel" onclick="addrModalPickCity(\'' + lyonId0 + '\')"') && tplCount('<select id="addr', 0).ok, 'am=' + am.slice(0, 160));
+    B.x("pickerTypeOpen('addrModalCity', 'lyon')"); const amOpen = String(documentStub.getElementById('pk_addrModalCity_host').innerHTML || '');
+    ok('ش١٧ · نافذة العنوان (٦/و٢): صف شريحة+حقل · الشريحة تحمل مدينة العناوين · الكتابة تفتح النتائج مرشَّحة تحته بلا رأس · ＋ Add city ظاهر · لا منسدلة', am.includes('class="headrow pkrow"') && am.includes('<b>Lyon Test</b>') && am.includes('pickerTypeOpen(\'addrModalCity\'') && amOpen.includes('class="panel bare"') && !amOpen.includes('class="phead"') && amOpen.includes('prow sel" onclick="addrModalPickCity(\'' + lyonId0 + '\')"') && amOpen.includes('＋ Add city') && tplCount('<select id="addr', 0).ok, 'am=' + am.slice(0, 120) + ' open=' + amOpen.slice(0, 120));
+    B.x("pickerRowClose('addrModalCity')");
     cap('picker.addresses.wired');
     // ٣) إنشاء الرحلة: اللوحة داخل النافذة والاختيار بالمعرّف
     B.x("tcCityId = null; delete __pk.tcCity; tcRenderCityPanel()");
     const tc = String(documentStub.getElementById('tcCityHost').innerHTML || '');
     const lyonId = B.x("((userListData.customCities || []).find(function(x){ return x.name === 'Lyon Test'; }) || {}).id");
+    B.x("pickerToggle('tcCity')"); const tcOpen = String(documentStub.getElementById('pk_tcCity_host').innerHTML || '');
     B.x("tcPickCity('" + lyonId + "')");
-    const picked = B.x("document.getElementById('tcCity').value + '|' + tcCityId");
-    ok('ش١٧ · نافذة الرحلة: لوحة بلا زر إغلاق · مدني بعلم دولتها · ＋ Add city · الاختيار يملأ الحقل المخفي بالاسم والمعرّف', tc.includes('id="pk_tcCity"') && !tc.includes('class="x"') && tc.includes('＋ Add city') && tc.includes('Lyon Test') && picked === 'Lyon Test|' + lyonId, 'tc=' + tc.slice(0, 80) + ' picked=' + picked);
+    const picked = B.x("document.getElementById('tcCity').value + '|' + tcCityId + '|' + String(__pk.tcCity.open)");
+    const tc2 = String(documentStub.getElementById('tcCityHost').innerHTML || '');
+    ok('ش١٧ · نافذة الرحلة: صف شريحة+حقل («Choose a city» قبل الاختيار) · الضغط على الشريحة يفتح القائمة مجرَّدة بأعلام مدني و＋ Add city · الاختيار يكتب بالشريحة والحقل المخفي ويطوي القائمة', tc.includes('class="headrow pkrow"') && tc.includes('<b>Choose a city</b>') && tcOpen.includes('class="panel bare"') && tcOpen.includes('Lyon Test') && tcOpen.includes('＋ Add city') && picked === 'Lyon Test|' + lyonId + '|false' && tc2.includes('<b>Lyon Test</b>'), 'tc=' + tc.slice(0, 80) + ' picked=' + picked);
     cap('picker.tripCreate.wired');
     // استعادة الحالة
     B.x("(function(){ var s = " + prev + "; userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.name !== 'Lyon Test'; }); myListCityId = s.c; myListCountry = s.k; plPanel = s.p; addrPanel = s.ap; tcCityId = null; delete __pk.plCities; delete __pk.tcCity; renderPlacesMine(); })()");
     const ul = store.get('userLists/' + B.x('currentUser.uid')); if (ul){ ul.customCities = (ul.customCities || []).filter(c => c.name !== 'Lyon Test'); store.set('userLists/' + B.x('currentUser.uid'), ul); }
+  }, []);
+
+  await must('ش١٨ · ٦/د المجتمع: الجذر والمصدر على الصيغة الموحَّدة (شريحة + حقل) بعدّاد المحتوى لكل مدينة · Go فعلًا رئيسًا — ر٧٠هـ', async () => {
+    const prev = B.x("JSON.stringify({ s: communityScreen, t: communityTab, c: communityScreenState.places.city })");
+    B.x("communityScreen = 'root'; communityTab = 'places'; communityScreenState.places.city = ''; renderCommunityModal()");
+    const root = screen('communityBody');
+    B.x("pickerToggle('cmRootCity')"); const rootOpen = String(documentStub.getElementById('pk_cmRootCity_host').innerHTML || '');
+    ok('ش١٨ · الجذر: شريحة «All cities» + حقل بصف واحد · لا منسدلة · Go زعفراني بثلث الصف · الضغط يفتح القائمة مجرَّدة و«All cities» بنقطة', root.includes('class="headrow pkrow"') && root.includes('<b>All cities</b>') && !root.includes('<select') && root.includes('class="actn primary hact" onclick="cmSearchGo()">Go') && rootOpen.includes('class="panel bare"') && /prow sel" onclick="cmRootCityChanged\(''\)"/.test(rootOpen), 'root=' + root.slice(0, 100));
+    B.x("cmRootCityChanged('paris')");
+    ok('ش١٨ · اختيار مدينة بالجذر يُكتب بالشريحة ويطوي القائمة ويسبق الدخول', screen('communityBody').includes('<b>Paris</b>') && B.x("communityScreenState.places.city + '|' + String(__pk.cmRootCity.open)") === 'paris|false', '');
+    B.x("communityScreen = 'source'; renderCommunityModal(); cmFillCityPick([{ cityId: 'paris', cityName: 'Paris' }, { cityId: 'paris', cityName: 'Paris' }, { cityId: 'rome', cityName: 'Rome' }])");
+    B.x("pickerToggle('cmCity')"); const srcOpen = String(documentStub.getElementById('pk_cmCity_host').innerHTML || '');
+    ok('ش١٨ · المصدر: مدن المحتوى بعدّادها (Paris 2 · Rome 1 · All cities 3) والمختارة بنقطة', srcOpen.includes('Paris</span><span><span class="cnt-num">2</span>') && srcOpen.includes('Rome</span><span><span class="cnt-num">1</span>') && srcOpen.includes('All cities</span><span><span class="cnt-num">3</span>') && /prow sel" onclick="cmCityChanged\('paris'\)"/.test(srcOpen), 'src=' + srcOpen.slice(0, 160));
+    B.x("(function(){ var s = " + prev + "; pickerRowClose('cmRootCity'); pickerRowClose('cmCity'); __cmCityRows = []; communityScreen = s.s; communityTab = s.t; communityScreenState.places.city = s.c; communityScreenState.trips.city = s.c; })()");
+    cap('picker.community.wired');
   }, []);
 
   await must('٥ · نشر القائمة عامة', async () => {
@@ -697,7 +717,7 @@ function citiesSeed(){
     const root = inOrder('communityBody', ['chipgrid c2', '>Places<', '>Trips<', 'Search by username']);
     const rootNo = notSees('communityBody', ['backchip', 'Most viewed']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
-    const src = inOrder('communityBody', ['backchip', 'id="cmCity"', 'chipgrid c3', 'All users’ lists', 'Users’ most viewed', 'Users’ most bookmarked', 'chipgrid c3', 'Shared with me', '🔖 My bookmarked from users', 'Most saved from users <span class="dim">stage 3']); // ر٦٩ض: مسميات بسياق الآخرين
+    const src = inOrder('communityBody', ['backchip', 'id="cmCityRow"', 'chipgrid c3', 'All users’ lists', 'Users’ most viewed', 'Users’ most bookmarked', 'chipgrid c3', 'Shared with me', '🔖 My bookmarked from users', 'Most saved from users <span class="dim">stage 3']); // ر٦٩ض: مسميات بسياق الآخرين
     B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
     const t = sees('communityBody', ['class="chip soon"']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
