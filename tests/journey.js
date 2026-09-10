@@ -470,6 +470,11 @@ function citiesSeed(){
     cap('picker.gazetteer.optionsByCountry');
     const off = await B.x("window.__mpTemplates.gazCityOptions('Saudi Arabia').then(function(o){ return 'ok:' + o.length; }, function(e){ return 'err:' + e; })");
     ok('ع٧ · بلا شبكة: التحميل يفشل بصمت ويعيد قائمة فارغة (لا يمنع الإضافة الحرة)', off === 'ok:0', 'got: ' + off);
+    // ر٧٠د: انحدار r70b2 — Confirm كان ينهار على خيارات الكائنات فلا تُضاف أي مدينة؛ المحطة تضغط Confirm فعلًا بالحالتين
+    const c1 = await B.x("(function(){ var p = openInputModal('City', '', '', [{ name: 'Jeddah', alt: ['Jiddah'] }, 'Makkah'], { allowFree: true }); document.getElementById('inputModalField').value = 'jeddah'; confirmInputModal(); return p; })()");
+    const c2 = await B.x("(function(){ var p = openInputModal('City', '', '', [{ name: 'Jeddah' }], { allowFree: true }); document.getElementById('inputModalField').value = 'Wadi Lajab'; confirmInputModal(); return p; })()");
+    const c3 = await B.x("(function(){ var p = openInputModal('Country', '', '', ['Spain', 'France']); document.getElementById('inputModalField').value = 'Atlantis'; confirmInputModal(); var e = document.getElementById('inputModalError').textContent; closeInputModal(); return p.then(function(v){ return String(v) + '|' + e; }); })()");
+    ok('ع٧ · Confirm: المختار من المعجم يعود باسمه القانوني · الغائب يُقبل نصًّا حرًّا · الدولة خارج القائمة تُرفض كما كانت', c1 === 'Jeddah' && c2 === 'Wadi Lajab' && c3 === 'null|Pick one from the list', 'got: ' + c1 + ' / ' + c2 + ' / ' + c3);
     cap('picker.gazetteer.offlineSafe');
     B.x("inputModalOptions = null; document.getElementById('inputModalField').value = ''");
   }, []);
