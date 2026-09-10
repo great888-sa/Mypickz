@@ -532,7 +532,9 @@ function citiesSeed(){
     B.x("communityScreen = 'source'; renderCommunityModal(); cmFillCityPick([{ cityId: 'paris', cityName: 'Paris' }, { cityId: 'paris', cityName: 'Paris' }, { cityId: 'rome', cityName: 'Rome' }])");
     B.x("pickerToggle('cmCity')"); const srcOpen = String(documentStub.getElementById('pk_cmCity_host').innerHTML || '');
     ok('ش١٨ · المصدر: مدن المحتوى بعدّادها (Paris 2 · Rome 1 · All cities 3) والمختارة بنقطة', srcOpen.includes('Paris</span><span><span class="cnt-num">2</span>') && srcOpen.includes('Rome</span><span><span class="cnt-num">1</span>') && srcOpen.includes('All cities</span><span><span class="cnt-num">3</span>') && /prow sel" onclick="cmCityChanged\('paris'\)"/.test(srcOpen), 'src=' + srcOpen.slice(0, 160));
-    B.x("(function(){ var s = " + prev + "; pickerRowClose('cmRootCity'); pickerRowClose('cmCity'); __cmCityRows = []; communityScreen = s.s; communityTab = s.t; communityScreenState.places.city = s.c; communityScreenState.trips.city = s.c; })()");
+    B.x("pickerRowClose('cmCity'); communityScreen = 'root'; renderCommunityModal(); pickerToggle('cmRootCity')"); const rootOpen2 = String(documentStub.getElementById('pk_cmRootCity_host').innerHTML || '');
+    ok('ش١٨ · الجذر (قرار أ): مدنه من المحتوى العام بعدّادها لا من قائمة الدليل (Paris 2 · Rome 1 · لا Marbella)', rootOpen2.includes('Paris</span><span><span class="cnt-num">2</span>') && rootOpen2.includes('Rome</span><span><span class="cnt-num">1</span>') && !rootOpen2.includes('Marbella'), 'root=' + rootOpen2.slice(0, 160));
+    B.x("(function(){ var s = " + prev + "; pickerRowClose('cmRootCity'); pickerRowClose('cmCity'); __cmCityRows = []; delete __cmSummary.places; delete __cmSummary.trips; communityScreen = s.s; communityTab = s.t; communityScreenState.places.city = s.c; communityScreenState.trips.city = s.c; })()");
     cap('picker.community.wired');
   }, []);
 
