@@ -28,6 +28,7 @@ const CAPS = [
   'bookmark.place.urlLessIsolated', 'bookmark.trip.selfListedInChip', 'bookmark.mirrors.loadedOnSignIn', 'security.nicknameEscaped', 'curators.twoPages',
   'screen.places.rowActions', 'screen.trip.defaultView', 'screen.trip.reopenStable', 'screen.trip.bookmarkedChip', 'screen.market.header', 'screen.market.card', 'screen.person.layer', 'screen.static.tripChips', 'screen.static.curatorPage', 'screen.static.placesChips', 'screen.static.backChip',
   'screen.community.stateKept', 'screen.header.gridNoScroll', 'screen.trips.cityPick', 'screen.places.ctxLast',
+  'picker.filter.normalized', 'picker.edit.deleteOwnOnly', 'picker.memory.lastPick', 'picker.add.belowResults',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -410,6 +411,27 @@ function citiesSeed(){
     ok('ع٤ · الترتيب الحرفي: عودة ← محدد ← ٣+٣ بالست ← سطر السياق', okOrder, 'missing/disordered: ' + missing.join(' | '));
     const panel = B.x("window.__mpTemplates.pickerPanel({ title: 'Cities', items: [{ id: 'riyadh', name: 'Riyadh', count: 12, selected: true }, { id: 'jeddah', name: 'Jeddah', count: 4 }], canAdd: true, onPick: 'pickCity', onAdd: 'openAddCity()' })");
     ok('ع٤ · لوحة الاختيار: المختار زعفراني بنقطة · عدّاد · ＋ Add city فعلًا رئيسًا', /prow sel/.test(panel) && /class="dot"/.test(panel) && /cnt-num">12/.test(panel) && /＋ Add city/.test(panel), '');
+  }, []);
+
+  await must('ع٦ · لوحة الاختيار الحية: تصفية بالتطبيع والأسماء البديلة · ضابط الدولة بالسطر · حذف بوضع التحرير على ما أملك فقط · الإضافة أسفل النتائج · ذاكرة آخر اختيار — ر٧٠أ', async () => {
+    const spec = "{ id: 'jx', title: 'Cities', countryLabel: 'SA', onCountry: 'void(0)', editable: true, onDelete: 'void', canAdd: true, onPick: 'void', onAdd: 'void(0)', items: [ { id: 'riyadh', name: 'Riyadh', count: 12, selected: true, alt: ['Ar Riyadh'] }, { id: 'jeddah', name: 'Jeddah', count: 4, alt: ['Jiddah'] }, { id: 'mylist_1', name: 'Al-Khobar', count: 1, custom: true } ] }";
+    const p0 = B.x("window.__mpTemplates.pickerPanel(" + spec + ")");
+    ok('ع٦ · ثلاثة صفوف · المختار بنقطة · العدّاد بعموده · حقل إدخال حي · ضابط الدولة بسطر التصفية · ＋ Add city آخرًا', (p0.match(/class="prow/g) || []).length === 3 && /class="dot"/.test(p0) && /cnt-num">12/.test(p0) && /<input type="text" class="search psearch"/.test(p0) && /class="pline"><span class="csel"[^>]*>SA ⌄<\/span><input/.test(p0) && p0.lastIndexOf('＋ Add city') > p0.lastIndexOf('class="prow'), '');
+    cap('picker.add.belowResults');
+    const f1 = B.x("window.__mpTemplates.pickerFilterItems(" + spec + ".items, 'ar-riy').map(i => i.id).join(',')");
+    const f2 = B.x("window.__mpTemplates.pickerFilterItems(" + spec + ".items, 'jidd').map(i => i.id).join(',')");
+    const f3 = B.x("window.__mpTemplates.pickerFilterItems(" + spec + ".items, 'khobar').map(i => i.id).join(',')");
+    const n1 = B.x("window.__mpTemplates.pickerNormalize('Al-Khobar') + '|' + window.__mpTemplates.pickerNormalize('Al Khobar') + '|' + window.__mpTemplates.pickerNormalize('Alkhobar') + '|' + window.__mpTemplates.pickerNormalize('Alexandria') + '|' + window.__mpTemplates.pickerKeys('Al-Khobar').join('+')");
+    ok('ع٦ · التطبيع: «Al-Khobar» و«Al Khobar» و«Alkhobar» مفتاح واحد · Alexandria لا تُشوَّه · «khobar» يجد Al-Khobar بالصيغة الثانية · «ar-riy» يجد الرياض · «Jiddah» يجد جدة', f1 === 'riyadh' && f2 === 'jeddah' && f3 === 'mylist_1' && n1 === 'alkhobar|alkhobar|alkhobar|alexandria|alkhobar+khobar', 'got: ' + f1 + ' / ' + f2 + ' / ' + f3 + ' / ' + n1);
+    cap('picker.filter.normalized');
+    const pq = B.x("window.__mpTemplates.pickerPanel(Object.assign(" + spec + ", { query: 'zzz' }))");
+    ok('ع٦ · لا مطابقة: صف «No match» و＋ Add city يبقى (الإضافة أسفل النتائج لا بدلها)', /prow dim">No match/.test(pq) && /＋ Add city/.test(pq), '');
+    const pe = B.x("window.__mpTemplates.pickerPanel(Object.assign(" + spec + ", { query: '', edit: true }))");
+    ok('ع٦ · وضع التحرير: زر الحذف على المدينة الخاصة وحدها (١ من ٣) والرأس يعرض Done', (pe.match(/class="del"/g) || []).length === 1 && /Done<\/span>/.test(pe) && /mylist_1/.test(pe.slice(pe.indexOf('class="del"') - 400, pe.indexOf('class="del"'))), '');
+    cap('picker.edit.deleteOwnOnly');
+    const mem = B.x("(function(){ var m = window.__mpTemplates.pickerMemory; var k = m.key('places'); m.set('places', 'riyadh'); return k + '|' + String(m.get('places')); })()");
+    ok('ع٦ · ذاكرة آخر اختيار بمفتاح موسوم بالوجهة ولا تنهار بلا تخزين (المحاكاة تعيد null)', /^mp_pick_places\|(riyadh|null)$/.test(mem), 'got: ' + mem);
+    cap('picker.memory.lastPick');
   }, []);
 
   await must('٥ · نشر القائمة عامة', async () => {
