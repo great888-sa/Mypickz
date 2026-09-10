@@ -30,6 +30,7 @@ const CAPS = [
   'screen.community.stateKept', 'screen.header.gridNoScroll', 'screen.trips.cityPick', 'screen.places.ctxLast',
   'picker.filter.normalized', 'picker.edit.deleteOwnOnly', 'picker.memory.lastPick', 'picker.add.belowResults',
   'picker.places.wired', 'picker.didYouMean',
+  'picker.gazetteer.optionsByCountry', 'picker.gazetteer.offlineSafe',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -455,6 +456,22 @@ function citiesSeed(){
     const near = B.x("(window.__mpTemplates.pickerNearest('Jiddah', [{ name: 'Jeddah' }, { name: 'Riyadh' }]) || {}).name + '|' + String(window.__mpTemplates.pickerNearest('Jeddah', [{ name: 'Jeddah' }])) + '|' + String(window.__mpTemplates.pickerNearest('Rome', [{ name: 'Milan' }]))");
     ok('ش١٦ · «هل تقصد؟»: Jiddah ← Jeddah · المطابق تمامًا لا يُسأل عنه · البعيد لا اقتراح', near === 'Jeddah|null|null', 'got: ' + near);
     cap('picker.didYouMean');
+  }, []);
+
+  await must('ع٧ · المعجم المرجعي بنافذة الإدخال: خيارات كائنات بأسماء بديلة تُرشَّح بالتطبيع · المختار اسمه القانوني · بلا شبكة الإضافة الحرة قائمة — ر٧٠ب-٢', async () => {
+    B.x("inputModalOptions = [{ name: 'Jeddah', alt: ['Jiddah', 'Jedda'] }, { name: 'Riyadh', alt: ['Riyad'] }, 'Makkah']; inputModalTouched = true; document.getElementById('inputModalField').value = 'jidd'; inputModalFilter()");
+    const h1 = screen('inputModalList');
+    ok('ع٧ · «jidd» يُظهر Jeddah وحدها (بالاسم البديل) والنص الحر يُقبل عند غياب المطابقة', h1.includes("inputModalPick('Jeddah')") && !h1.includes('Riyadh') && !h1.includes('Makkah'), h1.slice(0, 160));
+    B.x("document.getElementById('inputModalField').value = 'al riy'; inputModalFilter()");
+    const h2 = screen('inputModalList');
+    ok('ع٧ · «al riy» يجد Riyadh · الخيار النصي (Makkah) يعمل كما كان', h2.includes("inputModalPick('Riyadh')") && !h2.includes('Jeddah'), h2.slice(0, 160));
+    B.x("document.getElementById('inputModalField').value = 'zzz'; inputModalFilter()");
+    ok('ع٧ · لا مطابقة: سطر يبيّن أن Confirm يضيف مدينة جديدة', screen('inputModalList').includes('Confirm adds it as a new city'), '');
+    cap('picker.gazetteer.optionsByCountry');
+    const off = await B.x("window.__mpTemplates.gazCityOptions('Saudi Arabia').then(function(o){ return 'ok:' + o.length; }, function(e){ return 'err:' + e; })");
+    ok('ع٧ · بلا شبكة: التحميل يفشل بصمت ويعيد قائمة فارغة (لا يمنع الإضافة الحرة)', off === 'ok:0', 'got: ' + off);
+    cap('picker.gazetteer.offlineSafe');
+    B.x("inputModalOptions = null; document.getElementById('inputModalField').value = ''");
   }, []);
 
   await must('٥ · نشر القائمة عامة', async () => {
