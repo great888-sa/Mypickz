@@ -36,6 +36,7 @@ const CAPS = [
   'tripAdd.threeCases', 'tripAdd.returnToOrigin', 'community.searchScopedByCity', 'export.myPlaceCard',
   'community.tripPlaceActions',
   'cats.treeV2', 'cats.idMigration', 'cats.flagsAndSearchKey', 'cats.movePlace', 'cats.filterPlaces', 'cats.filterCommunity',
+  'places.sectionTree', 'list.emptyDeleted',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -652,6 +653,32 @@ function citiesSeed(){
     cap('cats.filterCommunity');
     } finally {
     B.x("(function(){ var s = " + prev + "; plFilterMain = s.pf[0]; plFilterSub = s.pf[1]; cmFilterMain = s.cf[0]; cmFilterSub = s.cf[1]; myListCityId = s.c; myListCountry = s.k; myCityListLoadedFor = null; plMoveMode = false; plModalFine = false; catPairClose('plModal'); catPairClose('plFilter'); closePlPlaceModal(); })()");
+    await B.x("loadMyCityList(myListCityId)");
+    }
+  }, []);
+
+  await must('ش٢١ · N-081: شاشة الأماكن بالتدرج (قسم قابل للطي بعدّاده ← فرعيات ← أماكن، الفارغ لا يظهر) · القائمة الفارغة تُحذف عند الحفظ وتعود بأول مكان — ر٧٠ج', async () => {
+    const prev = B.x("JSON.stringify({ c: myListCityId, k: myListCountry, pf: [plFilterMain, plFilterSub] })");
+    try {
+    const uid = B.x('currentUser.uid');
+    await store.set('userCityLists/' + uid + '_milan', { ownerId: uid, cityId: 'milan', cityName: 'Milan', public: true, catsV: 2, categories: { burger: { places: [{ id: 'm1', name: 'Bun One', url: 'https://maps.app.goo.gl/m1' }] }, italian: { places: [{ id: 'm2', name: 'Osteria', url: 'https://maps.app.goo.gl/m2' }, { id: 'm3', name: 'Pasta Bar', url: 'https://maps.app.goo.gl/m3' }] }, coffee: { places: [] } } });
+    B.x("myCityListLoadedFor = null; myListCityId = 'milan'; myListCountry = 'Italy'; plFilterMain = ''; plFilterSub = ''; plSecCollapsed = {}"); await B.x("loadMyCityList('milan')");
+    B.x('renderPlacesMine()'); const h = screen('plBody');
+    const iDish = h.indexOf('Restaurants · by dish'), iCui = h.indexOf('Restaurants · by cuisine'), iBurger = h.indexOf('Burger (1)'), iIt = h.indexOf('Italian (2)');
+    ok('ش٢١ · عنوانا القسمين بعدّاديهما (١ و٢ أماكن) بترتيب الشجرة، وفرعياتهما تحتهما، ولا عنوان للقسم الفارغ (Cafes)', iDish > -1 && iCui > iDish && iBurger > iDish && iBurger < iCui && iIt > iCui && h.includes('1 place') && h.includes('2 places') && !h.includes('Cafes &amp; Sweets') && !h.includes('Cafes & Sweets'), 'idx=' + [iDish, iCui, iBurger, iIt].join(','));
+    B.x("plToggleSection('restaurants_cuisine')"); const h2 = screen('plBody');
+    ok('ش٢١ · طي القسم يخفي فرعياته ويبقي عنوانه', h2.includes('Restaurants · by cuisine') && !h2.includes('Italian (2)') && h2.includes('Burger (1)'), '');
+    cap('places.sectionTree');
+    // حذف القائمة الفارغة: حذف الأماكن الثلاثة ثم الحفظ ← المستند يزول من المخزن
+    B.x("myCityListData.categories.burger.places = []; myCityListData.categories.italian.places = []"); await B.x('saveMyCityList()');
+    const gone = !store.get('userCityLists/' + uid + '_milan');
+    B.x("userEnsurePlaces('burger').places.push({ id: 'm9', name: 'Back Again', url: 'https://maps.app.goo.gl/m9' })"); await B.x('saveMyCityList()');
+    const back = store.get('userCityLists/' + uid + '_milan');
+    ok('ش٢١ · حذف آخر مكان يحذف مستند القائمة (لا يُكتب فارغًا) · أول مكان جديد يعيدها', gone && !!back && ((back.categories || {}).burger || {}).places.length === 1, 'gone=' + gone + ' back=' + !!back);
+    cap('list.emptyDeleted');
+    } finally {
+    B.x("(function(){ var s = " + prev + "; myListCityId = s.c; myListCountry = s.k; plFilterMain = s.pf[0]; plFilterSub = s.pf[1]; plSecCollapsed = {}; myCityListLoadedFor = null; })()");
+    store.delete('userCityLists/' + B.x('currentUser.uid') + '_milan');
     await B.x("loadMyCityList(myListCityId)");
     }
   }, []);
