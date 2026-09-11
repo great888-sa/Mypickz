@@ -34,6 +34,7 @@ const CAPS = [
   'picker.addresses.wired', 'picker.tripCreate.wired', 'city.savedAtOnce',
   'picker.community.wired',
   'tripAdd.threeCases', 'tripAdd.returnToOrigin', 'community.searchScopedByCity', 'export.myPlaceCard',
+  'community.tripPlaceActions',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -555,7 +556,7 @@ function citiesSeed(){
     B.set('userTrips', [t1, t2]); await B.x('saveTrip(userTrips[0])'); await B.x('saveTrip(userTrips[1])');
     B.x("myListCityId = 'paris'; plAddToTrip('" + CAT1 + "', 'p1', 'Cafe A')");
     const choose = String(documentStub.getElementById('tripPickerBody').innerHTML || '');
-    ok('ش١٩ · رحلتان: لوحة «Which trip?» مجرَّدة برحلتَي المدينة وأيامهما', choose.includes('Which trip?') && choose.includes('id="pk_tripAddChoose"') && choose.includes('Paris — A1 · 1 day') && choose.includes('Paris — A2 · 2 days'), choose.slice(0, 160));
+    ok('ش١٩ · رحلتان: لوحة «Which trip?» مجرَّدة بصفوف كبطاقة الرحلة (عنوان وسطر الأيام والأماكن)', choose.includes('Which trip?') && choose.includes('id="pk_tripAddChoose"') && choose.includes('Paris — A1<br><span class="dim mini">1 day · 0 places</span>') && choose.includes('Paris — A2<br><span class="dim mini">2 days · 0 places</span>'), choose.slice(0, 200));
     B.x("tripAddContinue('trip_a2')");
     const days = String(documentStub.getElementById('tripPickerBody').innerHTML || '');
     ok('ش١٩ · رحلة بيومين: لوحة «Which day?» بيومين', days.includes('Which day?') && days.includes("tripPickDay('1')") && days.includes("tripPickDay('2')"), days.slice(0, 120));
@@ -564,15 +565,20 @@ function citiesSeed(){
     ok('ش١٩ · لوحة «Which slot?» بالخانات السبع بلا اختيار مسبق', slots.includes('Which slot?') && (slots.match(/class="prow"/g) || []).length === 7 && !slots.includes('class="dot"') && slots.includes("tripPickSlot('coffee_tea')"), 'rows=' + (slots.match(/class="prow"/g) || []).length);
     cap('tripAdd.threeCases');
     await B.x("tripPickSlot('coffee_tea')");
-    const after = B.x("JSON.stringify({ n: (userTrips[1].days[1].places.coffee_tea || []).length, tab: currentTab, cur: currentTripId, origin: tripAddOrigin && tripAddOrigin.tab })");
-    ok('ش١٩ · الإضافة تهبط باليوم ٢ خانة القهوة، ثم يُفتح عرض الرحلة بتبويب الرحلات والأصل محفوظ', /"n":1/.test(after) && /"tab":"Trips"/.test(after) && /"cur":"trip_a2"/.test(after) && /"origin":"Places"/.test(after), 'got: ' + after);
+    const after = B.x("JSON.stringify({ n: (userTrips[1].days[1].places.coffee_tea || []).length, tab: currentTab, act: activeTripId, added: activeTripAdded.length, origin: tripAddOrigin && tripAddOrigin.tab })");
+    ok('ش١٩ · الإضافة تهبط باليوم ٢ خانة القهوة، ويبقى المستخدم بالأماكن ووضع الإضافة قائم بشريطه (١ مضاف) والأصل محفوظ', /"n":1/.test(after) && /"tab":"Places"/.test(after) && /"act":"trip_a2"/.test(after) && /"added":1/.test(after) && /"origin":"Places"/.test(after), 'got: ' + after);
+    await B.x('stopAddingToTrip()');
+    const done = B.x("JSON.stringify({ tab: currentTab, cur: currentTripId, act: activeTripId, origin: tripAddOrigin && tripAddOrigin.tab })");
+    ok('ش١٩ · «إنهاء» يعرض الرحلة بتبويب الرحلات ويطوي الشريط والأصل ما زال محفوظًا', /"tab":"Trips"/.test(done) && /"cur":"trip_a2"/.test(done) && /"act":null/.test(done) && /"origin":"Places"/.test(done), 'got: ' + done);
     B.x('backToTripsList()');
     ok('ش١٩ · الإنهاء يعود إلى الأماكن ويصفّي الأصل', B.x("currentTab + '|' + String(tripAddOrigin) + '|' + String(currentTripId)") === 'Places|null|null', '');
     cap('tripAdd.returnToOrigin');
     // N-076: زر تصدير مكاني يفتح معاينة الإرسال ببطاقة
     B.x("(function(){ var e = userGetEntry('" + CAT1 + "'); e.places = e.places || []; if (!e.places.length) e.places.push({ name: 'Cafe A', url: 'https://maps.app.goo.gl/x', area: 'Marais' }); })(); plSendPlace('" + CAT1 + "', 0)");
     const ex = String(documentStub.getElementById('tripShareBackdrop').innerHTML || '');
-    ok('ش١٩ · N-076: معاينة الإرسال لمكاني تعرض «Send as card» و«Send as message» والمكان مسجَّل للبطاقة', ex.includes('Send as card') && ex.includes('Send as message') && B.x("String((cmCache.places['my_" + CAT1 + "_0'] || {}).name)") === 'Cafe A', ex.slice(0, 120));
+    ok('ش١٩ · N-076: معاينة البطاقة الموحَّدة لمكاني: نوع PLACE · قسما AREA وLINK · التوقيع بالاسم · زرا الإرسال', ex.includes('xc-type">PLACE') && ex.includes('xc-day">AREA') && ex.includes('xc-day">LINK') && ex.includes('from the list of @') && ex.includes('Send as card') && ex.includes('Send as message'), ex.slice(0, 200));
+    const pagesN = B.x("(function(){ var m = { type: 'TRIP', title: 'T', sub: '', owner: 'x', sections: [] }; for (var d = 1; d <= 4; d++){ var it = []; for (var i = 0; i < 9; i++) it.push('p' + i); m.sections.push({ label: 'Day ' + d, items: it }); } return exportCardPages(m).map(function(pg){ return pg.map(function(s){ return s.label; }).join('+'); }).join(' | '); })()");
+    ok('ش١٩ · البطاقة الطويلة تُقسَّم عند حدود الأقسام (٤ أيام × ٩ أماكن → بطاقتان: يومان ويومان)', pagesN === 'Day 1+Day 2 | Day 3+Day 4', 'got: ' + pagesN);
     B.x('closeExportPreview()');
     cap('export.myPlaceCard');
     // N-079: بحث الاسم مرشَّحًا بالمدينة
@@ -586,6 +592,12 @@ function citiesSeed(){
     B.x("communityScreenState.places.city = ''; document.getElementById('cmSearch').value = 'zed'"); globalThis.__cap.toasts.length = 0; await B.x('cmSearchGo()');
     ok('ش١٩ · N-079: بمدينة محددة يُقصر البحث على من له محتوى فيها (رسالة) · الاسم الغائب رسالة أخرى · بلا مدينة يُفتح صاحبه', t1m.includes('No public content by this user in Paris') && t2m === "This name doesn't exist" && B.x('String(viewingUserUid)') === 'uZED', 't1=' + t1m + ' t2=' + t2m);
     cap('community.searchScopedByCity');
+    // N-080: صف الأفعال لمكان رحلة الآخرين
+    B.x("communityUserTrips = [{ id: 'ct1', cityId: 'paris', cityName: 'Paris', customLabel: 'Z', days: [{ dayNumber: 1, places: {} }] }]; resolvedTripCache['community_ct1'] = [{ dayNumber: 1, categoryOrder: null, places: { breakfast: [{ name: 'Cafe Z', url: 'https://maps.app.goo.gl/z', area: 'Marais', _available: true, _ref: { cityId: 'paris', subcatId: '" + CAT1 + "', placeId: 'p9', sourceUid: 'uZED' } }] } }]; viewingCommunityTripId = 'ct1'; viewingUserData = { nickname: 'zed' }; renderCommunityTripDetail(document.getElementById('communityBody'))");
+    const ct = screen('communityBody');
+    ok('ش١٩ · N-080: مكان رحلة الآخرين له صف أفعال: Maps · مفكرة · إلى رحلتي · بطاقة (بصاحبها zed)', ct.includes('Maps ↗') && ct.includes('bmk-btn') && ct.includes("cmAddOthersPlaceToTrip('paris', '" + CAT1 + "', 'p9', 'uZED', 'Cafe Z')") && ct.includes("cmExportOthersPlace('oid:uZED:paris:p9', 'Cafe Z', 'https://maps.app.goo.gl/z', 'zed'"), ct.slice(0, 200));
+    cap('community.tripPlaceActions');
+    B.x("communityUserTrips = []; delete resolvedTripCache['community_ct1']; viewingCommunityTripId = null; viewingUserData = null");
     } finally {
     B.x("(function(){ var s = " + prev + "; userTrips = s.trips; currentTab = s.tab; currentTripId = s.cur; activeTripId = s.act; myListCityId = s.city; viewingUserUid = null; tripAddOrigin = null; pendingPlaceRef = null; tcAfterCreate = null; tcPresetCityId = null; delete __cmSummary.places; communityScreenState.places.city = ''; userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'mylist_tv'; }); document.getElementById('tripPickerBackdrop').classList.remove('show'); })()");
     }
