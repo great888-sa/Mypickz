@@ -35,6 +35,7 @@ const CAPS = [
   'picker.community.wired',
   'tripAdd.threeCases', 'tripAdd.returnToOrigin', 'community.searchScopedByCity', 'export.myPlaceCard',
   'community.tripPlaceActions',
+  'cats.treeV2', 'cats.idMigration', 'cats.flagsAndSearchKey', 'cats.movePlace', 'cats.filterPlaces', 'cats.filterCommunity',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -606,6 +607,52 @@ function citiesSeed(){
     B.x("communityUserTrips = []; delete resolvedTripCache['community_ct1']; viewingCommunityTripId = null; viewingUserData = null");
     } finally {
     B.x("(function(){ var s = " + prev + "; userTrips = s.trips; currentTab = s.tab; currentTripId = s.cur; activeTripId = s.act; myListCityId = s.city; viewingUserUid = null; tripAddOrigin = null; pendingPlaceRef = null; tcAfterCreate = null; tcPresetCityId = null; delete __cmSummary.places; communityScreenState.places.city = ''; userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'mylist_tv'; }); document.getElementById('tripPickerBackdrop').classList.remove('show'); })()");
+    }
+  }, []);
+
+  await must('ش٢٠ · الشجرة v2: ٩ أقسام بمعرّفات · تحويل المعرّفات القديمة مرة واحدة · العلامة ومفتاح البحث · النقل من النافذة · التصفية بالشريحتين بالأماكن والمجتمع — ر٧٠ط', async () => {
+    const prev = B.x("JSON.stringify({ c: myListCityId, k: myListCountry, pf: [plFilterMain, plFilterSub], cf: [cmFilterMain, cmFilterSub] })");
+    try {
+    const tree = B.x("JSON.stringify({ secs: catSections().map(function(x){ return x.id; }), n: plCatsAll().length, steak: (plCatsAll().find(function(c){ return c.id === 'steak'; }) || {}).sectionId, sushi: !!plCatsAll().find(function(c){ return c.id === 'sushi'; }), pasta: !!plCatsAll().find(function(c){ return c.id === 'pasta'; }) })");
+    ok('ش٢٠ · ٩ أقسام بمعرّفاتها الثابتة · ٦٧ فرعيًّا · steak بقسم الوجبات · sushi موجود · pasta محذوف', /"secs":\["cafes_sweets","restaurants_dish","restaurants_cuisine","shopping","sights","beaches_sea","entertainment","stay_transit","others"\]/.test(tree) && /"n":67/.test(tree) && /"steak":"restaurants_dish"/.test(tree) && /"sushi":true/.test(tree) && /"pasta":false/.test(tree), 'got: ' + tree);
+    cap('cats.treeV2');
+    // التحويل: مستند قديم بمعرّفات قديمة ← يُقرأ بالجديد ويُحفظ بنسخة القاموس ٢
+    const uid = B.x('currentUser.uid');
+    await store.set('userCityLists/' + uid + '_rome', { ownerId: uid, cityId: 'rome', cityName: 'Rome', public: false, categories: { fine_italian: { places: [{ id: 'p_it', name: 'Trattoria', url: 'https://maps.app.goo.gl/it' }] }, shawarma: { places: [{ id: 'p_sw', name: 'Old sandwich', url: 'https://maps.app.goo.gl/sw' }] }, taco: { places: [{ id: 'p_tc', name: 'Fusion', url: 'https://maps.app.goo.gl/tc' }] }, coffee_bakery: { places: [{ id: 'p_cb', name: 'Beans', url: 'https://maps.app.goo.gl/cb' }] } } });
+    B.x("myCityListLoadedFor = null; myListCityId = 'rome'; myListCountry = 'Italy'"); await B.x("loadMyCityList('rome')");
+    const keys = B.x("Object.keys(myCityListData.categories).sort().join(',')");
+    await B.x('saveMyCityList()'); const saved = store.get('userCityLists/' + uid + '_rome') || {};
+    ok('ش٢٠ · المعرّفات القديمة تُقرأ بالجديدة (italian · sandwich · other_cuisine · coffee) وتُحفظ بنسخة القاموس ٢ بلا مفاتيح قديمة', keys === 'coffee,italian,other_cuisine,sandwich' && saved.catsV === 2 && !saved.categories.fine_italian && !saved.categories.shawarma && !!saved.categories.sandwich, 'keys=' + keys + ' catsV=' + saved.catsV + ' savedKeys=' + Object.keys(saved.categories || {}).join(','));
+    cap('cats.idMigration');
+    // النافذة: رئيسي ← فرعي بالشريحتين · Fine dining · الحفظ بالعلامة والمفتاح
+    B.x("openPlPlaceModal(null, null)"); B.x("window['catPairPickMain_plModal']('restaurants_dish')"); B.x("window['catPairPickSub_plModal']('burger')");
+    const modal = String(documentStub.getElementById('plModalCats').innerHTML || '');
+    ok('ش٢٠ · نافذة المكان: صف شريحتين (الرئيسي ثم الفرعي) · بعد الاختيار الشريحتان تحملان القسم والفرعي · شريحة Fine dining', modal.includes('class="headrow cprow"') && modal.includes('<b>Restaurants · by dish</b>') && modal.includes('<b>Burger</b>') && modal.includes('>Fine dining</button>') && B.x('plModalCat') === 'burger', modal.slice(0, 160));
+    B.x("plModalFine = true; document.getElementById('plName').value = 'Big Bun'; document.getElementById('plUrl').value = 'https://maps.app.goo.gl/bb'; document.getElementById('plArea').value = 'Trastevere'; document.getElementById('plPicks').value = 'Double cheese'; document.getElementById('plNote').value = ''");
+    await B.x('savePlPlace()');
+    const pl = B.x("JSON.stringify(((myCityListData.categories.burger || {}).places || [])[0] || {})");
+    ok('ش٢٠ · الحفظ: العلامة fine_dining · الاختيارات · مفتاح بحث مطبَّع يحوي الاسم والمنطقة والاختيار والتصنيف', /"flags":\["fine_dining"\]/.test(pl) && /"picks":\[\{"name":"Double cheese"\}\]/.test(pl) && /"searchKey":"[a-z0-9]*bigbun[a-z0-9]*"/.test(pl) && /trastevere/.test(pl) && /doublecheese/.test(pl) && /burger/.test(pl), 'got: ' + pl.slice(0, 200));
+    cap('cats.flagsAndSearchKey');
+    // النقل من نافذة التعديل: زر Move ثم اختيار فرعي آخر يحفظ فورًا
+    B.x("openPlPlaceModal('burger', 0)"); const edit = String(documentStub.getElementById('plModalCats').innerHTML || '');
+    B.x("plMoveMode = true; window['catPairPickMain_plModal']('restaurants_dish')"); await B.x("window['catPairPickSub_plModal']('sandwich')");
+    const moved = B.x("JSON.stringify({ b: (myCityListData.categories.burger.places || []).length, s: (myCityListData.categories.sandwich.places || []).map(function(p){ return p.name; }) })");
+    ok('ش٢٠ · N-083: نافذة التعديل تعرض «Move to another category»، والاختيار ينقل المكان فورًا إلى Sandwiches', edit.includes('Move to another category') && /"b":0/.test(moved) && /"Big Bun"/.test(moved), 'got: ' + moved);
+    cap('cats.movePlace');
+    // تصفية شاشة الأماكن بالشريحتين
+    B.x("plFilterMain = 'restaurants_dish'; plFilterSub = ''; renderPlacesMine()"); const f1 = screen('plBody');
+    B.x("plFilterSub = 'sandwich'; renderPlacesMine()"); const f2 = screen('plBody');
+    B.x("plFilterMain = 'cafes_sweets'; plFilterSub = ''; renderPlacesMine()"); const f3 = screen('plBody');
+    B.x("__cp.plFilter.open = 'sub'; catPairRefresh('plFilter')"); const subPanel = String(documentStub.getElementById('cp_plFilter_host').innerHTML || '');
+    ok('ش٢٠ · التصفية: الرئيسي يُظهر تصنيفاته فقط (Sandwiches وTrattoria لا) · الفرعي يضيّق · تبديل الرئيسي يخفي الأولى · لوحة الفرعي فيها حقل بحث وأسماء الأماكن ضمن مطابقاتها', f1.includes('Old sandwich') && !f1.includes('Trattoria') && f2.includes('Old sandwich') && !f2.includes('Beans') && !f3.includes('Old sandwich') && f3.includes('Beans') && subPanel.includes('class="search psearch"') && subPanel.includes('cnt-num'), 'f1=' + f1.slice(0, 80));
+    cap('cats.filterPlaces');
+    // تصفية المجتمع: قوائم فيها مطابقة بعدّادها
+    const cm = B.x("(function(){ cmFilterMain = 'restaurants_dish'; cmFilterSub = ''; var rows = cmApplyCatFilter([{ id: 'a_x', categories: { burger: { places: [{ name: 'A' }, { name: 'B' }] }, italian: { places: [{ name: 'C' }] } } }, { id: 'b_x', categories: { italian: { places: [{ name: 'D' }] } } }]); var r = rows.map(function(x){ return x.id + ':' + x._matches; }).join(','); cmFilterSub = 'burger'; var r2 = cmApplyCatFilter([{ id: 'a_x', categories: { burger: { places: [{ name: 'A' }] }, shawarma: { places: [{ name: 'S' }] } } }]).map(function(x){ return x.id + ':' + x._matches; }).join(','); cmFilterMain = ''; cmFilterSub = ''; return r + '|' + r2; })()");
+    ok('ش٢٠ · المجتمع: بالرئيسي تبقى القوائم ذات المطابقة بعدّادها (a:2) وتسقط الأخرى · بالفرعي تُحسب مطابقات الفرعي وحده (a:1)', cm === 'a_x:2|a_x:1', 'got: ' + cm);
+    cap('cats.filterCommunity');
+    } finally {
+    B.x("(function(){ var s = " + prev + "; plFilterMain = s.pf[0]; plFilterSub = s.pf[1]; cmFilterMain = s.cf[0]; cmFilterSub = s.cf[1]; myListCityId = s.c; myListCountry = s.k; myCityListLoadedFor = null; plMoveMode = false; plModalFine = false; catPairClose('plModal'); catPairClose('plFilter'); closePlPlaceModal(); })()");
+    await B.x("loadMyCityList(myListCityId)");
     }
   }, []);
 
