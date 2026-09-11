@@ -576,9 +576,15 @@ function citiesSeed(){
     // N-076: زر تصدير مكاني يفتح معاينة الإرسال ببطاقة
     B.x("(function(){ var e = userGetEntry('" + CAT1 + "'); e.places = e.places || []; if (!e.places.length) e.places.push({ name: 'Cafe A', url: 'https://maps.app.goo.gl/x', area: 'Marais' }); })(); plSendPlace('" + CAT1 + "', 0)");
     const ex = String(documentStub.getElementById('tripShareBackdrop').innerHTML || '');
-    ok('ش١٩ · N-076: معاينة البطاقة الموحَّدة لمكاني: نوع PLACE · قسما AREA وLINK · التوقيع بالاسم · زرا الإرسال', ex.includes('xc-type">PLACE') && ex.includes('xc-day">AREA') && ex.includes('xc-day">LINK') && ex.includes('from the list of @') && ex.includes('Send as card') && ex.includes('Send as message'), ex.slice(0, 200));
-    const pagesN = B.x("(function(){ var m = { type: 'TRIP', title: 'T', sub: '', owner: 'x', sections: [] }; for (var d = 1; d <= 4; d++){ var it = []; for (var i = 0; i < 9; i++) it.push('p' + i); m.sections.push({ label: 'Day ' + d, items: it }); } return exportCardPages(m).map(function(pg){ return pg.map(function(s){ return s.label; }).join('+'); }).join(' | '); })()");
-    ok('ش١٩ · البطاقة الطويلة تُقسَّم عند حدود الأقسام (٤ أيام × ٩ أماكن → بطاقتان: يومان ويومان)', pagesN === 'Day 1+Day 2 | Day 3+Day 4', 'got: ' + pagesN);
+    ok('ش١٩ · N-076: معاينة الإرسال لمكاني تفتح بزرَي الإرسال واختيار اللغة (الرسم نفسه يحتاج متصفحًا — يُثبَّت بلقطة المالك)', ex.includes('Send as card') && ex.includes('Send as message') && ex.includes("setExportLang('ar')"), ex.slice(0, 200));
+    // نموذج البطاقة v2 (ر٧٠ح): المكان بمساره الرئيسي › الفرعي والاختيارات والملاحظة · القائمة بمجموعاتها · اللغة العربية بعناوينها
+    B.x("cmCache.places['t_pl'] = { name: 'Cafe A', url: 'https://maps.app.goo.gl/x', area: 'Marais', city: 'Paris', category: '" + CAT1 + "', picks: [{ name: 'Flat white' }, { name: 'Croissant' }], note: 'best before 11', owner: 'zed' }");
+    const mp = B.x("(function(){ exportLang = 'en'; var m = exportCardModel2('oplace', 't_pl'); return JSON.stringify({ type: m.type, title: m.title, city: m.city, area: m.area, owner: m.owner, g: m.groups.length, label: m.groups[0].label, picks: m.groups[0].entries[0].picks, note: m.groups[0].entries[0].note, url: !!m.groups[0].entries[0].url }); })()");
+    ok('ش١٩ · نموذج بطاقة المكان: النوع · الاسم · المدينة – المنطقة · «الرئيسي › الفرعي» · الاختيارات · الملاحظة · الرابط · الصاحب', /"type":"place"/.test(mp) && /"title":"Cafe A"/.test(mp) && /"city":"Paris"/.test(mp) && /"area":"Marais"/.test(mp) && /"owner":"zed"/.test(mp) && / › /.test(mp) && /"picks":\["Flat white","Croissant"\]/.test(mp) && /"note":"best before 11"/.test(mp) && /"url":true/.test(mp), 'got: ' + mp);
+    const ml = B.x("(function(){ exportLang = 'ar'; var m = exportCardModel2('mylist', null); exportLang = 'en'; return JSON.stringify({ type: m.type, title: m.title, count: m.count, g: m.groups.length, n: m.groups.reduce(function(a, gr){ return a + gr.entries.length; }, 0) }); })()");
+    ok('ش١٩ · نموذج بطاقة القائمة بالعربية: عنوان بالمدينة و«قائمة» · عدد الأماكن بالعربية · مجموعات بالمسار', /"type":"list"/.test(ml) && /قائمة/.test(ml) && /(مكان|أماكن)/.test(ml) && /"g":[1-9]/.test(ml), 'got: ' + ml);
+    const qr = B.x("(function(){ var q = mpQR('https://maps.app.goo.gl/FkuRdzo9SVVrf5jw6'); return q ? q.size + '|' + q.modules[0].slice(0, 7).join('') + '|' + q.modules[6].slice(0, 7).join('') : 'null'; })()");
+    ok('ش١٩ · مولّد QR داخل الملف: مصفوفة ٢٩×٢٩ للرابط ونمط المكتشف بأول صف وسابعه', qr === '29|1111111|1111111', 'got: ' + qr);
     B.x('closeExportPreview()');
     cap('export.myPlaceCard');
     // N-079: بحث الاسم مرشَّحًا بالمدينة
