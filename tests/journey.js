@@ -455,8 +455,9 @@ function citiesSeed(){
     const h = screen('plBody');
     ok('ش١٦ · وضع التحرير: سلة على مدينتي الخاصة وحدها (Lyon) والرأس يعرض Done', (h.match(/class="del"/g) || []).length === 1 && h.includes("plRemoveCity('mylist_77')") && h.includes('Done</span>'), 'dels=' + (h.match(/class="del"/g) || []).length);
     B.x("__pk.plCities.edit = false; userListData.customCities = userListData.customCities.filter(c => c.id !== 'mylist_77'); plPanel = 'cats'; renderPlacesMine()");
-    const e = sees('plBody', ['id="pk_plCats"', "plPickCat('", 'Pick a category to add a place']); const e2 = notSees('plBody', ['＋ Add city']);
-    ok('ش١٦ · لوحة التصنيفات بالقالب نفسه: كل صف يفتح نافذة الإضافة بتصنيفه ولا زر إضافة مدينة', e.ok && e2.ok, e.why + ' ' + e2.why);
+    B.x("plPanel = null; plTogglePanel('cats')"); const e = sees('plBody', ['Pick a category to add a place', 'class="headrow cprow"', "catPairToggle('plAdd'", 'id="pk_plAdd_m"']); const e2 = notSees('plBody', ['＋ Add city', 'id="pk_plCats"']);
+    B.x("window['catPairPickMain_plAdd']('restaurants_dish')"); const e3 = sees('plBody', ['id="pk_plAdd_s"', "catPairPickSub_plAdd('burger')"]);
+    ok('ش١٦ · لوحة «＋ Add place» بالمستويين: الرئيسي أولًا (مفتوحًا) ثم فرعياته بعدّادها، ولا قائمة مسطحة ولا زر إضافة مدينة', e.ok && e2.ok && e3.ok, e.why + ' ' + e2.why + ' ' + e3.why);
     B.x("(function(){ var s = " + prev + "; myListCityId = s.c; myListCountry = s.k; plPanel = s.p; userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'mylist_77'; }); delete __pk.plCities; renderPlacesMine(); })()");
     cap('picker.places.wired');
     const near = B.x("(window.__mpTemplates.pickerNearest('Jiddah', [{ name: 'Jeddah' }, { name: 'Riyadh' }]) || {}).name + '|' + String(window.__mpTemplates.pickerNearest('Jeddah', [{ name: 'Jeddah' }])) + '|' + String(window.__mpTemplates.pickerNearest('Rome', [{ name: 'Milan' }]))");
@@ -813,7 +814,7 @@ function citiesSeed(){
   }, ['bookmark.trip.selfListedInChip']);
 
   await must('١٦د · اسم بوسوم لا يُنفَّذ كسكربت (المواصفة: الأمان أولًا)', async () => {
-    store.set('userCityLists/uXSS_paris', { ownerId: 'uXSS', cityId: 'paris', cityName: 'Paris', nickname: '<img src=x onerror=alert(1)>', public: true, viewCount: 1, categories: {} });
+    store.set('userCityLists/uXSS_paris', { ownerId: 'uXSS', cityId: 'paris', cityName: 'Paris', nickname: '<img src=x onerror=alert(1)>', public: true, viewCount: 1, categories: { burger: { places: [{ id: 'x1', name: 'X', url: 'https://maps.app.goo.gl/x1' }] } } }); // ر٧٠ط-٢: لا قائمة بلا مكان بالسوق
     B.set('communityScreen', 'source'); B.set('communityTab', 'places'); B.x("communityScreenState.places = { city: '', marked: false, sort: 'views' }");
     B.x('renderCommunityModal()');
     await new Promise(r => setTimeout(r, 30));
