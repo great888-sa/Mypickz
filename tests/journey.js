@@ -617,7 +617,14 @@ function citiesSeed(){
     const prev = B.x("JSON.stringify({ c: myListCityId, k: myListCountry, pf: [plFilterMain, plFilterSub], cf: [cmFilterMain, cmFilterSub] })");
     try {
     const tree = B.x("JSON.stringify({ secs: catSections().map(function(x){ return x.id; }), n: plCatsAll().length, steak: (plCatsAll().find(function(c){ return c.id === 'steak'; }) || {}).sectionId, sushi: !!plCatsAll().find(function(c){ return c.id === 'sushi'; }), pasta: !!plCatsAll().find(function(c){ return c.id === 'pasta'; }) })");
-    ok('ش٢٠ · ٩ أقسام بمعرّفاتها الثابتة · ٦٧ فرعيًّا · steak بقسم الوجبات · sushi موجود · pasta محذوف', /"secs":\["cafes_sweets","restaurants_dish","restaurants_cuisine","shopping","sights","beaches_sea","entertainment","stay_transit","others"\]/.test(tree) && /"n":67/.test(tree) && /"steak":"restaurants_dish"/.test(tree) && /"sushi":true/.test(tree) && /"pasta":false/.test(tree), 'got: ' + tree);
+    ok('ش٢٠ · الشجرة v3: ١٨ قسمًا بترتيب الاستعمال · ٨٠ فرعيًّا · steak بقسم الوجبات · sushi موجود · pasta محذوف · لا Spa ولا Parking', /"secs":\["cafes_sweets","restaurants_dish","restaurants_cuisine","shopping_store","shopping_product","parks_gardens","squares_streets","corniche_marinas","tower_bridge_views","nature","beaches","landmarks","tours_venues","theme_parks","zoos_aquariums","stay","transportation","others"\]/.test(tree) && /"n":80/.test(tree) && /"steak":"restaurants_dish"/.test(tree) && /"sushi":true/.test(tree) && /"pasta":false/.test(tree) && B.x("catKnown('wellness') || catKnown('parking')") === false, 'got: ' + tree);
+    // ر٧٠ل: الأمان العام — معرّف فرعي مجهول يُقرأ ويُعاد كتابته تحت Others (منفذ الاستيراد)
+    ok('ش٢٠ · معرّف فرعي مجهول (مستورد) يُعرض تحت Others', B.x("catIdNew('some_imported_cat')") === 'others' && B.x("catIdNew('burger')") === 'burger' && B.x("JSON.stringify(Object.keys(migrateCategoryKeys({ zzz_unknown: { places: [{ name: 'X' }] }, burger: { places: [] } }, true).categories).sort())") === '["burger","others"]', '');
+    // بالتصفية تُخفى الأقسام ذات الصفر، وبالإدخال تُعرض كلها
+    B.x("plFilterMain = ''; plFilterSub = ''; plPanel = 'cats'; renderPlacesMine(); __cp.plFilter.open = 'main'; catPairRefresh('plFilter'); __cp.plAdd.open = 'main'; catPairRefresh('plAdd')");
+    const fm = String(documentStub.getElementById('cp_plFilter_host').innerHTML || ''), am2 = String(documentStub.getElementById('cp_plAdd_host').innerHTML || '');
+    B.x("plPanel = null");
+    ok('ش٢٠ · لوحة الرئيسي بالتصفية تعرض الأقسام ذات المحتوى فقط، وبالإدخال الأقسام الثمانية عشر كلها', (fm.match(/class="prow/g) || []).length < 18 && (am2.match(/class="prow/g) || []).length >= 18, 'filter=' + (fm.match(/class="prow/g) || []).length + ' add=' + (am2.match(/class="prow/g) || []).length);
     cap('cats.treeV2');
     // التحويل: مستند قديم بمعرّفات قديمة ← يُقرأ بالجديد ويُحفظ بنسخة القاموس ٢
     const uid = B.x('currentUser.uid');
@@ -625,7 +632,7 @@ function citiesSeed(){
     B.x("myCityListLoadedFor = null; myListCityId = 'rome'; myListCountry = 'Italy'"); await B.x("loadMyCityList('rome')");
     const keys = B.x("Object.keys(myCityListData.categories).sort().join(',')");
     await B.x('saveMyCityList()'); const saved = store.get('userCityLists/' + uid + '_rome') || {};
-    ok('ش٢٠ · المعرّفات القديمة تُقرأ بالجديدة (italian · sandwich · other_cuisine · coffee) وتُحفظ بنسخة القاموس ٢ بلا مفاتيح قديمة', keys === 'coffee,italian,other_cuisine,sandwich' && saved.catsV === 2 && !saved.categories.fine_italian && !saved.categories.shawarma && !!saved.categories.sandwich, 'keys=' + keys + ' catsV=' + saved.catsV + ' savedKeys=' + Object.keys(saved.categories || {}).join(','));
+    ok('ش٢٠ · المعرّفات القديمة تُقرأ بالجديدة (italian · sandwich · other_cuisine · coffee) وتُحفظ بنسخة القاموس الحالية (٣) بلا مفاتيح قديمة', keys === 'coffee,italian,other_cuisine,sandwich' && saved.catsV === 3 && !saved.categories.fine_italian && !saved.categories.shawarma && !!saved.categories.sandwich, 'keys=' + keys + ' catsV=' + saved.catsV + ' savedKeys=' + Object.keys(saved.categories || {}).join(','));
     cap('cats.idMigration');
     // النافذة: رئيسي ← فرعي بالشريحتين · Fine dining · الحفظ بالعلامة والمفتاح
     B.x("openPlPlaceModal(null, null)"); B.x("window['catPairPickMain_plModal']('restaurants_dish')"); B.x("window['catPairPickSub_plModal']('burger')");
