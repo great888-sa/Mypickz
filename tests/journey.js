@@ -752,7 +752,8 @@ function citiesSeed(){
     const seenBefore = B.x("introSeenLocally()"); B.x("openHelpModal()"); const btn = String(documentStub.getElementById('helpCloseBtn').textContent || '');
     B.x("document.getElementById('authBackdrop').classList.remove('show'); closeHelpModal()");
     const gateOpen = B.x("document.getElementById('authBackdrop').classList.contains('show')"); const seenAfter = B.x("introSeenLocally()");
-    ok('ش٢٣ · الزائر: العلم المحلي فارغ أولًا · الزر «Got it — sign in» · إغلاق النبذة يفتح البوابة ويخلّد العلم', seenBefore === false && btn === 'Got it — sign in' && gateOpen === true && seenAfter === true, 'before=' + seenBefore + ' after=' + seenAfter + ' btn=' + btn + ' gate=' + gateOpen);
+    const above = tplCount('#helpBackdrop{z-index:2100;}', 1).ok; // النبذة فوق البوابة — البوابة تبقى مفتوحة للزائر (عقد حارس التشغيل)
+    ok('ش٢٣ · الزائر: العلم المحلي فارغ أولًا · الزر «Got it — sign in» · إغلاق النبذة يُبقي البوابة مفتوحة ويخلّد العلم · النبذة فوق البوابة', above && seenBefore === false && btn === 'Got it — sign in' && gateOpen === true && seenAfter === true, 'before=' + seenBefore + ' after=' + seenAfter + ' btn=' + btn + ' gate=' + gateOpen);
     cap('intro.firstVisit');
     } finally {
     B.x("currentUser = globalThis.__keepUser; currentTab = " + JSON.stringify(prevTab) + "; document.getElementById('authBackdrop').classList.remove('show'); document.getElementById('helpBackdrop').classList.remove('show'); helpExpanded = false; helpOpenIndex = -1");
