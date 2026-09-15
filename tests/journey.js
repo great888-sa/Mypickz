@@ -38,6 +38,7 @@ const CAPS = [
   'cats.treeV2', 'cats.idMigration', 'cats.flagsAndSearchKey', 'cats.movePlace', 'cats.filterPlaces', 'cats.filterCommunity',
   'places.sectionTree', 'list.emptyDeleted',
   'home.defaultRule', 'home.myCity', 'home.announceOnce',
+  'intro.levels', 'intro.firstVisit', 'intro.helpButton',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -227,7 +228,7 @@ code += '\n;globalThis.__bridge = { x: function(e){ return eval(e); }, set: func
 const sandboxGlobals = {
   document: documentStub, firebase: firebaseStub,
   navigator: { userAgent: 'journey-node', clipboard: { writeText: async t => { captured.clipboard.push(t); } }, share: undefined },
-  localStorage: { getItem: () => null, setItem(){}, removeItem(){} },
+  localStorage: (function(){ const st = {}; return { getItem: (k) => (k in st ? st[k] : null), setItem: (k, v) => { st[k] = String(v); }, removeItem: (k) => { delete st[k]; } }; })(),
   sessionStorage: { getItem: () => null, setItem(){}, removeItem(){} },
   location: { href: 'https://journey/', hostname: 'journey', origin: 'https://journey', pathname: '/', search: '', hash: '' },
   history: { replaceState(){}, pushState(){} },
@@ -731,6 +732,33 @@ function citiesSeed(){
     }
   }, []);
 
+  await must('ش٢٣ · أ-١٢-٢ النبذة: المستوى الأول شاشة واحدة والثاني مطوي · أول فتح للزائر ثم البوابة · زر «؟» يفتح قسم الوجهة · الإنجليزية أولًا', async () => {
+    B.x("globalThis.__keepUser = currentUser"); const prevTab = B.x('currentTab');
+    try {
+    B.x("helpLang = 'en'; helpExpanded = false; helpOpenIndex = -1; openHelpModal()");
+    const l1 = String(documentStub.getElementById('helpSections').innerHTML || ''); const title = String(documentStub.getElementById('helpTitle').textContent || '');
+    ok('ش٢٣ · المستوى الأول: العنوان بصياغة المالك · التعريف بأركانه الأربعة · المميزات المقتضبة · الوجهات الخمس · «ما يعمل بكل مكان» · «ابدأ بسرعة» · زر «Read more» · ولا أقسام مفتوحة', title === 'MyPickz — one place for your places.' && l1.includes('One platform for four things') && l1.includes('Categorized on two levels · Nearby in 15-minute walks') && l1.includes('<b>Places</b> — your favorite places') && l1.includes('<b>Addresses</b> — your personal addresses') && l1.includes('Start fast:') && l1.includes('Read more ⌄') && !l1.includes('id="help_sec_'), l1.slice(0, 160));
+    B.x("helpExpanded = true; renderHelpModal()"); const l2 = String(documentStub.getElementById('helpSections').innerHTML || '');
+    const nSec = (l2.match(/id="help_sec_/g) || []).length;
+    ok('ش٢٣ · المستوى الثاني: عشرة أقسام مطوية (التسعة + الشاشة الرئيسية) بلا محتوى مفتوح حتى الضغط', nSec === 10 && l2.includes('id="help_sec_privacy"') && l2.includes('id="help_sec_home"') && !l2.includes('Every place lives in one city'), 'n=' + nSec);
+    cap('intro.levels');
+    // زر «؟» بالرأس يفتح قسم الوجهة الحالية مفتوحًا
+    B.x("currentTab = 'Trips'; openHelpFor(currentTab)"); const l3 = String(documentStub.getElementById('helpSections').innerHTML || '');
+    ok('ش٢٣ · «؟» بشريط الرأس يفتح النبذة على قسم الوجهة (الرحلات مفتوحًا) · الزر موجود بالرأس', l3.includes('A trip has a <b>plan</b>') && tplCount('onclick="openHelpFor(currentTab)"', 1).ok, '');
+    cap('intro.helpButton');
+    B.x("closeHelpModal()");
+    // الزائر: أول فتح → النبذة ثم البوابة عند الإغلاق؛ الفتح الثاني → البوابة مباشرة
+    B.x("localStorage.removeItem('mypickz_intro_seen'); currentUser = null; helpExpanded = false; helpOpenIndex = -1");
+    const seenBefore = B.x("introSeenLocally()"); B.x("openHelpModal()"); const btn = String(documentStub.getElementById('helpCloseBtn').textContent || '');
+    B.x("document.getElementById('authBackdrop').classList.remove('show'); closeHelpModal()");
+    const gateOpen = B.x("document.getElementById('authBackdrop').classList.contains('show')"); const seenAfter = B.x("introSeenLocally()");
+    ok('ش٢٣ · الزائر: العلم المحلي فارغ أولًا · الزر «Got it — sign in» · إغلاق النبذة يفتح البوابة ويخلّد العلم', seenBefore === false && btn === 'Got it — sign in' && gateOpen === true && seenAfter === true, 'before=' + seenBefore + ' after=' + seenAfter + ' btn=' + btn + ' gate=' + gateOpen);
+    cap('intro.firstVisit');
+    } finally {
+    B.x("currentUser = globalThis.__keepUser; currentTab = " + JSON.stringify(prevTab) + "; document.getElementById('authBackdrop').classList.remove('show'); document.getElementById('helpBackdrop').classList.remove('show'); helpExpanded = false; helpOpenIndex = -1");
+    }
+  }, []);
+
   await must('٥ · نشر القائمة عامة', async () => {
     B.x("myCityListData.public = true");
     await B.x('saveMyCityList()');
@@ -1060,9 +1088,9 @@ function citiesSeed(){
   }, ['sort.people.byViews']);
 
   await must('٢٣ · الإرشاد ثنائي اللغة بمعجمه محمَّل', async () => {
-    const okAr = B.x("HELP_CONTENT.ar.sections.some(s => s.h.includes('Bookmark'))");
-    const okEn = B.x("HELP_CONTENT.en.sections.some(s => s.h === 'Save')");
-    ok('٢٣ · بندا المفكرة والحفظ باللغتين', okAr && okEn, '');
+    const okAr = B.x("HELP_CONTENT.ar.sections.some(s => s.id === 'community') && HELP_CONTENT.ar.intro.everywhere.includes('تمييز')");
+    const okEn = B.x("HELP_CONTENT.en.sections.some(s => s.id === 'community') && HELP_CONTENT.en.intro.everywhere.includes('Bookmark')");
+    ok('٢٣ · النبذة باللغتين بمستوييها (المميز والحفظ بالمستوى الأول · المجتمع قسمًا)', okAr && okEn, ''); // أ-١٢-٢
   }, ['guide.bilingual.loaded']);
 
   /* ═══════════ الفصل الثالث: الخاتمة — الحذف التسلسلي بشهادته المزدوجة ═══════════ */
