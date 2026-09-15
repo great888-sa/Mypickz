@@ -39,6 +39,7 @@ const CAPS = [
   'places.sectionTree', 'list.emptyDeleted',
   'home.defaultRule', 'home.myCity', 'home.announceOnce',
   'intro.levels', 'intro.firstVisit', 'intro.helpButton',
+  'trip.sourcesCard',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -763,6 +764,33 @@ function citiesSeed(){
     cap('intro.firstVisit');
     } finally {
     B.x("currentUser = globalThis.__keepUser; currentTab = " + JSON.stringify(prevTab) + "; document.getElementById('authBackdrop').classList.remove('show'); document.getElementById('helpBackdrop').classList.remove('show'); helpExpanded = false; helpOpenIndex = -1");
+    }
+  }, []);
+
+  await must('ش٢٤ · أ-١٢-٣ بطاقة المصادر الستة باليوم الفارغ: أعداد مدينة الرحلة · كل زر ينقل بوضع الإضافة · تزول بأول مكان · لا تظهر للقراءة', async () => {
+    const prev = B.x("JSON.stringify({ ut: userTrips, ct: currentTripId, vs: viewingSharedTrip, vm: tripViewMode, cpc: userListData.cityPlaceCounts, bm: userListData.placeBookmarks, tab: currentTab, at: activeTripId, city: myListCityId, country: myListCountry, lc: userListData.listCity, ps: placesSource, sc: plSessionCity, css: communityScreenState, ctab: communityTab, cscr: communityScreen, cc: userListData.customCities || [] })");
+    try {
+    B.set('userTrips', [{ id: 'trip_src_x', type: 'city', cityId: 'mylist_alpha', cityName: 'Alpha', customLabel: 'Src', public: false, sharedWith: [], sharedWithNames: {}, days: [{ dayNumber: 1, places: {} }] }]);
+    B.x("userListData.customCities = (userListData.customCities || []).concat([{ id: 'mylist_alpha', name: 'Alpha', country: 'Testland' }]); userListData.cityPlaceCounts = { mylist_alpha: 3, paris: 9 }; userListData.placeBookmarks = { b1: { cityId: 'mylist_alpha', name: 'B1' }, b2: { cityId: 'paris', name: 'B2' } }; __cmSummary.places = [{ cityId: 'mylist_alpha', ownerId: 'u9' }, { cityId: 'paris', ownerId: 'u9' }]; __cmSummary.trips = [{ cityId: 'mylist_alpha' }]; currentTripId = 'trip_src_x'; viewingSharedTrip = false; tripViewMode = false; resolvedTripCache['trip_src_x'] = [{ dayNumber: 1, places: {} }]; var w = document.createElement('div'); w.id = 'tripWrapX'; document.body.appendChild(w); renderTripDetail(w)");
+    const h = String(documentStub.getElementById('tripWrapX') ? documentStub.getElementById('tripWrapX').innerHTML : (documentStub.getElementById('tripDetailWrap') || {}).innerHTML || '');
+    const card = B.x("(function(){ var t = userTrips[0]; return tripSourcesCardHtml(t, 0); })()");
+    ok('ش٢٤ · البطاقة: ستة أزرار بأعداد مدينة الرحلة (أماكني ٣ · مفكرتي ١ · قوائم المجتمع ١ · رحلاته ١) · المشارَك بلا رقم · المنتقون بوسم المرحلة', card.includes('My places (3)') && card.includes('My bookmarks (1)') && card.includes('Community lists (1)') && card.includes('Community trips (1)') && card.includes('>Shared with me</button>') && card.includes('Curators <span class="dim">· stage 3</span>'), card.slice(0, 200));
+    // الانتقال: أماكني → شاشة الأماكن بمدينة الرحلة ووضع الإضافة قائم؛ قوائم المجتمع → المجتمع بمصدر الأماكن بمدينة الرحلة
+    await B.x("tripGoSource('trip_src_x', 'mine')"); const g1 = B.x("JSON.stringify({ tab: currentTab, city: myListCityId, at: activeTripId, src: placesSource })");
+    await B.x("tripGoSource('trip_src_x', 'lists')"); const g2 = B.x("JSON.stringify({ tab: currentTab, ctab: communityTab, scr: communityScreen, city: communityScreenState.places.city, at: activeTripId })");
+    ok('ش٢٤ · أماكني → الأماكن على مدينة الرحلة بوضع الإضافة · قوائم المجتمع → المجتمع/الأماكن بمدينة الرحلة بوضع الإضافة', g1 === '{"tab":"Places","city":"mylist_alpha","at":"trip_src_x","src":"mine"}' && g2 === '{"tab":"Community","ctab":"places","scr":"source","city":"mylist_alpha","at":"trip_src_x"}', g1 + ' ' + g2);
+    // تزول بأول مكان · لا تظهر للقراءة
+    const gone = B.x("(function(){ var t = userTrips[0]; t.days[0].places = { breakfast: [{ name: 'X', url: 'https://maps.app.goo.gl/x' }] }; resolvedTripCache['trip_src_x'] = [{ dayNumber: 1, places: { breakfast: [{ name: 'X', url: 'https://maps.app.goo.gl/x' }] } }]; var w = document.getElementById('tripWrapX'); renderTripDetail(w); var a = !w.innerHTML.includes('Add places to this day from'); t.days[0].places = {}; resolvedTripCache['trip_src_x'] = [{ dayNumber: 1, places: {} }]; tripViewMode = true; renderTripDetail(w); var b = !w.innerHTML.includes('Add places to this day from') && w.innerHTML.includes('No places yet.'); tripViewMode = false; renderTripDetail(w); var c = w.innerHTML.includes('Add places to this day from'); return JSON.stringify({ a: a, b: b, c: c }); })()");
+    ok('ش٢٤ · تزول بأول مكان · لا تظهر بوضع القراءة · وتعود باليوم الفارغ بوضع التحرير', gone === '{"a":true,"b":true,"c":true}', 'got ' + gone);
+    // لوحة الحالة الفارغة بالرحلات: أربعة أبواب بلا رحلة، وتزول بأول رحلة؛ «Trips shared with you» يفتح المجتمع/الرحلات بتصفح المشارَك
+    const tg = B.x("(function(){ var keep = userTrips, keepId = currentTripId; userTrips = []; currentTripId = null; renderMyTripsModal(); var a = String((document.getElementById('myTripsBody') || { innerHTML: '' }).innerHTML || ''); currentTripId = keepId; var has = a.includes('Start here — four ways to get a trip') && a.includes('3 · Trips from curators') && a.includes('4 · Trips shared with you'); userTrips = keep; currentTripId = null; renderMyTripsModal(); var b = String((document.getElementById('myTripsBody') || { innerHTML: '' }).innerHTML || '').includes('Start here — four ways to get a trip'); currentTripId = keepId; renderMyTripsModal(); tripsGuideGo('shared'); var c = JSON.stringify({ tab: currentTab, ctab: communityTab, shared: communityScreenState.trips.shared }); communityScreenState.trips.shared = false; return JSON.stringify({ has: has, b: b, c: c }); })()");
+    ok('ش٢٤ · الرحلات بلا رحلة: لوحة الأبواب الأربعة (إنشاء · المجتمع · المنتقون · المشارَك) وتزول بأول رحلة · «المشارَك معك» يفتح المجتمع/الرحلات بتصفح المشارَك', (function(){ try{ const o = JSON.parse(tg); return o.has === true && o.b === false && o.c === '{"tab":"Community","ctab":"trips","shared":true}'; }catch(e){ return false; } })(), tg.slice(0, 200));
+    cap('trip.sourcesCard');
+    } finally {
+    B.x("(function(){ var s = " + prev + "; userTrips = s.ut; currentTripId = s.ct; viewingSharedTrip = s.vs; tripViewMode = s.vm; userListData.cityPlaceCounts = s.cpc; userListData.placeBookmarks = s.bm; activeTripId = s.at; activeTripAdded = []; activeTripAddedRefs = []; placesSource = s.ps; plSessionCity = s.sc; communityTab = s.ctab; communityScreen = s.cscr; Object.assign(communityScreenState, s.css); userListData.customCities = s.cc; userListData.listCity = s.lc; userListData.placesSource = s.ps; myListCityId = s.city; myListCountry = s.country; myCityListLoadedFor = null; delete __cmSummary.places; delete __cmSummary.trips; delete resolvedTripCache['trip_src_x']; var w = document.getElementById('tripWrapX'); if (w && w.parentNode) w.parentNode.removeChild(w); updateActiveTripBanner(); })()");
+    await B.x("mpData.userLists.merge(currentUser.uid, { listCity: userListData.listCity || null, placesSource: placesSource })");
+    await B.x("loadMyCityList(myListCityId)");
+    B.x("switchTab(" + JSON.stringify(JSON.parse(prev).tab) + ")");
     }
   }, []);
 
