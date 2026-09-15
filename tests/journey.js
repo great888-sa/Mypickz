@@ -679,7 +679,7 @@ function citiesSeed(){
     const iDish = h.indexOf('Restaurants · by dish'), iCui = h.indexOf('Restaurants · by cuisine'), iBurger = h.indexOf('Burger (1)'), iIt = h.indexOf('Italian (2)');
     ok('ش٢١ · عنوانا القسمين بعدّاديهما (١ و٢ أماكن) بترتيب الشجرة، وفرعياتهما تحتهما، ولا عنوان للقسم الفارغ (Cafes)', iDish > -1 && iCui > iDish && iBurger > iDish && iBurger < iCui && iIt > iCui && h.includes('1 place') && h.includes('2 places') && !h.includes('Cafes &amp; Sweets') && !h.includes('Cafes & Sweets'), 'idx=' + [iDish, iCui, iBurger, iIt].join(','));
     B.x("plToggleSection('restaurants_cuisine')"); const h2 = screen('plBody');
-    ok('ش٢١ · طي القسم يخفي فرعياته ويبقي عنوانه', h2.includes('Restaurants · by cuisine') && !h2.includes('Italian (2)') && h2.includes('Burger (1)'), '');
+    ok('ش٢١ · طي القسم يخفي فرعياته ويبقي عنوانه · العدّاد بصنفه البارز', h2.includes('Restaurants · by cuisine') && !h2.includes('Italian (2)') && h2.includes('Burger (1)') && h2.includes('class="seccnt">2 places') && tplCount('class="actn primary" onclick="plTogglePanel(\\\'cats\\\')"', 1).ok && tplCount('viewport-fit=cover', 1).ok && tplCount('min-height:100dvh', 1).ok, '');
     cap('places.sectionTree');
     // حذف القائمة الفارغة: حذف الأماكن الثلاثة ثم الحفظ ← المستند يزول من المخزن
     B.x("myCityListData.categories.burger.places = []; myCityListData.categories.italian.places = []"); await B.x('saveMyCityList()');
