@@ -41,6 +41,7 @@ const CAPS = [
   'intro.levels', 'intro.firstVisit', 'intro.helpButton',
   'trip.sourcesCard',
   'paste.parser', 'paste.nameCheck',
+  'share.param',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -828,6 +829,10 @@ function citiesSeed(){
     const p2 = B.x("JSON.stringify((myCityListData.categories.burger.places || []).slice(-1)[0] || {})");
     ok('ش٢٥ · اسم مختلف عمّا جاء مع الرابط → تنبيه ويُحفظ (لا وسم) · رابط بلا نص مشاركة → `linkUnverified` · «← Back» بالشريط', warned && !/linkUnverified/.test(p1) && /"linkUnverified":true/.test(p2) && tplCount('onclick="openActiveTripSources()">← Back</button>', 1).ok, 'warned=' + warned + ' p1=' + p1.slice(0, 80) + ' p2=' + p2.slice(0, 80));
     cap('paste.nameCheck');
+    // r70q: اختصار iOS — ?share= يُلتقط ويفتح نافذة المكان بوضع اللصق محلَّلًا بعد الدخول
+    const sh = await B.x("(async function(){ pendingShareText = 'Cafe Nero\\nhttps://maps.app.goo.gl/nero'; await consumePendingShare(); return JSON.stringify({ tab: currentTab, open: document.getElementById('plBackdrop') ? document.getElementById('plBackdrop').classList.contains('show') : null, n: document.getElementById('plName').value, u: document.getElementById('plUrl').value, pending: pendingShareText }); })()");
+    ok('ش٢٥ · r70q: نص المشاركة من الاختصار يفتح الأماكن ونافذة المكان بوضع اللصق والاسم والرابط مملوءين ويُستهلك', /"tab":"Places"/.test(sh) && /"n":"Cafe Nero"/.test(sh) && /"u":"https:\/\/maps.app.goo.gl\/nero"/.test(sh) && /"pending":null/.test(sh), sh);
+    cap('share.param'); B.x('closePlPlaceModal()');
     B.x("myCityListData.categories.burger.places = (myCityListData.categories.burger.places || []).filter(function(q){ return q.name !== 'Totally Different Place' && q.name !== 'Manual One'; })"); await B.x('saveMyCityList()');
   }, []);
 
