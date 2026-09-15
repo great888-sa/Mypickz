@@ -40,6 +40,7 @@ const CAPS = [
   'home.defaultRule', 'home.myCity', 'home.announceOnce',
   'intro.levels', 'intro.firstVisit', 'intro.helpButton',
   'trip.sourcesCard',
+  'paste.parser', 'paste.nameCheck',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -791,7 +792,7 @@ function citiesSeed(){
     B.x("activeTripId = 'trip_src_x'; tripSrcOpen = false; openActiveTripSources()");
     const back = B.x("JSON.stringify({ tab: currentTab, id: currentTripId, open: tripSrcOpen })");
     B.x("openActiveTrip()"); const view = B.x("JSON.stringify({ tab: currentTab, id: currentTripId, open: tripSrcOpen })");
-    ok('ش٢٤ · r70o4: زران بالشريط — «← Sources» يعود إلى الرحلة والبطاقة مفتوحة · «View trip» يفتحها والبطاقة مطوية · الأزرار الأربعة تلتف', back === '{"tab":"Trips","id":"trip_src_x","open":true}' && view === '{"tab":"Trips","id":"trip_src_x","open":false}' && tplCount('onclick="openActiveTripSources()">← Sources</button><button type="button" class="actn" onclick="openActiveTrip()">View trip</button>', 1).ok && tplCount('.atb-head .acts{display:flex; flex-wrap:wrap; gap:6px; flex:1 1 100%;}', 1).ok, 'back=' + back + ' view=' + view);
+    ok('ش٢٤ · r70o4/r70p: زران بالشريط — «← Back» يعود إلى الرحلة والبطاقة مفتوحة · «View trip» يفتحها والبطاقة مطوية · الأزرار الأربعة تلتف', back === '{"tab":"Trips","id":"trip_src_x","open":true}' && view === '{"tab":"Trips","id":"trip_src_x","open":false}' && tplCount('onclick="openActiveTripSources()">← Back</button><button type="button" class="actn" onclick="openActiveTrip()">View trip</button>', 1).ok && tplCount('.atb-head .acts{display:flex; flex-wrap:wrap; gap:6px; flex:1 1 100%;}', 1).ok, 'back=' + back + ' view=' + view);
     // لوحة الحالة الفارغة بالرحلات: أربعة أبواب بلا رحلة، وتزول بأول رحلة؛ «Trips shared with you» يفتح المجتمع/الرحلات بتصفح المشارَك
     const tg = B.x("(function(){ var keep = userTrips, keepId = currentTripId; userTrips = []; currentTripId = null; renderMyTripsModal(); var a = String((document.getElementById('myTripsBody') || { innerHTML: '' }).innerHTML || ''); currentTripId = keepId; var has = a.includes('Start here — four ways to get a trip') && a.includes('3 · Trips from curators') && a.includes('4 · Trips shared with you'); userTrips = keep; currentTripId = null; renderMyTripsModal(); var b = String((document.getElementById('myTripsBody') || { innerHTML: '' }).innerHTML || '').includes('Start here — four ways to get a trip'); currentTripId = keepId; renderMyTripsModal(); tripsGuideGo('shared'); var c = JSON.stringify({ tab: currentTab, ctab: communityTab, shared: communityScreenState.trips.shared }); communityScreenState.trips.shared = false; return JSON.stringify({ has: has, b: b, c: c }); })()");
     ok('ش٢٤ · الرحلات بلا رحلة: لوحة الأبواب الأربعة (إنشاء · المجتمع · المنتقون · المشارَك) وتزول بأول رحلة · «المشارَك معك» يفتح المجتمع/الرحلات بتصفح المشارَك', (function(){ try{ const o = JSON.parse(tg); return o.has === true && o.b === false && o.c === '{"tab":"Community","ctab":"trips","shared":true}'; }catch(e){ return false; } })(), tg.slice(0, 200));
@@ -802,6 +803,29 @@ function citiesSeed(){
     await B.x("loadMyCityList(myListCityId)");
     B.x("switchTab(" + JSON.stringify(JSON.parse(prev).tab) + ")");
     }
+  }, []);
+
+  await must('ش٢٥ · أ-١٢-٤ اللصق الذكي: المحلّل بثلاث درجات · العنوان إلى المنطقة · استنتاج المدينة · مطابقة الاسم بالرابط · وسم الرابط غير المتحقَّق · «← Back»', async () => {
+    const pr = B.x("JSON.stringify([parseMapsShare('Zeffirino Paris\\n8 Rue de Rivoli, 75004 Paris, France\\nhttps://maps.app.goo.gl/abc'), parseMapsShare('Cafe Nero\\nhttps://maps.app.goo.gl/def'), parseMapsShare('https://maps.app.goo.gl/ghi'), parseMapsShare('Check out Burger Joint, Via Roma 3, Milan\\nhttps://maps.app.goo.gl/jkl')])");
+    const P = JSON.parse(pr);
+    ok('ش٢٥ · الدرجات: اسم+عنوان+رابط (٣ · المنطقة «8 Rue de Rivoli» · الرمز البريدي يُسقَط) · اسم+رابط (٢) · رابط وحده (١) · سطر واحد بفاصلة يُقسم اسمًا وعنوانًا', P[0].grade === 3 && P[0].name === 'Zeffirino Paris' && P[0].area === '8 Rue de Rivoli' && P[0].parts.indexOf('Paris') >= 0 && P[1].grade === 2 && P[1].name === 'Cafe Nero' && P[2].grade === 1 && !P[2].name && P[3].name === 'Burger Joint' && P[3].area === 'Via Roma 3', pr.slice(0, 220));
+    // استنتاج المدينة من العنوان بحسب مدن المستخدم
+    const inf = B.x("(function(){ var k = userListData.customCities; userListData.customCities = (userListData.customCities || []).concat([{ id: 'mylist_milano', name: 'Milan', country: 'Italy' }]); var c = inferCityFrom(['Via Roma 3', 'Milan', 'Italy']); var n = inferCityFrom(['Nowhere']); userListData.customCities = k; return (c ? c.id : null) + '|' + (n ? n.id : 'null'); })()");
+    ok('ش٢٥ · المدينة تُستنتج حين يطابق جزء من العنوان إحدى مدني (Milan) ولا تُستنتج وإلا', inf === 'mylist_milano|null', inf);
+    // التحليل التلقائي بالحقل: «Read it» زال، واللصق يملأ الاسم والمنطقة والرابط
+    B.x("openPlPlaceModal(null, null); window['catPairPickMain_plModal']('restaurants_dish'); window['catPairPickSub_plModal']('burger'); document.getElementById('plShareText').value = 'Bun One\\nRue Cler, 75007 Paris, France\\nhttps://maps.app.goo.gl/bun'; plParseShare()");
+    const filled = B.x("JSON.stringify({ n: document.getElementById('plName').value, a: document.getElementById('plArea').value, u: document.getElementById('plUrl').value, note: document.getElementById('plNote').value })");
+    ok('ش٢٥ · اللصق يملأ الاسم والمنطقة والرابط (لا شيء بالملاحظة) · «Read it» زال · زر «Paste from Maps» واحد', filled === '{"n":"Bun One","a":"Rue Cler","u":"https://maps.app.goo.gl/bun","note":""}' && tplCount('>Read it<', 0).ok && tplCount('onclick="plPasteShare()">📋 Paste from Maps</button>', 1).ok, filled);
+    cap('paste.parser');
+    // مطابقة الاسم: تعديل الاسم بعيدًا عن ما جاء مع الرابط → تنبيه لا منع؛ وبلا نص مشاركة → الرابط غير متحقَّق
+    const nT = captured.toasts.length; B.x("document.getElementById('plName').value = 'Totally Different Place'; document.getElementById('plPicks').value = ''; document.getElementById('plNote').value = ''"); await B.x('savePlPlace()');
+    const warned = captured.toasts.slice(nT).some(function(t){ return /Name doesn't match what came with the link/.test(t); });
+    const p1 = B.x("JSON.stringify((myCityListData.categories.burger.places || []).slice(-1)[0] || {})");
+    B.x("openPlPlaceModal(null, null); window['catPairPickMain_plModal']('restaurants_dish'); window['catPairPickSub_plModal']('burger'); document.getElementById('plName').value = 'Manual One'; document.getElementById('plUrl').value = 'https://maps.app.goo.gl/manual'; document.getElementById('plArea').value = ''; document.getElementById('plPicks').value = ''; document.getElementById('plNote').value = ''"); await B.x('savePlPlace()');
+    const p2 = B.x("JSON.stringify((myCityListData.categories.burger.places || []).slice(-1)[0] || {})");
+    ok('ش٢٥ · اسم مختلف عمّا جاء مع الرابط → تنبيه ويُحفظ (لا وسم) · رابط بلا نص مشاركة → `linkUnverified` · «← Back» بالشريط', warned && !/linkUnverified/.test(p1) && /"linkUnverified":true/.test(p2) && tplCount('onclick="openActiveTripSources()">← Back</button>', 1).ok, 'warned=' + warned + ' p1=' + p1.slice(0, 80) + ' p2=' + p2.slice(0, 80));
+    cap('paste.nameCheck');
+    B.x("myCityListData.categories.burger.places = (myCityListData.categories.burger.places || []).filter(function(q){ return q.name !== 'Totally Different Place' && q.name !== 'Manual One'; })"); await B.x('saveMyCityList()');
   }, []);
 
   await must('٥ · نشر القائمة عامة', async () => {
