@@ -229,7 +229,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .headrow{display:flex; justify-content:space-between; align-items:center; gap:8px; margin:8px 0 6px;}
 .tcpanel{margin:4px 0 8px;} .tcpanel .panel.bare{padding:4px 0;} .pkrow .psearch{min-width:0;}
 .modal .csel,.modal .chip,.modal .addr-chip{border-width:2px;} .modal .psearch{border-width:1px;} /* ر٧٠هـ-٢ (قرار المالك): شرائح النوافذ بإطار عريض · حقل الكتابة خفيف */
-.help-l1{margin:0;} .help-feats{letter-spacing:.1px;} /* أ-١٢-٢: المستوى الأول للنبذة */
+.help-l1{margin:0;} .help-feats{letter-spacing:.1px;} #helpBackdrop{z-index:2100;} /* أ-١٢-٢: المستوى الأول للنبذة · النبذة فوق البوابة عند أول فتح */
 .pl-sechead{display:flex; justify-content:space-between; align-items:center; margin:14px 0 4px; padding:6px 10px; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer;} .pl-sechead.closed{opacity:.8;} .pl-sechead .seccnt{font-size:13.5px; font-weight:800;} /* ر٧٠ج · ر٧٠ل-٣ */
 .pl-flag{display:inline-block; font-size:10.5px; font-weight:800; padding:1px 8px; border-radius:999px; margin:2px 0 4px;} .cprow .csel[disabled]{opacity:.55;} /* ر٧٠ط */
 @media (pointer:coarse){ input,textarea,select{font-size:16px !important;} } /* ر٧٠ل-٢ (قرار المالك): لا تكبير تلقائي بسفاري — حقول اللمس ١٦ بكسل */
@@ -7173,9 +7173,9 @@ logTiming('Script started (t=0 reference)');
   authReadyPromise.then(() => {
     if (!currentUser) {
       if (currentTab !== 'Community') switchTab('Community'); // أ-١٢-١: ما خلف البوابة لا اعتبار له (إلزامية التسجيل)
-      if (!introSeenLocally()){ helpExpanded = false; helpOpenIndex = -1; openHelpModal(); return; } // أ-١٢-٢: أول فتح للرابط — النبذة فقط ثم البوابة عند إغلاقها
       // حارس: لو فتح الزائر النافذة بنفسه وبدأ الكتابة قبل اكتمال التحميل، لا نعيد فتحها (كانت تمسح الإيميل/كلمة السر المُدخَلة)
       if (!document.getElementById('authBackdrop').classList.contains('show')) openGate(); // خ١-ب: البوابة (المشهد ١)
+      if (!introSeenLocally()){ helpExpanded = false; helpOpenIndex = -1; openHelpModal(); } // أ-١٢-٢: أول فتح للرابط — النبذة فوق البوابة (عقد حارس التشغيل: البوابة تبقى مفتوحة للزائر)
     }
   });
 })();
