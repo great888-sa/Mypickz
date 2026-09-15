@@ -624,6 +624,9 @@ function citiesSeed(){
     B.x("plFilterMain = ''; plFilterSub = ''; plPanel = 'cats'; renderPlacesMine(); __cp.plFilter.open = 'main'; catPairRefresh('plFilter'); __cp.plAdd.open = 'main'; catPairRefresh('plAdd')");
     const fm = String(documentStub.getElementById('cp_plFilter_host').innerHTML || ''), am2 = String(documentStub.getElementById('cp_plAdd_host').innerHTML || '');
     B.x("plPanel = null");
+    const empt = B.x("(function(){ var keep = myCityListData; myCityListData = { categories: {} }; var h = catPairRow({ id: 'plFilterX', main: '', sub: '', allowAll: true, countOf: plCatCount, placesOf: plPlaceNamesOf }); __cp.plFilterX.open = 'main'; var out = catPairPanel('plFilterX'); myCityListData = keep; delete __cp.plFilterX; return out; })()");
+    ok('ش٢٠ · بلا محتوى: لوحة التصفية تقول صراحة «لا أماكن بأي تصنيف بعد» (ر٧٠ل-٢)', empt.includes('No places in any category yet'), empt.slice(0, 120));
+    ok('ش٢٠ · حقول اللمس ١٦ بكسل (لا تكبير تلقائي بسفاري) — قاعدة بنية مشروطة بالمؤشر الخشن', tplCount('@media (pointer:coarse){ input,textarea,select{font-size:16px !important;} }', 1).ok, '');
     ok('ش٢٠ · لوحة الرئيسي بالتصفية تعرض الأقسام ذات المحتوى فقط، وبالإدخال الأقسام الثمانية عشر كلها', (fm.match(/class="prow/g) || []).length < 18 && (am2.match(/class="prow/g) || []).length >= 18, 'filter=' + (fm.match(/class="prow/g) || []).length + ' add=' + (am2.match(/class="prow/g) || []).length);
     cap('cats.treeV2');
     // التحويل: مستند قديم بمعرّفات قديمة ← يُقرأ بالجديد ويُحفظ بنسخة القاموس ٢
