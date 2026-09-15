@@ -37,6 +37,7 @@ const CAPS = [
   'community.tripPlaceActions',
   'cats.treeV2', 'cats.idMigration', 'cats.flagsAndSearchKey', 'cats.movePlace', 'cats.filterPlaces', 'cats.filterCommunity',
   'places.sectionTree', 'list.emptyDeleted',
+  'home.defaultRule', 'home.myCity', 'home.announceOnce',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
 ];
 const covered = new Set();
@@ -692,6 +693,41 @@ function citiesSeed(){
     B.x("(function(){ var s = " + prev + "; myListCityId = s.c; myListCountry = s.k; plFilterMain = s.pf[0]; plFilterSub = s.pf[1]; plSecCollapsed = {}; myCityListLoadedFor = null; })()");
     store.delete('userCityLists/' + B.x('currentUser.uid') + '_milan');
     await B.x("loadMyCityList(myListCityId)");
+    }
+  }, []);
+
+  await must('ش٢٢ · أ-١٢-١: الوجهة الافتراضية بقاعدتها · وسم «مدينتي» حتى مدينتين والأخيرة استعمالًا · إعلان التحول مرة · مثال الملاحظة', async () => {
+    const prev = B.x("JSON.stringify({ dt: userListData.defaultTab || null, mc: userListData.myCities || [], ha: userListData.homeAnnounced || false, cpc: userListData.cityPlaceCounts || {}, city: myListCityId, tab: currentTab })");
+    var prevCC;
+    try {
+    // القاعدة: بلا اختيار يدوي — له أماكن → Places، بلا أماكن → Community؛ الاختيار اليدوي يعلو
+    const r = B.x("(function(){ var o = []; userListData.defaultTab = null; userListData.cityPlaceCounts = {}; o.push(defaultTabFor()); userListData.cityPlaceCounts = { paris: 2 }; o.push(defaultTabFor()); userListData.defaultTab = 'Trips'; o.push(defaultTabFor()); userListData.defaultTab = null; return o.join(','); })()");
+    ok('ش٢٢ · الوجهة: بلا أماكن → Community · له أماكن → Places · اليدوي يعلو (Trips)', r === 'Community,Places,Trips', 'got ' + r);
+    cap('home.defaultRule');
+    // وسم مدينتي: حتى مدينتين، الثالثة تُرفض، الاختيار يجعل الموسومة أولًا، الإزالة بالضغط ثانية — على مدن المستخدم الفعلية بالمحاكاة
+    prevCC = B.x("JSON.stringify(userListData.customCities || [])");
+    B.x("userListData.customCities = (userListData.customCities || []).concat([{ id: 'mylist_alpha', name: 'Alpha', country: 'Testland' }, { id: 'mylist_beta', name: 'Beta', country: 'Testland' }])");
+    const cs = [{ id: 'mylist_alpha', name: 'Alpha', country: 'Testland' }, { id: 'mylist_beta', name: 'Beta', country: 'Testland' }];
+    const c1 = cs[0].id, c2 = cs[1] ? cs[1].id : 'zz_extra';
+    await B.x("(async function(){ userListData.myCities = []; await plToggleMyCity(" + JSON.stringify(c1) + "); await plToggleMyCity(" + JSON.stringify(c2) + "); await plToggleMyCity('zz_third'); })()");
+    const m1 = B.x("JSON.stringify(myCities())"); await B.x("bumpMyCityUse(" + JSON.stringify(c1) + ")"); const m2 = B.x("JSON.stringify(myCities())"); await B.x("plToggleMyCity(" + JSON.stringify(c2) + ")"); const m3 = B.x("JSON.stringify(myCities()) + '|' + myCityHome()");
+    const saved = store.get('userLists/' + B.x('currentUser.uid')) || {};
+    const prevCountry = B.x('myListCountry'); B.x("myListCountry = " + JSON.stringify(cs[0].country) + "; plPanel = 'cities'; __pk.plCities = __pk.plCities || {}; __pk.plCities.edit = true; renderPlacesMine()"); const pane = screen('plBody'); B.x("__pk.plCities.edit = false; plPanel = null; myListCountry = " + JSON.stringify(prevCountry));
+    ok('ش٢٢ · مدينتي: الثالثة تُرفض · الاستعمال يقدّم · الإزالة بالضغط · تُحفظ بالمستند · لوحة المدن بوضع التحرير تعرض 🏠 والموسومة باسمها', m1 === JSON.stringify([c2, c1]) && m2 === JSON.stringify([c1, c2]) && m3 === JSON.stringify([c1]) + '|' + c1 && JSON.stringify(saved.myCities) === JSON.stringify([c1]) && pane.includes('class="homebtn on"') && pane.includes('🏠 ' + cs[0].name), m1 + ' ' + m2 + ' ' + m3 + ' on=' + pane.includes('class="homebtn on"'));
+    cap('home.myCity');
+    // الإعلان مرة واحدة
+    const nT = captured.toasts.length; B.x("userListData.homeAnnounced = false; userListData.defaultTab = null"); await B.x('announceHomeOnce()'); await B.x('announceHomeOnce()'); const newT = captured.toasts.slice(nT); const t1 = newT.join(' | '); const once = newT.filter(function(t){ return /Your home is now Places/.test(t); }).length === 1;
+    const s2 = store.get('userLists/' + B.x('currentUser.uid')) || {};
+    // بلا مدينة محددة: الرأس «Select city» وإرشاد، ولا مدينة تُفرض؛ ومع محتوى تُختار الأكثر محتوًى؛ والموسومة تُقدَّم؛ والرمز بصف الرأس
+    const nc = B.x("(function(){ var keepC = myListCityId, keepK = myListCountry, keepD = myCityListData, keepCpc = userListData.cityPlaceCounts, keepMc = userListData.myCities, keepLc = userListData.listCity; var out = {}; myListCityId = null; myCityListData = null; myListCountry = null; plPanel = null; renderPlacesMine(); out.empty = document.getElementById('plBody').innerHTML; userListData.cityPlaceCounts = { mylist_beta: 3, mylist_alpha: 1 }; userListData.myCities = []; userListData.listCity = null; out.most = (plCityWithMostContent() || {}).id; userListData.myCities = ['mylist_alpha']; myListCityId = 'mylist_alpha'; myCityListData = { categories: {} }; myListCountry = 'Testland'; renderPlacesMine(); out.head = document.getElementById('plBody').innerHTML.slice(0, 500); myListCityId = keepC; myListCountry = keepK; myCityListData = keepD; userListData.cityPlaceCounts = keepCpc; userListData.myCities = keepMc; userListData.listCity = keepLc; return JSON.stringify(out); })()");
+    const ncj = JSON.parse(nc);
+    ok('ش٢٢ · بلا مدينة: الرأس «Select city» وإرشاد «Pick a city — or add one» · الأكثر محتوًى تُختار افتراضيًّا · الموسومة تحمل 🏠 بصف الرأس', ncj.empty.includes('<b>Select city</b>') && ncj.empty.includes('Pick a city — or add one') && ncj.most === 'mylist_beta' && ncj.head.includes('<b>🏠 Alpha</b>'), 'most=' + ncj.most + ' head=' + ncj.head.slice(0, 160));
+    ok('ش٢٢ · إعلان «Your home is now Places» يظهر مرة ويُخلَّد بالمستند · مثال الملاحظة بالنافذة', once && s2.homeAnnounced === true && tplCount('placeholder="e.g. best pancakes before 11 — book ahead"', 1).ok, 'toast=' + t1);
+    cap('home.announceOnce');
+    } finally {
+    B.x("(function(){ var s = " + prev + "; userListData.defaultTab = s.dt; userListData.myCities = s.mc; userListData.homeAnnounced = s.ha; userListData.cityPlaceCounts = s.cpc; })()");
+    if (typeof prevCC !== 'undefined') B.x("userListData.customCities = " + prevCC);
+    await B.x("mpData.userLists.merge(currentUser.uid, { defaultTab: userListData.defaultTab, myCities: userListData.myCities, homeAnnounced: userListData.homeAnnounced })");
     }
   }, []);
 
