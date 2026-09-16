@@ -966,35 +966,51 @@ function citiesSeed(){
     store.delete('userCityLists/uXSS_paris');
   }, ['security.nicknameEscaped']);
 
-  await must('١٦هـ · ر٧٢-أ-١: دليل المنتقين الحي وصفحة المنتقي وزرا الأرشيف (٦/هـ على القواعد الحية)', async () => {
-    // بذرة ملفين موثَّقين (verified يكتبه المالك — M4.12) وثالث غير موثَّق
-    await store.set('communityProfiles/cur_a', { nickname: 'Amal', displayName: 'Amal K.', verified: true, publicCityIds: ['paris'], followerCount: 12, showFollowerCount: true, bio: 'Coffee first. A long bio text that goes well beyond the two visible lines on a phone screen, so that the More button appears here for sure and the clamp class is applied to the paragraph.', updatedAt: Date.now() - 86400000 * 2, hasAnyPublicContent: true });
+  await must('١٦هـ · ر٧٢-أ-١ (إعادة البناء من المسودة v2): شبكة المنتقين بالبيانات · صفحة المنتقي بالرأس والشرائح الست · شاشة المدينة · حالة «أنا» · طبقة الشخص بشريطها · الوسم بيد المالك', async () => {
+    const uid = B.x('currentUser.uid');
+    await store.set('communityProfiles/cur_a', { nickname: 'Amal', displayName: 'Amal K.', verified: true, publicCityIds: ['paris'], followerCount: 12, showFollowerCount: true, bio: 'Coffee first, then everything else.', contactUrl: 'https://example.com/amal', viewCount: 40, updatedAt: Date.now() - 86400000 * 2, hasAnyPublicContent: true });
     await store.set('communityProfiles/cur_b', { nickname: 'Badr', verified: true, publicCityIds: ['mylist_alpha', 'paris'], followerCount: 3, showFollowerCount: false, updatedAt: Date.now() - 86400000 * 9, hasAnyPublicContent: true });
     await store.set('communityProfiles/cur_c', { nickname: 'Cara', verified: false, publicCityIds: ['paris'], hasAnyPublicContent: true });
-    B.x("curators = null; curPage = null; curFilterCity = ''; curOnly = 'all'; curNameQ = ''; curCityOpen = false; userListData.myCities = ['mylist_alpha']");
-    await B.x('renderCuratorsBody()'); const h1 = screen('curatorsBody');
-    const iB = h1.indexOf('Badr'), iA = h1.indexOf('Amal K.');
-    ok('١٦هـ · الدليل: الموثَّقان فقط (لا Cara) · من علّم مدينتي أولًا (Badr قبل Amal) · شارة Curator · عدّاد المتابعين حين يُظهره صاحبه فقط · صف الرأس (مدينة + بحث الاسم) · شريحتا All/Following', iB > -1 && iA > -1 && iB < iA && !h1.includes('Cara') && (h1.match(/class="cur-badge">Curator</g) || []).length === 2 && h1.includes('12 followers') && !h1.includes('3 followers') && h1.includes('placeholder="Type a name…"') && h1.includes('>Following (0)<'), 'iB=' + iB + ' iA=' + iA);
-    B.x("curNameQ = 'ama'"); await B.x('renderCuratorsBody()'); const h2 = screen('curatorsBody');
-    B.x("curNameQ = ''; curFilterCity = 'mylist_alpha'"); await B.x('renderCuratorsBody()'); const h3 = screen('curatorsBody');
-    ok('١٦هـ · بحث الاسم يرشّح (Amal وحدها) · مرشِّح المدينة يرشّح (Badr وحده)', h2.includes('Amal K.') && !h2.includes('Badr') && h3.includes('Badr') && !h3.includes('Amal K.'), '');
-    B.x("curFilterCity = ''; curOpen('cur_a')"); await new Promise(function(r){ setTimeout(r, 20); }); const pg = screen('curatorsBody');
-    ok('١٦هـ · صفحة المنتقي: رأس مضغوط (الاسم · الشارة · المدن · Follow) · النبذة بسطرين مع More · العدّادات سطرًا · زرا الأرشيف · السطر التعريفي · ← Curators', pg.includes('← Curators') && pg.includes('class="cur-badge">Curator') && pg.includes('＋ Follow') && pg.includes('class="cur-bio clamp"') && pg.includes('>More<') && pg.includes('12 followers · 1 city · Updated 2 days ago') && pg.includes('📍 Browse places') && pg.includes('🧳 Browse trips') && pg.includes('Picks with a personal taste'), JSON.stringify({ back: pg.includes('← Curators'), badge: pg.includes('class="cur-badge">Curator'), follow: pg.includes('＋ Follow'), clamp: pg.includes('class="cur-bio clamp"'), more: pg.includes('>More<'), stat: pg.includes('12 followers · 1 city · Updated 2 days ago'), statRaw: (pg.match(/class="stattext">([^<]*)</) || [])[1] }));
-    await B.x("curBrowse('cur_a', 'places')"); await new Promise(function(r){ setTimeout(r, 30); });
+    await store.set('communityProfiles/' + uid, { nickname: 'Me', verified: true, publicCityIds: [], updatedAt: Date.now(), hasAnyPublicContent: false });
+    await store.set('userCityLists/cur_a_paris', { ownerId: 'cur_a', cityId: 'paris', cityName: 'Paris', public: true, categories: { coffee: { places: [{ id: 'p1', name: 'Café Mélodie', url: 'https://maps.app.goo.gl/m', area: 'Le Marais', picks: ['fig pastry'], note: 'before nine' }, { id: 'p2', name: 'Ten Belles', url: 'https://maps.app.goo.gl/t', area: '10th' }] }, squares: { places: [{ id: 'p3', name: 'Place des Vosges', url: 'https://maps.app.goo.gl/v' }] } } });
+    await store.set('trips/tr_a1', { ownerId: 'cur_a', cityId: 'paris', cityName: 'Paris', public: true, days: [] });
+    B.x("curators = null; curPage = null; curCity = null; curChip = null; curFilterCity = ''; curOnly = 'all'; curNameQ = ''; curSearchQ = ''; curCityOpen = false; userListData.myCities = ['mylist_alpha']; Object.keys(curData).forEach(function(k){ delete curData[k]; })");
+    await B.x('renderCuratorsBody()'); await new Promise(function(r){ setTimeout(r, 40); }); const g = screen('curatorsBody');
+    const iB = g.indexOf('>Badr<'), iA = g.indexOf('>Amal K.<');
+    ok('١٦هـ · الشبكة: الموثَّقون فقط (لا Cara) · من علّم مدينتي أولًا (Badr قبل Amal) · دوائر بالحرفين · البيانات (مدن · رحلات · متابعون بإذنه · updated) · «You» على حسابي · صف الرأس', iB > -1 && iA > -1 && iB < iA && !g.includes('Cara') && g.includes('class="curring">AK<') && g.includes('1 city · ') && g.includes('12 followers') && !g.includes('3 followers') && g.includes('updated 2d ago') && g.includes('class="curyou">You<') && g.includes('placeholder="Type a name…"') && g.includes('pick a curator'), 'iB=' + iB + ' iA=' + iA + ' ' + g.slice(0, 200));
+    B.x("curNameQ = 'ama'"); await B.x('renderCuratorsBody()'); const g2 = screen('curatorsBody');
+    B.x("curNameQ = ''; curFilterCity = 'mylist_alpha'"); await B.x('renderCuratorsBody()'); const g3 = screen('curatorsBody');
+    ok('١٦هـ · بحث الاسم يرشّح (Amal وحدها) · مرشِّح المدينة يرشّح (Badr وحده)', g2.includes('Amal K.') && !g2.includes('>Badr<') && g3.includes('>Badr<') && !g3.includes('Amal K.'), '');
+    B.x("curFilterCity = ''; curOpen('cur_a')"); await new Promise(function(r){ setTimeout(r, 80); }); const pg = screen('curatorsBody');
+    ok('١٦هـ · صفحة المنتقي: رأس القالب (الحرفان · الاسم · ✧ Curator · Paris من قائمته · ＋ Follow) · النبذة · الأرقام (picks بوسم · followers · 1 city · views · updated) · ✉ Contact · السطر التعريفي · الشرائح الست (🏠 Paris · Latest 10 · Cities · All places lists 3 places · All trips lists 1 trips · Search) · شاشة مدينته مفتوحة افتراضيًّا', pg.includes('class="curava">AK<') && pg.includes('Amal K. <span class="curvb">✧ Curator</span>') && pg.includes('class="curmt3">Paris<') && pg.includes('＋ Follow') && pg.includes('Coffee first') && pg.includes('<b>12</b> followers') && pg.includes('<b>1</b> city') && pg.includes('<b>40</b> views') && pg.includes('✉ Contact') && pg.includes('Picks with a personal taste') && pg.includes('🏠 Paris<span class="s">curator\'s city') && pg.includes('Latest 10<span class="s">updated places') && pg.includes('Cities<span class="s">1<') && pg.includes('All places lists<span class="s">3 places') && pg.includes('All trips lists<span class="s">1 trips') && pg.includes('placeholder="Search places…"') && pg.includes('class="curcitycard"') && pg.includes('All places · 3') && pg.includes('Trips · 1'), pg.slice(0, 300));
+    B.x("curSearchQ = 'ten'"); await B.x('renderCuratorsBody()'); await new Promise(function(r){ setTimeout(r, 40); }); const sr = screen('curatorsBody');
+    ok('١٦هـ · بحث أماكنه: بطاقة برأس (Paris · Specialty Coffee · Open list →) والمكان بصفه', sr.includes('Paris · Specialty Coffee') && sr.includes('>Ten Belles<') && sr.includes('Open list →') && !sr.includes('Place des Vosges'), sr.slice(0, 200));
+    B.x("curSearchQ = ''; curChip = 'cities'"); await B.x('renderCuratorsBody()'); await new Promise(function(r){ setTimeout(r, 40); }); const cs = screen('curatorsBody');
+    B.x("curOpenCity('paris')"); await new Promise(function(r){ setTimeout(r, 40); }); const cty = screen('curatorsBody');
+    ok('١٦هـ · Cities: مدينة بعدّاديها (3 places · 1 trip) · شاشة المدينة: الرأي بوسم · مبدّل Top picks / All places · 3 / Trips · 1 · العودة ← Amal K.', cs.includes('3 places · 1 trip') && cty.includes('No notes yet') && cty.includes('Top picks') && cty.includes('All places · 3') && cty.includes('Trips · 1') && cty.includes('← Amal K.'), '');
+    await B.x("curBrowse('cur_a', 'places', 'paris')"); await new Promise(function(r){ setTimeout(r, 60); });
     const arch = B.x("JSON.stringify({ tab: currentTab, of: curArchiveOf, view: viewingUserUid })"); const cb = String((documentStub.getElementById('communityBody') || { innerHTML: '' }).innerHTML || '');
-    ok('١٦هـ · «Browse places» ينقل إلى طبقة الشخص بالمجتمع بشريط الأرشيف للعرض فقط وزر ← Curator', arch === '{"tab":"Community","of":"cur_a","view":"cur_a"}' && cb.includes("You're browsing Amal K.'s archive — read only") && cb.includes('← Curator'), arch + ' ' + cb.slice(0, 160));
+    ok('١٦هـ · All places → طبقة الشخص بالمجتمع بشريط «Browsing Amal K.\'s places — read only» و«← Curator page»', arch === '{"tab":"Community","of":"cur_a","view":"cur_a"}' && cb.includes("Browsing Amal K.'s places — read only") && cb.includes('← Curator page'), arch + ' ' + cb.slice(0, 160));
     B.x('curArchiveBack()'); const back = B.x("JSON.stringify({ tab: currentTab, page: curPage ? curPage.uid : null, of: curArchiveOf })");
-    // ر٧٢-أ-١ب: المالك يوسم منتقيًا من نافذة المستخدمين (الحقل verified بالملف العام — يُنشأ إن لم يوجد) ويزيله؛ نافذة الإدارة تحمل الإحصائيات والأبواب؛ الدرج بمدخلي المالك
+    ok('١٦هـ · ← Curator page يعود إلى صفحته', back === '{"tab":"Curators","page":"cur_a","of":null}', back);
+    // حالة «أنا»: بلا زر متابعة؛ مكانه My dashboard؛ اللوحة بأبوابها الموسومة
+    B.x("curOpen(" + JSON.stringify(uid) + ")"); await new Promise(function(r){ setTimeout(r, 60); }); const me = screen('curatorsBody');
+    B.x('openDashboard()'); const dash = String(documentStub.getElementById('dashBody').innerHTML || '');
+    ok('١٦هـ · «أنا»: لا ＋ Follow · زر 🎛 My dashboard · «Followers» و«Edit profile» بوسم · السطر «This is how your page looks to others» · اللوحة: أبواب المنتقي بوسومها', !me.includes('＋ Follow') && me.includes('🎛 My dashboard') && me.includes('👥 Followers') && me.includes('This is how your page looks to others') && dash.includes('✧ curator') && dash.includes('👥 Followers') && dash.includes('✎ My profile') && dash.includes('🧰 Curator tools'), me.slice(0, 160));
+    B.x("closeModalById('dashBackdrop')");
+    // الدرج بالمرجع §٧ ولوحة الإدارة بالبلاطات والأبواب فوقها
+    ok('١٦هـ · الدرج: My account مطوي (Become a curator · password · Google · log out · delete) · My Dashboard (Open dashboard · Stats · My bookmarks · Cards · Export · Import) · App (Preferences · Help) · Owner (Admin panel · System status) · Policies · لا Copy link/QR/Contact بالدرج (تحت Help)', tplCount('onclick="drToggleAccount()"', 1).ok && tplCount('onclick="openFromDrawer(openDashboard)"', 1).ok && tplCount('>🔖 My bookmarks<', 1).ok && tplCount('class="dr-item" onclick="openFromDrawer(showQR)"', 0).ok && tplCount('>🔗 Copy Link<', 0).ok && tplCount('>✉️ Contact Us<', 0).ok && tplCount('onclick="openFromDrawer(openAdminPanel)"', 1).ok && tplCount('id="adminTiles"', 1).ok && tplCount('class="dash-door" onclick="openUsersModal()"', 1).ok && tplCount("closeHelpModal(); copyLink();", 1).ok, '');
+    // وسم المنتقي من نافذة المستخدمين (المالك)
     const ownerOn = B.x("(function(){ var k = isOwner; isOwner = true; return k; })()");
     await store.set('users/u_newcur', { nickname: 'Nada', email: 'nada@x.io', hasAccount: true });
-    B.x("allUsersCache = [{ uid: 'u_newcur', nickname: 'Nada', email: 'nada@x.io' }]; curators = []; communityUsers = []");
+    B.x("allUsersCache = [{ uid: 'u_newcur', nickname: 'Nada', email: 'nada@x.io' }]; communityUsers = []"); B.x("curators = curators.filter(function(c){ return c.uid !== 'u_newcur'; })");
     await B.x("toggleCuratorUser('u_newcur')"); const p1 = JSON.parse(JSON.stringify(store.get('communityProfiles/u_newcur') || {})); const w1 = String(documentStub.getElementById('usersListBody').innerHTML || '');
     await B.x("toggleCuratorUser('u_newcur')"); const p2 = store.get('communityProfiles/u_newcur') || {};
     B.x("isOwner = " + ownerOn);
-    ok('ش١٦هـ · الوسم من نافذة المستخدمين: ينشئ الملف العام بالاسم ويضع verified ويعرض شارة Curator وشريحة «Curator ✓» · الإزالة تعيده false', p1.verified === true && p1.nickname === 'Nada' && w1.includes('class="pl-flag ubadge">Curator') && w1.includes('>Curator ✓<') && p2.verified === false && tplCount('id="adminBackdrop"', 1).ok && tplCount('onclick="openFromDrawer(openAdminPanel)"', 1).ok && tplCount('👥 Manage Users', 0).ok && tplCount('<h3 style="text-align:center;">👥 Users</h3>', 1).ok, JSON.stringify({ p1: p1, p2: p2 }) + ' ' + w1.slice(0, 120));
-    store.delete('communityProfiles/u_newcur'); store.delete('users/u_newcur');
-    ok('١٦هـ · ← Curator يعود إلى صفحة المنتقي', back === '{"tab":"Curators","page":"cur_a","of":null}', back);
-    B.x("curPage = null; curators = null; curArchiveOf = null; viewingUserUid = null; viewingUserData = null; communityScreen = 'root'; communityTab = 'places'; userListData.myCities = []"); store.delete('communityProfiles/cur_a'); store.delete('communityProfiles/cur_b'); store.delete('communityProfiles/cur_c');
+    ok('١٦هـ · الوسم من نافذة المستخدمين: ينشئ الملف العام بالاسم ويضع verified ويعرض الشارة المفرَّغة «✧ Curator» · الإزالة تعيده false', p1.verified === true && p1.nickname === 'Nada' && w1.includes('class="curvb ubadge">✧ Curator') && p2.verified === false, JSON.stringify({ p1: p1, p2: p2 }));
+    cap('curators.twoPages');
+    B.x("curPage = null; curCity = null; curators = null; curArchiveOf = null; viewingUserUid = null; viewingUserData = null; communityScreen = 'root'; communityTab = 'places'; userListData.myCities = []; Object.keys(curData).forEach(function(k){ delete curData[k]; })");
+    ['communityProfiles/cur_a', 'communityProfiles/cur_b', 'communityProfiles/cur_c', 'communityProfiles/' + uid, 'communityProfiles/u_newcur', 'users/u_newcur', 'userCityLists/cur_a_paris', 'trips/tr_a1'].forEach(function(k){ store.delete(k); });
   }, ['curators.twoPages']);
 
   // ═══ رحلة الشاشة (ر٦٥) — كل محطة تسمّي مشهد المرجع الذي تحرسه ═══
@@ -1091,7 +1107,7 @@ function citiesSeed(){
 
   await must('ش٩ · ٦/هـ٢ صفحة المنتقي: رأس واحد وأفعال التسوية بلا تعتيم', async () => {
     const a = tplCount('← Curators', 1); const b = tpl(["const CUR_BADGE = 'Curator';", 'Save <span class="dim">stage 3</span>']); const bNo = tplCount('>🔖 Bookmarked</span>', 0); const bOld = tplCount('verified curator', 0);
-    const c = tpl(['.cur-shell{border-radius:16px;']); const d = tpl(['.cur-shell{background:var(--ivory);']);
+    const c = tpl(['.curidn{border-radius:16px; padding:16px 15px 14px;}']); const d = tpl(['.curidn{background:linear-gradient(160deg, var(--surf), var(--bar)); color:var(--ivory-bright);}']);
     ok('ش٩ · ر٧٢-أ-١: عودة واحدة وقشرة المنتقي الحية بشارة Curator (لا «verified curator») — والشرائح الست بلا Bookmarked بمستوى المبدل (ر٦٩ · N-007)', a.ok && b.ok && bNo.ok && bOld.ok && c.ok && d.ok, a.why + b.why + bNo.why + bOld.why + c.why + d.why);
   }, ['screen.static.curatorPage']);
 
