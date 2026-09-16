@@ -702,6 +702,7 @@ function citiesSeed(){
 
   await must('ش٢٢ · أ-١٢-١ (r70r): الوجهة الأماكن دائمًا والاختيار اليدوي فوقها · وسم «مدينتي» يدوي حتى مدينتين ولا يؤثر بالفتح · العودة على آخر مدينة محددة · مثال الملاحظة', async () => {
     const prev = B.x("JSON.stringify({ dt: userListData.defaultTab || null, mc: userListData.myCities || [], cpc: userListData.cityPlaceCounts || {}, city: myListCityId, tab: currentTab, lc: userListData.listCity || null })");
+    const uid = B.x('currentUser.uid');
     var prevCC;
     try {
     const r = B.x("(function(){ var o = []; userListData.defaultTab = null; userListData.cityPlaceCounts = {}; o.push(defaultTabFor()); userListData.cityPlaceCounts = { paris: 2 }; o.push(defaultTabFor()); userListData.defaultTab = 'Trips'; o.push(defaultTabFor()); userListData.defaultTab = null; return o.join(','); })()");
@@ -718,8 +719,16 @@ function citiesSeed(){
     ok('ش٢٢ · مدينتي يدوي: الثالثة تُرفض · الإزالة بالضغط · تُحفظ بالمستند · 🏠 ظاهر بلا وضع تحرير والموسومة باسمها', m1 === JSON.stringify([c2, c1]) && m3 === JSON.stringify([c1]) && JSON.stringify(saved.myCities) === JSON.stringify([c1]) && pane.includes('class="homebtn on"') && pane.includes('🏠 ' + cs[0].name) && !pane.includes('class="del"'), m1 + ' ' + m3);
     cap('home.myCity');
     // العودة على آخر مدينة محددة (المحفوظة) — الوسم لا يؤثر؛ وبلا محفوظة → «Select city»
-    const pk = B.x("(function(){ var k = { lc: userListData.listCity, mc: userListData.myCities }; userListData.listCity = 'mylist_beta'; userListData.myCities = ['mylist_alpha']; var a = plInitialCityPick(); userListData.listCity = null; var b = plInitialCityPick(); userListData.listCity = k.lc; userListData.myCities = k.mc; return (a ? a.id : null) + '|' + (b ? b.id : 'null'); })()");
-    ok('ش٢٢ · العودة: آخر مدينة محددة تُفتح (Beta) ولو كانت الموسومة غيرها · وبلا محفوظة لا مدينة', pk === 'mylist_beta|null', 'got ' + pk);
+    const pk = B.x("(function(){ var k = { lc: userListData.listCity, mc: userListData.myCities, cpc: userListData.cityPlaceCounts }; userListData.listCity = 'mylist_beta'; userListData.myCities = ['mylist_alpha']; var a = plInitialCityPick(); userListData.listCity = null; var b = plInitialCityPick(); userListData.myCities = []; userListData.cityPlaceCounts = { mylist_beta: 4, mylist_alpha: 1 }; var c = plInitialCityPick(); userListData.cityPlaceCounts = {}; var d = plInitialCityPick(); userListData.listCity = k.lc; userListData.myCities = k.mc; userListData.cityPlaceCounts = k.cpc; return [a, b, c, d].map(function(x){ return x ? x.id : 'null'; }).join('|'); })()");
+    ok('ش٢٢ · العودة (ر٧٢-أ-١ز): المحفوظة أولًا (Beta ولو كانت الموسومة Alpha) · بلا محفوظة → الموسومة (Alpha) · بلا وسم → الأكثر محتوًى (Beta) · بلا شيء → لا مدينة', pk === 'mylist_beta|mylist_alpha|mylist_beta|null', 'got ' + pk);
+    // الحفظ العام لا يمسح المحفوظة · الوسم ذرّي بنسخته العامة للمنتقي ويُعاد اشتقاقه بالمزامنة
+    const kAt = B.x("JSON.stringify({ mc: userListData.myCities, cs: userListData.curatorSelf })");
+    B.x("userListData.curatorSelf = true; userListData.myCities = []"); await B.x("plToggleMyCity('mylist_alpha')");
+    const pubA = JSON.stringify((store.get('communityProfiles/' + uid) || {}).myCityIds || null); const privA = JSON.stringify((store.get('userLists/' + uid) || {}).myCities || null);
+    B.x("userListData.curatorSelf = false"); await B.x("plToggleMyCity('mylist_alpha')"); await B.x("plToggleMyCity('mylist_alpha')");
+    const pubB = JSON.stringify((store.get('communityProfiles/' + uid) || {}).myCityIds || null);
+    B.x("(function(){ var k = " + kAt + "; userListData.myCities = k.mc; userListData.curatorSelf = k.cs; })()"); await B.x("mpData.profiles.setMyCities(currentUser.uid, userListData.myCities, null)");
+    ok('ش٢٢ · الوسم ذرّي: للمنتقي يُكتب بالخاص والعام معًا · لغير المنتقي لا تُمس النسخة العامة · الحفظ العام لا يكتب المدينة فارغة · المزامنة تعيد اشتقاق النسخة', pubA === '["mylist_alpha"]' && privA === '["mylist_alpha"]' && pubB === '["mylist_alpha"]' && tplCount("if (myListCityId) __patch.listCity = myListCityId;", 1).ok && tplCount('myCityIds: (uid === (currentUser && currentUser.uid) && userListData && userListData.curatorSelf) ? myCities() : []', 1).ok, pubA + '/' + privA + '/' + pubB);
     const nc = B.x("(function(){ var keepC = myListCityId, keepK = myListCountry, keepD = myCityListData; myListCityId = null; myCityListData = null; myListCountry = null; plPanel = null; renderPlacesMine(); var e = document.getElementById('plBody').innerHTML; myListCityId = 'mylist_alpha'; myCityListData = { categories: {} }; myListCountry = 'Testland'; renderPlacesMine(); var h = document.getElementById('plBody').innerHTML.slice(0, 500); myListCityId = keepC; myListCountry = keepK; myCityListData = keepD; return JSON.stringify({ e: e.includes('<b>Select city</b>'), h: h.includes('<b>🏠 Alpha</b>') }); })()");
     ok('ش٢٢ · بلا مدينة: الرأس «Select city» · الموسومة تحمل 🏠 بصف الرأس', nc === '{"e":true,"h":true}', nc);
     const reload = await B.x("(async function(){ var k = { mc: userListData.myCities }; await mpData.userLists.merge(currentUser.uid, { myCities: ['mylist_alpha'] }); await loadUserList(); var out = JSON.stringify(userListData.myCities); userListData.myCities = k.mc; await mpData.userLists.merge(currentUser.uid, { myCities: k.mc }); return out; })()");
