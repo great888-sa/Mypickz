@@ -966,12 +966,26 @@ function citiesSeed(){
     store.delete('userCityLists/uXSS_paris');
   }, ['security.nicknameEscaped']);
 
-  await must('١٦هـ · المنتقون صفحتان بضغطة (المواصفة ٦/هـ)', async () => {
-    B.x('curOpenPage()');
-    const pageShown = documentStub.getElementById('curPage').style.display === '' && documentStub.getElementById('curGrid').style.display === 'none';
-    B.x('curBackToGrid()');
-    const gridBack = documentStub.getElementById('curGrid').style.display === '';
-    ok('١٦هـ · الشبكة تنطوي وتعود', pageShown && gridBack, '');
+  await must('١٦هـ · ر٧٢-أ-١: دليل المنتقين الحي وصفحة المنتقي وزرا الأرشيف (٦/هـ على القواعد الحية)', async () => {
+    // بذرة ملفين موثَّقين (verified يكتبه المالك — M4.12) وثالث غير موثَّق
+    await store.set('communityProfiles/cur_a', { nickname: 'Amal', displayName: 'Amal K.', verified: true, publicCityIds: ['paris'], followerCount: 12, showFollowerCount: true, bio: 'Coffee first. A long bio text that goes well beyond the two visible lines on a phone screen, so that the More button appears here for sure and the clamp class is applied to the paragraph.', updatedAt: Date.now() - 86400000 * 2, hasAnyPublicContent: true });
+    await store.set('communityProfiles/cur_b', { nickname: 'Badr', verified: true, publicCityIds: ['mylist_alpha', 'paris'], followerCount: 3, showFollowerCount: false, updatedAt: Date.now() - 86400000 * 9, hasAnyPublicContent: true });
+    await store.set('communityProfiles/cur_c', { nickname: 'Cara', verified: false, publicCityIds: ['paris'], hasAnyPublicContent: true });
+    B.x("curators = null; curPage = null; curFilterCity = ''; curOnly = 'all'; curNameQ = ''; curCityOpen = false; userListData.myCities = ['mylist_alpha']");
+    await B.x('renderCuratorsBody()'); const h1 = screen('curatorsBody');
+    const iB = h1.indexOf('Badr'), iA = h1.indexOf('Amal K.');
+    ok('١٦هـ · الدليل: الموثَّقان فقط (لا Cara) · من علّم مدينتي أولًا (Badr قبل Amal) · شارة Curator · عدّاد المتابعين حين يُظهره صاحبه فقط · صف الرأس (مدينة + بحث الاسم) · شريحتا All/Following', iB > -1 && iA > -1 && iB < iA && !h1.includes('Cara') && (h1.match(/class="cur-badge">Curator</g) || []).length === 2 && h1.includes('12 followers') && !h1.includes('3 followers') && h1.includes('placeholder="Type a name…"') && h1.includes('>Following (0)<'), 'iB=' + iB + ' iA=' + iA);
+    B.x("curNameQ = 'ama'"); await B.x('renderCuratorsBody()'); const h2 = screen('curatorsBody');
+    B.x("curNameQ = ''; curFilterCity = 'mylist_alpha'"); await B.x('renderCuratorsBody()'); const h3 = screen('curatorsBody');
+    ok('١٦هـ · بحث الاسم يرشّح (Amal وحدها) · مرشِّح المدينة يرشّح (Badr وحده)', h2.includes('Amal K.') && !h2.includes('Badr') && h3.includes('Badr') && !h3.includes('Amal K.'), '');
+    B.x("curFilterCity = ''; curOpen('cur_a')"); await new Promise(function(r){ setTimeout(r, 20); }); const pg = screen('curatorsBody');
+    ok('١٦هـ · صفحة المنتقي: رأس مضغوط (الاسم · الشارة · المدن · Follow) · النبذة بسطرين مع More · العدّادات سطرًا · زرا الأرشيف · السطر التعريفي · ← Curators', pg.includes('← Curators') && pg.includes('class="cur-badge">Curator') && pg.includes('＋ Follow') && pg.includes('class="cur-bio clamp"') && pg.includes('>More<') && pg.includes('12 followers · 1 city · Updated 2 days ago') && pg.includes('📍 Browse places') && pg.includes('🧳 Browse trips') && pg.includes('Picks with a personal taste'), JSON.stringify({ back: pg.includes('← Curators'), badge: pg.includes('class="cur-badge">Curator'), follow: pg.includes('＋ Follow'), clamp: pg.includes('class="cur-bio clamp"'), more: pg.includes('>More<'), stat: pg.includes('12 followers · 1 city · Updated 2 days ago'), statRaw: (pg.match(/class="stattext">([^<]*)</) || [])[1] }));
+    await B.x("curBrowse('cur_a', 'places')"); await new Promise(function(r){ setTimeout(r, 30); });
+    const arch = B.x("JSON.stringify({ tab: currentTab, of: curArchiveOf, view: viewingUserUid })"); const cb = String((documentStub.getElementById('communityBody') || { innerHTML: '' }).innerHTML || '');
+    ok('١٦هـ · «Browse places» ينقل إلى طبقة الشخص بالمجتمع بشريط الأرشيف للعرض فقط وزر ← Curator', arch === '{"tab":"Community","of":"cur_a","view":"cur_a"}' && cb.includes("You're browsing Amal K.'s archive — read only") && cb.includes('← Curator'), arch + ' ' + cb.slice(0, 160));
+    B.x('curArchiveBack()'); const back = B.x("JSON.stringify({ tab: currentTab, page: curPage ? curPage.uid : null, of: curArchiveOf })");
+    ok('١٦هـ · ← Curator يعود إلى صفحة المنتقي', back === '{"tab":"Curators","page":"cur_a","of":null}', back);
+    B.x("curPage = null; curators = null; curArchiveOf = null; viewingUserUid = null; viewingUserData = null; communityScreen = 'root'; communityTab = 'places'; userListData.myCities = []"); store.delete('communityProfiles/cur_a'); store.delete('communityProfiles/cur_b'); store.delete('communityProfiles/cur_c');
   }, ['curators.twoPages']);
 
   // ═══ رحلة الشاشة (ر٦٥) — كل محطة تسمّي مشهد المرجع الذي تحرسه ═══
@@ -1067,9 +1081,9 @@ function citiesSeed(){
   }, ['screen.static.tripChips']);
 
   await must('ش٩ · ٦/هـ٢ صفحة المنتقي: رأس واحد وأفعال التسوية بلا تعتيم', async () => {
-    const a = tplCount('← Curators', 1); const b = tpl(['verified curator', '🔖 My bookmarked <span class="dim">later</span>', 'Save <span class="dim">stage 3</span>', 'followers: count shown here']); const bNo = tplCount('>🔖 Bookmarked</span>', 0);
-    const c = tplCount('class="cur-shell curhead"', 1); const d = tpl(['.cur-shell{opacity:1;}']);
-    ok('ش٩ · عودة واحدة وقشرة واحدة بعناصرها وبلا تعتيم — والشرائح الست بلا Bookmarked بمستوى المبدل (ر٦٩ · N-007)', a.ok && b.ok && bNo.ok && c.ok && d.ok, a.why + b.why + bNo.why + c.why + d.why);
+    const a = tplCount('← Curators', 1); const b = tpl(["const CUR_BADGE = 'Curator';", 'Save <span class="dim">stage 3</span>']); const bNo = tplCount('>🔖 Bookmarked</span>', 0); const bOld = tplCount('verified curator', 0);
+    const c = tpl(['.cur-shell{border-radius:16px;']); const d = tpl(['.cur-shell{background:var(--ivory);']);
+    ok('ش٩ · ر٧٢-أ-١: عودة واحدة وقشرة المنتقي الحية بشارة Curator (لا «verified curator») — والشرائح الست بلا Bookmarked بمستوى المبدل (ر٦٩ · N-007)', a.ok && b.ok && bNo.ok && bOld.ok && c.ok && d.ok, a.why + b.why + bNo.why + bOld.why + c.why + d.why);
   }, ['screen.static.curatorPage']);
 
   await must('ش١٠ · ٦/أ شرائح الأماكن: المنشآن معطَّلان بوسم موعدهما', async () => {
