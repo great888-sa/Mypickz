@@ -984,6 +984,15 @@ function citiesSeed(){
     const arch = B.x("JSON.stringify({ tab: currentTab, of: curArchiveOf, view: viewingUserUid })"); const cb = String((documentStub.getElementById('communityBody') || { innerHTML: '' }).innerHTML || '');
     ok('١٦هـ · «Browse places» ينقل إلى طبقة الشخص بالمجتمع بشريط الأرشيف للعرض فقط وزر ← Curator', arch === '{"tab":"Community","of":"cur_a","view":"cur_a"}' && cb.includes("You're browsing Amal K.'s archive — read only") && cb.includes('← Curator'), arch + ' ' + cb.slice(0, 160));
     B.x('curArchiveBack()'); const back = B.x("JSON.stringify({ tab: currentTab, page: curPage ? curPage.uid : null, of: curArchiveOf })");
+    // ر٧٢-أ-١ب: المالك يوسم منتقيًا من نافذة المستخدمين (الحقل verified بالملف العام — يُنشأ إن لم يوجد) ويزيله؛ نافذة الإدارة تحمل الإحصائيات والأبواب؛ الدرج بمدخلي المالك
+    const ownerOn = B.x("(function(){ var k = isOwner; isOwner = true; return k; })()");
+    await store.set('users/u_newcur', { nickname: 'Nada', email: 'nada@x.io', hasAccount: true });
+    B.x("allUsersCache = [{ uid: 'u_newcur', nickname: 'Nada', email: 'nada@x.io' }]; curators = []; communityUsers = []");
+    await B.x("toggleCuratorUser('u_newcur')"); const p1 = JSON.parse(JSON.stringify(store.get('communityProfiles/u_newcur') || {})); const w1 = String(documentStub.getElementById('usersListBody').innerHTML || '');
+    await B.x("toggleCuratorUser('u_newcur')"); const p2 = store.get('communityProfiles/u_newcur') || {};
+    B.x("isOwner = " + ownerOn);
+    ok('ش١٦هـ · الوسم من نافذة المستخدمين: ينشئ الملف العام بالاسم ويضع verified ويعرض شارة Curator وشريحة «Curator ✓» · الإزالة تعيده false', p1.verified === true && p1.nickname === 'Nada' && w1.includes('class="pl-flag ubadge">Curator') && w1.includes('>Curator ✓<') && p2.verified === false && tplCount('id="adminBackdrop"', 1).ok && tplCount('onclick="openFromDrawer(openAdminPanel)"', 1).ok && tplCount('👥 Manage Users', 0).ok && tplCount('<h3 style="text-align:center;">👥 Users</h3>', 1).ok, JSON.stringify({ p1: p1, p2: p2 }) + ' ' + w1.slice(0, 120));
+    store.delete('communityProfiles/u_newcur'); store.delete('users/u_newcur');
     ok('١٦هـ · ← Curator يعود إلى صفحة المنتقي', back === '{"tab":"Curators","page":"cur_a","of":null}', back);
     B.x("curPage = null; curators = null; curArchiveOf = null; viewingUserUid = null; viewingUserData = null; communityScreen = 'root'; communityTab = 'places'; userListData.myCities = []"); store.delete('communityProfiles/cur_a'); store.delete('communityProfiles/cur_b'); store.delete('communityProfiles/cur_c');
   }, ['curators.twoPages']);
