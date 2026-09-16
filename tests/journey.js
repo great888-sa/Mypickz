@@ -40,6 +40,7 @@ const CAPS = [
   'home.defaultRule', 'home.myCity', 'home.announceOnce',
   'intro.levels', 'intro.firstVisit', 'intro.helpButton',
   'trip.sourcesCard',
+  'curators.follow',
   'paste.parser', 'paste.nameCheck',
   'share.param',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
@@ -83,11 +84,13 @@ const documentStub = {
 };
 
 /* ═══════════ ٣ · المنصة الذاكرية بخطّاف قواعد M4.24 ═══════════ */
-const MARK = { TS: '__ts', INC: '__inc', DEL: '__del' };
+const MARK = { TS: '__ts', INC: '__inc', DEL: '__del', AU: '__au', AR: '__ar' };
 const FieldValue = {
   serverTimestamp: () => ({ [MARK.TS]: 1 }),
   increment: n => ({ [MARK.INC]: n }),
   delete: () => ({ [MARK.DEL]: true }),
+  arrayUnion: (...xs) => ({ [MARK.AU]: xs }), // ر٧٢-أ-٢: النسخة الخفيفة للمتابعة
+  arrayRemove: (...xs) => ({ [MARK.AR]: xs }),
 };
 const FieldPath = { documentId: () => '__name__' };
 const ALLOWED_EVENTS = ['visit_source','signup_start','signup_done','place_open','bookmark_add','mylist_open','mylist_save','trip_open','trip_save','community_open','share_link','share_card','curator_view','curator_contact','curator_follow','session_depth','import_run','import_place','import_suggest_kept','import_suggest_changed','personal_open','personal_save','personal_place_open','reserved_2','reserved_3'];
@@ -101,6 +104,8 @@ function deepMerge(base, patch){
     if (v && typeof v === 'object' && v[MARK.DEL]){ delete base[k]; continue; }
     if (v && typeof v === 'object' && MARK.INC in v){ base[k] = (typeof base[k] === 'number' ? base[k] : 0) + v[MARK.INC]; continue; }
     if (v && typeof v === 'object' && v[MARK.TS]){ base[k] = Date.now(); continue; }
+    if (v && typeof v === 'object' && MARK.AU in v){ const arr = Array.isArray(base[k]) ? base[k].slice() : []; v[MARK.AU].forEach(function(x){ if (arr.indexOf(x) < 0) arr.push(x); }); base[k] = arr; continue; }
+    if (v && typeof v === 'object' && MARK.AR in v){ base[k] = (Array.isArray(base[k]) ? base[k] : []).filter(function(x){ return v[MARK.AR].indexOf(x) < 0; }); continue; }
     if (v && typeof v === 'object' && !Array.isArray(v)){ base[k] = base[k] && typeof base[k] === 'object' && !Array.isArray(base[k]) ? base[k] : {}; deepMerge(base[k], v); continue; }
     base[k] = clone(v);
   }
@@ -1028,6 +1033,22 @@ function citiesSeed(){
     const selfCard = B.x("othersCard({ title: 'X', sub: '1 place', bmSelf: true, cnt: 3, openHandler: 'void(0)', exportHandler: 'void(0)', saveMsg: 'x' })");
     ok('١٦هـ · قائمتي بطبقة الشخص: عدّاد سلبي (label) بلا شريحة rules · الشريحتان بحارس ضغطتين وإشعار فوري', selfCard.includes('class="actn label"') && selfCard.includes('class="bmk-cnt">3<') && !selfCard.includes('>rules<') && tplCount('if (curBrowseBusy) return; curBrowseBusy = true;', 1).ok, selfCard.slice(0, 160));
     ok('١٦هـ · ⭐ بصف أفعال مكاني بشاشة الأماكن · بطاقة قائمة طبقة الشخص = بطاقة السوق (Open → · 📤 · مفكرة · Save) · «Notes:» بنمط «Picks:»', rowStar && personCard && tplCount('.pl-note b{color:var(--saffron);}', 1).ok, '');
+    // ═══ ر٧٢-أ-٢: المتابعة ذرّيًّا (السجل + العدّاد حيث تسمح القواعد + النسخة الخفيفة) · الإفصاح مرة · منع الذات · الإلغاء · Followers للمنتقي · My profile · شريحتا الحفظ بالرحلات
+    B.x("userListData.following = []; userListData.followDisclosed = false; globalThis.confirm = function(){ return true; }; curators = curators.filter(function(c){ return c.uid !== 'cur_a' && c.uid !== 'cur_b'; }).concat([{ uid: 'cur_a', nickname: 'Amal', verified: true, publicCityIds: ['paris'], followerCount: 12, showFollowerCount: true, hasAnyPublicContent: true }, { uid: 'cur_b', nickname: 'Badr', verified: true, publicCityIds: [], followerCount: 0, hasAnyPublicContent: false }])");
+    await B.x("curToggleFollow('cur_a')"); const recA = store.get('follows/' + uid + '_cur_a'); const profA = JSON.parse(JSON.stringify(store.get('communityProfiles/cur_a') || {})); const listA = JSON.parse(JSON.stringify(store.get('userLists/' + uid) || {}));
+    await B.x("curToggleFollow('cur_b')"); const recB = store.get('follows/' + uid + '_cur_b'); const profB = JSON.parse(JSON.stringify(store.get('communityProfiles/cur_b') || {}));
+    const selfTry = await B.x("(async function(){ var n = Object.keys(userListData.following).length; await curToggleFollow(currentUser.uid); return userListData.following.length === n; })()");
+    await B.x("curToggleFollow('cur_a')"); const recA2 = store.get('follows/' + uid + '_cur_a'); const profA2 = JSON.parse(JSON.stringify(store.get('communityProfiles/cur_a') || {}));
+    ok('١٦هـ · المتابعة: السجل بحقوله + عدّاد Amal 13 + النسخة الخفيفة + الإفصاح مرة · Badr بلا محتوى عام: السجل بلا عدّاد · لا متابعة للذات · الإلغاء يعكس (لا سجل · 12)', !!recA && recA.followerUid === uid && recA.curatorUid === 'cur_a' && profA.followerCount === 13 && (listA.following || []).indexOf('cur_a') >= 0 && listA.followDisclosed === true && !!recB && profB.followerCount === 3 && selfTry === true && !recA2 && profA2.followerCount === 12, JSON.stringify({ recA: !!recA, fcA: profA.followerCount, list: listA.following, recB: !!recB, fcB: profB.followerCount, selfTry: selfTry, recA2: !!recA2, fcA2: profA2.followerCount }));
+    // Followers للمنتقي عن نفسه · My profile بحدوده
+    await store.set('follows/f1_' + uid, { followerUid: 'f1', curatorUid: uid }); await store.set('communityProfiles/f1', { nickname: 'Fahad' });
+    await B.x('curOpenFollowers()'); const fl = String(documentStub.getElementById('dashBody').innerHTML || '');
+    await B.x('openMyProfile()'); const dbg = B.x("JSON.stringify({ dn: !!document.getElementById('mpDisplayName'), sw: !!document.getElementById('mpShowFc') })"); B.x("document.getElementById('mpDisplayName').value = 'Me K.'; document.getElementById('mpBio').value = 'Short bio'; document.getElementById('mpContact').value = 'https://x.io/me'; document.getElementById('mpShowFc').classList.add('on')"); const nT2 = captured.toasts.length; await B.x('saveMyProfile()'); const prMe = JSON.parse(JSON.stringify(store.get('communityProfiles/' + uid) || {})); const saveToast = captured.toasts.slice(nT2).join('|');
+    ok('١٦هـ · Followers للمنتقي: الاسم (Fahad) · My profile يحفظ الاسم والنبذة والرابط وإظهار العدّاد بالملف العام', fl.includes('>Fahad<') && prMe.displayName === 'Me K.' && prMe.bio === 'Short bio' && prMe.contactUrl === 'https://x.io/me' && prMe.showFollowerCount === true, fl.slice(0, 120) + ' dbg=' + dbg + ' toast=' + saveToast + ' ' + JSON.stringify(prMe));
+    store.delete('follows/f1_' + uid); store.delete('communityProfiles/f1');
+    // شريحتا الحفظ بالرحلات: مرشِّح بمصدر الرحلة
+    ok('١٦هـ · الرحلات: شريحتا Saved from Curators / Community حيّتان بمرشِّح المصدر (لا وسم stage 3)', tplCount('data-tsrc="savedCur" onclick="selectTripsSource(\'savedCur\')"', 1).ok && tplCount('data-tsrc="savedCom"', 1).ok && tplCount("Fills with trip copy", 0).ok && tplCount('if (t && tripOwnerFilter && !tripOwnerFilter(t)) return;', 1).ok, '');
+    cap('curators.follow');
     cap('curators.twoPages');
     B.x("curPage = null; curCity = null; curators = null; curArchiveOf = null; viewingUserUid = null; viewingUserData = null; communityScreen = 'root'; communityTab = 'places'; Object.keys(curData).forEach(function(k){ delete curData[k]; }); currentTab = " + JSON.stringify(prevTab16));
     ['communityProfiles/cur_a', 'communityProfiles/cur_b', 'communityProfiles/cur_c', 'communityProfiles/' + uid, 'communityProfiles/u_newcur', 'users/u_newcur', 'userCityLists/cur_a_paris', 'trips/tr_a1'].forEach(function(k){ store.delete(k); });
@@ -1126,7 +1147,7 @@ function citiesSeed(){
   }, ['screen.static.tripChips']);
 
   await must('ش٩ · ٦/هـ٢ صفحة المنتقي: رأس واحد وأفعال التسوية بلا تعتيم', async () => {
-    const a = tplCount('← Curators', 1); const b = tpl(["const CUR_BADGE = 'Curator';", 'Save <span class="dim">stage 3</span>']); const bNo = tplCount('>🔖 Bookmarked</span>', 0); const bOld = tplCount('verified curator', 0);
+    const a = tplCount('← Curators', 1); const b = tpl(["const CUR_BADGE = 'Curator';", 'Save <span class="dim">stage 3</span>']); const bNo = tplCount('>🔖 Bookmarked</span>', 0); const bOld = tplCount('verified curator', 0); // ر٧٢-أ-٢: شريحتا الحفظ بالرحلات حيّتان (لا وسم stage 3 عليهما)
     const c = tpl(['.curidn{border-radius:16px; padding:16px 15px 14px;}']); const d = tpl(['.curidn{background:linear-gradient(160deg, var(--surf), var(--bar)); color:var(--ivory-bright);}']);
     ok('ش٩ · ر٧٢-أ-١: عودة واحدة وقشرة المنتقي الحية بشارة Curator (لا «verified curator») — والشرائح الست بلا Bookmarked بمستوى المبدل (ر٦٩ · N-007)', a.ok && b.ok && bNo.ok && bOld.ok && c.ok && d.ok, a.why + b.why + bNo.why + bOld.why + c.why + d.why);
   }, ['screen.static.curatorPage']);
