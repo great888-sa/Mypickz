@@ -1,5 +1,7 @@
 // MyPickz — tests/rules-sim.js
 // يختبر firestore.rules على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// M4.25 (١٧ سبتمبر ٢٠٢٦ — النشرة الجامعة على أ-٦): + القسم ٢٢ — ٦٤ حالة (hasTop للموثَّق · geoSources/legSources/flagsUsed/catsV · copyCount بسجل copies ذرّيًّا
+//   · عدّاد المتابعين للموثَّقين بلا محتوى وبالدفعة (existsAfter) · curatorCityNotes · curatorRequests · reports · stats_cities · مفاتيح الإحصاء الجديدة والقديمة) — المجموع ٥١١.
 // M4.24 (٤ سبتمبر ٢٠٢٦ — نشرة التنظيف الثنائية): اجتثاث مجموعة favorites بحدثَيها (حالاتها العشر صارت حالتَي
 //   حراسة رفض افتراضي) · bookmark_add محل reserved_1 وfavorite_add بحالات الأحداث — المجموع ٤٤٧ حالة.
 // v3.8 (٣ سبتمبر ٢٠٢٦ — نشرة القرار المؤسِّس ٠٩، سطور M4.23 أقرّها المالك أولًا): + القسم ٢١ وقلب سبع حالات إعجاب مجمَّدة:
@@ -729,6 +731,115 @@ const no = (label, f) => expect(false, label, f);
   await ok('M4.24.1 communityProfiles read signed-in allow', () => a.doc('communityProfiles/pB').get());
   await ok('M4.24.1 nicknames read GUEST allow (availability check before auth — login-by-name is server-side later)', () => guest.doc('nicknames/nickb').get());
   await ok('M4.24.1 nicknames read signed-in allow (share by name)', () => a.doc('nicknames/nickb').get());
+
+  // ================= ٢٢) M4.25 — النشرة الجامعة (١٧ سبتمبر ٢٠٢٦) =================
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await db.doc('communityProfiles/userV').set({ nickname: 'v', verified: true, hasAnyPublicContent: false, followerCount: 0, viewCount: 0 }); // موثَّق بلا محتوى عام
+    await db.doc('communityProfiles/pB').set({ nickname: 'b', uid: B, verified: true, hasAnyPublicContent: true, followerCount: 0, viewCount: 0 }, { merge: true });
+    await db.doc('userCityLists/cBpub3').set({ ownerId: B, public: true, sharedWith: [], bookmarkCount: 0, viewCount: 0, copyCount: 0, categories: {} });
+    await db.doc('userCityLists/cApub').set({ ownerId: A, public: true, sharedWith: [], categories: {} });
+    await db.doc('trips/tBpub3').set({ ownerId: B, public: true, sharedWith: [], saveCount: 0, copyCount: 0, name: 'B public 3' });
+    await db.doc('trips/tBpriv3').set({ ownerId: B, public: false, sharedWith: [], saveCount: 0, copyCount: 0, name: 'B private 3' });
+    await db.doc('curatorRequests/userB').set({ uid: B, text: 'x', at: 1, status: 'pending' });
+  });
+  const v = env.authenticatedContext('userV').firestore();
+  // (١) hasTop: موثَّق + عامة ✓ · موثَّق + خاصة ✗ · غير موثَّق ✗ · بلا الحقل ✓ · المالك ✓ · تحديث ذاتي
+  await ok('M4.25 hasTop create by VERIFIED owner on PUBLIC list allow', () => b.doc('userCityLists/userB_top1').set({ ownerId: B, public: true, sharedWith: [], hasTop: true, categories: {} }));
+  await no('M4.25 hasTop create by VERIFIED owner on PRIVATE list deny', () => b.doc('userCityLists/userB_top2').set({ ownerId: B, public: false, sharedWith: [], hasTop: true, categories: {} }));
+  await no('M4.25 hasTop create by NON-verified owner deny', () => a.doc('userCityLists/userA_top1').set({ ownerId: A, public: true, sharedWith: [], hasTop: true, categories: {} }));
+  await ok('M4.25 hasTop:false create by non-verified allow', () => a.doc('userCityLists/userA_top2').set({ ownerId: A, public: true, sharedWith: [], hasTop: false, categories: {} }));
+  await ok('M4.25 no hasTop field create allow (old shape)', () => a.doc('userCityLists/userA_top3').set({ ownerId: A, public: true, sharedWith: [], categories: {} }));
+  await no('M4.25 hasTop update by non-verified owner deny', () => a.doc('userCityLists/cApub').set({ hasTop: true }, { merge: true }));
+  // (٢) الجغرافيا
+  await ok('M4.25 geoSources allowed set create allow', () => a.doc('userCityLists/userA_geo1').set({ ownerId: A, public: false, sharedWith: [], geoSources: ['user_pin', 'fsq'], categories: {} }));
+  await no('M4.25 geoSources with google deny', () => a.doc('userCityLists/userA_geo2').set({ ownerId: A, public: false, sharedWith: [], geoSources: ['google'], categories: {} }));
+  await no('M4.25 googleLat key on list deny', () => a.doc('userCityLists/userA_geo3').set({ ownerId: A, public: false, sharedWith: [], googleLat: 48.8, categories: {} }));
+  await ok('M4.25 trip legSources allowed create allow', () => a.doc('trips/tA_leg1').set({ ownerId: A, public: false, sharedWith: [], legSources: ['estimate', 'osrm'], plan: {}, dayRoutes: [] }));
+  await no('M4.25 trip legSources google deny', () => a.doc('trips/tA_leg2').set({ ownerId: A, public: false, sharedWith: [], legSources: ['google'] }));
+  // (٣) القاموس
+  await ok('M4.25 catsV 3 allow', () => a.doc('userCityLists/userA_cv1').set({ ownerId: A, public: false, sharedWith: [], catsV: 3, categories: {} }));
+  await no('M4.25 catsV 2 deny', () => a.doc('userCityLists/userA_cv2').set({ ownerId: A, public: false, sharedWith: [], catsV: 2, categories: {} }));
+  await ok('M4.25 flagsUsed fine_dining allow', () => a.doc('userCityLists/userA_fl1').set({ ownerId: A, public: false, sharedWith: [], flagsUsed: ['fine_dining'], categories: {} }));
+  await no('M4.25 flagsUsed unknown flag deny', () => a.doc('userCityLists/userA_fl2').set({ ownerId: A, public: false, sharedWith: [], flagsUsed: ['michelin'], categories: {} }));
+  await ok('M4.25 trip plan/dayRoutes by owner update allow', () => a.doc('trips/tA').set({ plan: { coffee: [] }, dayRoutes: [{ day: 1, variant: 'shortest', stops: [], legs: [] }] }, { merge: true }));
+  await no('M4.25 trip owner touching copyCount deny', () => a.doc('trips/tA').set({ copyCount: 3 }, { merge: true }));
+  // (٤) copies + copyCount
+  const cpBatch = (who, uid, kind, key, coll, count) => () => { const btch = who.batch();
+    btch.set(who.doc(`copies/${uid}__${key}`), { uid: uid, kind: kind, docKey: key, at: 1 });
+    btch.set(who.doc(`${coll}/${key}`), { copyCount: count }, { merge: true });
+    return btch.commit(); };
+  await ok('M4.25 copies record create by self allow', () => a.doc('copies/userA__tBpub3').set({ uid: A, kind: 'trip', docKey: 'tBpub3', at: 1 }));
+  await no('M4.25 copies record create for other uid deny', () => a.doc('copies/userB__tBpub3').set({ uid: B, kind: 'trip', docKey: 'tBpub3', at: 1 }));
+  await no('M4.25 copies record bad kind deny', () => a.doc('copies/userA__cBpub3').set({ uid: A, kind: 'card', docKey: 'cBpub3', at: 1 }));
+  await no('M4.25 copies record docKey mismatch deny', () => a.doc('copies/userA__cBpub3').set({ uid: A, kind: 'list', docKey: 'other', at: 1 }));
+  await no('M4.25 copies record update deny', () => a.doc('copies/userA__tBpub3').set({ at: 2 }, { merge: true }));
+  await no('M4.25 copies record delete by self deny', () => a.doc('copies/userA__tBpub3').delete());
+  await ok('M4.25 copies read by self allow', () => a.doc('copies/userA__tBpub3').get());
+  await no('M4.25 copies read by other deny', () => b.doc('copies/userA__tBpub3').get());
+  await ok('M4.25 copyCount +1 on public trip WITH record (already exists) allow', () => a.doc('trips/tBpub3').set({ copyCount: 1 }, { merge: true }));
+  await no('M4.25 copyCount +1 on public list WITHOUT record deny', () => a.doc('userCityLists/cBpub3').set({ copyCount: 1 }, { merge: true }));
+  await ok('M4.25 copyCount BATCH (record + counter) on public list allow — existsAfter', cpBatch(a, A, 'list', 'cBpub3', 'userCityLists', 1));
+  await no('M4.25 copyCount +2 deny', () => a.doc('trips/tBpub3').set({ copyCount: 3 }, { merge: true }));
+  await no('M4.25 copyCount -1 deny (لا تناقص)', () => a.doc('trips/tBpub3').set({ copyCount: 0 }, { merge: true }));
+  await no('M4.25 copyCount on PRIVATE trip deny', cpBatch(a, A, 'trip', 'tBpriv3', 'trips', 1));
+  await no('M4.25 list create with copyCount 5 deny', () => a.doc('userCityLists/userA_cc1').set({ ownerId: A, public: false, sharedWith: [], copyCount: 5, categories: {} }));
+  await no('M4.25 list owner touching copyCount deny', () => b.doc('userCityLists/cBpub3').set({ copyCount: 9 }, { merge: true }));
+  // (٥) المتابعة: موثَّق بلا محتوى عام · الدفعة الواحدة
+  const flBatch = (who, uid, cur, on, count) => () => { const btch = who.batch();
+    if (on) btch.set(who.doc(`follows/${uid}_${cur}`), { followerUid: uid, curatorUid: cur, at: 1 }); else btch.delete(who.doc(`follows/${uid}_${cur}`));
+    btch.set(who.doc(`communityProfiles/${cur}`), { followerCount: count }, { merge: true });
+    return btch.commit(); };
+  await ok('M4.25 follow BATCH (record + counter) on VERIFIED profile WITHOUT public content allow', flBatch(a, A, 'userV', true, 1));
+  await ok('M4.25 unfollow BATCH on verified profile allow', flBatch(a, A, 'userV', false, 0));
+  await ok('M4.25 follow BATCH on public-content profile allow (existsAfter)', flBatch(a, A, 'pB', true, 1));
+  await no('M4.25 followerCount +1 WITHOUT record deny', () => a.doc('communityProfiles/pB').set({ followerCount: 2 }, { merge: true }));
+  await no('M4.25 followerCount on profile neither verified nor public deny', flBatch(a, A, N, true, 1));
+  // (٦) رأي المدينة
+  await ok('M4.25 curatorCityNotes create by verified self allow', () => b.doc('curatorCityNotes/userB__paris').set({ uid: B, cityId: 'paris', text: 'Coffee first', bestTime: 'April', returns: 'yes', updatedAt: 1 }));
+  await no('M4.25 curatorCityNotes create by NON-verified deny', () => a.doc('curatorCityNotes/userA__paris').set({ uid: A, cityId: 'paris', text: 'x' }));
+  await no('M4.25 curatorCityNotes cityId mismatch deny', () => b.doc('curatorCityNotes/userB__rome').set({ uid: B, cityId: 'paris', text: 'x' }));
+  await no('M4.25 curatorCityNotes text > 300 deny', () => b.doc('curatorCityNotes/userB__rome').set({ uid: B, cityId: 'rome', text: 'x'.repeat(301) }));
+  await no('M4.25 curatorCityNotes bad returns deny', () => b.doc('curatorCityNotes/userB__rome').set({ uid: B, cityId: 'rome', returns: 'maybe' }));
+  await no('M4.25 curatorCityNotes unknown field deny', () => b.doc('curatorCityNotes/userB__rome').set({ uid: B, cityId: 'rome', rating: 5 }));
+  await ok('M4.25 curatorCityNotes read by signed-in allow', () => a.doc('curatorCityNotes/userB__paris').get());
+  await no('M4.25 curatorCityNotes read by guest deny', () => guest.doc('curatorCityNotes/userB__paris').get());
+  await no('M4.25 curatorCityNotes create for other uid deny', () => b.doc('curatorCityNotes/userA__paris').set({ uid: B, cityId: 'paris' }));
+  // (٧) الطلبات والبلاغات
+  await ok('M4.25 curatorRequests create by self pending allow', () => a.doc('curatorRequests/userA').set({ uid: A, text: 'please', at: 1, status: 'pending' }));
+  await no('M4.25 curatorRequests create with status accepted deny', () => a.doc('curatorRequests/userA2').set({ uid: A, status: 'accepted' }));
+  await no('M4.25 curatorRequests create for other uid deny', () => a.doc('curatorRequests/userB').set({ uid: B }));
+  await no('M4.25 curatorRequests status change by self deny', () => a.doc('curatorRequests/userA').set({ status: 'accepted' }, { merge: true }));
+  await ok('M4.25 curatorRequests status change by OWNER allow', () => owner.doc('curatorRequests/userB').set({ status: 'accepted' }, { merge: true }));
+  await no('M4.25 curatorRequests owner changing text deny', () => owner.doc('curatorRequests/userB').set({ text: 'edited' }, { merge: true }));
+  await ok('M4.25 curatorRequests read by self allow', () => a.doc('curatorRequests/userA').get());
+  await no('M4.25 curatorRequests read by other deny', () => b.doc('curatorRequests/userA').get());
+  await ok('M4.25 reports create by signed-in allow', () => a.doc('reports/r1').set({ by: A, kind: 'place', docKey: 'cBpub3:coffee:p1', reason: 'spam', at: 1 }));
+  await no('M4.25 reports create by SUSPENDED deny', () => s.doc('reports/r2').set({ by: S, kind: 'place', docKey: 'x' }));
+  await no('M4.25 reports create with other by deny', () => a.doc('reports/r3').set({ by: B, kind: 'place', docKey: 'x' }));
+  await no('M4.25 reports bad kind deny', () => a.doc('reports/r4').set({ by: A, kind: 'user', docKey: 'x' }));
+  await no('M4.25 reports read by reporter deny', () => a.doc('reports/r1').get());
+  await ok('M4.25 reports read by OWNER allow', () => owner.doc('reports/r1').get());
+  await ok('M4.25 reports delete by OWNER allow', () => owner.doc('reports/r1').delete());
+  // (٩) مفاتيح الإحصاء الجديدة والقديمة
+  await ok('M4.25 stats_lists new key open_app allow', () => a.doc('stats_lists/cBpub3').set({ open_app: 1 }));
+  await no('M4.25 stats_lists old key open_ulist deny', () => a.doc('stats_lists/cBpub3__2026-09-17').set({ open_ulist: 1 }));
+  await no('M4.25 stats_lists removed key save_from deny', () => a.doc('stats_lists/cBpub3__2026-09-18').set({ save_from: 1 }));
+  await ok('M4.25 stats_curators new key ref_social allow', () => a.doc('stats_curators/userB00000000000000000').set({ ref_social: 1 }));
+  await ok('M4.25 stats_curators export key allow', () => a.doc('stats_curators/userB00000000000000000__2026-09-17').set({ export: 1 }));
+  await no('M4.25 stats_curators old key ref_ig deny', () => a.doc('stats_curators/userB00000000000000000__2026-09-18').set({ ref_ig: 1 }));
+  await ok('M4.25 stats_trips view_total allow', () => a.doc('stats_trips/tBpub3').set({ view_total: 1 }));
+  await no('M4.25 stats_trips removed key interested deny', () => a.doc('stats_trips/tBpub3__2026-09-17').set({ interested: 1 }));
+  await ok('M4.25 stats_cards view_social allow', () => a.doc('stats_cards/userA0000000000000000000__card1').set({ view_social: 1 }));
+  await no('M4.25 stats_cards old key view_ig deny', () => a.doc('stats_cards/userA0000000000000000000__card2').set({ view_ig: 1 }));
+  // (١١) stats_cities
+  await ok('M4.25 stats_cities create by signed-in allow', () => a.doc('stats_cities/paris__2026-09-17').set({ open: 1, place_added: 1 }));
+  await ok('M4.25 stats_cities update +1 allow', () => b.doc('stats_cities/paris__2026-09-17').set({ open: 2 }, { merge: true }));
+  await no('M4.25 stats_cities unknown key deny', () => a.doc('stats_cities/paris__2026-09-18').set({ views: 1 }));
+  await no('M4.25 stats_cities bad id (no date) deny', () => a.doc('stats_cities/paris').set({ open: 1 }));
+  await no('M4.25 stats_cities read by user deny', () => a.doc('stats_cities/paris__2026-09-17').get());
+  await ok('M4.25 stats_cities read by OWNER allow', () => owner.doc('stats_cities/paris__2026-09-17').get());
+  await no('M4.25 stats_cities create by GUEST deny', () => guest.doc('stats_cities/rome__2026-09-17').set({ open: 1 }));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
