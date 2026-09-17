@@ -131,9 +131,8 @@ const MP_EXPECTED = [
   ["mpTrack.hit('signup_done')", 1],
   ["mpTrack.hit('reserved_1')", { prod: 2, test: 0 }], // ر٦٣: الاختبار انتقل لـreserved_2 (reserved_1 خارج قائمة M4.24)
   ["mpTrack.hit('reserved_2')", { prod: 0, test: 2 }],
-  ["mpTrack.statsList(docId, 'open_ulist')", 1],
-  ["mpTrack.statsTrip(tripId, 'view_shared')", 1],
-  ["mpTrack.statsTrip(tripId, 'view_community')", 1],
+  ["mpTrack.statsList(docId, 'open_app')", 1], // r72m (M4.25 §١٧-ج)
+  ["mpTrack.statsTrip(tripId, 'view_total')", 2],
   ["mpTrack.captureSource();", 1],
   ["mpTrack.trapError(mpTrack.classify", 1],
   ["window.addEventListener('unhandledrejection'", 1],
