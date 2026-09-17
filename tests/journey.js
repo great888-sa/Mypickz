@@ -1062,6 +1062,14 @@ function citiesSeed(){
     const mineHide = B.x("(function(){ var k = tripsSource; tripsSource = 'mine'; tripSourceFilter = null; currentTripId = null; renderMyTripsModal(); var h = document.getElementById('myTripsBody').innerHTML; tripsSource = k; return !h.includes('Coffee days'); })()");
     ok('١٦هـ · ر٧٢-أ-٢هـ: النسخة بإسناد لا تظهر بـ«My trips» (شريحتها وحدها)', mineHide === true, '');
     B.x("userTrips = userTrips.filter(function(t){ return !(t.source && t.source.tripId === 'tr_pub9'); })"); store.delete('trips/tr_pub9');
+    // ر٧٢-أ-٢ز (لقطة المالك): All trips lists يجب أن تنقل إلى المجتمع فعلًا وتعرض الرحلات — تشغيل حقيقي بالمحاكاة
+    B.x("curPage = curators.find(function(c){ return c.uid === 'cur_a'; }); curArchiveOf = null; personLayerOnly = null; curBrowseBusy = false; currentTab = 'Curators'");
+    await store.set('trips/tr_a2', { ownerId: 'cur_a', cityId: 'paris', cityName: 'Paris', public: true, saveCount: 0, days: [] });
+    const tErr = await B.x("(async function(){ try{ await curBrowse('cur_a', 'trips'); return 'ok'; }catch(e){ return 'ERR ' + (e && (e.stack || e.message)); } })()"); await new Promise(function(r){ setTimeout(r, 120); });
+    const tRender = B.x("(function(){ try{ renderCommunityModal(); return 'ok'; }catch(e){ return 'ERR ' + (e && (e.stack || e.message)).slice(0, 400); } })()");
+    const tState = B.x("JSON.stringify({ tab: currentTab, only: personLayerOnly, view: viewingUserUid, busy: curBrowseBusy })"); const cbT = String((documentStub.getElementById('communityBody') || { innerHTML: '' }).innerHTML || '');
+    ok('١٦هـ · ر٧٢-أ-٢ز: All trips lists ينقل إلى المجتمع (tab=Community · only=trips · view=cur_a · busy=false) · الرسم بلا استثناء · مهلة ٦ ثوانٍ تُسمّي المرحلة العالقة', tErr === 'ok' && tRender === 'ok' && tState === '{"tab":"Community","only":"trips","view":"cur_a","busy":false}' && cbT.includes("Browsing Amal's trips") && tplCount("showToast('Slow connection · stuck at step ' + vcuStep", 1).ok && B.x('vcuStep') === 'done', tErr + ' render=' + tRender + ' ' + tState + ' step=' + B.x('vcuStep'));
+    B.x('curArchiveBack()'); store.delete('trips/tr_a2');
     ok('١٦هـ · طبقة الشخص من شريحة الرحلات: الرحلات فقط (لا قوائم المدن)', tplCount("if (personLayerOnly !== 'trips') html += cities.map(c => {", 1).ok && tplCount("if (personLayerOnly !== 'places' && communityUserTrips.length){", 1).ok && tplCount("personLayerOnly = (what === 'trips') ? 'trips' : 'places';", 1).ok, '');
     ok('١٦هـ · الرحلات: شريحتا Saved from Curators / Community حيّتان بمرشِّح المصدر (لا وسم stage 3)', tplCount('data-tsrc="savedCur" onclick="selectTripsSource(\'savedCur\')"', 1).ok && tplCount('data-tsrc="savedCom"', 1).ok && tplCount("Fills with trip copy", 0).ok && tplCount('const byType = tripSourceFilter ? userTrips.filter(tripSourceFilter) : byType0;', 1).ok, '');
     cap('curators.follow');
