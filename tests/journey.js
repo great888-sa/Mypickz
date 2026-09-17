@@ -1039,7 +1039,7 @@ function citiesSeed(){
     await B.x("curToggleFollow('cur_b')"); const recB = store.get('follows/' + uid + '_cur_b'); const profB = JSON.parse(JSON.stringify(store.get('communityProfiles/cur_b') || {}));
     const selfTry = await B.x("(async function(){ var n = Object.keys(userListData.following).length; await curToggleFollow(currentUser.uid); return userListData.following.length === n; })()");
     await B.x("curToggleFollow('cur_a')"); const recA2 = store.get('follows/' + uid + '_cur_a'); const profA2 = JSON.parse(JSON.stringify(store.get('communityProfiles/cur_a') || {}));
-    ok('١٦هـ · المتابعة: السجل بحقوله + عدّاد Amal 13 + النسخة الخفيفة + الإفصاح مرة · Badr بلا محتوى عام: السجل بلا عدّاد · لا متابعة للذات · الإلغاء يعكس (لا سجل · 12)', !!recA && recA.followerUid === uid && recA.curatorUid === 'cur_a' && profA.followerCount === 13 && tplCount('await b.commit(); // (أ) السجل + النسخة الخفيفة — ذرّيًّا', 1).ok && (listA.following || []).indexOf('cur_a') >= 0 && listA.followDisclosed === true && !!recB && profB.followerCount === 3 && selfTry === true && !recA2 && profA2.followerCount === 12, JSON.stringify({ recA: !!recA, fcA: profA.followerCount, list: listA.following, recB: !!recB, fcB: profB.followerCount, selfTry: selfTry, recA2: !!recA2, fcA2: profA2.followerCount }));
+    ok('١٦هـ · المتابعة (r72m دفعة واحدة — M4.25): السجل بحقوله + عدّاد Amal 13 + النسخة الخفيفة + الإفصاح مرة · Badr موثَّق بلا محتوى عام: السجل والعدّاد (4) · لا متابعة للذات · الإلغاء يعكس (لا سجل · 12)', !!recA && recA.followerUid === uid && recA.curatorUid === 'cur_a' && profA.followerCount === 13 && tplCount('if (curatorHasPublic) b.set(col(\'communityProfiles\').doc(curatorUid), { followerCount: inc(on ? 1 : -1) }, { merge: true }); // r72m', 1).ok && (listA.following || []).indexOf('cur_a') >= 0 && listA.followDisclosed === true && !!recB && profB.followerCount === 4 && selfTry === true && !recA2 && profA2.followerCount === 12, JSON.stringify({ recA: !!recA, fcA: profA.followerCount, list: listA.following, recB: !!recB, fcB: profB.followerCount, selfTry: selfTry, recA2: !!recA2, fcA2: profA2.followerCount }));
     // Followers للمنتقي عن نفسه · My profile بحدوده
     await store.set('follows/f1_' + uid, { followerUid: 'f1', curatorUid: uid }); await store.set('communityProfiles/f1', { nickname: 'Fahad' });
     await B.x('curOpenFollowers()'); const fl = String(documentStub.getElementById('dashBody').innerHTML || '');
@@ -1053,12 +1053,13 @@ function citiesSeed(){
     const nTrips = B.x('userTrips.length'); await B.x("copyOthersTrip('tr_pub9')"); const cp = B.x("JSON.stringify((function(){ var t = tripCopyOf('tr_pub9'); return t ? { own: t.ownerId, pub: t.public, src: t.source && t.source.ownerId, nm: t.source && t.source.ownerName, days: t.days.length, lbl: t.customLabel } : null; })())");
     const again = (function(){ const n0 = captured.toasts.length; return B.x("copyOthersTrip('tr_pub9').then(function(){ return true; })") && n0; })();
     const savedCur = await B.x("(async function(){ curators = (curators || []).some(function(c){ return c.uid === 'cur_a'; }) ? curators : (curators || []).concat([{ uid: 'cur_a', nickname: 'Amal', verified: true, publicCityIds: ['paris'] }]); var k = tripsSource; tripsSource = 'savedCur'; await renderSavedOthersTrips(true); var a = document.getElementById('myTripsBody').innerHTML; await renderSavedOthersTrips(false); var b = document.getElementById('myTripsBody').innerHTML; tripsSource = k; return JSON.stringify({ a: a.includes('Coffee days') && a.includes('from Amal'), b: !b.includes('Coffee days') }); })()");
-    ok('١٦هـ · Save على رحلة الآخرين: نسخة برحلاتي (مالكها أنا · خاصة · بإسناد Amal · أيامها) · Saved from Curators تعرضها بسطر «from Amal» · Saved from Community لا', B.x('userTrips.length') === nTrips + 1 && /"own":"/.test(cp) && /"pub":false/.test(cp) && /"src":"cur_a"/.test(cp) && /"nm":"Amal"/.test(cp) && /"days":1/.test(cp) && savedCur === '{"a":true,"b":true}', cp + ' ' + savedCur);
+    const cpRec = store.get('copies/' + uid + '__tr_pub9'); const cpCnt = (store.get('trips/tr_pub9') || {}).copyCount;
+    ok('١٦هـ · Save على رحلة الآخرين: نسخة برحلاتي (مالكها أنا · خاصة · بإسناد Amal · أيامها) · Saved from Curators تعرضها بسطر «from Amal» · Saved from Community لا · r72m: سجل النسخ + copyCount 1 على المصدر', !!cpRec && cpRec.kind === 'trip' && cpCnt === 1 && B.x('userTrips.length') === nTrips + 1 && /"own":"/.test(cp) && /"pub":false/.test(cp) && /"src":"cur_a"/.test(cp) && /"nm":"Amal"/.test(cp) && /"days":1/.test(cp) && savedCur === '{"a":true,"b":true}', cp + ' ' + savedCur);
     // ر٧٢-أ-٢و: نسخة من المجتمع (مالك غير منتقٍ وغير محمَّل بالذاكرة) تُسند بالاسم من ملفه العام
     await store.set('trips/tr_pub10', { ownerId: 'u_mem', cityId: 'paris', cityName: 'Paris', customLabel: 'Walks', type: 'city', public: true, saveCount: 0, days: [] }); await store.set('communityProfiles/u_mem', { nickname: 'Salma' });
     await B.x("copyOthersTrip('tr_pub10')"); const nm = B.x("(function(){ var t = tripCopyOf('tr_pub10'); return t ? t.source.ownerName : null; })()");
     ok('١٦هـ · ر٧٢-أ-٢و: نسخة من المجتمع تُسند باسم صاحبها من ملفه العام (Salma) لا «a member»', nm === 'Salma', 'got ' + nm);
-    B.x("userTrips = userTrips.filter(function(t){ return !(t.source && t.source.tripId === 'tr_pub10'); })"); store.delete('trips/tr_pub10'); store.delete('communityProfiles/u_mem');
+    B.x("userTrips = userTrips.filter(function(t){ return !(t.source && t.source.tripId === 'tr_pub10'); })"); store.delete('trips/tr_pub10'); store.delete('communityProfiles/u_mem'); store.delete('copies/' + uid + '__tr_pub10'); store.delete('copies/' + uid + '__tr_pub9');
     const mineHide = B.x("(function(){ var k = tripsSource; tripsSource = 'mine'; tripSourceFilter = null; currentTripId = null; renderMyTripsModal(); var h = document.getElementById('myTripsBody').innerHTML; tripsSource = k; return !h.includes('Coffee days'); })()");
     ok('١٦هـ · ر٧٢-أ-٢هـ: النسخة بإسناد لا تظهر بـ«My trips» (شريحتها وحدها)', mineHide === true, '');
     B.x("userTrips = userTrips.filter(function(t){ return !(t.source && t.source.tripId === 'tr_pub9'); })"); store.delete('trips/tr_pub9');
@@ -1072,6 +1073,11 @@ function citiesSeed(){
     B.x('curArchiveBack()'); store.delete('trips/tr_a2');
     ok('١٦هـ · طبقة الشخص من شريحة الرحلات: الرحلات فقط (لا قوائم المدن)', tplCount("if (personLayerOnly !== 'trips') html += cities.map(c => {", 1).ok && tplCount("if (personLayerOnly !== 'places' && communityUserTrips.length){", 1).ok && tplCount("personLayerOnly = (what === 'trips') ? 'trips' : 'places';", 1).ok, '');
     ok('١٦هـ · الرحلات: شريحتا Saved from Curators / Community حيّتان بمرشِّح المصدر (لا وسم stage 3)', tplCount('data-tsrc="savedCur" onclick="selectTripsSource(\'savedCur\')"', 1).ok && tplCount('data-tsrc="savedCom"', 1).ok && tplCount("Fills with trip copy", 0).ok && tplCount('const byType = tripSourceFilter ? userTrips.filter(tripSourceFilter) : byType0;', 1).ok, '');
+    // r72m (M4.25): الحقول المشتقة عند الحفظ · مفاتيح الإحصاء الجديدة · stats_cities · legSources
+    const derived = B.x("JSON.stringify(mpData.listDerived({ categories: { coffee: { places: [{ id: 'a', name: 'A', url: 'u', topPlace: true, geo: { lat: 1, lng: 2, source: 'user_pin' }, flags: ['fine_dining'] }, { id: 'b', name: 'B', url: 'u2', geo: { lat: 1, lng: 2, source: 'fsq' } }] } } }))");
+    const derivedNone = B.x("JSON.stringify(mpData.listDerived({ categories: { coffee: { places: [{ id: 'a', name: 'A', url: 'u' }] } } }))");
+    ok('١٦هـ · r72m: الحقول المشتقة من الأماكن (hasTop · geoSources · flagsUsed) ومع قائمة بلا شيء تكون فارغة', derived === '{"hasTop":true,"geoSources":["user_pin","fsq"],"flagsUsed":["fine_dining"]}' && derivedNone === '{"hasTop":false,"geoSources":[],"flagsUsed":[]}', derived + ' ' + derivedNone);
+    ok('١٦هـ · r72m: مفاتيح الإحصاء الجديدة بالكود (open_app · view_total · open_total/trip_add · stats_cities) ولا مفتاح قديم · المتابعة دفعة واحدة · سجل النسخ · Most saved حي', tplCount("mpTrack.statsList(docId, 'open_app')", 1).ok && tplCount("mpTrack.statsTrip(tripId, 'view_total')", 2).ok && tplCount("'open_ulist'", 0).ok && tplCount("'view_shared'", 0).ok && tplCount("add('stats_cities/' + cityId + '__' + day, field, 1)", 1).ok && tplCount("legSources: Object.keys(__legs)", 1).ok && tplCount("record: function(uid, kind, docKey, coll){", 1).ok && tplCount("cmSetBrowse(\\'copies\\')", 1).ok, '');
     cap('curators.follow');
     cap('curators.twoPages');
     B.x("curPage = null; curCity = null; curators = null; curArchiveOf = null; viewingUserUid = null; viewingUserData = null; communityScreen = 'root'; communityTab = 'places'; Object.keys(curData).forEach(function(k){ delete curData[k]; }); currentTab = " + JSON.stringify(prevTab16));
@@ -1112,7 +1118,7 @@ function citiesSeed(){
     const root = inOrder('communityBody', ['chipgrid c2', '>Places<', '>Trips<', 'Search by username']);
     const rootNo = notSees('communityBody', ['backchip', 'Most viewed']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
-    const src = inOrder('communityBody', ['backchip', 'id="cmCityRow"', 'chipgrid c3', 'All users’ lists', 'Users’ most viewed', 'Users’ most bookmarked', 'chipgrid c3', 'Shared with me', '🔖 My bookmarked from users', 'Most saved from users <span class="dim">stage 3']); // ر٦٩ض: مسميات بسياق الآخرين
+    const src = inOrder('communityBody', ['backchip', 'id="cmCityRow"', 'chipgrid c3', 'All users’ lists', 'Users’ most viewed', 'Users’ most bookmarked', 'chipgrid c3', 'Shared with me', '🔖 My bookmarked from users', 'Most saved from users</button>']); // ر٦٩ض: مسميات بسياق الآخرين
     B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
     const t = sees('communityBody', ['class="chip soon"']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
@@ -1349,14 +1355,14 @@ function citiesSeed(){
     ok('ح٣ · رسالة الفراغ الصادقة', a.ok, a.why);
   }, ['edge.emptyCityMarket']);
 
-  await must('ح٤ · المؤجل يستجيب برسالة خطوته ولا يغيّر الحالة (Most saved · One day trip · المنشآن) — ر٦٨', async () => {
-    B.x('renderCommunityModal()'); await new Promise(r => setTimeout(r, 30));
+  await must('ح٤ · المؤجل يستجيب برسالة خطوته ولا يغيّر الحالة (Users’ most viewed بالرحلات · One day trip) — ر٦٨ · r72m: Most saved صار حيًّا', async () => {
+    B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
     const before = B.x('JSON.stringify([communitySort, communityMarkedOnly])'); captured.toasts.length = 0;
-    const a = await click('communityBody', 'Most saved');
-    const toasted = captured.toasts.some(t => /stage 3/.test(t));
+    const a = await click('communityBody', 'Users’ most viewed');
+    const toasted = captured.toasts.some(t => /trips counters/.test(t));
     const same = B.x('JSON.stringify([communitySort, communityMarkedOnly])') === before;
-    const b = { ok: !/One day trip/.test(SRC), why: 'One day trip still present' }; const c = findClickable(SRC, 'Saved from Curators');
-    ok('ح٤ · الضغط يُنتج رسالة الخطوة والحالة ثابتة والمؤجلات الساكنة تحمل showSoon', a.ok && toasted && same && b.ok && !!c && /showSoon/.test(c.code), JSON.stringify({ a: a.why, toasted, same, noDayChip: b.ok, c: !!c }));
+    const b = { ok: !/One day trip/.test(SRC), why: 'One day trip still present' }; const c = findClickable(SRC, 'Most saved from users');
+    ok('ح٤ · الضغط يُنتج رسالة الخطوة والحالة ثابتة · Most saved حي بـcmSetBrowse(copies) لا showSoon', a.ok && toasted && same && b.ok && !!c && /cmSetBrowse\(\\?'copies\\?'\)/.test(c.code) && !/showSoon/.test(c.code), JSON.stringify({ a: a.why, toasted, same, noDayChip: b.ok, c: !!c }));
   }, ['edge.disabledChipsInert']);
 
   await must('م · مصفوفة مشاهد المرجع v1.42: كل مشهد مغطًّى أو مؤجَّل بسببه (لا فجوة صامتة)', async () => {
