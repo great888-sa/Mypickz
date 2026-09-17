@@ -248,7 +248,7 @@ const no = (label, f) => expect(false, label, f);
   await ok('stats_curators read app owner', () => owner.doc('stats_curators/' + CUR).get());
   await ok('stats_cards create guest (uid__cardId)', () => guest.doc('stats_cards/' + CUR + '__card_0001').set({ view_social: 1, view_total: 1 }));
   await no('stats_cards create bad id', () => guest.doc('stats_cards/card1').set({ view_total: 1 }));
-  await ok('stats_cards update +1', () => guest.doc('stats_cards/' + CUR + '__card_0001').update({ view_total: 2, view_tt: 1 }));
+  await ok('stats_cards update +1', () => guest.doc('stats_cards/' + CUR + '__card_0001').update({ view_total: 2, view_social: 2 })); // M4.25: مفاتيح §١٧-ج
   await ok('stats_cards read by card owner', () => cur.doc('stats_cards/' + CUR + '__card_0001').get());
   await no('stats_cards read by other', () => a.doc('stats_cards/' + CUR + '__card_0001').get());
   await ok('stats_cards read app owner', () => owner.doc('stats_cards/' + CUR + '__card_0001').get());
