@@ -192,13 +192,13 @@ const no = (label, f) => expect(false, label, f);
   await ok('sessions read owner', () => owner.doc('analytics/sessions_2026-08-19__paris').get());
 
   // ================= ٤-هـ) v3.3: stats_lists =================
-  await ok('stats_lists create guest (existing list cA)', () => guest.doc('stats_lists/cA').set({ open_community: 1, open_total: 1 }));
-  await no('stats_lists create unknown list', () => guest.doc('stats_lists/zzz').set({ open_total: 1 }));
-  await ok('stats_lists create daily doc', () => guest.doc('stats_lists/cA__2026-08-19').set({ open_community: 1, open_total: 1 }));
+  await ok('stats_lists create guest (existing list cA)', () => guest.doc('stats_lists/cA').set({ open_community: 1, open_app: 1 })); // M4.25: مفاتيح §١٧-ج
+  await no('stats_lists create unknown list', () => guest.doc('stats_lists/zzz').set({ open_app: 1 }));
+  await ok('stats_lists create daily doc', () => guest.doc('stats_lists/cA__2026-08-19').set({ open_community: 1, open_app: 1 }));
   await no('stats_lists create unknown key', () => guest.doc('stats_lists/cBpub').set({ hack: 1 }));
-  await ok('stats_lists update +1', () => guest.doc('stats_lists/cA').update({ open_total: 2, save_from: 1 }));
-  await no('stats_lists update +51', () => guest.doc('stats_lists/cA').update({ open_total: 53 }));
-  await no('stats_lists update decrease', () => guest.doc('stats_lists/cA').update({ open_total: 1 }));
+  await ok('stats_lists update +1', () => guest.doc('stats_lists/cA').update({ open_app: 2, copy_from: 1 }));
+  await no('stats_lists update +51', () => guest.doc('stats_lists/cA').update({ open_app: 53 }));
+  await no('stats_lists update decrease', () => guest.doc('stats_lists/cA').update({ open_app: 1 }));
   await ok('stats_lists read by list owner (A)', () => a.doc('stats_lists/cA').get());
   await ok('stats_lists read daily by list owner (A)', () => a.doc('stats_lists/cA__2026-08-19').get());
   await no('stats_lists read by other user (B)', () => b.doc('stats_lists/cA').get());
@@ -208,27 +208,27 @@ const no = (label, f) => expect(false, label, f);
   await ok('stats_lists delete app owner', () => owner.doc('stats_lists/cA__2026-08-19').delete());
 
   // ================= ٤-و) v3.3: stats_trips =================
-  await ok('stats_trips create guest (existing trip tA)', () => guest.doc('stats_trips/tA').set({ view_shared: 1, view_total: 1 }));
+  await ok('stats_trips create guest (existing trip tA)', () => guest.doc('stats_trips/tA').set({ view_total: 1 }));
   await no('stats_trips create unknown trip', () => guest.doc('stats_trips/nope').set({ view_total: 1 }));
-  await ok('stats_trips update copy +1', () => guest.doc('stats_trips/tA').update({ copy: 1 }));
+  await ok('stats_trips update view_total +1', () => guest.doc('stats_trips/tA').update({ view_total: 2 }));
   await ok('stats_trips read by trip owner (A)', () => a.doc('stats_trips/tA').get());
   await no('stats_trips read by other (B)', () => b.doc('stats_trips/tA').get());
   await ok('stats_trips read app owner', () => owner.doc('stats_trips/tA').get());
 
   // ================= ٤-ز) v3.3: stats_places =================
-  await ok('stats_places create guest (list cA + 16-hex hash)', () => guest.doc('stats_places/cA__0123456789abcdef').set({ open_community: 2, open_total: 2 }));
+  await ok('stats_places create guest (list cA + 16-hex hash)', () => guest.doc('stats_places/cA__0123456789abcdef').set({ open_total: 2 }));
   await no('stats_places create short hash', () => guest.doc('stats_places/cA__abc').set({ open_total: 1 }));
   await no('stats_places create unknown list', () => guest.doc('stats_places/zzz__0123456789abcdef').set({ open_total: 1 }));
   await no('stats_places create unknown key', () => guest.doc('stats_places/cA__fedcba9876543210').set({ url: 'x' }));
-  await ok('stats_places update save_from +1', () => guest.doc('stats_places/cA__0123456789abcdef').update({ save_from: 1 }));
+  await ok('stats_places update trip_add +1', () => guest.doc('stats_places/cA__0123456789abcdef').update({ trip_add: 1 }));
   await ok('stats_places read by list owner (A)', () => a.doc('stats_places/cA__0123456789abcdef').get());
   await no('stats_places read by other (B)', () => b.doc('stats_places/cA__0123456789abcdef').get());
   await no('stats_places read guest', () => guest.doc('stats_places/cA__0123456789abcdef').get());
 
   // ================= ٤-ز-٢) v3.3.1: stats_places — أماكن دليل المالك =================
-  await ok('stats_places owner guide create (real city paris)', () => guest.doc('stats_places/owner_paris__0123456789abcdef').set({ open_app: 5, open_total: 5 }));
-  await no('stats_places owner guide unknown city', () => guest.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_app: 1 }));
-  await no('stats_places owner guide uppercase city (bad id)', () => guest.doc('stats_places/owner_Paris__0123456789abcdef').set({ open_app: 1 }));
+  await ok('stats_places owner guide create (real city paris)', () => guest.doc('stats_places/owner_paris__0123456789abcdef').set({ open_total: 5 }));
+  await no('stats_places owner guide unknown city', () => guest.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_total: 1 }));
+  await no('stats_places owner guide uppercase city (bad id)', () => guest.doc('stats_places/owner_Paris__0123456789abcdef').set({ open_total: 1 }));
   await ok('stats_places owner guide update +1', () => guest.doc('stats_places/owner_paris__0123456789abcdef').update({ open_total: 6 }));
   await ok('stats_places owner guide read by app owner', () => owner.doc('stats_places/owner_paris__0123456789abcdef').get());
   await no('stats_places owner guide read by user', () => a.doc('stats_places/owner_paris__0123456789abcdef').get());
@@ -239,14 +239,14 @@ const no = (label, f) => expect(false, label, f);
   // ================= ٤-ح) v3.3: stats_curators / stats_cards =================
   const CUR = 'abcdefghijklmnopqrstuvwxyz12';
   const cur = env.authenticatedContext(CUR).firestore();
-  await ok('stats_curators create guest (uid-shaped id)', () => guest.doc('stats_curators/' + CUR).set({ page_view: 1, ref_ig: 1 }));
+  await ok('stats_curators create guest (uid-shaped id)', () => guest.doc('stats_curators/' + CUR).set({ page_view: 1, ref_social: 1 }));
   await no('stats_curators create short id', () => guest.doc('stats_curators/userA').set({ page_view: 1 }));
   await ok('stats_curators create daily', () => guest.doc('stats_curators/' + CUR + '__2026-08-19').set({ contact_click: 1 }));
   await no('stats_curators create unknown key', () => guest.doc('stats_curators/' + CUR).set({ followers_list: 1 }));
   await ok('stats_curators read by curator', () => cur.doc('stats_curators/' + CUR).get());
   await no('stats_curators read by other user', () => a.doc('stats_curators/' + CUR).get());
   await ok('stats_curators read app owner', () => owner.doc('stats_curators/' + CUR).get());
-  await ok('stats_cards create guest (uid__cardId)', () => guest.doc('stats_cards/' + CUR + '__card_0001').set({ view_ig: 1, view_total: 1 }));
+  await ok('stats_cards create guest (uid__cardId)', () => guest.doc('stats_cards/' + CUR + '__card_0001').set({ view_social: 1, view_total: 1 }));
   await no('stats_cards create bad id', () => guest.doc('stats_cards/card1').set({ view_total: 1 }));
   await ok('stats_cards update +1', () => guest.doc('stats_cards/' + CUR + '__card_0001').update({ view_total: 2, view_tt: 1 }));
   await ok('stats_cards read by card owner', () => cur.doc('stats_cards/' + CUR + '__card_0001').get());
@@ -737,6 +737,7 @@ const no = (label, f) => expect(false, label, f);
     const db = ctx.firestore();
     await db.doc('communityProfiles/userV').set({ nickname: 'v', verified: true, hasAnyPublicContent: false, followerCount: 0, viewCount: 0 }); // موثَّق بلا محتوى عام
     await db.doc('communityProfiles/pB').set({ nickname: 'b', uid: B, verified: true, hasAnyPublicContent: true, followerCount: 0, viewCount: 0 }, { merge: true });
+    await db.doc(`communityProfiles/${B}`).set({ verified: true }, { merge: true }); // isVerifiedUser(B) يقرأ ملف B بمعرّفه
     await db.doc('userCityLists/cBpub3').set({ ownerId: B, public: true, sharedWith: [], bookmarkCount: 0, viewCount: 0, copyCount: 0, categories: {} });
     await db.doc('userCityLists/cApub').set({ ownerId: A, public: true, sharedWith: [], categories: {} });
     await db.doc('trips/tBpub3').set({ ownerId: B, public: true, sharedWith: [], saveCount: 0, copyCount: 0, name: 'B public 3' });
@@ -793,7 +794,7 @@ const no = (label, f) => expect(false, label, f);
   await ok('M4.25 follow BATCH (record + counter) on VERIFIED profile WITHOUT public content allow', flBatch(a, A, 'userV', true, 1));
   await ok('M4.25 unfollow BATCH on verified profile allow', flBatch(a, A, 'userV', false, 0));
   await ok('M4.25 follow BATCH on public-content profile allow (existsAfter)', flBatch(a, A, 'pB', true, 1));
-  await no('M4.25 followerCount +1 WITHOUT record deny', () => a.doc('communityProfiles/pB').set({ followerCount: 2 }, { merge: true }));
+  await no('M4.25 followerCount +1 WITHOUT record deny', () => a.doc('communityProfiles/userV').set({ followerCount: 1 }, { merge: true }));
   await no('M4.25 followerCount on profile neither verified nor public deny', flBatch(a, A, N, true, 1));
   // (٦) رأي المدينة
   await ok('M4.25 curatorCityNotes create by verified self allow', () => b.doc('curatorCityNotes/userB__paris').set({ uid: B, cityId: 'paris', text: 'Coffee first', bestTime: 'April', returns: 'yes', updatedAt: 1 }));
