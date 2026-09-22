@@ -459,7 +459,7 @@ function citiesSeed(){
     const a = sees('plBody', ['id="pk_plCountries"', 'class="search psearch"', 'Browse countries', 'France']); const a2 = notSees('plBody', ['plFilterCountries', '✕ Close']);
     ok('ش١٦ · لوحة الدول بالقالب المشترك بحقل تصفية حي ولا لوحة قديمة', a.ok && a2.ok, a.why + ' ' + a2.why);
     B.x("plPanel = 'cities'; renderPlacesMine()");
-    const c = sees('plBody', ['id="pk_plCities"', 'cnt-num', '＋ Add city', 'class="dot"', 'Type a city…', 'Browse cities · France']); const d = notSees('plBody', ['🗑', '✕ Close', 'class="pinned"']);
+    const c = sees('plBody', ['id="pk_plCities"', 'cnt-num', '＋ Add city', 'class="dot"', 'Type a city…', 'Browse cities · all countries']); const d = notSees('plBody', ['🗑', '✕ Close', 'class="pinned"']); // r72r-1: اللوحة عبر الدول
     ok('ش١٦ · لوحة المدن: عدّاد بعمود · المختارة بنقطة · ＋ Add city · لا سلة خارج التحرير · لا رأس قديم', c.ok && d.ok, c.why + ' ' + d.why);
     B.x("__pk.plCities.edit = true; renderPlacesMine()");
     const h = screen('plBody');
@@ -505,7 +505,7 @@ function citiesSeed(){
     ok('ش١٧ · بعد التأكيد مباشرة: المدينة بمدني (لا تعليق) · مختارة · دولتها بالشريحة · محفوظة بالمستند', /"found":true/.test(added) && /"pending":null/.test(added) && /"cur":true/.test(added) && /"country":"France"/.test(added) && persisted && B.x("(userListData.customCities || []).length") === before + 1, 'got: ' + added + ' persisted=' + persisted);
     cap('city.savedAtOnce');
     B.x("plPanel = 'cities'; renderPlacesMine()");
-    ok('ش١٧ · تظهر بلوحة المدن فورًا بعدّاد صفر', screen('plBody').includes('Lyon Test</span><span><span class="cnt-num">0</span>'), '');
+    ok('ش١٧ · تظهر بلوحة المدن فورًا بعدّاد صفر', /Lyon Test<[^]*?class="cnt-num">0</.test(screen('plBody')), '');
     // ٢) العناوين على اللوحة
     B.x("addrCurrentCountry = 'France'; addrPanel = 'countries'; renderAddresses()");
     const h1 = String(documentStub.getElementById('addrPanel').innerHTML || '');
@@ -686,10 +686,10 @@ function citiesSeed(){
     await store.set('userCityLists/' + uid + '_milan', { ownerId: uid, cityId: 'milan', cityName: 'Milan', public: true, catsV: 2, categories: { burger: { places: [{ id: 'm1', name: 'Bun One', url: 'https://maps.app.goo.gl/m1' }] }, italian: { places: [{ id: 'm2', name: 'Osteria', url: 'https://maps.app.goo.gl/m2' }, { id: 'm3', name: 'Pasta Bar', url: 'https://maps.app.goo.gl/m3' }] }, coffee: { places: [] } } });
     B.x("myCityListLoadedFor = null; myListCityId = 'milan'; myListCountry = 'Italy'; plFilterMain = ''; plFilterSub = ''; plSecCollapsed = {}"); await B.x("loadMyCityList('milan')");
     B.x('renderPlacesMine()'); const h = screen('plBody');
-    const iDish = h.indexOf('Restaurants · by dish'), iCui = h.indexOf('Restaurants · by cuisine'), iBurger = h.indexOf('Burger # 1'), iIt = h.indexOf('Italian # 2'); // r72q-2: رأس القسم بلا أيقونة والعدد بـ#
-    ok('ش٢١ · عنوانا القسمين بعدّاديهما (١ و٢ أماكن) بترتيب الشجرة، وفرعياتهما تحتهما، ولا عنوان للقسم الفارغ (Cafes)', iDish > -1 && iCui > iDish && iBurger > iDish && iBurger < iCui && iIt > iCui && h.includes('1 place') && h.includes('2 places') && !h.includes('Cafes &amp; Sweets') && !h.includes('Cafes & Sweets'), 'idx=' + [iDish, iCui, iBurger, iIt].join(','));
+    const iDish = h.indexOf('Restaurants · by dish'), iCui = h.indexOf('Restaurants · by cuisine'), iBurger = h.indexOf('Burger <span class="pg-n"># 1</span>'), iIt = h.indexOf('Italian <span class="pg-n"># 2</span>'); // r72r-1: المجموعة العاجية
+    ok('ش٢١ · عنوانا القسمين بعدّاديهما (١ و٢ أماكن) بترتيب الشجرة، وفرعياتهما تحتهما، ولا عنوان للقسم الفارغ (Cafes)', iDish > -1 && iCui > iDish && iBurger > iDish && iBurger < iCui && iIt > iCui && h.includes('# 1 place') && h.includes('# 2 places') && !h.includes('Cafes &amp; Sweets') && !h.includes('Cafes & Sweets'), 'idx=' + [iDish, iCui, iBurger, iIt].join(','));
     B.x("plToggleSection('restaurants_cuisine')"); const h2 = screen('plBody');
-    ok('ش٢١ · طي القسم يخفي فرعياته ويبقي عنوانه · العدّاد بصنفه البارز', h2.includes('Restaurants · by cuisine') && !h2.includes('Italian # 2') && h2.includes('Burger # 1') && h2.includes('class="seccnt">2 places') && tplCount('class="actn primary" onclick="plTogglePanel(\\\'cats\\\')"', 1).ok && tplCount('viewport-fit=cover', 1).ok && tplCount('min-height:100dvh', 1).ok, '');
+    ok('ش٢١ · طي القسم يخفي فرعياته ويبقي عنوانه · العدّاد بصنفه البارز', h2.includes('Restaurants · by cuisine') && !h2.includes('Italian <span class="pg-n">') && h2.includes('Burger <span class="pg-n">') && h2.includes('class="seccnt"># 2 places') && tplCount('class="actn primary" onclick="plTogglePanel(\\\'cats\\\')"', 1).ok && tplCount('viewport-fit=cover', 1).ok && tplCount('min-height:100dvh', 1).ok, '');
     cap('places.sectionTree');
     // حذف القائمة الفارغة: حذف الأماكن الثلاثة ثم الحفظ ← المستند يزول من المخزن
     B.x("myCityListData.categories.burger.places = []; myCityListData.categories.italian.places = []"); await B.x('saveMyCityList()');
@@ -997,7 +997,7 @@ function citiesSeed(){
     // ⭐ Top place بمكان بقائمته العامة → يظهر تحت المدينة وبـLatest 10 (بالفرعي بعدده) ومع «Notes:» برأسه
     await store.set('userCityLists/cur_a_paris', { ownerId: 'cur_a', cityId: 'paris', cityName: 'Paris', public: true, categories: { coffee: { places: [{ id: 'p1', name: 'Café Mélodie', url: 'https://maps.app.goo.gl/m', area: 'Le Marais', picks: ['fig pastry'], note: 'before nine', topPlace: true, topAt: 2000 }, { id: 'p2', name: 'Ten Belles', url: 'https://maps.app.goo.gl/t', area: '10th', topPlace: true, topAt: 3000 }] }, squares: { places: [{ id: 'p3', name: 'Place des Vosges', url: 'https://maps.app.goo.gl/v' }] } } });
     B.x("Object.keys(curData).forEach(function(k){ delete curData[k]; }); curCity = null; curChip = 'latest'"); await B.x('renderCuratorsBody()'); await new Promise(function(r){ setTimeout(r, 60); }); const lt = screen('curatorsBody');
-    ok('١٦هـ · Latest 10 updated places: الأحدث أولًا (Ten Belles قبل Café Mélodie) برأس (Paris · Specialty Coffee · 2 · Open list →) و«Notes:» برأس', lt.indexOf('>Ten Belles<') > -1 && lt.indexOf('>Ten Belles<') < lt.indexOf('>Café Mélodie<') && lt.includes('Paris · Specialty Coffee') && lt.includes('class="n"># 2<') && lt.includes('>Note</div><div class="pc-val pc-more" dir="auto">before nine') && lt.includes('class="pcard open"'), lt.slice(0, 200));
+    ok('١٦هـ · Latest 10 updated places: الأحدث أولًا (Ten Belles قبل Café Mélodie) برأس (Paris · Specialty Coffee · 2 · Open list →) و«Notes:» برأس', lt.indexOf('>Ten Belles<') > -1 && lt.indexOf('>Ten Belles<') < lt.indexOf('>Café Mélodie<') && lt.includes('Paris · Specialty Coffee') && lt.includes('class="pg-n"># 2<') && lt.includes('>Note</div><div class="pc-val pc-more" dir="auto">before nine') && lt.includes('class="pcard open"'), lt.slice(0, 200));
     await B.x("curBrowse('cur_a', 'places', 'paris')"); await new Promise(function(r){ setTimeout(r, 60); });
     const arch = B.x("JSON.stringify({ tab: currentTab, of: curArchiveOf, view: viewingUserUid })"); const cb = String((documentStub.getElementById('communityBody') || { innerHTML: '' }).innerHTML || '');
     ok('١٦هـ · All places → طبقة الشخص بالمجتمع بشريط «Browsing Amal K.\'s places — read only» و«← Curator page»', arch === '{"tab":"Community","of":"cur_a","view":"cur_a"}' && cb.includes("Browsing Amal's places — read only") && cb.includes('← Curator page'), arch + ' ' + cb.slice(0, 160));
@@ -1033,10 +1033,10 @@ function citiesSeed(){
     await B.x('saveMyCityList()'); const inval2 = B.x("typeof curData[currentUser.uid]");
     ok('١٦هـ · اتحاد المصدرين: مدينة بالملف العام لا يعيدها الاستعلام تُقرأ بمستندها (Rome:1) · حفظ قائمتي يصفّر ذاكرة صفحتي', uni === '["Rome:1"]' && inval === 'object' && inval2 === 'undefined', uni + ' ' + inval + '/' + inval2);
     store.delete('communityProfiles/cur_u'); store.delete('userCityLists/cur_u_rome');
-    const personCard = tplCount("saveMsg: 'Copy this list into yours — stage 3', exportHandler: \"exportOtherList('\" + attrStr(u.uid) + \"', '\" + attrStr(c.id) + \"')\", openHandler: \"openCommunityCityList('\" + attrStr(c.id) + \"')\"", 1).ok && tplCount('bmSelf: mine,', 1).ok;
+    const personCard = tplCount("saveMsg: 'Copy this list into yours — stage 3', exportHandler: \"exportOtherList('\" + attrStr(u.uid) + \"', '\" + attrStr(c.id) + \"')\", openHandler: \"openCommunityCityList('\" + attrStr(c.id) + \"')\"", 1).ok && tplCount('bmSelf: mine,', 3).ok; // r72r-3: بطاقتا السوق أيضًا
     // ر٧٢-أ-١ط: قائمتي أنا بطبقة الشخص — عدّاد سلبي لا شريحة «rules»؛ وحارس الضغطتين بالشريحتين
     const selfCard = B.x("othersCard({ title: 'X', sub: '1 place', bmSelf: true, cnt: 3, openHandler: 'void(0)', exportHandler: 'void(0)', saveMsg: 'x' })");
-    ok('١٦هـ · قائمتي بطبقة الشخص: عدّاد سلبي (label) بلا شريحة rules · الشريحتان بحارس ضغطتين بلا إشعار «Opening» (r72a2h)', selfCard.includes('class="actn label"') && selfCard.includes('class="bmk-cnt">3<') && !selfCard.includes('>rules<') && tplCount('if (curBrowseBusy) return; curBrowseBusy = true;', 1).ok && tplCount("'Opening trips…'", 0).ok, selfCard.slice(0, 160));
+    ok('١٦هـ · قائمتي بطبقة الشخص: عدّاد سلبي (label) بلا شريحة rules · الشريحتان بحارس ضغطتين بلا إشعار «Opening» (r72a2h)', selfCard.includes('>Bookmarks</div><div class="pc-val pc-area">3</div>') && !selfCard.includes('>rules<') && !selfCard.includes('pc-a bmk') && tplCount('if (curBrowseBusy) return; curBrowseBusy = true;', 1).ok && tplCount("'Opening trips…'", 0).ok, selfCard.slice(0, 160));
     ok('١٦هـ · ★ بصف أفعال مكاني (البطاقة الموحَّدة) · بطاقة قائمة طبقة الشخص = بطاقة السوق (Open → · 📤 · مفكرة · Save) · عناوين البطاقة بالنحاسي', rowStar && personCard && tplCount('.pc-lab{color:var(--copper);}', 1).ok, '');
     // ═══ ر٧٢-أ-٢: المتابعة ذرّيًّا (السجل + العدّاد حيث تسمح القواعد + النسخة الخفيفة) · الإفصاح مرة · منع الذات · الإلغاء · Followers للمنتقي · My profile · شريحتا الحفظ بالرحلات
     B.x("userListData.following = []; userListData.followDisclosed = false; openConfirmModal = function(){ return Promise.resolve(true); }; curators = curators.filter(function(c){ return c.uid !== 'cur_a' && c.uid !== 'cur_b'; }).concat([{ uid: 'cur_a', nickname: 'Amal', verified: true, publicCityIds: ['paris'], followerCount: 12, showFollowerCount: true, hasAnyPublicContent: true }, { uid: 'cur_b', nickname: 'Badr', verified: true, publicCityIds: [], followerCount: 0, hasAnyPublicContent: false }])");
@@ -1092,12 +1092,12 @@ function citiesSeed(){
     ok('١٦هـ · ر٧٢-أ-٢ز: All trips lists ينقل إلى المجتمع (tab=Community · only=trips · view=cur_a · busy=false) · الرسم بلا استثناء · مهلة ٦ ثوانٍ تُسمّي المرحلة العالقة', tErr === 'ok' && tRender === 'ok' && tState === '{"tab":"Community","only":"trips","view":"cur_a","busy":false}' && cbT.includes("Browsing Amal's trips") && tplCount("showToast('Slow connection · stuck at step ' + vcuStep", 1).ok && B.x('vcuStep') === 'done', tErr + ' render=' + tRender + ' ' + tState + ' step=' + B.x('vcuStep'));
     B.x('curArchiveBack()'); store.delete('trips/tr_a2');
     ok('١٦هـ · طبقة الشخص من شريحة الرحلات: الرحلات فقط (لا قوائم المدن)', tplCount("if (personLayerOnly !== 'trips') html += cities.map(c => {", 1).ok && tplCount("if (personLayerOnly !== 'places' && communityUserTrips.length){", 1).ok && tplCount("personLayerOnly = (what === 'trips') ? 'trips' : 'places';", 1).ok, '');
-    ok('١٦هـ · الرحلات: شريحتا Saved from Curators / Community حيّتان بمرشِّح المصدر (لا وسم stage 3)', tplCount('data-tsrc="savedCur" onclick="selectTripsSource(\'savedCur\')"', 1).ok && tplCount('data-tsrc="savedCom"', 1).ok && tplCount("Fills with trip copy", 0).ok && tplCount('const byType = tripSourceFilter ? userTrips.filter(tripSourceFilter) : byType0;', 1).ok, '');
+    ok('١٦هـ · الرحلات: شريحتا Saved from Curators / Community حيّتان بمرشِّح المصدر (لا وسم stage 3)', tplCount("['savedCur', 'Saved from Curators']", 1).ok && tplCount("['savedCom', 'Saved from Community']", 1).ok && tplCount("Fills with trip copy", 0).ok && tplCount('const byType = tripSourceFilter ? userTrips.filter(tripSourceFilter) : byType0;', 1).ok, '');
     // r72m (M4.25): الحقول المشتقة عند الحفظ · مفاتيح الإحصاء الجديدة · stats_cities · legSources
     const derived = B.x("JSON.stringify(mpData.listDerived({ categories: { coffee: { places: [{ id: 'a', name: 'A', url: 'u', topPlace: true, geo: { lat: 1, lng: 2, source: 'user_pin' }, flags: ['fine_dining'] }, { id: 'b', name: 'B', url: 'u2', geo: { lat: 1, lng: 2, source: 'fsq' } }] } } }))");
     const derivedNone = B.x("JSON.stringify(mpData.listDerived({ categories: { coffee: { places: [{ id: 'a', name: 'A', url: 'u' }] } } }))");
     ok('١٦هـ · r72m: الحقول المشتقة من الأماكن (hasTop · geoSources · flagsUsed) ومع قائمة بلا شيء تكون فارغة', derived === '{"hasTop":true,"geoSources":["user_pin","fsq"],"flagsUsed":["fine_dining"]}' && derivedNone === '{"hasTop":false,"geoSources":[],"flagsUsed":[]}', derived + ' ' + derivedNone);
-    ok('١٦هـ · r72m: مفاتيح الإحصاء الجديدة بالكود (open_app · view_total · open_total/trip_add · stats_cities) ولا مفتاح قديم · المتابعة دفعة واحدة · سجل النسخ · Most saved حي', tplCount("mpTrack.statsList(docId, 'open_app')", 1).ok && tplCount("mpTrack.statsTrip(tripId, 'view_total')", 2).ok && tplCount("'open_ulist'", 0).ok && tplCount("'view_shared'", 0).ok && tplCount("add('stats_cities/' + cityId + '__' + day, field, 1)", 1).ok && tplCount("legSources: Object.keys(__legs)", 1).ok && tplCount("record: function(uid, kind, docKey, coll){", 1).ok && tplCount("cmSetBrowse(\\'copies\\')", 1).ok, '');
+    ok('١٦هـ · r72m: مفاتيح الإحصاء الجديدة بالكود (open_app · view_total · open_total/trip_add · stats_cities) ولا مفتاح قديم · المتابعة دفعة واحدة · سجل النسخ · Most saved حي', tplCount("mpTrack.statsList(docId, 'open_app')", 1).ok && tplCount("mpTrack.statsTrip(tripId, 'view_total')", 2).ok && tplCount("'open_ulist'", 0).ok && tplCount("'view_shared'", 0).ok && tplCount("add('stats_cities/' + cityId + '__' + day, field, 1)", 1).ok && tplCount("legSources: Object.keys(__legs)", 1).ok && tplCount("record: function(uid, kind, docKey, coll){", 1).ok && tplCount("['copies', 'Places most saved by users']", 1).ok, ''); // r72r-2: بقائمة Sort by
     // r72p: Picks بعدده · الطلب (مرة · الحالة · القبول يوسم) · البلاغ (لا على محتواي) · بابا الإدارة · إحصاء المنتقي (مرة يوميًّا) · Resend · trip_built
     await store.set('userCityLists/cur_a_paris', { ownerId: 'cur_a', cityId: 'paris', cityName: 'Paris', public: true, categories: { coffee: { places: [{ id: 'p1', name: 'Café Mélodie', url: 'https://maps.app.goo.gl/m', topPlace: true, topAt: 2 }] } } });
     B.x("Object.keys(curData).forEach(function(k){ delete curData[k]; }); curPage = null; curCity = null"); B.x("curOpen('cur_a')"); await new Promise(function(r){ setTimeout(r, 80); }); const pk = screen('curatorsBody');
@@ -1125,6 +1125,29 @@ function citiesSeed(){
     await B.x("openCityNotesEditor('paris')"); const ed = String(documentStub.getElementById('formBody').innerHTML || '');
     ok('١٦هـ · r72q-1: نافذة الرأي بقشرة التطبيق (formBackdrop) بعناوين وحدود وتلميحات مثال وشرائح I return', B.x("document.getElementById('formBackdrop').classList.contains('show')") && ed.includes('Your impression') && ed.includes('placeholder="e.g. late September"') && ed.includes('· ≤ 80') && ed.includes('class="chip cn-ret'), ed.slice(0, 160));
     B.x("closeModalById('formBackdrop')"); store.delete('communityProfiles/cur_z'); store.delete('userCityLists/cur_z_paris');
+    // r72r-1: المجموعة العاجية بكل واجهة · المفكرة على الشجرة باسم المدينة · لا أيقونات فرعية · Show ⌄ بالأماكن والرحلات مع Shared with me · اللوحة عبر الدول والدولة تتبع · إصلاحات المنتقين
+    const grp = B.x("placeGroupHtml('Specialty Coffee', 2, '<button class=\"go\">Open list →</button>', placeCardHtml({ id: 'g1', name: 'G', url: 'u' }, 'others', { actions: [] }))");
+    ok('١٦هـ · r72r-1: المجموعة العاجية (pgroup) برأس الفرعي «# n» وزر يمين، وتضم البطاقة الكريمية (pcard) — والبطاقة لم تعد عاجية بذاتها', grp.startsWith('<div class="pgroup"><div class="pg-head"><span class="pg-title">Specialty Coffee <span class="pg-n"># 2</span></span><button class="go">Open list →</button></div><div class="pcard') && !grp.includes('pc-in') && tplCount('.pgroup{background:var(--ivory); color:var(--ink);}', 1).ok, grp.slice(0, 200));
+    ok('١٦هـ · r72r-1: البنية نفسها بالأماكن والمفكرة ويوم الرحلة والعناوين والمنتقين (خمسة استدعاءات placeGroupHtml)', tplCount('placeGroupHtml(', 6).ok && tplCount("html += placeGroupHtml(cat.name, visible.length, __catRight, __cards);", 1).ok && tplCount("html += placeGroupHtml(cat ? catLabelOf(cat) : 'Places', byCat[cat].length, '', __bmCards);", 1).ok && tplCount("html += placeGroupHtml(meta.label, places.length, __right, __tcards);", 1).ok && tplCount("html += placeGroupHtml(cat.name, places.length, __aright, __acards);", 1).ok && tplCount("return placeGroupHtml((withCity ? g.city.name + ' · ' : '') + sub,", 1).ok, '');
+    const noIcons = tplCount("sec.items.forEach(i => out.push({ id: i.id, icon: '', name: i.name,", 1).ok && tplCount("return hit ? hit.name : String(idOrName || ''); }", 1).ok && tplCount("items: TRIP_CATEGORIES.map(c => ({ id: c.id, name: c.label }))", 1).ok && tplCount("out += meta.label + '\\n';", 1).ok && !/\$\{c\.icon\} \$\{escapeHtml\(c\.name\)\}/.test(SRC) && tplCount("items: privateCategoryList().map(c => ({ id: c.id, name: c.name, count:", 1).ok;
+    ok('١٦هـ · r72r-1: أيقونات الفرعي محذوفة من الشجرة والمفكرة ولوحات الاختيار والرحلات والعناوين ونصوص التصدير', noIcons, '');
+    B.x("placesSource = 'mine'; plShowOpen = false; plToggleShowPanel()"); const sp = String((documentStub.getElementById('plShowPanel') || { innerHTML: '' }).innerHTML || '');
+    ok('١٦هـ · r72r-1: الأماكن — Show ⌄ بلوحة المصادر الخمسة (My places · My bookmarked · Saved from Curators/Community بوسم · Shared with me) · العنوان بعدده · Export places list', sp.includes('My places') && sp.includes('My bookmarked') && sp.includes('Saved from Curators · stage 3') && sp.includes('Shared with me') && tplCount('id="plSrcTitle"', 1).ok && tplCount('📤 Export places list', 1).ok && tplCount("if (placesSource === 'shared'){ body.innerHTML", 1).ok, sp.slice(0, 200));
+    B.x("plShowOpen = false; plToggleShowPanel(); tripsSource = 'mine'; tripShowOpen = false; tripToggleShowPanel()"); const tp = String((documentStub.getElementById('tripShowPanel') || { innerHTML: '' }).innerHTML || ''); B.x("tripShowOpen = false; tripToggleShowPanel()");
+    ok('١٦هـ · r72r-1: الرحلات — Show ⌄ بالمصادر الخمسة مع Shared with me (المشارَك انتقل من المجتمع) · دالتا العرض المستخرجتان', tp.includes('My trips') && tp.includes('Shared with me') && tp.includes('Saved from Community') && tplCount('async function renderSharedTripsInto(host){', 1).ok && tplCount('async function renderSharedListsInto(host){', 1).ok && tplCount("if (tripsSource === 'shared'){", 1).ok, tp.slice(0, 160));
+    const cpx = B.x("(function(){ var k = { c: myListCityId, k: myListCountry, all: plCityPanelAll }; userListData.customCities = (userListData.customCities || []).concat([{ id: 'mylist_osaka', name: 'Osaka', country: 'Japan' }]); plCityPanelAll = true; plPanel = 'cities'; renderPlacesMine(); var h = document.getElementById('plBody').innerHTML; var r = { all: h.includes('Browse cities · all countries') && h.includes('Osaka'), jp: h.includes('Japan') }; plPanel = null; return JSON.stringify(r); })()");
+    await B.x("plPickCity('mylist_osaka')"); const cc = B.x("JSON.stringify({ c: myListCityId, k: myListCountry })");
+    ok('١٦هـ · r72r-1: لوحة المدن عبر الدول (Osaka · Japan ظاهرتان) واختيار المدينة يحوّل الدولة تلقائيًّا إلى Japan', cpx === '{"all":true,"jp":true}' && cc === '{"c":"mylist_osaka","k":"Japan"}', cpx + ' ' + cc);
+    B.x("userListData.customCities = userListData.customCities.filter(function(c){ return c.id !== 'mylist_osaka'; }); myListCountry = 'France'; myListCityId = 'paris'; myCityListLoadedFor = null; userListData.listCountry = 'France'; userListData.listCity = 'paris'"); await B.x("loadMyCityList('paris')");
+    // r72r-2/3: مدخل المجتمع بلا كرة أرضية · المبدّل يظلّل فقط · Sort by ⌄ (الافتراضي most bookmarked) · التجميع بالمستخدم كبسولةً · بطاقة القائمة بشبكة الأفعال · لا Shared with me
+    B.x("communityScreen = 'root'; communityTab = 'places'; renderCommunityModal()"); await new Promise(function(r){ setTimeout(r, 40); }); const rt = screen('communityBody');
+    B.x("cmPickTab('trips')"); await new Promise(function(r){ setTimeout(r, 30); }); const rt2 = screen('communityBody'); const stillRoot = B.x('communityScreen') === 'root';
+    B.x("cmOpenSource('places'); cmSortOpen = true; renderCommunityModal()"); await new Promise(function(r){ setTimeout(r, 80); }); const mk = screen('communityBody');
+    const chk = { globe: !rt.includes('🌍'), browse: rt2.includes('Browse Trips'), stillRoot: stillRoot, back: mk.includes('← Community'), all: mk.includes('>All users places lists<'), sort: /Sort by: <b>Users places most (bookmarked|viewed)<\/b>/.test(mk), panel: mk.includes('Places most saved by users'), mine: mk.includes('My bookmarked from users'), noShared: !mk.includes('Shared with me'), noPlacesChip: !mk.includes('csel label"><b>Places</b>') };
+    ok('١٦هـ · r72r-2: المدخل بلا 🌍 · Trips يظلّل ويبقى بالجذر (Browse Trips) · شاشة العرض: ← Community · All users places lists · Sort by بلوحة الخيارات الثلاثة · My bookmarked · لا Shared with me', Object.values(chk).every(Boolean) && tplCount("places: { city: '', marked: false, sort: 'bookmarks' }", 1).ok, JSON.stringify(chk));
+    B.x("cmSortOpen = false"); const cardLine = B.x("cmGroupByOwner([{ ownerId: 'cur_a', nickname: 'Amal', cityId: 'paris', cityName: 'Paris', categories: {} }], function(r){ return r.ownerId; }, function(r){ return r.nickname; }, function(r){ return othersCard({ title: 'Paris', sub: 'Places # 3', stat: '12 views', bmOn: false, cnt: 2, bmHandler: 'void(0)', reportKind: 'list', reportKey: 'cur_a_paris', exportHandler: 'void(0)', openHandler: 'void(0)' }); })");
+    ok('١٦هـ · r72r-3: مجموعة المستخدم كبسولة (AM · Amal) برأس عاجي وعدد · بطاقة القائمة بنمط بطاقة المكان (Details · Views · Actions: Open → · 🔖 بعدّاد · 📤 · Save · ⚑ أحمر)', cardLine.includes('class="curpill cmpill"') && cardLine.includes('class="curring">AM<') && cardLine.includes('>Amal<') && cardLine.includes('class="pg-n"># 1') && cardLine.includes('>Details</div><div class="pc-val pc-area" dir="auto">Places # 3') && cardLine.includes('>Views</div><div class="pc-val pc-area">12<') && cardLine.includes('class="pc-a bmk"') && cardLine.includes('class="bmk-cnt">2<') && cardLine.includes('class="pc-a flag"') && cardLine.includes('Save <span class="dim">3</span>'), cardLine.slice(0, 260));
+    ok('١٦هـ · r72r-1: المنتقون — تبديل المفكرة يعيد رسم المنتقين · العودة تحفظ الشريحة والمدينة · الملف يُقرأ طازجًا بكل فتح', tplCount("if (currentTab === 'Curators') renderCuratorsBody(); // r72r-1", 1).ok && tplCount("curPage = (curators || []).find(function(x){ return x.uid === uid; }) || null; switchTab('Curators'); } // r72r-1", 1).ok && tplCount("viewingUserData = null; try{ viewingUserData = await mpData.profiles.get(uid); }", 1).ok, '');
     // r72q-2: البطاقة الموحَّدة — الأوضاع الأربعة · المطوي (الاسم · Area · Maps + 🔖) · More/Less يُذكر · الالتفاف · ⚑ أحمر لغير الذات · Note/Picks بعناوين نحاسية · لا أيقونات برؤوس الأقسام · الأعداد بـ#
     const pl6 = { id: 'x1', name: 'X', url: 'https://maps.app.goo.gl/x', area: 'Old town', picks: ['a', 'b'], note: 'n1', topPlace: true };
     const cMine = B.x("placeCardHtml(" + JSON.stringify(pl6) + ", 'mine', { actions: [{ html: 'Maps ↗', href: 'https://maps.app.goo.gl/x' }, { cls: 'bmk', html: 'b', on: 'void(0)' }, { html: '🧳', on: 'void(0)' }, { html: '📤', on: 'void(0)' }, { cls: 'star on', html: '★', on: 'void(0)' }, { html: '✏️', on: 'void(0)' }] })");
@@ -1133,7 +1156,7 @@ function citiesSeed(){
     const cBm = B.x("placeCardHtml({ id: 'b1', name: 'B', url: 'u', area: 'A' }, 'bookmark', { actions: [{ html: 'Maps ↗', href: 'u' }, { cls: 'bmk on', html: 'b', on: 'void(0)' }, { html: '🧳', on: 'void(0)' }, { html: '📤', on: 'void(0)' }] })");
     const nActs = function(h){ return (h.match(/class="pc-a[ "]/g) || []).length; }; const nMore = function(h){ return (h.match(/pc-a[^"]* pc-more/g) || []).length; };
     ok('١٦هـ · r72q-2: الأوضاع — mine ٦ أفعال (٤ منها بعد More) · others ٦ منها ⚑ أحمر · محتواي بلا ⚑ · المفكرة ٤ · Note وPicks وArea بعناوينها · المطوي يُظهر Maps و🔖 فقط', nActs(cMine) === 6 && nMore(cMine) === 4 && cMine.includes('pc-a star on') && nActs(cOthers) === 6 && cOthers.includes('class="pc-a flag pc-more"') && !cSelf.includes('pc-a flag') && nActs(cBm) === 4 && cMine.includes('class="pc-lab">Area</div><div class="pc-val pc-area"') && cMine.includes('pc-more">Picks</div>') && cMine.includes('pc-more">Note</div>') && cMine.includes('>More ⌄<') && cOthers.includes('class="pcard open"'), JSON.stringify({ m: nActs(cMine), mm: nMore(cMine), o: nActs(cOthers), b: nActs(cBm) }));
-    ok('١٦هـ · r72q-2: لا أيقونة برؤوس الأقسام والعدد بـ# · شريحة المدينة بسطرين · Cities # n · العدّاد بالشبكة #', tplCount("escapeHtml(cat.name) + ' # ' + visible.length", 1).ok && tplCount("'<div class=\"pl-cathead\"><span>' + cat.icon", 0).ok && tplCount("<small>' + cn + '</small>Top places # '", 1).ok && tplCount("Cities # ' + d.cities.length", 1).ok && tplCount("'cities # ' + nC + ' · trips # ' + nT", 1).ok && tplCount('<span class="trip-cat">${meta.label}</span>', 2).ok, '');
+    ok('١٦هـ · r72q-2: لا أيقونة برؤوس الأقسام والعدد بـ# · شريحة المدينة بسطرين · Cities # n · العدّاد بالشبكة #', tplCount("html += placeGroupHtml(cat.name, visible.length, __catRight, __cards);", 1).ok && tplCount("'<div class=\"pl-cathead\"><span>' + cat.icon", 0).ok && tplCount("<small>' + cn + '</small>Top places # '", 1).ok && tplCount("Cities # ' + d.cities.length", 1).ok && tplCount("'cities # ' + nC + ' · trips # ' + nT", 1).ok && tplCount('<span class="trip-cat">${meta.label}</span>', 1).ok && tplCount('html += placeGroupHtml(meta.label, places.length, __right, __tcards);', 1).ok, ''); // r72r-1: يوم الرحلة مجموعة عاجية
     cap('curators.follow');
     cap('curators.twoPages');
     B.x("curPage = null; curCity = null; curators = null; curArchiveOf = null; viewingUserUid = null; viewingUserData = null; communityScreen = 'root'; communityTab = 'places'; Object.keys(curData).forEach(function(k){ delete curData[k]; }); currentTab = " + JSON.stringify(prevTab16));
@@ -1174,21 +1197,21 @@ function citiesSeed(){
     const root = inOrder('communityBody', ['chipgrid c2', '>Places<', '>Trips<', 'Search by username']);
     const rootNo = notSees('communityBody', ['backchip', 'Most viewed']);
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
-    const src = inOrder('communityBody', ['backchip', 'id="cmCityRow"', 'chipgrid c3', 'All users’ lists', 'Users’ most viewed', 'Users’ most bookmarked', 'chipgrid c3', 'Shared with me', '🔖 My bookmarked from users', 'Most saved from users</button>']); // ر٦٩ض: مسميات بسياق الآخرين
+    const src = inOrder('communityBody', ['backchip', 'id="cmCityRow"', 'chipgrid c2', 'All users places lists', 'Sort by: <b>', 'chipgrid c2', '🔖 My bookmarked from users']); // r72r-2 // ر٦٩ض: مسميات بسياق الآخرين
     B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
-    const t = sees('communityBody', ['class="chip soon"']);
+    const t = { ok: !screen('communityBody').includes('Shared with me') && /Trip views need a public counter/.test(SRC), why: 'shared chip still in community or no M4.26 guard' }; // r72r-2
     B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
-    ok('ش٥ · الجذر مبدل ١×٢ + بحث · شاشة المصدر: عودة · محدد · ٣+٢ بترتيبها · مشاهدات الرحلات معطَّلة', root.ok && rootNo.ok && src.ok && t.ok, root.why + rootNo.why + src.why + t.why);
+    ok('ش٥ · الجذر مبدل ١×٢ + بحث · شاشة المصدر: عودة · All users … + Sort by ⌄ · My bookmarked · لا Shared with me · مشاهدات الرحلات بوسم M4.26 (r72r-2)', root.ok && rootNo.ok && src.ok && t.ok, root.why + rootNo.why + src.why + t.why);
   }, ['screen.market.header']);
 
   await must('ش٦ · ٦/د بطاقة السوق: مفكرة بعدّاد · Save بوسمه · 📤 · Open (الشاشة)', async () => {
-    const a = sees('cmMarket', ['bmk-btn', 'bmk-cnt', 'Save <span class="dim">stage 3', '📤', 'Open →', 'linklike']);
+    const a = sees('cmMarket', ['pc-a bmk', 'bmk-cnt', 'Save <span class="dim">3', '📤', 'Open →', 'class="curpill cmpill"']); // r72r-3: بطاقة القائمة بنمط بطاقة المكان ورأس المستخدم كبسولة
     ok('ش٦ · عناصر البطاقة الستة', a.ok, a.why);
   }, ['screen.market.card']);
 
   await must('ش٧ · ٦/د٢ طبقة الشخص: عودة مميَّزة وصفوف رحلاته بأفعال التسوية (الشاشة)', async () => {
     await B.x("viewCommunityUser('" + U1 + "')"); await new Promise(r => setTimeout(r, 40));
-    const a = sees('communityBody', ['backchip', 'Open →', 'bmk-btn', 'bmk-cnt', '📤']);
+    const a = sees('communityBody', ['backchip', 'Open →', 'pc-a bmk', 'bmk-cnt', '📤']); // r72r-3
     const b = notSees('communityBody', ['Saved ✓', 'saved by', '♥']);
     ok('ش١١ · عودة مميَّزة وصفوف الرحلات بمفكرة معدودة و📤 — ولا معجم قديم', a.ok && b.ok, a.why + b.why);
     B.set('viewingUserUid', null);
@@ -1227,7 +1250,7 @@ function citiesSeed(){
   }, ['screen.places.ctxLast']);
 
   await must('ش٨ · القوالب الساكنة: شرائح الرحلات بالحرف وOne day trip موسومة', async () => {
-    const a = tpl(['data-tsrc="saved" onclick="selectTripsSource(\'saved\')">🔖 Bookmarked trips', 'Saved from Curators <span class=\"dim\">stage 3</span></button>', 'Saved from Community <span class=\"dim\">stage 3</span></button>']);
+    const a = tpl(["['saved', 'My bookmarked'], ['savedCur', 'Saved from Curators'], ['savedCom', 'Saved from Community'], ['shared', 'Shared with me']", 'id="tripShowBtn" onclick="tripToggleShowPanel()"']); // r72r-1: Show ⌄
     const b = tplCount('data-ttype="day"', 0); const c = tpl(['data-ttype="city"', 'data-ttype="multi"']);
     ok('ش٨ · الرباعي الحرفي والمنشآن مؤجلان — والأنواع اثنان بلا يوم واحد (ر٦٩ · N-009)', a.ok && b.ok && c.ok, a.why + b.why + c.why);
   }, ['screen.static.tripChips']);
@@ -1239,7 +1262,7 @@ function citiesSeed(){
   }, ['screen.static.curatorPage']);
 
   await must('ش١٠ · ٦/أ شرائح الأماكن: المنشآن معطَّلان بوسم موعدهما', async () => {
-    const a = tpl(['data-src="curators" onclick="showSoon(', 'data-src="community" onclick="showSoon(', 'Saved from Curators <span class="dim">stage 3</span></button>']);
+    const a = tpl(["if (id === 'curators' || id === 'community'){ showSoon('Your copies of places arrive with Save (stage 3)'); return; }", 'id="plShowBtn" onclick="plToggleShowPanel()"']); // r72r-1
     ok('ش١٠ · الرباعي بالحرف والمنشآن مؤجلان مستجيبان (ر٦٨)', a.ok, a.why);
   }, ['screen.static.placesChips']);
 
@@ -1305,7 +1328,7 @@ function citiesSeed(){
 
   await must('٢٠ · فعل الذات سلبي بالواجهة (شاهد الشرط بالقالب)', async () => {
     const tpl = fs.readFileSync(appFile, 'utf8');
-    ok('٢٠ · شرطا الذات السلبية حاضران (قائمة ورحلة)', tpl.includes('Bookmarks on your list') && tpl.includes('Bookmarks on your trip'), '');
+    ok('٢٠ · شرطا الذات السلبية حاضران (قائمة ورحلة)', tpl.includes('Bookmarks on your list') && tpl.includes('Bookmarks on your trip') && tpl.includes("if (!o.bmSelf) acts.push({ cls: 'bmk'") && tpl.includes('>Bookmarks</div>'), ''); // r72r-3: بالبطاقة الموحَّدة
   }, ['trip.save.selfHidden']);
 
   await must('٢١ · أحداث القياس: الجديد يمر والمتقاعد يُرفض وfavorites موصدة', async () => {
@@ -1331,8 +1354,8 @@ function citiesSeed(){
   // ═══ التسلسلات (ر٦٧) — كل محطة سيناريو مستخدم كامل بالضغط لا بالاستدعاء ═══
   await must('ت٠ · محرك الضغط يصل للمعالج (الضغط يبدّل مصدر المجتمع فعلًا)', async () => {
     B.set('communityScreen', 'root'); B.x('renderCommunityModal()');
-    const c = await click('communityBody', 'Trips'); await new Promise(r => setTimeout(r, 30));
-    const a = sees('communityBody', ['backchip', '<b>Trips</b>']);
+    const c = await click('communityBody', 'Trips'); await new Promise(r => setTimeout(r, 30)); const c2 = await click('communityBody', 'Browse Trips'); await new Promise(r => setTimeout(r, 30)); // r72r-2: المبدّل يظلّل والانتقال بـBrowse
+    const a = sees('communityBody', ['backchip', 'All users trips']);
     ok('ت٠ · ضغط «Trips» بالجذر فتح شاشة الرحلات', c.ok && a.ok, c.why + a.why);
   }, ['click.engine.reachesHandler']);
 
@@ -1341,9 +1364,9 @@ function citiesSeed(){
     const before = screen('cmMarket').includes('bmk-btn on');
     const c = await click('cmMarket', 'Bookmark'); await new Promise(r => setTimeout(r, 40));
     B.x('cmBackToRoot()'); B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 40));
-    const afterReopen = screen('cmMarket').includes('bmk-btn on');
+    const afterReopen = screen('cmMarket').includes('pc-a bmk on');
     B.set('listBookmarksMap', null); await B.x('ensureListBookmarks()'); B.x('renderCommunityModal()'); await new Promise(r => setTimeout(r, 40));
-    const afterReload = screen('cmMarket').includes('bmk-btn on');
+    const afterReload = screen('cmMarket').includes('pc-a bmk on');
     if (afterReload){ await click('cmMarket', 'Bookmarked — tap to remove'); await new Promise(r => setTimeout(r, 30)); }
     ok('ت١ · مطفأ ← مضاء بعد الضغط ← باقٍ بعد العودة ← باقٍ بعد إعادة التحميل من المرآة', !before && c.ok && afterReopen && afterReload, c.why + JSON.stringify({ before, afterReopen, afterReload }));
   }, ['seq.browseMarkBackReload']);
@@ -1414,11 +1437,11 @@ function citiesSeed(){
   await must('ح٤ · المؤجل يستجيب برسالة خطوته ولا يغيّر الحالة (Users’ most viewed بالرحلات · One day trip) — ر٦٨ · r72m: Most saved صار حيًّا', async () => {
     B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
     const before = B.x('JSON.stringify([communitySort, communityMarkedOnly])'); captured.toasts.length = 0;
-    const a = await click('communityBody', 'Users’ most viewed');
-    const toasted = captured.toasts.some(t => /trips counters/.test(t));
+    B.x('cmSortOpen = true; renderCommunityModal()'); await new Promise(r => setTimeout(r, 30)); const a = await click('communityBody', 'Users trips most viewed'); // r72r-2: بقائمة Sort by
+    const toasted = captured.toasts.some(t => /M4\.26/.test(t));
     const same = B.x('JSON.stringify([communitySort, communityMarkedOnly])') === before;
-    const b = { ok: !/One day trip/.test(SRC), why: 'One day trip still present' }; const c = findClickable(SRC, 'Most saved from users');
-    ok('ح٤ · الضغط يُنتج رسالة الخطوة والحالة ثابتة · Most saved حي بـcmSetBrowse(copies) لا showSoon', a.ok && toasted && same && b.ok && !!c && /cmSetBrowse\(\\?'copies\\?'\)/.test(c.code) && !/showSoon/.test(c.code), JSON.stringify({ a: a.why, toasted, same, noDayChip: b.ok, c: !!c }));
+    const b = { ok: !/One day trip/.test(SRC), why: 'One day trip still present' }; const c = { code: /\['copies', 'Trips most saved by users'\]/.test(SRC) ? "cmPickSort('copies')" : '' };
+    ok('ح٤ · الضغط يُنتج رسالة الخطوة والحالة ثابتة · Most saved حي بـcmSetBrowse(copies) لا showSoon', a.ok && toasted && same && b.ok && !!c.code, JSON.stringify({ a: a.why, toasted, same, noDayChip: b.ok, c: !!c }));
   }, ['edge.disabledChipsInert']);
 
   await must('م · مصفوفة مشاهد المرجع v1.42: كل مشهد مغطًّى أو مؤجَّل بسببه (لا فجوة صامتة)', async () => {
