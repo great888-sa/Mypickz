@@ -141,7 +141,7 @@ const MP_EXPECTED = [
   ["window.addEventListener('unhandledrejection'", 1],
   // خ٢ (٢٧ أغسطس): وجهة العناوين الشخصية تعرض روابطها بسماتها (data-mpsrc="app" · data-mppersonal="1") — إبرة إضافية بنسخة الاختبار
   //   حتى ترقية الإطار للإنتاج (حينها يصير العدد ٨/٣ بالملفين وتُوحَّد القيمة). القيمة إما رقم واحد للملفين أو {prod, test}.
-  ['data-mpsrc=', { prod: 7, test: 8 }], // r72q-2: رابط Maps بوضع trip يحمل data-mpsrc بالقراءة والتحرير (كان واحدًا) // ر٥٢: رابط نافذة My Favorites المتقاعدة كان يحمل السمة — زال معها
+  ['data-mpsrc=', { prod: 7, test: 7 }], // r72w: رحلة الآخرين تمرّ بالبطاقة الموحَّدة (community) // ر٥٢: رابط نافذة My Favorites المتقاعدة كان يحمل السمة — زال معها
   ['data-mppersonal=', { prod: 2, test: 3 }],
   ['data-mpowner="1"', 1]
 ];
