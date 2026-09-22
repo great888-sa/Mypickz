@@ -5464,9 +5464,9 @@ let myListCountry = null;  // الدولة المختارة حاليًا داخ�
 async function loadSharedCityLists(){
   if (!currentUser){ sharedCityLists = []; return; }
   try{
-    const snap = await withAuthRetry(() => db.collection('userCityLists').where('sharedWith','array-contains',currentUser.uid).get());
+    const snap = await withAuthRetry(() => db.collection('userCityLists').where('sharedWith','array-contains',currentUser.uid).get()); // r72t: الأم؛ التركيب بالطبقة أدناه
     sharedCityLists = [];
-    snap.forEach(doc => sharedCityLists.push({ docId: doc.id, ...doc.data() }));
+    const __rows = []; snap.forEach(doc => __rows.push({ docId: doc.id, ...doc.data() })); sharedCityLists = await Promise.all(__rows.map(function(r){ return mpData.cityLists._compose(r, r.docId); })); // r72t (M4.26): المشارَك معي كاملًا بالفرعية
   }catch(e){ sharedCityLists = []; }
 }
 
@@ -5514,7 +5514,6 @@ async function loadUserList(){
 }
 
 // معرّف مستند Firestore لبيانات مدينة معيّنة بـMy List الخاصة بالمستخدم الحالي
-function myCityListDocId(cityId){ return currentUser.uid + '_' + cityId; }
 
 // تحميل بيانات مدينة معيّنة بـMy List (المرحلة ١ من إعادة الهيكلة) — مستند مستقل لكل مدينة
 async function loadMyCityList(cityId){
@@ -5738,7 +5737,7 @@ async function removeMyListCountry(country){
   const removeIds = citiesToRemove.map(c => c.id);
   userListData.customCities = (userListData.customCities || []).filter(c => c.country !== country);
   for (const id of removeIds){
-    try{ await db.collection('userCityLists').doc(myCityListDocId(id)).delete(); }catch(e){}
+    try{ await mpData.cityLists.remove(currentUser.uid, id); }catch(e){} // r72t: الأم وفرعياتها
     if (myCityListLoadedFor === id){ myCityListData = null; myCityListLoadedFor = null; }
   }
   if (myListCountry === country){
@@ -5903,7 +5902,7 @@ async function syncCommunityProfileFor(uid, nickname){
     const publicCityIds = [];
     citySnap.forEach(doc => {
       const d = doc.data();
-      const nLive = Object.values((d.categories && typeof d.categories === 'object') ? d.categories : {}).reduce(function(a, e){ return a + ((e && e.places) || []).filter(function(q){ return q && (q.name || q.url); }).length; }, 0);
+      const __d = mpData.cityLists._fromIndex(d); const nLive = Object.values((__d.categories && typeof __d.categories === 'object') ? __d.categories : {}).reduce(function(a, e){ return a + ((e && e.places) || []).filter(function(q){ return q && (q.name || q.url); }).length; }, 0);
       if (!nLive) return; // ر٧٢-أ-١د
       publicCityIds.push(d.cityId);
     });
@@ -6703,7 +6702,7 @@ async function viewCommunityUser(uid){
     let __qRows = []; try{ __qRows = await mpData.cityLists.publicByOwnerFull(uid); }catch(e){ mpSwallow(e, 'public by owner'); } // r72s: اتحاد المصدرين كما بصفحة المنتقي · r72t: بالفرعية (الأماكن كاملة) — المدينة الجديدة تظهر ولو لم تصل إلى الملف العام بعد
     const __qIds = {}; __qRows.forEach(function(r){ __qIds[r.cityId || String(r.id || '').split('_').slice(1).join('_')] = r; });
     const __missing = (viewingUserData.publicCityIds || []).filter(function(cid){ return !__qIds[cid]; });
-    const cityDocs = await Promise.all(__missing.map(cityId => db.collection('userCityLists').doc(uid + '_' + cityId).get()));
+    const cityDocs = await Promise.all(__missing.map(cityId => mpData.cityLists.get(uid, cityId).then(function(d){ return { exists: !!d, data: function(){ return d; } }; }).catch(function(){ return { exists: false }; }))); // r72t: عبر الطبقة (مركَّبة)
     const __all = __qRows.map(function(r){ return { exists: true, data: function(){ return r; } }; }).concat(cityDocs);
     __all.forEach(doc => {
       if (!doc.exists) return;
