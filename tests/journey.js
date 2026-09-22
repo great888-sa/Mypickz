@@ -538,18 +538,12 @@ function citiesSeed(){
 
   await must('ش١٨ · ٦/د المجتمع: الجذر والمصدر على الصيغة الموحَّدة (شريحة + حقل) بعدّاد المحتوى لكل مدينة · Go فعلًا رئيسًا — ر٧٠هـ', async () => {
     const prev = B.x("JSON.stringify({ s: communityScreen, t: communityTab, c: communityScreenState.places.city })");
-    B.x("communityScreen = 'root'; communityTab = 'places'; communityScreenState.places.city = ''; renderCommunityModal()");
-    const root = screen('communityBody');
-    B.x("pickerToggle('cmRootCity')"); const rootOpen = String(documentStub.getElementById('pk_cmRootCity_host').innerHTML || '');
-    ok('ش١٨ · الجذر: شريحة «Select city» + حقل بصف واحد · لا منسدلة · Go زعفراني بثلث الصف · الضغط يفتح القائمة مجرَّدة و«All cities» بنقطة', root.includes('class="headrow pkrow"') && root.includes('<b>Select city</b>') && !root.includes('<select') && root.includes('class="actn primary hact" onclick="cmSearchGo()">Go') && rootOpen.includes('class="panel bare"') && /prow sel" onclick="cmRootCityChanged\(''\)"/.test(rootOpen), 'root=' + root.slice(0, 100));
-    B.x("cmRootCityChanged('paris')");
-    ok('ش١٨ · اختيار مدينة بالجذر يُكتب بالشريحة ويطوي القائمة ويسبق الدخول', screen('communityBody').includes('<b>Paris</b>') && B.x("communityScreenState.places.city + '|' + String(__pk.cmRootCity.open)") === 'paris|false', '');
-    B.x("communityScreen = 'source'; renderCommunityModal(); cmFillCityPick([{ cityId: 'paris', cityName: 'Paris' }, { cityId: 'paris', cityName: 'Paris' }, { cityId: 'rome', cityName: 'Rome' }])");
+    B.x("communityTab = 'places'; communityScreenState.places.city = ''; renderCommunityModal(); cmFillCityPick([{ cityId: 'paris', cityName: 'Paris' }, { cityId: 'paris', cityName: 'Paris' }, { cityId: 'rome', cityName: 'Rome' }])");
+    const one = screen('communityBody');
+    ok('ش١٨ · r72s: الشاشة الواحدة — لا مدخل ولا زر عودة · مبدّل المصدر أولًا · شريحة المدينة بصف واحد · All users + Search by username · My bookmarked + Sort by', B.x('communityScreen') === 'source' && !one.includes('backchip') && !one.includes('cmRootCity') && one.indexOf('>Places<') < one.indexOf('id="cmCityRow"') && one.includes('class="headrow pkrow"') && one.includes('>Search by username<') && one.includes('Sort by: <b>'), one.slice(0, 200));
     B.x("pickerToggle('cmCity')"); const srcOpen = String(documentStub.getElementById('pk_cmCity_host').innerHTML || '');
-    ok('ش١٨ · المصدر: مدن المحتوى بعدّادها (Paris 2 · Rome 1 · All cities 3) والمختارة بنقطة', srcOpen.includes('Paris</span><span><span class="cnt-num">2</span>') && srcOpen.includes('Rome</span><span><span class="cnt-num">1</span>') && srcOpen.includes('All cities</span><span><span class="cnt-num">3</span>') && /prow sel" onclick="cmCityChanged\('paris'\)"/.test(srcOpen), 'src=' + srcOpen.slice(0, 160));
-    B.x("pickerRowClose('cmCity'); communityScreen = 'root'; renderCommunityModal(); pickerToggle('cmRootCity')"); const rootOpen2 = String(documentStub.getElementById('pk_cmRootCity_host').innerHTML || '');
-    ok('ش١٨ · الجذر (قرار أ): مدنه من المحتوى العام بعدّادها لا من قائمة الدليل (Paris 2 · Rome 1 · لا Marbella)', rootOpen2.includes('Paris</span><span><span class="cnt-num">2</span>') && rootOpen2.includes('Rome</span><span><span class="cnt-num">1</span>') && !rootOpen2.includes('Marbella'), 'root=' + rootOpen2.slice(0, 160));
-    B.x("(function(){ var s = " + prev + "; pickerRowClose('cmRootCity'); pickerRowClose('cmCity'); __cmCityRows = []; delete __cmSummary.places; delete __cmSummary.trips; communityScreen = s.s; communityTab = s.t; communityScreenState.places.city = s.c; communityScreenState.trips.city = s.c; })()");
+    ok('ش١٨ · المصدر: مدن المحتوى بعدّادها (Paris 2 · Rome 1 · All cities 3) والمختارة بنقطة', srcOpen.includes('Paris</span><span><span class="cnt-num">2</span>') && srcOpen.includes('Rome</span><span><span class="cnt-num">1</span>') && srcOpen.includes('All cities') && srcOpen.includes('class="dot"'), srcOpen.slice(0, 200));
+    B.x("(function(){ var s = " + prev + "; pickerRowClose('cmCity'); __cmCityRows = []; delete __cmSummary.places; delete __cmSummary.trips; communityScreen = 'source'; communityTab = s.t; communityScreenState.places.city = s.c; communityScreenState.trips.city = s.c; })()");
     cap('picker.community.wired');
   }, []);
 
@@ -1128,7 +1122,7 @@ function citiesSeed(){
     // r72r-1: المجموعة العاجية بكل واجهة · المفكرة على الشجرة باسم المدينة · لا أيقونات فرعية · Show ⌄ بالأماكن والرحلات مع Shared with me · اللوحة عبر الدول والدولة تتبع · إصلاحات المنتقين
     const grp = B.x("placeGroupHtml('Specialty Coffee', 2, '<button class=\"go\">Open list →</button>', placeCardHtml({ id: 'g1', name: 'G', url: 'u' }, 'others', { actions: [] }))");
     ok('١٦هـ · r72r-1: المجموعة العاجية (pgroup) برأس الفرعي «# n» وزر يمين، وتضم البطاقة الكريمية (pcard) — والبطاقة لم تعد عاجية بذاتها', grp.startsWith('<div class="pgroup"><div class="pg-head"><span class="pg-title">Specialty Coffee <span class="pg-n"># 2</span></span><button class="go">Open list →</button></div><div class="pcard') && !grp.includes('pc-in') && tplCount('.pgroup{background:var(--ivory); color:var(--ink);}', 1).ok, grp.slice(0, 200));
-    ok('١٦هـ · r72r-1: البنية نفسها بالأماكن والمفكرة ويوم الرحلة والعناوين والمنتقين (خمسة استدعاءات placeGroupHtml)', tplCount('placeGroupHtml(', 6).ok && tplCount("html += placeGroupHtml(cat.name, visible.length, __catRight, __cards);", 1).ok && tplCount("html += placeGroupHtml(cat ? catLabelOf(cat) : 'Places', byCat[cat].length, '', __bmCards);", 1).ok && tplCount("html += placeGroupHtml(meta.label, places.length, __right, __tcards);", 1).ok && tplCount("html += placeGroupHtml(cat.name, places.length, __aright, __acards);", 1).ok && tplCount("return placeGroupHtml((withCity ? g.city.name + ' · ' : '') + sub,", 1).ok, '');
+    ok('١٦هـ · r72r-1: البنية نفسها بالأماكن والمفكرة ويوم الرحلة والعناوين والمنتقين (خمسة استدعاءات placeGroupHtml)', tplCount('placeGroupHtml(', 7).ok && tplCount("html += placeGroupHtml(cat.name, visible.length, __catRight, __cards);", 1).ok && tplCount("html += placeGroupHtml(cat ? catLabelOf(cat) : 'Places', byCat[cat].length, '', __bmCards);", 1).ok && tplCount("html += placeGroupHtml(meta.label, places.length, __right, __tcards);", 1).ok && tplCount("html += placeGroupHtml(cat.name, places.length, __aright, __acards);", 1).ok && tplCount("return placeGroupHtml((withCity ? g.city.name + ' · ' : '') + sub,", 1).ok, '');
     const noIcons = tplCount("sec.items.forEach(i => out.push({ id: i.id, icon: '', name: i.name,", 1).ok && tplCount("return hit ? hit.name : String(idOrName || ''); }", 1).ok && tplCount("items: TRIP_CATEGORIES.map(c => ({ id: c.id, name: c.label }))", 1).ok && tplCount("out += meta.label + '\\n';", 1).ok && !/\$\{c\.icon\} \$\{escapeHtml\(c\.name\)\}/.test(SRC) && tplCount("items: privateCategoryList().map(c => ({ id: c.id, name: c.name, count:", 1).ok;
     ok('١٦هـ · r72r-1: أيقونات الفرعي محذوفة من الشجرة والمفكرة ولوحات الاختيار والرحلات والعناوين ونصوص التصدير', noIcons, '');
     B.x("placesSource = 'mine'; plShowOpen = false; plToggleShowPanel()"); const sp = String((documentStub.getElementById('plShowPanel') || { innerHTML: '' }).innerHTML || '');
@@ -1140,13 +1134,18 @@ function citiesSeed(){
     ok('١٦هـ · r72r-1: لوحة المدن عبر الدول (Osaka · Japan ظاهرتان) واختيار المدينة يحوّل الدولة تلقائيًّا إلى Japan', cpx === '{"all":true,"jp":true}' && cc === '{"c":"mylist_osaka","k":"Japan"}', cpx + ' ' + cc);
     B.x("userListData.customCities = userListData.customCities.filter(function(c){ return c.id !== 'mylist_osaka'; }); myListCountry = 'France'; myListCityId = 'paris'; myCityListLoadedFor = null; userListData.listCountry = 'France'; userListData.listCity = 'paris'"); await B.x("loadMyCityList('paris')");
     // r72r-2/3: مدخل المجتمع بلا كرة أرضية · المبدّل يظلّل فقط · Sort by ⌄ (الافتراضي most bookmarked) · التجميع بالمستخدم كبسولةً · بطاقة القائمة بشبكة الأفعال · لا Shared with me
-    B.x("communityScreen = 'root'; communityTab = 'places'; renderCommunityModal()"); await new Promise(function(r){ setTimeout(r, 40); }); const rt = screen('communityBody');
-    B.x("cmPickTab('trips')"); await new Promise(function(r){ setTimeout(r, 30); }); const rt2 = screen('communityBody'); const stillRoot = B.x('communityScreen') === 'root';
-    B.x("cmOpenSource('places'); cmSortOpen = true; renderCommunityModal()"); await new Promise(function(r){ setTimeout(r, 80); }); const mk = screen('communityBody');
-    const chk = { globe: !rt.includes('🌍'), browse: rt2.includes('Browse Trips'), stillRoot: stillRoot, back: mk.includes('← Community'), all: mk.includes('>All users places lists<'), sort: /Sort by: <b>Users places most (bookmarked|viewed)<\/b>/.test(mk), panel: mk.includes('Places most saved by users'), mine: mk.includes('My bookmarked from users'), noShared: !mk.includes('Shared with me'), noPlacesChip: !mk.includes('csel label"><b>Places</b>') };
-    ok('١٦هـ · r72r-2: المدخل بلا 🌍 · Trips يظلّل ويبقى بالجذر (Browse Trips) · شاشة العرض: ← Community · All users places lists · Sort by بلوحة الخيارات الثلاثة · My bookmarked · لا Shared with me', Object.values(chk).every(Boolean) && tplCount("places: { city: '', marked: false, sort: 'bookmarks' }", 1).ok, JSON.stringify(chk));
+    B.x("communityTab = 'places'; cmSortOpen = true; renderCommunityModal()"); await new Promise(function(r){ setTimeout(r, 80); }); const mk = screen('communityBody');
+    const chk = { noGlobe: !mk.includes('🌍'), noBack: !mk.includes('backchip'), switchFirst: mk.indexOf('>Places<') < mk.indexOf('All users places lists'), all: mk.includes('>All users places lists<'), search: mk.includes('>Search by username<'), sort: /Sort by: <b>Users places most (bookmarked|viewed)<\/b>/.test(mk), panel: mk.includes('All · recent') && mk.includes('Places most saved by users'), mine: mk.includes('My bookmarked from users'), noShared: !mk.includes('Shared with me') };
+    ok('١٦هـ · r72s: الشاشة الواحدة — بلا 🌍 ولا عودة · المبدّل أولًا · All users + Search by username · My bookmarked + Sort by (بخيار All · recent والثلاثة) · لا Shared with me', Object.values(chk).every(Boolean) && tplCount("places: { city: '', marked: false, sort: 'bookmarks' }", 1).ok, JSON.stringify(chk));
     B.x("cmSortOpen = false"); const cardLine = B.x("cmGroupByOwner([{ ownerId: 'cur_a', nickname: 'Amal', cityId: 'paris', cityName: 'Paris', categories: {} }], function(r){ return r.ownerId; }, function(r){ return r.nickname; }, function(r){ return othersCard({ title: 'Paris', sub: 'Places # 3', stat: '12 views', bmOn: false, cnt: 2, bmHandler: 'void(0)', reportKind: 'list', reportKey: 'cur_a_paris', exportHandler: 'void(0)', openHandler: 'void(0)' }); })");
     ok('١٦هـ · r72r-3: مجموعة المستخدم كبسولة (AM · Amal) برأس عاجي وعدد · بطاقة القائمة بنمط بطاقة المكان (Details · Views · Actions: Open → · 🔖 بعدّاد · 📤 · Save · ⚑ أحمر)', cardLine.includes('class="curpill cmpill"') && cardLine.includes('class="curring">AM<') && cardLine.includes('>Amal<') && cardLine.includes('class="pg-n"># 1') && cardLine.includes('>Details</div><div class="pc-val pc-area" dir="auto">Places # 3') && cardLine.includes('>Views</div><div class="pc-val pc-area">12<') && cardLine.includes('class="pc-a bmk"') && cardLine.includes('class="bmk-cnt">2<') && cardLine.includes('class="pc-a flag"') && cardLine.includes('Save <span class="dim">3</span>'), cardLine.slice(0, 260));
+    // r72s: My bookmarked from users — تجميع بالمستخدم: قوائمه المميَّزة بطاقاتٍ وأماكنه المميَّزة بمجموعة رأسها اسم القائمة · طبقة الشخص بالاتحاد · لا وميض قبل البوابة
+    await store.set('userCityLists/cur_a_rome', { ownerId: 'cur_a', cityId: 'rome', cityName: 'Rome', public: true, viewCount: 4, bookmarkCount: 1, categories: { pizza: { active: true, places: [{ id: 'r1', name: 'Bonci', url: 'https://maps.app.goo.gl/b' }] } } });
+    B.x("listBookmarksMap = listBookmarksMap || {}; listBookmarksMap['cur_a_rome'] = { ownerUid: 'cur_a', cityId: 'rome', at: 1 }; userListData.placeBookmarks = userListData.placeBookmarks || {}; var m = userListData.placeBookmarks; m['oid:cur_a:paris:p9'] = { url: 'https://maps.app.goo.gl/p9', key: 'oid:cur_a:paris:p9', name: 'Ten Belles', category: 'coffee', cityId: 'paris', area: '10th', ownerUid: 'cur_a' }; communityTab = 'places'; communityScreenState.places.city = ''");
+    await B.x("renderBookmarkedLists(document.getElementById('communityBody'), '')"); const bmv = screen('communityBody');
+    ok('١٦هـ · r72s: My bookmarked from users — كبسولة المستخدم (Amal) · قائمته المميَّزة (Rome · Places # 1) بطاقةً · مكانه المميَّز (Ten Belles) بمجموعة رأسها «Paris · Specialty Coffee» مع Open list →', bmv.includes('class="curpill cmpill"') && bmv.includes('>Amal<') && bmv.includes('>Rome<') && bmv.includes('Places # 1') && /Paris · [^<]+ <span class="pg-n"># 1<\/span>/.test(bmv) && bmv.includes('>Ten Belles<') && bmv.includes('Open list →'), JSON.stringify({ rome: bmv.includes('>Rome<'), n1: bmv.includes('Places # 1'), grp: (bmv.match(/Paris · [^<]{0,40}/) || [])[0], tb: bmv.includes('>Ten Belles<') }));
+    B.x("delete listBookmarksMap['cur_a_rome']; delete userListData.placeBookmarks['oid:cur_a:paris:p9']"); store.delete('userCityLists/cur_a_rome');
+    ok('١٦هـ · r72s: طبقة الشخص تجمع مدنه من الاستعلام ∪ الملف العام · الشاشات مخفية حتى تُعرف حالة المصادقة (لا وميض قبل البوابة)', tplCount("let __qRows = []; try{ __qRows = await mpData.cityLists.publicByOwner(uid); }", 1).ok && tplCount('<body class="auth-pending">', 1).ok && tplCount("document.body.classList.remove('auth-pending');", 1).ok && tplCount('body.auth-pending .mp-screen, body.auth-pending .tabbar{visibility:hidden;}', 1).ok, '');
     ok('١٦هـ · r72r-1: المنتقون — تبديل المفكرة يعيد رسم المنتقين · العودة تحفظ الشريحة والمدينة · الملف يُقرأ طازجًا بكل فتح', tplCount("if (currentTab === 'Curators') renderCuratorsBody(); // r72r-1", 1).ok && tplCount("curPage = (curators || []).find(function(x){ return x.uid === uid; }) || null; switchTab('Curators'); } // r72r-1", 1).ok && tplCount("viewingUserData = null; try{ viewingUserData = await mpData.profiles.get(uid); }", 1).ok, '');
     // r72q-2: البطاقة الموحَّدة — الأوضاع الأربعة · المطوي (الاسم · Area · Maps + 🔖) · More/Less يُذكر · الالتفاف · ⚑ أحمر لغير الذات · Note/Picks بعناوين نحاسية · لا أيقونات برؤوس الأقسام · الأعداد بـ#
     const pl6 = { id: 'x1', name: 'X', url: 'https://maps.app.goo.gl/x', area: 'Old town', picks: ['a', 'b'], note: 'n1', topPlace: true };
@@ -1193,15 +1192,13 @@ function citiesSeed(){
   }, ['screen.trip.bookmarkedChip']);
 
   await must('ش٥ · ٦/د رأس السوق: مبدل نقي ثم شرائح التصفح والفرز (الشاشة)', async () => {
-    B.set('communityScreen', 'root'); B.x('renderCommunityModal()');
-    const root = inOrder('communityBody', ['chipgrid c2', '>Places<', '>Trips<', 'Search by username']);
-    const rootNo = notSees('communityBody', ['backchip', 'Most viewed']);
-    B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
-    const src = inOrder('communityBody', ['backchip', 'id="cmCityRow"', 'chipgrid c2', 'All users places lists', 'Sort by: <b>', 'chipgrid c2', '🔖 My bookmarked from users']); // r72r-2 // ر٦٩ض: مسميات بسياق الآخرين
-    B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
-    const t = { ok: !screen('communityBody').includes('Shared with me') && /Trip views need a public counter/.test(SRC), why: 'shared chip still in community or no M4.26 guard' }; // r72r-2
-    B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
-    ok('ش٥ · الجذر مبدل ١×٢ + بحث · شاشة المصدر: عودة · All users … + Sort by ⌄ · My bookmarked · لا Shared with me · مشاهدات الرحلات بوسم M4.26 (r72r-2)', root.ok && rootNo.ok && src.ok && t.ok, root.why + rootNo.why + src.why + t.why);
+    B.x("communityTab = 'places'; renderCommunityModal()"); await new Promise(r => setTimeout(r, 30));
+    const root = inOrder('communityBody', ['chipgrid c2', '>Places<', '>Trips<', 'id="cmCityRow"', 'All users places lists', 'Search by username', 'My bookmarked from users', 'Sort by: <b>']);
+    const rootNo = notSees('communityBody', ['backchip', '🌍', 'Shared with me', 'Browse Places']);
+    B.x("cmPickTab('trips')"); await new Promise(r => setTimeout(r, 30));
+    const t = { ok: screen('communityBody').includes('All users trips') && /Trip views need a public counter/.test(SRC), why: 'trips screen or M4.26 guard missing' };
+    B.x("cmPickTab('places')"); await new Promise(r => setTimeout(r, 30));
+    ok('ش٥ · r72s: الشاشة الواحدة بترتيب صفوفها (المبدّل · المدينة · All users + Search · My bookmarked + Sort by) · لا مدخل ولا Browse ولا Shared with me · الرحلات بالصفوف نفسها', root.ok && rootNo.ok && t.ok, root.why + rootNo.why + t.why);
   }, ['screen.market.header']);
 
   await must('ش٦ · ٦/د بطاقة السوق: مفكرة بعدّاد · Save بوسمه · 📤 · Open (الشاشة)', async () => {
@@ -1220,7 +1217,7 @@ function citiesSeed(){
   await must('ش١٢ · القرار ١١ (٦): العودة للجذر ثم فتح المصدر يعيد حالته (المدينة والشريحة)', async () => {
     B.x("cmCityChanged('paris')"); await new Promise(r => setTimeout(r, 30));
     B.x("cmSetBrowse('bookmarks')"); await new Promise(r => setTimeout(r, 30));
-    B.x('cmBackToRoot()'); B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 30));
+    B.x("cmPickTab('trips')"); B.x("cmPickTab('places')"); await new Promise(r => setTimeout(r, 30)); // r72s: التبديل بالمبدّل يحفظ حالة كل مصدر
     const kept = B.x("JSON.stringify(communityScreenState.places)");
     const a = sees('communityBody', ['Paris']);
     ok('ش١٢ · المدينة والشريحة محفوظتان بعد العودة', kept.includes('"city":"paris"') && kept.includes('"sort":"bookmarks"') && a.ok, kept + a.why);
@@ -1256,7 +1253,7 @@ function citiesSeed(){
   }, ['screen.static.tripChips']);
 
   await must('ش٩ · ٦/هـ٢ صفحة المنتقي: رأس واحد وأفعال التسوية بلا تعتيم', async () => {
-    const a = tplCount('← Curators', 1); const b = tpl(["const CUR_BADGE = 'Curator';", 'Save <span class="dim">stage 3</span>']); const bNo = tplCount('>🔖 Bookmarked</span>', 0); const bOld = tplCount('verified curator', 0); // ر٧٢-أ-٢: شريحتا الحفظ بالرحلات حيّتان (لا وسم stage 3 عليهما)
+    const a = tplCount('← Curators', 1); const b = tpl(["const CUR_BADGE = 'Curator';", "html: 'Save <span class=\"dim\">3</span>'"]); const bNo = tplCount('>🔖 Bookmarked</span>', 0); const bOld = tplCount('verified curator', 0); // r72s: Save 3 بالبطاقة الموحَّدة · ر٧٢-أ-٢: شريحتا الحفظ بالرحلات حيّتان (لا وسم stage 3 عليهما)
     const c = tpl(['.curidn{border-radius:16px; padding:16px 15px 14px;}']); const d = tpl(['.curidn{background:linear-gradient(160deg, var(--surf), var(--bar)); color:var(--ivory-bright);}']);
     ok('ش٩ · ر٧٢-أ-١: عودة واحدة وقشرة المنتقي الحية بشارة Curator (لا «verified curator») — والشرائح الست بلا Bookmarked بمستوى المبدل (ر٦٩ · N-007)', a.ok && b.ok && bNo.ok && bOld.ok && c.ok && d.ok, a.why + b.why + bNo.why + bOld.why + c.why + d.why);
   }, ['screen.static.curatorPage']);
@@ -1353,17 +1350,17 @@ function citiesSeed(){
   /* ═══════════ الفصل الثالث: الخاتمة — الحذف التسلسلي بشهادته المزدوجة ═══════════ */
   // ═══ التسلسلات (ر٦٧) — كل محطة سيناريو مستخدم كامل بالضغط لا بالاستدعاء ═══
   await must('ت٠ · محرك الضغط يصل للمعالج (الضغط يبدّل مصدر المجتمع فعلًا)', async () => {
-    B.set('communityScreen', 'root'); B.x('renderCommunityModal()');
-    const c = await click('communityBody', 'Trips'); await new Promise(r => setTimeout(r, 30)); const c2 = await click('communityBody', 'Browse Trips'); await new Promise(r => setTimeout(r, 30)); // r72r-2: المبدّل يظلّل والانتقال بـBrowse
-    const a = sees('communityBody', ['backchip', 'All users trips']);
-    ok('ت٠ · ضغط «Trips» بالجذر فتح شاشة الرحلات', c.ok && a.ok, c.why + a.why);
+    B.x("communityTab = 'places'; renderCommunityModal()"); await new Promise(r => setTimeout(r, 30));
+    const c = await click('communityBody', 'Trips'); await new Promise(r => setTimeout(r, 30)); // r72s: المبدّل يفتح الرحلات بالشاشة نفسها
+    const a = sees('communityBody', ['All users trips', 'My bookmarked from users']);
+    ok('ت٠ · ضغط «Trips» بمبدّل المصدر يفتح الرحلات بالشاشة الواحدة (r72s)', c.ok && a.ok, c.why + a.why);
   }, ['click.engine.reachesHandler']);
 
   await must('ت١ · تصفح ← تمييز بالضغط ← عودة ← إعادة فتح ← إعادة تحميل: التمييز باقٍ', async () => {
-    B.set('communityScreen', 'root'); B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 40));
+    B.x("communityTab = 'places'; renderCommunityModal()"); await new Promise(r => setTimeout(r, 40)); // r72s
     const before = screen('cmMarket').includes('bmk-btn on');
     const c = await click('cmMarket', 'Bookmark'); await new Promise(r => setTimeout(r, 40));
-    B.x('cmBackToRoot()'); B.x("cmOpenSource('places')"); await new Promise(r => setTimeout(r, 40));
+    B.x("cmPickTab('trips')"); B.x("cmPickTab('places')"); await new Promise(r => setTimeout(r, 40)); // r72s
     const afterReopen = screen('cmMarket').includes('pc-a bmk on');
     B.set('listBookmarksMap', null); await B.x('ensureListBookmarks()'); B.x('renderCommunityModal()'); await new Promise(r => setTimeout(r, 40));
     const afterReload = screen('cmMarket').includes('pc-a bmk on');
@@ -1435,7 +1432,7 @@ function citiesSeed(){
   }, ['edge.emptyCityMarket']);
 
   await must('ح٤ · المؤجل يستجيب برسالة خطوته ولا يغيّر الحالة (Users’ most viewed بالرحلات · One day trip) — ر٦٨ · r72m: Most saved صار حيًّا', async () => {
-    B.x("cmOpenSource('trips')"); await new Promise(r => setTimeout(r, 30));
+    B.x("cmPickTab('trips')"); await new Promise(r => setTimeout(r, 30)); // r72s
     const before = B.x('JSON.stringify([communitySort, communityMarkedOnly])'); captured.toasts.length = 0;
     B.x('cmSortOpen = true; renderCommunityModal()'); await new Promise(r => setTimeout(r, 30)); const a = await click('communityBody', 'Users trips most viewed'); // r72r-2: بقائمة Sort by
     const toasted = captured.toasts.some(t => /M4\.26/.test(t));
