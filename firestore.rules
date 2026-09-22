@@ -1,3 +1,14 @@
+// firestore rules v3.10 (M4.26 + أ-١٤ — النشرة الأخيرة قبل الإطلاق · ٢٢ سبتمبر ٢٠٢٦؛ على المواصفة أ-٦ §١٢ وبيان M4.26؛ الهجرة بسكربت — انتقالية: الأم تقبل categories أو index):
+//   (أ) التقسيم: الأم userCityLists فهرسًا (index · splitV · بلا categories بعد الهجرة) · الفرعي userCityListCats/{uid}_{city}_{cat} يحمل نسخة شرط القراءة (public · sharedWith) — لا get() للأم
+//   (١) العدّاد اللحظي للنسخ: حذف copies لصاحبه · copyCount −١ من غير المالك بغياب السجل (!existsAfter)
+//   (٢) حذف الحساب: كل سجل ينشئه المستخدم يحذفه (copies · curatorRequests · reports · follows · listBookmarks · tripSaves) · الفرعيات مع الأم
+//   (٣) trips.viewCount +١ من غير المالك (كالقوائم)
+//   (٤) الملف العام: contact{type,value} بأنواعه السبعة (≤ ١٢٠) — contactUrl يبقى مقبولًا انتقاليًّا · displayName يُسحب · tagline ≤ ٤٠
+//   (٥) مدن المواسم: cities.kind ∈ {city, event} · from · to (المالك يكتب — لا تغيير بالقاعدة؛ توثيق)
+//   (٦) reports.kind يضيف notes و app (app بلا docKey)
+//   (٧) settings/app.rulesVersion (المالك يكتب — لا تغيير بالقاعدة؛ توثيق)
+//   (٨) userLists.hiddenCities[] (حقل بمستند صاحبه — لا تغيير بالقاعدة؛ توثيق)
+//   الامتحان: tests/rules-sim.js القسم ٢٣ · التراجع: firestore_rules_M4-25.txt (v3.9)
 // firestore rules v3.9 (M4.25 — النشرة الجامعة ١٧ سبتمبر ٢٠٢٦؛ على المواصفة أ-٦ v1.5 المعتمدة §١٤ و§١٧-ج؛ لا هجرة بيانات):
 //   (١) topPlace لمالك موثَّق بقائمة عامة — بحقل مشتق hasTop بمستوى القائمة (القواعد لا تمرّ على المصفوفات)
 //   (٢) الجغرافيا: geoSources ⊆ {user_pin,fsq,overture,osm,user_paste} · legSources ⊆ {estimate,osrm,user} — لا إحداثيات جوجل أبدًا
@@ -385,25 +396,31 @@ service cloud.firestore {
         && request.resource.data.get('favoriteCount', 0) == 0
         && request.resource.data.get('saveCount', 0) == 0
         && request.resource.data.get('copyCount', 0) == 0 // M4.25 (٤)
+        && request.resource.data.get('viewCount', 0) == 0 // M4.26 (٣)
         && legSourcesOk() && noGoogleCoords(); // M4.25 (٢)(٣): plan/dayRoutes مقبولة لصاحبها بلا قيد إضافي
       // v3.7 (الفجوة ١٦) + v3.8: صاحب الرحلة لا يمس favoriteCount ولا saveCount
       // v3.8 (السطر ٥): فرع تفضيل الرحلة (v3.7-٤) سُحب — favoriteCount مجمَّد
       // v3.8 (السطر ٤): حفظ الرحلة العامة من الآخرين — saveCount ±١ بأرضية، مربوط بسجل tripSaves للطالب (نمط الفجوة ١٧)
       allow update: if isOwner()
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
-            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['favoriteCount', 'saveCount', 'copyCount'])
-            && legSourcesOk() && noGoogleCoords()) // M4.25 (٢)(٣)(٤)
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['favoriteCount', 'saveCount', 'copyCount', 'viewCount'])
+            && legSourcesOk() && noGoogleCoords()) // M4.25 (٢)(٣)(٤) · M4.26 (٣)
         || (isSignedIn() && !isSuspended() && (resource.data.public == true || request.auth.uid in resource.data.get('sharedWith', [])) && resource.data.ownerId != request.auth.uid && // M4.24.1 بند ١٨
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['saveCount', 'copyCount']) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['saveCount', 'copyCount', 'viewCount']) &&
+            (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
+             || request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0) + 1) && // M4.26 (٣)
             request.resource.data.get('saveCount', 0) >= 0 &&
             (request.resource.data.get('saveCount', 0) == resource.data.get('saveCount', 0)
              || (request.resource.data.get('saveCount', 0) == resource.data.get('saveCount', 0) + 1
               && existsAfter(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))
              || (request.resource.data.get('saveCount', 0) == resource.data.get('saveCount', 0) - 1
               && !existsAfter(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))) &&
+            request.resource.data.get('copyCount', 0) >= 0 &&
             (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0)
              || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) + 1
-                 && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId))))); // M4.25 (٤)
+                 && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)))
+             || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) - 1
+                 && !existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId))))); // M4.25 (٤) · M4.26 (١) لحظي
       // ⚠️ delete بلا !isSuspended() عمدًا — حق حذف البيانات لا يسقط بالإيقاف (قرار المالك ١٦ أغسطس).
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
@@ -421,6 +438,10 @@ service cloud.firestore {
       function noPrivateKeys() {
         return !request.resource.data.get('categories', {}).keys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others']);
       }
+      function indexOk() { // M4.26 (أ): الفهرس قائمة (≤ ٢٠٠٠٠ مدخل) و splitV == 1 حين يوجد — الانتقالية تقبل الأم بلا فهرس
+        return (!('index' in request.resource.data) || (request.resource.data.index is list && request.resource.data.index.size() <= 20000))
+          && (!('splitV' in request.resource.data) || request.resource.data.splitV == 1);
+      }
       function privateKeysOkOnUpdate() {
         return !('categories' in request.resource.data.diff(resource.data).affectedKeys())
           || !('categories' in request.resource.data)
@@ -435,20 +456,23 @@ service cloud.firestore {
         && request.resource.data.get('bookmarkCount', 0) == 0
         && request.resource.data.get('viewCount', 0) == 0
         && request.resource.data.get('copyCount', 0) == 0 // M4.25 (٤)
-        && hasTopOk(request.auth.uid) && geoSourcesOk() && noGoogleCoords() && flagsUsedOk() && catsVOk(); // M4.25 (١)(٢)(٣)
+        && hasTopOk(request.auth.uid) && geoSourcesOk() && noGoogleCoords() && flagsUsedOk() && catsVOk() && indexOk(); // M4.25 (١)(٢)(٣) · M4.26 (أ)
       // v3.7 (الفجوة ١٦) + v3.8: التعديل الذاتي لا يمس favoriteCount ولا bookmarkCount ولا viewCount (الحفظ يرسلها غير متغيّرة — لا تُحتسب متأثرة)
       // v3.8 (السطر ٥): فرع ±١ على favoriteCount من الآخرين سُحب — مجمَّد
       // v3.8 (السطر ٣): مفكرة القائمة العامة من الآخرين — bookmarkCount ±١ بأرضية، مربوط بسجل listBookmarks للطالب (نمط الفجوة ١٧)
       // v3.8 (السطر المعلَّق ق٠١-١٩): viewCount العام — زيادة بواحد فقط من الآخرين (نمط مشاهدات الملف المجتمعي)
-      allow update: if privateKeysOkOnUpdate() && (isOwner()
+      allow update: if privateKeysOkOnUpdate() && indexOk() && (isOwner()
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['favoriteCount', 'bookmarkCount', 'viewCount', 'copyCount'])
             && hasTopOk(request.auth.uid) && geoSourcesOk() && noGoogleCoords() && flagsUsedOk() && catsVOk()) // M4.25 (١)(٢)(٣)(٤)
         || (isSignedIn() && !isSuspended() && (resource.data.public == true || request.auth.uid in resource.data.get('sharedWith', [])) && resource.data.ownerId != request.auth.uid && // M4.24.1 بند ١٨
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookmarkCount', 'viewCount', 'copyCount']) &&
+            request.resource.data.get('copyCount', 0) >= 0 &&
             (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0)
              || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) + 1
-                 && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)))) && // M4.25 (٤)
+                 && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)))
+             || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) - 1
+                 && !existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)))) && // M4.25 (٤) · M4.26 (١) لحظي
             (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
              || request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0) + 1) &&
             request.resource.data.get('bookmarkCount', 0) >= 0 &&
@@ -462,12 +486,34 @@ service cloud.firestore {
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
     }
 
+    // M4.26 (أ): المستند الفرعي — مكان لكل تصنيف · شرط القراءة منسوخ فيه (public · sharedWith) فلا قراءة للأم · الكتابة لصاحبه فقط
+    match /userCityListCats/{docId} {
+      allow read: if isOwner() || (isSignedIn() && resource == null && docId.split('_')[0] == request.auth.uid)
+        || (isSignedIn() && (resource.data.ownerId == request.auth.uid || resource.data.public == true || request.auth.uid in resource.data.get('sharedWith', [])));
+      allow create: if isSignedIn() && !isSuspended()
+        && request.resource.data.ownerId == request.auth.uid
+        && docId.split('_')[0] == request.auth.uid
+        && request.resource.data.keys().hasAll(['ownerId', 'cityId', 'catId', 'public', 'places'])
+        && request.resource.data.places is list
+        && !(request.resource.data.catId in ['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others'])
+        && noGoogleCoords();
+      allow update: if isOwner() || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId && request.resource.data.catId == resource.data.catId && request.resource.data.cityId == resource.data.cityId
+        && request.resource.data.places is list && noGoogleCoords());
+      allow delete: if isOwner() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+    }
+
     match /communityProfiles/{uid} {
       allow read: if isSignedIn(); // M4.24.1 بند ١٤
       function profileFieldsOk() {
         return (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 200))
-          && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 40))
-          && (!('contactUrl' in request.resource.data) || (request.resource.data.contactUrl is string && request.resource.data.contactUrl.matches('https://.*') && request.resource.data.contactUrl.size() <= 300))
+          && !('displayName' in request.resource.data) // M4.26 (٤): سُحب — الاسم من الحساب والشعار tagline
+          && (!('tagline' in request.resource.data) || (request.resource.data.tagline is string && request.resource.data.tagline.size() <= 40))
+          && (!('contactUrl' in request.resource.data) || (request.resource.data.contactUrl is string && request.resource.data.contactUrl.matches('https://.*') && request.resource.data.contactUrl.size() <= 300)) // انتقالي
+          && (!('contact' in request.resource.data) || (request.resource.data.contact is map
+              && request.resource.data.contact.keys().hasOnly(['type', 'value'])
+              && request.resource.data.contact.get('type', '') in ['instagram', 'x', 'snapchat', 'website', 'email', 'phone', 'whatsapp']
+              && request.resource.data.contact.get('value', '') is string && request.resource.data.contact.get('value', '').size() >= 1 && request.resource.data.contact.get('value', '').size() <= 120)) // M4.26 (٤)
           && (!('showFollowerCount' in request.resource.data) || request.resource.data.showFollowerCount is bool);
       }
       function selfProtectedKeysAbsentOnCreate() {
@@ -525,7 +571,7 @@ service cloud.firestore {
         && request.resource.data.kind in ['trip', 'list', 'place']
         && request.resource.data.docKey is string && request.resource.data.docKey == docId.split('__')[1];
       allow update: if false;
-      allow delete: if isOwner();
+      allow delete: if isOwner() || (isSignedIn() && docId.split('__')[0] == request.auth.uid); // M4.26 (١)(٢): لصاحبه — العدّاد اللحظي وحذف الحساب
     }
 
     // M4.25 (٦): رأي المنتقي بالمدينة — curatorCityNotes/{uid}__{cityId}
@@ -559,7 +605,7 @@ service cloud.firestore {
         && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 300));
       allow update: if isOwner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
         && request.resource.data.status in ['pending', 'accepted', 'declined'];
-      allow delete: if isOwner();
+      allow delete: if isOwner() || (isSignedIn() && request.auth.uid == uid); // M4.26 (٢)
     }
 
     // M4.25 (٧): البلاغات — المسجَّل ينشئ؛ المالك يقرأ ويحذف
@@ -567,13 +613,13 @@ service cloud.firestore {
       allow read: if isOwner();
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.keys().hasOnly(['by', 'kind', 'docKey', 'reason', 'at'])
-        && request.resource.data.keys().hasAll(['by', 'kind', 'docKey'])
+        && request.resource.data.keys().hasAll(['by', 'kind'])
         && request.resource.data.by == request.auth.uid
-        && request.resource.data.kind in ['place', 'list', 'trip', 'profile']
-        && request.resource.data.docKey is string && request.resource.data.docKey.size() <= 120
+        && request.resource.data.kind in ['place', 'list', 'trip', 'profile', 'notes', 'app'] // M4.26 (٦)
+        && (request.resource.data.kind == 'app' || (request.resource.data.docKey is string && request.resource.data.docKey.size() <= 120))
         && (!('reason' in request.resource.data) || (request.resource.data.reason is string && request.resource.data.reason.size() <= 200));
       allow update: if false;
-      allow delete: if isOwner();
+      allow delete: if isOwner() || (isSignedIn() && resource.data.by == request.auth.uid); // M4.26 (٢)
     }
 
     // ===== v3.8 (السطر ٢): سجل مفكرة القوائم — الثابت ١٢: نية خاصة لصاحبها، العلني عدّادها المجمَّع فقط =====
