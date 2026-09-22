@@ -1,5 +1,6 @@
 // MyPickz — tests/rules-sim.js
 // يختبر firestore.rules على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// M4.26 (٢٢ سبتمبر ٢٠٢٦ — التقسيم والأسطر الثمانية): + القسم ٢٣ (~٥٠ حالة).
 // M4.25 (١٧ سبتمبر ٢٠٢٦ — النشرة الجامعة على أ-٦): + القسم ٢٢ — ٦٤ حالة (hasTop للموثَّق · geoSources/legSources/flagsUsed/catsV · copyCount بسجل copies ذرّيًّا
 //   · عدّاد المتابعين للموثَّقين بلا محتوى وبالدفعة (existsAfter) · curatorCityNotes · curatorRequests · reports · stats_cities · مفاتيح الإحصاء الجديدة والقديمة) — المجموع ٥١١.
 // M4.24 (٤ سبتمبر ٢٠٢٦ — نشرة التنظيف الثنائية): اجتثاث مجموعة favorites بحدثَيها (حالاتها العشر صارت حالتَي
@@ -841,6 +842,82 @@ const no = (label, f) => expect(false, label, f);
   await no('M4.25 stats_cities read by user deny', () => a.doc('stats_cities/paris__2026-09-17').get());
   await ok('M4.25 stats_cities read by OWNER allow', () => owner.doc('stats_cities/paris__2026-09-17').get());
   await no('M4.25 stats_cities create by GUEST deny', () => guest.doc('stats_cities/rome__2026-09-17').set({ open: 1 }));
+
+  // ================= ٢٣) M4.26 + أ-١٤ — التقسيم والأسطر الثمانية (٢٢ سبتمبر ٢٠٢٦) =================
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await db.doc('userCityLists/userB_split').set({ ownerId: B, cityId: 'split', cityName: 'Split', public: true, sharedWith: [], index: [{ id: 'p1', name: 'P1', catId: 'coffee' }], splitV: 1, bookmarkCount: 0, viewCount: 0, copyCount: 1 });
+    await db.doc('userCityListCats/userB_split_coffee').set({ ownerId: B, cityId: 'split', catId: 'coffee', public: true, sharedWith: [], places: [{ id: 'p1', name: 'P1', url: 'u' }] });
+    await db.doc('userCityListCats/userB_split_pizza').set({ ownerId: B, cityId: 'split', catId: 'pizza', public: false, sharedWith: [A], places: [] });
+    await db.doc('userCityListCats/userB_priv_bar').set({ ownerId: B, cityId: 'priv', catId: 'bar', public: false, sharedWith: [], places: [] });
+    await db.doc('copies/userA__userB_split').set({ uid: A, kind: 'list', docKey: 'userB_split', at: 1 });
+    await db.doc('trips/tB_v').set({ ownerId: B, public: true, sharedWith: [], saveCount: 0, copyCount: 1, viewCount: 0, name: 'v' });
+    await db.doc('copies/userA__tB_v').set({ uid: A, kind: 'trip', docKey: 'tB_v', at: 1 });
+    await db.doc('curatorRequests/userA').set({ uid: A, text: 'x', at: 1, status: 'pending' });
+    await db.doc('reports/rA1').set({ by: A, kind: 'place', docKey: 'x', at: 1 });
+    await db.doc('follows/userA_pB').set({ followerUid: A, curatorUid: 'pB', at: 1 });
+  });
+  // (أ) الأم فهرسًا — انتقالية: categories أو index
+  await ok('M4.26 parent create with index+splitV allow', () => a.doc('userCityLists/userA_ix1').set({ ownerId: A, public: false, sharedWith: [], index: [], splitV: 1 }));
+  await ok('M4.26 parent create with categories (transitional) allow', () => a.doc('userCityLists/userA_ix2').set({ ownerId: A, public: false, sharedWith: [], categories: {} }));
+  await no('M4.26 parent splitV 2 deny', () => a.doc('userCityLists/userA_ix3').set({ ownerId: A, public: false, sharedWith: [], index: [], splitV: 2 }));
+  await no('M4.26 parent index not a list deny', () => a.doc('userCityLists/userA_ix4').set({ ownerId: A, public: false, sharedWith: [], index: 'x', splitV: 1 }));
+  // (أ) الفرعي
+  await ok('M4.26 cat create by owner allow', () => a.doc('userCityListCats/userA_ix1_coffee').set({ ownerId: A, cityId: 'ix1', catId: 'coffee', public: false, sharedWith: [], places: [{ id: 'q', name: 'Q', url: 'u' }] }));
+  await no('M4.26 cat create private catId deny', () => a.doc('userCityListCats/userA_ix1_personal_home').set({ ownerId: A, cityId: 'ix1', catId: 'personal_home', public: false, sharedWith: [], places: [] }));
+  await no('M4.26 cat create missing places deny', () => a.doc('userCityListCats/userA_ix1_pizza').set({ ownerId: A, cityId: 'ix1', catId: 'pizza', public: false, sharedWith: [] }));
+  await no('M4.26 cat create for other uid deny', () => a.doc('userCityListCats/userB_x_coffee').set({ ownerId: B, cityId: 'x', catId: 'coffee', public: false, sharedWith: [], places: [] }));
+  await no('M4.26 cat create with googleLat deny', () => a.doc('userCityListCats/userA_ix1_bar').set({ ownerId: A, cityId: 'ix1', catId: 'bar', public: false, sharedWith: [], places: [], googleLat: 1 }));
+  await ok('M4.26 cat update by owner (places) allow', () => a.doc('userCityListCats/userA_ix1_coffee').set({ places: [] }, { merge: true }));
+  await no('M4.26 cat update changing catId deny', () => a.doc('userCityListCats/userA_ix1_coffee').set({ catId: 'pizza' }, { merge: true }));
+  await no('M4.26 cat update by other deny', () => b.doc('userCityListCats/userA_ix1_coffee').set({ places: [] }, { merge: true }));
+  await ok('M4.26 cat read PUBLIC by other allow', () => a.doc('userCityListCats/userB_split_coffee').get());
+  await ok('M4.26 cat read SHARED with me allow', () => a.doc('userCityListCats/userB_split_pizza').get());
+  await no('M4.26 cat read PRIVATE by other deny', () => a.doc('userCityListCats/userB_priv_bar').get());
+  await no('M4.26 cat read by guest deny', () => guest.doc('userCityListCats/userB_split_coffee').get());
+  await ok('M4.26 cat delete by owner allow', () => a.doc('userCityListCats/userA_ix1_coffee').delete());
+  await no('M4.26 cat delete by other deny', () => a.doc('userCityListCats/userB_split_coffee').delete());
+  // (١) العدّاد اللحظي: حذف السجل و −١ بالدفعة
+  const unBatch = (who, uid, key, coll, count) => () => { const btch = who.batch(); btch.delete(who.doc(`copies/${uid}__${key}`)); btch.set(who.doc(`${coll}/${key}`), { copyCount: count }, { merge: true }); return btch.commit(); };
+  await ok('M4.26 copies delete by self allow', () => a.doc('copies/userA__tBpub3').delete());
+  await no('M4.26 copies delete by other deny', () => b.doc('copies/userA__userB_split').delete());
+  await ok('M4.26 copyCount -1 BATCH (delete record + counter) on list allow', unBatch(a, A, 'userB_split', 'userCityLists', 0));
+  await ok('M4.26 copyCount -1 BATCH on trip allow', unBatch(a, A, 'tB_v', 'trips', 0));
+  await no('M4.26 copyCount -1 WITH record still present deny', () => a.doc('trips/tBpub3').set({ copyCount: 0 }, { merge: true }));
+  await no('M4.26 copyCount below zero deny', () => a.doc('trips/tB_v').set({ copyCount: -1 }, { merge: true }));
+  // (٢) حذف الحساب: كل سجل يحذفه صاحبه
+  await ok('M4.26 curatorRequests delete by self allow', () => a.doc('curatorRequests/userA').delete());
+  await ok('M4.26 reports delete by reporter allow', () => a.doc('reports/rA1').delete());
+  await no('M4.26 reports delete by other deny', () => b.doc('reports/r5').set({ by: B, kind: 'place', docKey: 'x' }).then(() => a.doc('reports/r5').delete()));
+  await ok('M4.26 follows delete by follower allow', () => a.doc('follows/userA_pB').delete());
+  // (٣) trips.viewCount
+  await ok('M4.26 trips viewCount +1 by other allow', () => a.doc('trips/tB_v').set({ viewCount: 1 }, { merge: true }));
+  await no('M4.26 trips viewCount +2 deny', () => a.doc('trips/tB_v').set({ viewCount: 3 }, { merge: true }));
+  await no('M4.26 trips viewCount by OWNER deny', () => b.doc('trips/tB_v').set({ viewCount: 5 }, { merge: true }));
+  await no('M4.26 trip create with viewCount 3 deny', () => a.doc('trips/tA_v').set({ ownerId: A, public: false, sharedWith: [], viewCount: 3 }));
+  // (٤) التواصل بنوعه · displayName مسحوب · tagline
+  await ok('M4.26 profile contact email allow', () => a.doc('communityProfiles/' + A).set({ contact: { type: 'email', value: 'a@x.io' } }, { merge: true }));
+  await ok('M4.26 profile contact whatsapp allow', () => a.doc('communityProfiles/' + A).set({ contact: { type: 'whatsapp', value: '+9665' } }, { merge: true }));
+  await no('M4.26 profile contact bad type deny', () => a.doc('communityProfiles/' + A).set({ contact: { type: 'fax', value: '1' } }, { merge: true }));
+  await no('M4.26 profile contact empty value deny', () => a.doc('communityProfiles/' + A).set({ contact: { type: 'email', value: '' } }, { merge: true }));
+  await no('M4.26 profile contact extra key deny', () => a.doc('communityProfiles/' + A).set({ contact: { type: 'email', value: 'a', x: 1 } }, { merge: true }));
+  await no('M4.26 profile displayName deny (withdrawn)', () => a.doc('communityProfiles/' + A).set({ displayName: 'X' }, { merge: true }));
+  await ok('M4.26 profile tagline 40 allow', () => a.doc('communityProfiles/' + A).set({ tagline: 'x'.repeat(40) }, { merge: true }));
+  await no('M4.26 profile tagline 41 deny', () => a.doc('communityProfiles/' + A).set({ tagline: 'x'.repeat(41) }, { merge: true }));
+  await ok('M4.26 profile contactUrl https still allowed (transitional)', () => a.doc('communityProfiles/' + A).set({ contactUrl: 'https://x.io/a' }, { merge: true }));
+  // (٥) مدن المواسم — المالك يكتب
+  await ok('M4.26 cities event kind by OWNER allow', () => owner.doc('cities/season1').set({ name: 'Season', kind: 'event', from: '2026-11-01', to: '2026-12-31' }));
+  await no('M4.26 cities event kind by user deny', () => a.doc('cities/season2').set({ name: 'S', kind: 'event' }));
+  // (٦) أنواع البلاغ
+  await ok('M4.26 report kind notes allow', () => a.doc('reports/rn1').set({ by: A, kind: 'notes', docKey: 'cur_a__paris', reason: 'x' }));
+  await ok('M4.26 report kind app without docKey allow', () => a.doc('reports/rapp1').set({ by: A, kind: 'app', reason: 'The button does nothing' }));
+  await no('M4.26 report kind place without docKey deny', () => a.doc('reports/rp0').set({ by: A, kind: 'place' }));
+  // (٧) rulesVersion — المالك
+  await ok('M4.26 settings rulesVersion by OWNER allow', () => owner.doc('settings/app').set({ rulesVersion: 'v3.10' }, { merge: true }));
+  await no('M4.26 settings rulesVersion by user deny', () => a.doc('settings/app').set({ rulesVersion: 'v9' }, { merge: true }));
+  // (٨) hiddenCities بمستند صاحبه
+  await ok('M4.26 userLists hiddenCities by self allow', () => a.doc('userLists/' + A).set({ hiddenCities: ['paris'] }, { merge: true }));
+  await no('M4.26 userLists hiddenCities by other deny', () => b.doc('userLists/' + A).set({ hiddenCities: [] }, { merge: true }));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
