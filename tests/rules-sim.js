@@ -575,7 +575,8 @@ const no = (label, f) => expect(false, label, f);
   await ok('v3.7 follow delete own by suspended allow (withdrawal)', () => s.doc(`follows/${S}_${C}`).delete());
   await ok('v3.7 follow delete app owner allow', () => owner.doc(`follows/${B}_${C}`).delete());
 
-  await ok('v3.7 cp followerCount +1 by other allow', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 1 }));
+  await no('v3.7→v3.10 cp followerCount +1 by other with a PRE-EXISTING record deny (no inflation)', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 1 })); // v3.10: السجل يُنشأ بالطلب نفسه
+  await ok('v3.10 cp followerCount +1 BATCH (new record + counter) by another user allow', () => { const btch = b.batch(); btch.set(b.doc(`follows/${B}_${C}`), { followerUid: B, curatorUid: C, at: 1 }); btch.set(b.doc(`communityProfiles/${C}`), { followerCount: 1 }, { merge: true }); return btch.commit(); });
   await no('v3.7 cp followerCount +2 deny', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 3 }));
   await no('v3.7 cp followerCount 1 -> -1 deny (floor)', () => a.doc(`communityProfiles/${C}`).update({ followerCount: -1 }));
   await no('v3.7 cp SELF bump viewCount deny (gap 15 closed)', () => c.doc(`communityProfiles/${C}`).update({ viewCount: 999 }));
@@ -583,7 +584,7 @@ const no = (label, f) => expect(false, label, f);
   await no('v3.7 cp SELF set verified deny', () => c.doc(`communityProfiles/${C}`).update({ verified: true }));
   await no('v3.7 cp SELF create with verified deny', () => env.authenticatedContext('newV').firestore().doc('communityProfiles/newV').set({ hasAnyPublicContent: false, verified: true }));
   await ok('v3.7 cp OWNER set verified allow', () => owner.doc(`communityProfiles/${C}`).update({ verified: true }));
-  await ok('v3.7 cp self set bio/displayName/contactUrl/showFollowerCount allow', () => c.doc(`communityProfiles/${C}`).update({ bio: 'Food and coffee in Riyadh', displayName: 'Khalid', contactUrl: 'https://instagram.com/khalid', showFollowerCount: true }));
+  await ok('v3.7→M4.26 cp self set bio/contactUrl/showFollowerCount allow (displayName withdrawn)', () => c.doc(`communityProfiles/${C}`).update({ bio: 'Food and coffee in Riyadh', contactUrl: 'https://instagram.com/khalid', showFollowerCount: true }));
   await no('v3.7 cp self bio over 200 chars deny', () => c.doc(`communityProfiles/${C}`).update({ bio: 'x'.repeat(201) }));
   await no('v3.7 cp self contactUrl not https deny', () => c.doc(`communityProfiles/${C}`).update({ contactUrl: 'http://evil.example' }));
   await ok('v3.7 cp self totalFavoriteCount recompute still allowed (documented exception — syncCommunityProfile)', () => c.doc(`communityProfiles/${C}`).update({ totalFavoriteCount: 4 }));
@@ -605,7 +606,8 @@ const no = (label, f) => expect(false, label, f);
   await no('v3.7 gap17 followerCount +1 by user WITHOUT follow doc deny', () => b.doc(`communityProfiles/${C}`).update({ followerCount: 2 }));
   await no('v3.7 gap17 followerCount -1 by follower WHILE follow doc exists deny', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 0 }));
   await env.withSecurityRulesDisabled(async (x) => x.firestore().doc(`follows/${A}_${C}`).delete());
-  await ok('v3.7 gap17 followerCount -1 after unfollow (doc absent) allow', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 0 }));
+  await no('v3.7→v3.10 followerCount -1 with record ABSENT deny (no zeroing)', () => a.doc(`communityProfiles/${C}`).update({ followerCount: 0 }));
+  await ok('v3.10 followerCount -1 BATCH (delete record + counter) allow', () => { const btch = b.batch(); btch.delete(b.doc(`follows/${B}_${C}`)); btch.set(b.doc(`communityProfiles/${C}`), { followerCount: 0 }, { merge: true }); return btch.commit(); });
 
   await no('v3.7 gap18 follow create to uid without communityProfile deny', () => a.doc(`follows/${A}_nobody123`).set({ followerUid: A, curatorUid: 'nobody123', at: 1 }));
 
@@ -635,7 +637,8 @@ const no = (label, f) => expect(false, label, f);
 
   // --- (السطر ٣) عدّاد مفكرة القائمة المربوط بالسجل ---
   await no('v3.8 bookmarkCount +1 WITHOUT bookmark record deny (gap17 pattern)', () => b.doc('userCityLists/cBpub2').update({ bookmarkCount: 1 }));
-  await ok('v3.8 bookmarkCount +1 with record allow', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 1 }));
+  await no('v3.8→v3.10 bookmarkCount +1 with a PRE-EXISTING record deny', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 1 }));
+  await ok('v3.10 bookmarkCount +1 BATCH (new record + counter) by another user allow', () => { const btch = c.batch(); btch.set(c.doc(`listBookmarks/${C}__cBpub`), { at: 1 }); btch.set(c.doc('userCityLists/cBpub'), { bookmarkCount: 1 }, { merge: true }); return btch.commit(); });
   await no('v3.8 bookmarkCount +2 deny', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 3 }));
   await no('v3.8 bookmarkCount SELF bump by list owner deny (gap16 pattern)', () => b.doc('userCityLists/cBpub').update({ bookmarkCount: 2 }));
   await no('v3.8 bookmarkCount by suspended deny', () => s.doc('userCityLists/cBpub').update({ bookmarkCount: 2 }));
@@ -645,7 +648,7 @@ const no = (label, f) => expect(false, label, f);
   await no('v3.8 bookmarkCount floor 0 -> -1 deny', () => a.doc('userCityLists/cBpub2').update({ bookmarkCount: -1 }));
 
   // --- (السطر المعلَّق ق٠١-١٩) عدّاد مشاهدات القائمة العام ---
-  await ok('v3.8 ucl viewCount +1 combined with unchanged bookmarkCount allow', () => a.doc('userCityLists/cBpub').update({ viewCount: 1, bookmarkCount: 1 }));
+  await ok('v3.8 ucl viewCount +1 (bookmarkCount untouched) allow', () => a.doc('userCityLists/cBpub').update({ viewCount: 1 }));
   await ok('v3.8 ucl viewCount +1 alone by other allow', () => a.doc('userCityLists/cBpub').update({ viewCount: 2 }));
   await no('v3.8 ucl viewCount +2 deny', () => a.doc('userCityLists/cBpub').update({ viewCount: 4 }));
   await no('v3.8 ucl viewCount decrease deny', () => a.doc('userCityLists/cBpub').update({ viewCount: 1 }));
@@ -656,7 +659,8 @@ const no = (label, f) => expect(false, label, f);
   // --- فكّ التمييز: الحذف ثم النقص بغياب السجل ---
   await no('v3.8 lb delete by LIST OWNER deny', () => b.doc(`listBookmarks/${A}__cBpub`).delete());
   await ok('v3.8 lb delete own allow (unbookmark)', () => a.doc(`listBookmarks/${A}__cBpub`).delete());
-  await ok('v3.8 bookmarkCount -1 after unbookmark (record absent) allow', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 0 }));
+  await no('v3.8→v3.10 bookmarkCount -1 with record ABSENT deny', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 0 }));
+  await ok('v3.10 bookmarkCount -1 BATCH (delete record + counter) allow', () => { const btch = c.batch(); btch.delete(c.doc(`listBookmarks/${C}__cBpub`)); btch.set(c.doc('userCityLists/cBpub'), { bookmarkCount: 0 }, { merge: true }); return btch.commit(); });
   await no('v3.8 bookmarkCount +1 after unbookmark (record absent) deny', () => a.doc('userCityLists/cBpub').update({ bookmarkCount: 1 }));
 
   // --- (السطران ٣ و١٩ — نمط ١٦ عند الإنشاء) ---
@@ -686,14 +690,16 @@ const no = (label, f) => expect(false, label, f);
   await no('v3.8 ts read by TRIP OWNER deny (invariant 12)', () => b.doc(`tripSaves/${A}__tBpub`).get());
   await no('v3.8 ts read guest deny', () => guest.doc(`tripSaves/${A}__tBpub`).get());
   await ok('v3.8 ts read app owner allow', () => owner.doc(`tripSaves/${A}__tBpub`).get());
-  await ok('v3.8 saveCount +1 with record allow', () => a.doc('trips/tBpub').update({ saveCount: 1 }));
+  await no('v3.8→v3.10 saveCount +1 with a PRE-EXISTING record deny', () => a.doc('trips/tBpub').update({ saveCount: 1 }));
+  await ok('v3.10 saveCount +1 BATCH by another user allow', () => { const btch = c.batch(); btch.set(c.doc(`tripSaves/${C}__tBpub`), { at: 1 }); btch.set(c.doc('trips/tBpub'), { saveCount: 1 }, { merge: true }); return btch.commit(); });
   await no('v3.8 saveCount +1 WITHOUT record deny (curatorC has none)', () => c.doc('trips/tBpub').update({ saveCount: 2 }));
   await no('v3.8 saveCount +2 deny', () => a.doc('trips/tBpub').update({ saveCount: 3 }));
   await no('v3.8 saveCount SELF by trip owner deny (gap16 pattern)', () => b.doc('trips/tBpub').update({ saveCount: 2 }));
   await no('v3.8 saveCount by suspended deny', () => s.doc('trips/tBpub').update({ saveCount: 2 }));
   await no('v3.8 saveCount -1 WHILE record exists deny', () => a.doc('trips/tBpub').update({ saveCount: 0 }));
   await ok('v3.8 ts delete own allow (unsave)', () => a.doc(`tripSaves/${A}__tBpub`).delete());
-  await ok('v3.8 saveCount -1 after unsave (record absent) allow', () => a.doc('trips/tBpub').update({ saveCount: 0 }));
+  await no('v3.8→v3.10 saveCount -1 with record ABSENT deny', () => a.doc('trips/tBpub').update({ saveCount: 0 }));
+  await ok('v3.10 saveCount -1 BATCH (delete record + counter) allow', () => { const btch = c.batch(); btch.delete(c.doc(`tripSaves/${C}__tBpub`)); btch.set(c.doc('trips/tBpub'), { saveCount: 0 }, { merge: true }); return btch.commit(); });
   await no('v3.8 trips create with saveCount 5 deny', () => a.doc('trips/t38a').set({ ownerId: A, public: false, sharedWith: [], saveCount: 5 }));
   await ok('v3.8 trips create with saveCount 0 allow', () => a.doc('trips/t38b').set({ ownerId: A, public: false, sharedWith: [], saveCount: 0 }));
   await no('v3.8 trip owner self-update touching saveCount deny', () => b.doc('trips/tBpub').update({ name: 'x', saveCount: 1 }));
@@ -776,10 +782,11 @@ const no = (label, f) => expect(false, label, f);
   await no('M4.25 copies record bad kind deny', () => a.doc('copies/userA__cBpub3').set({ uid: A, kind: 'card', docKey: 'cBpub3', at: 1 }));
   await no('M4.25 copies record docKey mismatch deny', () => a.doc('copies/userA__cBpub3').set({ uid: A, kind: 'list', docKey: 'other', at: 1 }));
   await no('M4.25 copies record update deny', () => a.doc('copies/userA__tBpub3').set({ at: 2 }, { merge: true }));
-  await no('M4.25 copies record delete by self deny', () => a.doc('copies/userA__tBpub3').delete());
+  await ok('M4.25→M4.26 copies record delete by self allow (on a scratch record)', () => a.doc('copies/userA__scratch22').set({ uid: A, kind: 'trip', docKey: 'scratch22', at: 1 }).then(() => a.doc('copies/userA__scratch22').delete()));
   await ok('M4.25 copies read by self allow', () => a.doc('copies/userA__tBpub3').get());
   await no('M4.25 copies read by other deny', () => b.doc('copies/userA__tBpub3').get());
-  await ok('M4.25 copyCount +1 on public trip WITH record (already exists) allow', () => a.doc('trips/tBpub3').set({ copyCount: 1 }, { merge: true }));
+  await no('M4.25→v3.10 copyCount +1 with a PRE-EXISTING record deny', () => a.doc('trips/tBpub3').set({ copyCount: 1 }, { merge: true }));
+  await ok('v3.10 copyCount +1 BATCH (new record + counter) on public trip allow', () => { const btch = c.batch(); btch.set(c.doc(`copies/${C}__tBpub3`), { uid: C, kind: 'trip', docKey: 'tBpub3', at: 1 }); btch.set(c.doc('trips/tBpub3'), { copyCount: 1 }, { merge: true }); return btch.commit(); });
   await no('M4.25 copyCount +1 on public list WITHOUT record deny', () => a.doc('userCityLists/cBpub3').set({ copyCount: 1 }, { merge: true }));
   await ok('M4.25 copyCount BATCH (record + counter) on public list allow — existsAfter', cpBatch(a, A, 'list', 'cBpub3', 'userCityLists', 1));
   await no('M4.25 copyCount +2 deny', () => a.doc('trips/tBpub3').set({ copyCount: 3 }, { merge: true }));
@@ -879,12 +886,21 @@ const no = (label, f) => expect(false, label, f);
   await no('M4.26 cat delete by other deny', () => a.doc('userCityListCats/userB_split_coffee').delete());
   // (١) العدّاد اللحظي: حذف السجل و −١ بالدفعة
   const unBatch = (who, uid, key, coll, count) => () => { const btch = who.batch(); btch.delete(who.doc(`copies/${uid}__${key}`)); btch.set(who.doc(`${coll}/${key}`), { copyCount: count }, { merge: true }); return btch.commit(); };
-  await ok('M4.26 copies delete by self allow', () => a.doc('copies/userA__tBpub3').delete());
+  await ok('M4.26 copies delete by self allow', () => a.doc('copies/userA__scratch23').set({ uid: A, kind: 'trip', docKey: 'scratch23', at: 1 }).then(() => a.doc('copies/userA__scratch23').delete()));
   await no('M4.26 copies delete by other deny', () => b.doc('copies/userA__userB_split').delete());
   await ok('M4.26 copyCount -1 BATCH (delete record + counter) on list allow', unBatch(a, A, 'userB_split', 'userCityLists', 0));
   await ok('M4.26 copyCount -1 BATCH on trip allow', unBatch(a, A, 'tB_v', 'trips', 0));
   await no('M4.26 copyCount -1 WITH record still present deny', () => a.doc('trips/tBpub3').set({ copyCount: 0 }, { merge: true }));
   await no('M4.26 copyCount below zero deny', () => a.doc('trips/tB_v').set({ copyCount: -1 }, { merge: true }));
+  // (٩) إغلاق ثغرة العدّادات: لا تضخيم بسجل قائم ولا تصفير بلا سجل — بالأربعة
+  await no('v3.10 inflate: copyCount +1 again with my record already there deny', () => c.doc('trips/tBpub3').set({ copyCount: 2 }, { merge: true }));
+  await no('v3.10 zero: copyCount -1 without any record deny', () => v.doc('trips/tBpub3').set({ copyCount: 0 }, { merge: true })); // userV بلا سجل
+  await no('v3.10 inflate: bookmarkCount +1 with pre-existing record deny', () => a.doc('userCityLists/cBpub3').set({ bookmarkCount: 1 }, { merge: true }));
+  await no('v3.10 zero: bookmarkCount -1 without record deny', () => v.doc('userCityLists/cBpub3').set({ bookmarkCount: -1 }, { merge: true }));
+  await no('v3.10 inflate: saveCount +1 without creating a record deny', () => a.doc('trips/tB_v').set({ saveCount: 1 }, { merge: true }));
+  await no('v3.10 inflate: followerCount +1 without a new record deny', () => v.doc('communityProfiles/pB').set({ followerCount: 9 }, { merge: true }));
+  await no('v3.10 batch that creates a record but bumps by +2 deny', () => { const btch = a.batch(); btch.set(a.doc('copies/userA__tB_v'), { uid: A, kind: 'trip', docKey: 'tB_v', at: 1 }); btch.set(a.doc('trips/tB_v'), { copyCount: 2 }, { merge: true }); return btch.commit(); });
+  await ok('v3.10 batch that creates a record and bumps by +1 allow', () => { const btch = a.batch(); btch.set(a.doc('copies/userA__tB_v'), { uid: A, kind: 'trip', docKey: 'tB_v', at: 1 }); btch.set(a.doc('trips/tB_v'), { copyCount: 1 }, { merge: true }); return btch.commit(); });
   // (٢) حذف الحساب: كل سجل يحذفه صاحبه
   await ok('M4.26 curatorRequests delete by self allow', () => a.doc('curatorRequests/userA').delete());
   await ok('M4.26 reports delete by reporter allow', () => a.doc('reports/rA1').delete());
@@ -915,6 +931,9 @@ const no = (label, f) => expect(false, label, f);
   // (٧) rulesVersion — المالك
   await ok('M4.26 settings rulesVersion by OWNER allow', () => owner.doc('settings/app').set({ rulesVersion: 'v3.10' }, { merge: true }));
   await no('M4.26 settings rulesVersion by user deny', () => a.doc('settings/app').set({ rulesVersion: 'v9' }, { merge: true }));
+  // ملاحظة المصفوفة (المطابقة المقيَّدة): المالك ينشئ ملفًا عامًّا لمستخدم آخر — تجيزه القواعد؛ حالة تخصه
+  await ok('M4.12 matrix note: OWNER creates a community profile for another user allow', () => owner.doc('communityProfiles/userNewByOwner').set({ nickname: 'newby', verified: true, publicCityIds: [] }));
+  await no('M4.12 matrix note: a user cannot create a profile for another user deny', () => a.doc('communityProfiles/userNewByA').set({ nickname: 'x' }));
   // (٨) hiddenCities بمستند صاحبه
   await ok('M4.26 userLists hiddenCities by self allow', () => a.doc('userLists/' + A).set({ hiddenCities: ['paris'] }, { merge: true }));
   await no('M4.26 userLists hiddenCities by other deny', () => b.doc('userLists/' + A).set({ hiddenCities: [] }, { merge: true }));
