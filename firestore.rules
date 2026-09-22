@@ -8,6 +8,7 @@
 //   (٦) reports.kind يضيف notes و app (app بلا docKey)
 //   (٧) settings/app.rulesVersion (المالك يكتب — لا تغيير بالقاعدة؛ توثيق)
 //   (٨) userLists.hiddenCities[] (حقل بمستند صاحبه — لا تغيير بالقاعدة؛ توثيق)
+//   (٩) إغلاق ثغرة العدّادات المربوطة (المفكرة · الحفظ · المتابعة · النسخ): +١ فقط حين يُنشأ السجل بالطلب نفسه (!exists && existsAfter) · −١ فقط حين يُحذف بالطلب نفسه (exists && !existsAfter) — لا تضخيم بسجل قائم ولا تصفير بلا سجل
 //   الامتحان: tests/rules-sim.js القسم ٢٣ · التراجع: firestore_rules_M4-25.txt (v3.9)
 // firestore rules v3.9 (M4.25 — النشرة الجامعة ١٧ سبتمبر ٢٠٢٦؛ على المواصفة أ-٦ v1.5 المعتمدة §١٤ و§١٧-ج؛ لا هجرة بيانات):
 //   (١) topPlace لمالك موثَّق بقائمة عامة — بحقل مشتق hasTop بمستوى القائمة (القواعد لا تمرّ على المصفوفات)
@@ -412,15 +413,15 @@ service cloud.firestore {
             request.resource.data.get('saveCount', 0) >= 0 &&
             (request.resource.data.get('saveCount', 0) == resource.data.get('saveCount', 0)
              || (request.resource.data.get('saveCount', 0) == resource.data.get('saveCount', 0) + 1
-              && existsAfter(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))
+              && !exists(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)) && existsAfter(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))
              || (request.resource.data.get('saveCount', 0) == resource.data.get('saveCount', 0) - 1
-              && !existsAfter(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))) &&
+              && exists(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)) && !existsAfter(/databases/$(database)/documents/tripSaves/$(request.auth.uid + '__' + tripId)))) && // v3.10: بالطلب نفسه
             request.resource.data.get('copyCount', 0) >= 0 &&
             (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0)
              || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) + 1
-                 && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)))
+                 && !exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)) && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)))
              || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) - 1
-                 && !existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId))))); // M4.25 (٤) · M4.26 (١) لحظي
+                 && exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)) && !existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId))))); // M4.25 (٤) · M4.26 (١) لحظي · v3.10: بالطلب نفسه
       // ⚠️ delete بلا !isSuspended() عمدًا — حق حذف البيانات لا يسقط بالإيقاف (قرار المالك ١٦ أغسطس).
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
@@ -470,17 +471,17 @@ service cloud.firestore {
             request.resource.data.get('copyCount', 0) >= 0 &&
             (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0)
              || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) + 1
-                 && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)))
+                 && !exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)) && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)))
              || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) - 1
-                 && !existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)))) && // M4.25 (٤) · M4.26 (١) لحظي
+                 && exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)) && !existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)))) && // M4.25 (٤) · M4.26 (١) لحظي · v3.10: السجل يُنشأ/يُحذف بالطلب نفسه (لا تضخيم ولا تصفير)
             (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
              || request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0) + 1) &&
             request.resource.data.get('bookmarkCount', 0) >= 0 &&
             (request.resource.data.get('bookmarkCount', 0) == resource.data.get('bookmarkCount', 0)
              || (request.resource.data.get('bookmarkCount', 0) == resource.data.get('bookmarkCount', 0) + 1
-                 && existsAfter(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId)))
+                 && !exists(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId)) && existsAfter(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId)))
              || (request.resource.data.get('bookmarkCount', 0) == resource.data.get('bookmarkCount', 0) - 1
-                 && !existsAfter(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId))))));
+                 && exists(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId)) && !existsAfter(/databases/$(database)/documents/listBookmarks/$(request.auth.uid + '__' + docId)))))); // v3.10: بالطلب نفسه
       // ⚠️ delete بلا !isSuspended() عمدًا — نفس مبرر trips أعلاه
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
@@ -538,9 +539,9 @@ service cloud.firestore {
             request.resource.data.get('followerCount', 0) >= 0 &&
             (request.resource.data.get('followerCount', 0) == resource.data.get('followerCount', 0)
              || (request.resource.data.get('followerCount', 0) == resource.data.get('followerCount', 0) + 1
-                 && existsAfter(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + uid))) // M4.25 (٥): existsAfter — دفعة واحدة
+                 && !exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + uid)) && existsAfter(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + uid))) // M4.25 (٥) · v3.10: السجل يُنشأ بالطلب نفسه
              || (request.resource.data.get('followerCount', 0) == resource.data.get('followerCount', 0) - 1
-                 && !existsAfter(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + uid)))));
+                 && exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + uid)) && !existsAfter(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + uid)))));
     }
 
     // ===== v3.7 (١): المتابعة — الثابت ١٠ =====
