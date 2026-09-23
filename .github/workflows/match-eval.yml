@@ -20,6 +20,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Diagnose checkout
+        run: |
+          echo "commit: $(git log -1 --oneline)"
+          echo "--- root ---"; ls -la
+          echo "--- scripts ---"; ls -la scripts || true
+          echo "--- scripts/eval ---"; ls -la scripts/eval || true
       - name: Run match eval
         env:
           FSQ_API_KEY: ${{ secrets.FSQ_API_KEY }}
