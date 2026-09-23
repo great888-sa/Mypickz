@@ -14,6 +14,12 @@ async function candidatesFor(env, city, name){
   for (const t of qs){ const sh = await shard(env, city, bucketOf(t)); const ids = own(sh.tokens, t) ? sh.tokens[t] : []; const rare = 1 / Math.sqrt(ids.length || 1); ids.forEach(id => { hits.set(id, (hits.get(id) || 0) + rare); if (own(sh.entries, id)) entries[id] = sh.entries[id]; }); }
   return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).filter(e => own(entries, e[0])).map(e => Object.assign({ id: 'ovt:' + e[0] }, entries[e[0]])).filter(x => typeof x.lat === 'number');
 }
+const UNIT_RE = /\b(shop|unit|building|bldg|floor|office|suite|store|tower|block|villa|gate|plot|no\.?|رقم|محل|مبنى|الدور|مكتب|شارع|طريق|حي|road|rd|st|street|ave|avenue|rue|via|calle|strasse|str|blvd|boulevard|highway|hwy|district)\b/i;
+function pickNamePart(parts){ // الجزء الذي يشبه اسم مكان: حروف أكثر، أرقام أقل، لا أوصاف وحدات/شوارع، ولا مدينة/دولة في الذيل
+  let best = 0, bestS = -1e9; const n = parts.length;
+  parts.forEach((x, i) => { const letters = (x.match(/[A-Za-z\u0600-\u06FF]/g) || []).length, digits = (x.match(/\d/g) || []).length; let sc = Math.min(letters, 12) - 6 * digits - (UNIT_RE.test(x) ? 30 : 0) - (i >= n - 2 && n > 2 ? 6 : 0) - i; if (letters < 2) sc -= 50; if (sc > bestS){ bestS = sc; best = i; } });
+  return best;
+}
 async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويستخرج الاسم والعنوان من المسار أو من عنوان الصفحة — لا يقرأ الإحداثيات أبدًا (الثابت السابع)
   let u; try{ u = new URL(raw.trim()); }catch(_){ return { error: 'bad url' }; } if (!GOOGLE_HOSTS.test(u.hostname)) return { error: 'not a google maps link' };
   const H = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'Accept-Language': 'en,ar;q=0.8', 'Accept': 'text/html' };
@@ -35,7 +41,7 @@ async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويست�
   let name = '', addr = '';
   const m = final.match(/\/maps\/place\/([^/?#]+)/);
   const dec = x => { let y = x; for (let k = 0; k < 2; k++){ try{ const z = decodeURIComponent(y); if (z === y) break; y = z; }catch(_){ break; } } return y; }; // ترميز مضاعف (Constituci%25C3%25B3n)
-  if (m){ const seg = dec(m[1].replace(/\+/g, ' ')); if (!looksLikeToken(seg)){ const parts = seg.split(',').map(x => x.trim()).filter(Boolean); name = parts[0] || ''; addr = parts.slice(1).join(', '); } }
+  if (m){ const seg = dec(m[1].replace(/\+/g, ' ')); if (!looksLikeToken(seg)){ const parts = seg.split(',').map(x => x.trim()).filter(Boolean); const k = pickNamePart(parts); name = parts[k] || ''; addr = parts.filter((_, i) => i !== k).join(', '); } }
   if (!name && html){ // عنوان الصفحة: og:title = «الاسم · العنوان» أو <title>الاسم - Google Maps</title>
     const og = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i);
     let t = og ? og[1] : ((html.match(/<title>([^<]+)<\/title>/i) || [])[1] || '');
@@ -46,7 +52,7 @@ async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويست�
   for (let k = 0; k < 3 && /^https?:\/\//i.test(name); k++){ // رابط متداخل (maps?q=… أو /maps/place/…) → يُفكّ حتى يبقى نص
     try{ const inner = new URL(name); const q = inner.searchParams.get('q'); const mm = inner.pathname.match(/\/maps\/place\/([^/?#]+)/); name = q ? dec(q) : (mm ? dec(mm[1].replace(/\+/g, ' ')) : ''); }catch(_){ name = ''; }
   }
-  if (name && !addr && name.indexOf(',') > 0){ const parts = name.split(',').map(x => x.trim()).filter(Boolean); name = parts[0]; addr = parts.slice(1).join(', '); } // «Molto, Al Imam Saud Rd, As Sahafah, Riyadh» → الاسم والعنوان
+  if (name && !addr && name.indexOf(',') > 0){ const parts = name.split(',').map(x => x.trim()).filter(Boolean); const k = pickNamePart(parts); name = parts[k]; addr = parts.filter((_, i) => i !== k).join(', '); } // «Shop 2104 Building, Caribou Coffee…, 1435 Rd 4626, Manama» → الاسم الجزء الأعلى حروفًا بلا أوصاف الوحدات؛ الباقي عنوان
   if (/^-?\d+(\.\d+)?$/.test(name)) name = ''; // لا نقبل رقمًا (إحداثية) اسمًا
   let host = ''; try{ host = new URL(final).hostname; }catch(_){ }
   const out = { name: name.slice(0, 120), addr: addr.slice(0, 160), host }; // لا lat/lng إطلاقًا
