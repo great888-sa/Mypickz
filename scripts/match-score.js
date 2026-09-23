@@ -26,14 +26,15 @@ if (SRC === 'fsq'){ fsqRows = JSON.parse(fs.readFileSync(__dirname + '/eval/matc
 function candidates(p){
   if (fsqRows){ const r = fsqRows.find(x => x.id === p.id); return (r && r.cands || []).map(c => ({ id: c.fsq_id, name: c.name, names: [], addr: c.address, locality: c.locality, lat: c.lat, lng: c.lng })); }
   if (!pool[p.city]){ const f = __dirname + '/eval/overture/' + p.city + '.json'; pool[p.city] = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : []; }
-  const first = toks(splitName(p.name)[0]); const arr = pool[p.city];
-  return arr.filter(c => { const B = toks(c.name); for (const t of first) if (B.has(t)) return true; return false; }).slice(0, 400); // ترشيح أولي برمز مشترك
+  const qs = new Set(); splitName(p.name).forEach(n => toks(n).forEach(t => qs.add(t))); const arr = pool[p.city];
+  return arr.filter(c => { const B = toks(c.name + ' ' + (c.names || []).join(' ')); for (const t of qs) if (B.has(t)) return true; return false; }).slice(0, 600); // ترشيح أولي برمز مشترك من أي صيغة
 }
-const out = { correct: 0, wrong: 0, none: 0, byCity: {}, rows: [] };
+const out = { correct: 0, wrong: 0, none: 0, byCity: {}, rows: [] }; const CANDS = [];
 for (const p of gold){
   const c = out.byCity[p.city] = out.byCity[p.city] || { n: 0, correct: 0, wrong: 0, none: 0 }; c.n++;
-  let best = null, bestS = 0;
-  for (const cand of candidates(p)){ if (typeof cand.lat !== 'number') continue; const s = nameSim(p.name, cand) * 0.8 + addrSim(p.addr, cand) * 0.2; if (s > bestS){ bestS = s; best = cand; } }
+  let best = null, bestS = 0; const scored = [];
+  for (const cand of candidates(p)){ if (typeof cand.lat !== 'number') continue; const ns = nameSim(p.name, cand), as = addrSim(p.addr, cand); const s = ns * 0.8 + as * 0.2; scored.push({ name: cand.name, names: cand.names, addr: cand.addr, locality: cand.locality, lat: cand.lat, lng: cand.lng, cat: cand.cat, ns: +ns.toFixed(2), as: +as.toFixed(2), s: +s.toFixed(2), m: Math.round(dist(p.truth, { lat: cand.lat, lng: cand.lng })) }); if (s > bestS){ bestS = s; best = cand; } }
+  scored.sort((a, b) => b.s - a.s); CANDS.push({ id: p.id, name: p.name, addr: p.addr, city: p.city, cands: scored.slice(0, 20) }); // للضبط دون شبكة
   if (!best || bestS < MIN){ out.none++; c.none++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'none', score: +bestS.toFixed(2), top: best && best.name }); continue; }
   const d = Math.round(dist(p.truth, { lat: best.lat, lng: best.lng }));
   if (d <= MAX_M){ out.correct++; c.correct++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'correct', m: d, score: +bestS.toFixed(2), match: best.name }); }
@@ -45,3 +46,4 @@ Object.keys(out.byCity).sort().forEach(k => { const c = out.byCity[k]; console.l
 const pass = (out.correct / n) >= 0.85 && (out.wrong / n) <= 0.03;
 console.log(pass ? 'VERDICT: PASS' : 'VERDICT: FAIL');
 fs.writeFileSync(__dirname + '/eval/score-report-' + SRC + '.json', JSON.stringify({ n, summary: { correct: out.correct, wrong: out.wrong, none: out.none }, byCity: out.byCity, rows: out.rows }, null, 1));
+fs.writeFileSync(__dirname + '/eval/score-cands-' + SRC + '.json', JSON.stringify(CANDS)); // أفضل ٢٠ مرشَّحًا لكل مكان — الملف الصغير للضبط
