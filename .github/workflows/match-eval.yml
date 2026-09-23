@@ -1,0 +1,32 @@
+# MyPickz — تقييم جودة المطابقة (ز-١) بضغطة زر من تبويب Actions — المفتاح سرٌّ بالمستودع (FSQ_API_KEY) لا يظهر بأي ملف أو سجل
+name: Match eval
+on:
+  workflow_dispatch:
+    inputs:
+      city:
+        description: 'city id to limit (empty = all)'
+        required: false
+        default: ''
+      limit:
+        description: 'max places (0 = all)'
+        required: false
+        default: '0'
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run match eval
+        env:
+          FSQ_API_KEY: ${{ secrets.FSQ_API_KEY }}
+        run: node scripts/match-eval.js --city=${{ github.event.inputs.city }} --limit=${{ github.event.inputs.limit }} || true
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: match-report
+          path: scripts/eval/match-report.json
+          if-no-files-found: warn
