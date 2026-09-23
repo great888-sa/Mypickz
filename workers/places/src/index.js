@@ -14,14 +14,28 @@ async function candidatesFor(env, city, name){
   for (const t of qs){ const sh = await shard(env, city, bucketOf(t)); const ids = own(sh.tokens, t) ? sh.tokens[t] : []; const rare = 1 / Math.sqrt(ids.length || 1); ids.forEach(id => { hits.set(id, (hits.get(id) || 0) + rare); if (own(sh.entries, id)) entries[id] = sh.entries[id]; }); }
   return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).filter(e => own(entries, e[0])).map(e => Object.assign({ id: 'ovt:' + e[0] }, entries[e[0]])).filter(x => typeof x.lat === 'number');
 }
-async function resolveGoogle(raw){ // يتتبّع الرابط ويستخرج الاسم من مسار /maps/place/<name>/… — لا يقرأ الإحداثيات
-  let u; try{ u = new URL(raw); }catch(_){ return { error: 'bad url' }; } if (!GOOGLE_HOSTS.test(u.hostname)) return { error: 'not a google maps link' };
-  let final = u.href; try{ const r = await fetch(u.href, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 MyPickz-Resolve/1.0', 'Accept-Language': 'en' }, cf: { cacheTtl: 86400 } }); final = r.url || final; }catch(_){ }
-  const m = final.match(/\/maps\/place\/([^/?#]+)/); let name = '', addr = '';
-  if (m){ const seg = decodeURIComponent(m[1].replace(/\+/g, ' ')); const parts = seg.split(',').map(s => s.trim()).filter(Boolean); name = parts[0] || ''; addr = parts.slice(1).join(', '); }
-  if (!name){ const q = new URL(final).searchParams.get('q'); if (q && !/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(q)) name = q; }
-  return { name: name.slice(0, 120), addr: addr.slice(0, 160), host: new URL(final).hostname }; // لا lat/lng إطلاقًا
+async function resolveGoogle(raw){ // يتتبّع الرابط ويستخرج الاسم والعنوان من المسار أو من عنوان الصفحة — لا يقرأ الإحداثيات أبدًا (الثابت السابع)
+  let u; try{ u = new URL(raw.trim()); }catch(_){ return { error: 'bad url' }; } if (!GOOGLE_HOSTS.test(u.hostname)) return { error: 'not a google maps link' };
+  const H = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'Accept-Language': 'en,ar;q=0.8', 'Accept': 'text/html' };
+  let final = u.href, html = '';
+  try{ let r = await fetch(u.href, { redirect: 'follow', headers: H, cf: { cacheTtl: 86400 } }); final = r.url || final;
+    if (/consent\.google\./i.test(new URL(final).hostname)){ const c = new URL(final).searchParams.get('continue'); if (c){ r = await fetch(c, { redirect: 'follow', headers: Object.assign({}, H, { Cookie: 'CONSENT=YES+; SOCS=CAI' }) }); final = r.url || c; } }
+    const txt = await r.text(); html = txt.slice(0, 400000); }catch(_){ }
+  const looksLikeToken = s => !/[A-Za-z\u0600-\u06FF]/.test(s) || (s.length > 40 && !/\s/.test(s));
+  let name = '', addr = '';
+  const m = final.match(/\/maps\/place\/([^/?#]+)/);
+  if (m){ const seg = decodeURIComponent(m[1].replace(/\+/g, ' ')); if (!looksLikeToken(seg)){ const parts = seg.split(',').map(x => x.trim()).filter(Boolean); name = parts[0] || ''; addr = parts.slice(1).join(', '); } }
+  if (!name && html){ // عنوان الصفحة: og:title = «الاسم · العنوان» أو <title>الاسم - Google Maps</title>
+    const og = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i);
+    let t = og ? og[1] : ((html.match(/<title>([^<]+)<\/title>/i) || [])[1] || '');
+    t = t.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s*[-–]\s*Google Maps\s*$/i, '').replace(/\s*·\s*Google Maps\s*$/i, '').trim();
+    if (t && !/^Google Maps$/i.test(t)){ const parts = t.split(/\s*[·•]\s*/); name = parts[0].trim(); addr = parts.slice(1).join(' · ').trim(); }
+  }
+  if (!name){ try{ const q = new URL(final).searchParams.get('q'); if (q && !/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(q)) name = q; }catch(_){ } }
+  let host = ''; try{ host = new URL(final).hostname; }catch(_){ }
+  return { name: name.slice(0, 120), addr: addr.slice(0, 160), host }; // لا lat/lng إطلاقًا
 }
+
 export default {
   async fetch(request, env){
     const url = new URL(request.url); const origin = request.headers.get('Origin') || '';
