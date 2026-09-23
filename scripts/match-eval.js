@@ -14,7 +14,7 @@ const CITY_NAME = { riyadh: 'Riyadh', jeddah: 'Jeddah', khobar: 'Al Khobar', par
 function dist(a, b){ const R = 6371000, toR = x => x * Math.PI / 180; const dLat = toR(b.lat - a.lat), dLng = toR(b.lng - a.lng); const s = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(s)); }
 function cleanName(n){ return String(n).replace(/\s*[|｜]\s*.*$/, '').replace(/[®™]/g, '').trim(); } // «شيفز برجر | Chef's Burger» → الجزء الأول
 // نوعا المفاتيح: القديم (v3 — يبدأ بـ fsq3) والجديد (Service API Key — Bearer + إصدار الواجهة)
-const LEGACY = /^fsq3/.test(KEY);
+const LEGACY = false; // ٢٣ سبتمبر: الواجهة القديمة أُوقفت (HTTP 410) — الجديدة دائمًا بترويسة Bearer وإصدار الواجهة، مهما كان شكل المفتاح
 async function fsq(name, city){
   const [lat, lng] = CITY_CENTER[city]; const qs = new URLSearchParams({ query: name, ll: lat + ',' + lng, radius: '30000', limit: '3', fields: LEGACY ? 'fsq_id,name,geocodes,location' : 'fsq_place_id,name,latitude,longitude,location' });
   const url = (LEGACY ? 'https://api.foursquare.com/v3/places/search?' : 'https://places-api.foursquare.com/places/search?') + qs;
