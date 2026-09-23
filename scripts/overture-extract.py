@@ -9,20 +9,19 @@ if not release:  # اكتشاف آخر إصدار من فهرس الحاوية �
 print('overture release:', release)
 bbox = json.load(open('scripts/eval/cities-bbox.json', encoding='utf-8')); bbox.pop('note', None)
 only = [c for c in sys.argv[1:] if c in bbox] or list(bbox.keys())
-con = duckdb.connect(); con.execute("INSTALL httpfs; LOAD httpfs; SET s3_region='us-west-2';")
+con = duckdb.connect(); con.execute("INSTALL httpfs; LOAD httpfs; INSTALL spatial; LOAD spatial; SET s3_region='us-west-2';")
 src = f"s3://overturemaps-us-west-2/release/{release}/theme=places/type=place/*.parquet"
 os.makedirs('scripts/eval/overture', exist_ok=True)
 for city in only:
     x0, y0, x1, y1 = bbox[city]
     q = f"""
       SELECT id, names.primary AS name, names.common AS common, categories.primary AS cat,
-             ST_Y(ST_GeomFromWKB(geometry)) AS lat, ST_X(ST_GeomFromWKB(geometry)) AS lng,
+             ST_Y(geometry) AS lat, ST_X(geometry) AS lng,
              addresses[1].freeform AS addr, addresses[1].locality AS locality
       FROM read_parquet('{src}', hive_partitioning=1)
       WHERE bbox.xmin >= {x0} AND bbox.xmax <= {x1} AND bbox.ymin >= {y0} AND bbox.ymax <= {y1}
     """
     try:
-        con.execute("INSTALL spatial; LOAD spatial;")
         rows = con.execute(q).fetchall()
     except Exception as e:
         print(city, 'ERROR', str(e)[:300]); continue
