@@ -42,6 +42,8 @@ const CAPS = [
   'trip.sourcesCard',
   'curators.follow',
   'lists.split',
+  'geo.step',
+  'geo.savePlace',
   'paste.parser', 'paste.nameCheck',
   'share.param',
   'click.engine.reachesHandler', 'seq.browseMarkBackReload', 'seq.shareOpenAsOther', 'seq.signOutClearsScreen', 'seq.addressNeverPublic', 'seq.deleteWithSharedTrip', 'edge.doubleToggleStable', 'edge.reservedNickname', 'edge.emptyCityMarket', 'edge.disabledChipsInert',
@@ -267,6 +269,7 @@ globalThis.Notification = undefined;
 try { vm.runInThisContext(code, { filename: 'app.js' }); }
 catch (e) { console.warn = realWarn; console.log('FAIL  app evaluation crashed →', e.message); process.exit(1); }
 const B = globalThis.__bridge;
+  B.x('window.__geoAuto = "skip"'); // ز-١-ب: خطوة الخريطة تُختبر بمحطاتها؛ المحطات القائمة تحفظ بلا إحداثيات
 // حقن قواعد اللعب: قاعدة البيانات والمصادقة والرصد
 B.set('db', dbStub); B.set('auth', authStub);
 B.x('showToast = function(m){ globalThis.__cap.toasts.push(String(m)); }');
@@ -1126,7 +1129,7 @@ function citiesSeed(){
     // r72r-1: المجموعة العاجية بكل واجهة · المفكرة على الشجرة باسم المدينة · لا أيقونات فرعية · Show ⌄ بالأماكن والرحلات مع Shared with me · اللوحة عبر الدول والدولة تتبع · إصلاحات المنتقين
     const grp = B.x("placeGroupHtml('Specialty Coffee', 2, '<button class=\"go\">Open list →</button>', placeCardHtml({ id: 'g1', name: 'G', url: 'u' }, 'others', { actions: [] }))");
     ok('١٦هـ · r72r-1: المجموعة العاجية (pgroup) برأس الفرعي «# n» وزر يمين، وتضم البطاقة الكريمية (pcard) — والبطاقة لم تعد عاجية بذاتها', grp.startsWith('<div class="pgroup"><div class="pg-head"><span class="pg-title">Specialty Coffee <span class="pg-n"># 2</span></span><button class="go">Open list →</button></div><div class="pcard') && !grp.includes('pc-in') && tplCount('.pgroup{background:var(--ivory); color:var(--ink);}', 1).ok, grp.slice(0, 200));
-    ok('١٦هـ · r72r-1: البنية نفسها بالأماكن والمفكرة ويوم الرحلة والعناوين والمنتقين (خمسة استدعاءات placeGroupHtml)', tplCount('placeGroupHtml(', 10).ok && tplCount("html += placeGroupHtml(cat.name, visible.length, __catRight, __cards);", 1).ok && tplCount("html += placeGroupHtml(cat ? catLabelOf(cat) : 'Places', byCat[cat].length, '', __bmCards);", 1).ok && tplCount("html += placeGroupHtml(meta.label, places.length, __right, __tcards);", 1).ok && tplCount("html += placeGroupHtml(cat.name, places.length, __aright, __acards);", 1).ok && tplCount("return placeGroupHtml((withCity ? g.city.name + ' · ' : '') + sub,", 1).ok, '');
+    ok('١٦هـ · r72r-1: البنية نفسها بالأماكن والمفكرة ويوم الرحلة والعناوين والمنتقين (خمسة استدعاءات placeGroupHtml)', tplCount('placeGroupHtml(', 11).ok && tplCount("html += placeGroupHtml(cat.name, visible.length, __catRight, __cards);", 1).ok && tplCount("html += placeGroupHtml(cat ? catLabelOf(cat) : 'Places', byCat[cat].length, '', __bmCards);", 1).ok && tplCount("html += placeGroupHtml(meta.label, places.length, __right, __tcards);", 1).ok && tplCount("html += placeGroupHtml(cat.name, places.length, __aright, __acards);", 1).ok && tplCount("return placeGroupHtml((withCity ? g.city.name + ' · ' : '') + sub,", 1).ok, '');
     const noIcons = tplCount("sec.items.forEach(i => out.push({ id: i.id, icon: '', name: i.name,", 1).ok && tplCount("return hit ? hit.name : String(idOrName || ''); }", 1).ok && tplCount("items: TRIP_CATEGORIES.map(c => ({ id: c.id, name: c.label }))", 1).ok && tplCount("out += meta.label + '\\n';", 1).ok && !/\$\{c\.icon\} \$\{escapeHtml\(c\.name\)\}/.test(SRC) && tplCount("items: privateCategoryList().map(c => ({ id: c.id, name: c.name, count:", 1).ok;
     ok('١٦هـ · r72r-1: أيقونات الفرعي محذوفة من الشجرة والمفكرة ولوحات الاختيار والرحلات والعناوين ونصوص التصدير', noIcons, '');
     B.x("placesSource = 'mine'; plShowOpen = false; plToggleShowPanel()"); const sp = String((documentStub.getElementById('plShowPanel') || { innerHTML: '' }).innerHTML || '');
@@ -1177,6 +1180,37 @@ function citiesSeed(){
     B.x("placesSource = 'mine'; plShowOpen = false; plToggleShowPanel()"); const plP = String((documentStub.getElementById('plShowPanel') || { innerHTML: '' }).innerHTML || ''); B.x("plToggleShowPanel()");
     B.x("tripsSource = 'mine'; tripShowOpen = false; tripToggleShowPanel()"); const trP = String((documentStub.getElementById('tripShowPanel') || { innerHTML: '' }).innerHTML || ''); B.x("tripToggleShowPanel()");
     ok('١٦هـ · r72w: الشجرة بلا أيقونات فرعية · أعداد الترتيب بالمجتمع (recent 2 · views 1 · bookmarks 1 · copies 1) · أعداد المصادر بلوحتي الأماكن والرحلات (cnt-num)', noIcon === true && cnts === '{"recent":2,"views":1,"bookmarks":1,"copies":1}' && plP.includes('cnt-num') && trP.includes('cnt-num') && tplCount('<span class="srcsub">· ', 1).ok && tplCount("showToast('Copy removed — counter not updated · '", 1).ok && tplCount("lines: [['Saved by users', '# ' + (t.copyCount || 0)]]", 1).ok, cnts + ' ' + plP.slice(0, 80));
+    // ز-١-ب: خطوة الخريطة (بمحاكاة العامل وLeaflet) · الكتابة داخل المكان · Save للمكان والقائمة بإسناد · Saved from · لا إحداثيات جوجل
+    B.x("window.__geoAuto = null; window.__mpGeoStub = { auto: { id: 'ovt:1', name: 'Dalmata Paris 2', addr: '8 Rue Tiquetonne', lat: 48.86453, lng: 2.34943, score: 0.78 }, candidates: [{ id: 'ovt:1', name: 'Dalmata Paris 2', addr: '8 Rue Tiquetonne', lat: 48.86453, lng: 2.34943, score: 0.78 }, { id: 'ovt:2', name: 'Dalmata', addr: '21 Rue de Charonne', lat: 48.85317, lng: 2.37489, score: 0.67 }] }; mpData.geo.match = async function(){ return window.__mpGeoStub; }; mpData.geo.resolve = async function(){ return { name: 'Dalmata', addr: '8 Rue Tiquetonne, 75002 Paris' }; }; window.ensureLeaflet = function(){ window.L = { map: function(){ return { setView: function(){ return this; }, remove: function(){}, invalidateSize: function(){}, fitBounds: function(){} }; }, tileLayer: function(){ return { addTo: function(){} }; }, marker: function(){ return { addTo: function(){ return this; }, on: function(){ return this; }, setLatLng: function(){ return this; }, bindPopup: function(){ return this; }, openPopup: function(){} }; }, divIcon: function(){ return {}; }, featureGroup: function(){ return { getBounds: function(){ return { pad: function(){ return {}; } }; } }; } }; return Promise.resolve(); }");
+    B.x("myListCityId = 'paris'; myCityListData = myCityListData || { categories: {} }; plEdit = null; plModalCat = '" + CAT1 + "'; document.getElementById('plName').value = 'Dalmata'; document.getElementById('plUrl').value = 'https://maps.app.goo.gl/x1'; document.getElementById('plArea').value = ''; plResolvedAddr = '8 Rue Tiquetonne, 75002 Paris'");
+    await B.x('savePlPlace()'); await new Promise(r => setTimeout(r, 40)); const geoOpen = screen('geoBackdrop'); const st1 = B.x("document.getElementById('geoStatus').textContent"); const cands = B.x("document.getElementById('geoCands').innerHTML");
+    ok('١٦هـ · ز-١-ب: الحفظ يفتح خطوة الخريطة أولًا (لا كتابة قبل التأكيد) · الدبوس على الأفضل · مرشَّحان مرقَّمان · السؤال «Is this the place?»', /Is this the place/.test(st1) && cands.includes('1 · Dalmata Paris 2') && cands.includes('2 · Dalmata') && B.x('plGeoConfirmed') === false, st1 + ' | ' + cands.slice(0, 120));
+    await B.x('geoConfirm()'); await new Promise(r => setTimeout(r, 60));
+    const saved = listDocOf(uid, 'paris'); const pl = ((saved && saved.categories && saved.categories[CAT1]) || { places: [] }).places.find(function(q){ return q.name === 'Dalmata'; }) || {};
+    ok('١٦هـ · ز-١-ب: التأكيد يكتب داخل المكان openId (ovt:1) و geo{lat,lng,source: overture} — ولا حقل إحداثيات جوجل', pl.openId === 'ovt:1' && pl.geo && pl.geo.lat === 48.86453 && pl.geo.source === 'overture' && !('googleLat' in pl) && !JSON.stringify(saved || {}).includes('googleLat'), JSON.stringify(pl).slice(0, 160));
+    cap('geo.step');
+    B.x("geoCands = window.__mpGeoStub.candidates; geoPin = null; geoMap = null; geoChoose(1)"); const picked = B.x('JSON.stringify(geoPick)');
+    B.x("geoPick = { lat: 48.9, lng: 2.4, dragged: true }; plEdit = null; plModalCat = '" + CAT1 + "'; document.getElementById('plName').value = 'My secret spot'; document.getElementById('plUrl').value = 'https://maps.app.goo.gl/x2'"); await B.x('geoConfirm()'); await new Promise(r => setTimeout(r, 60));
+    const saved2 = listDocOf(uid, 'paris'); const pl2 = ((saved2 && saved2.categories && saved2.categories[CAT1]) || { places: [] }).places.find(function(q){ return q.name === 'My secret spot'; }) || {};
+    ok('١٦هـ · ز-١-ب: اختيار المرشَّح ٢ يبدّل الدبوس · الدبوس المسحوب يُحفظ بمصدر user_pin بلا openId', /Rue de Charonne/.test(picked) && pl2.geo && pl2.geo.source === 'user_pin' && !pl2.openId, picked.slice(0, 80) + ' | ' + JSON.stringify(pl2.geo));
+    B.x("plEdit = null; plModalCat = '" + CAT1 + "'; document.getElementById('plName').value = 'No pin place'; document.getElementById('plUrl').value = 'https://maps.app.goo.gl/x3'; plGeoConfirmed = false; plGeoResult = null"); await B.x('savePlPlace()'); await new Promise(r => setTimeout(r, 30)); await B.x('geoSkip()'); await new Promise(r => setTimeout(r, 60));
+    const pl3 = (((listDocOf(uid, 'paris') || {}).categories || {})[CAT1] || { places: [] }).places.find(function(q){ return q.name === 'No pin place'; }) || {};
+    ok('١٦هـ · ز-١-ب: Skip يحفظ الاسم والرابط بلا إحداثيات (المكان صالح)', pl3.url === 'https://maps.app.goo.gl/x3' && !pl3.geo && !pl3.openId, JSON.stringify(pl3));
+    B.x("plOpenCityMap()"); await new Promise(r => setTimeout(r, 40)); const mapCount = B.x("document.getElementById('mapCount').textContent");
+    ok('١٦هـ · ز-١-ب: خريطة السياق لقائمتي بالمدينة تعدّ ما له دبوس فقط (2 of n)', /^2 of \d+ places have a pin/.test(mapCount), mapCount);
+    B.x("closeModalById('mapBackdrop')");
+    // Save للمكان من الآخرين بإسناد + Saved from Curators
+    await store.set('userCityLists/cur_a_paris', { ownerId: 'cur_a', cityId: 'paris', cityName: 'Paris', nickname: 'Amal', public: true, sharedWith: [], categories: { [CAT1]: { active: true, places: [{ id: 'ap1', name: 'Ten Belles', url: 'https://maps.app.goo.gl/tb', area: '10th', picks: ['flat white'], geo: { lat: 48.87, lng: 2.36, source: 'overture' }, openId: 'ovt:77' }] } } });
+    B.x("curators = (curators || []).some(function(c){ return c.uid === 'cur_a'; }) ? curators : (curators || []).concat([{ uid: 'cur_a', nickname: 'Amal', verified: true }])");
+    await B.x("saveOthersPlace('cur_a', 'paris', '" + CAT1 + "', 'ap1')"); await new Promise(r => setTimeout(r, 80));
+    const mine = (((listDocOf(uid, 'paris') || {}).categories || {})[CAT1] || { places: [] }).places.find(function(q){ return q.source && q.source.placeId === 'ap1'; }) || {};
+    const rec = store.get('copies/' + uid + '__cur_a_paris:' + CAT1 + ':ap1');
+    ok('١٦هـ · ز-١-ب: Save على مكان منتقٍ ينسخه إلى قائمتي بالمدينة والفرعي نفسهما مع الهوية والإحداثيات والإسناد (Amal) · سجل نسخ بلا عدّاد', mine.name === 'Ten Belles' && mine.source.ownerName === 'Amal' && mine.openId === 'ovt:77' && mine.geo && mine.geo.lat === 48.87 && !!rec && rec.kind === 'place' && ((store.get('userCityLists/cur_a_paris') || {}).copyCount || 0) === 0, JSON.stringify(mine).slice(0, 160));
+    B.x("placesSource = 'curators'"); await B.x("renderPlacesBody()"); await new Promise(r => setTimeout(r, 80)); const sf = screen('plBody');
+    ok('١٦هـ · ز-١-ب: مصدر «Saved from Curators» حي: مجموعة المدينة وبطاقة المكان بسطر From · Amal', sf.includes('>Ten Belles<') && sf.includes('>From</div>') && sf.includes('Amal'), sf.slice(0, 200));
+    B.x("placesSource = 'mine'"); cap('geo.savePlace');
+    ok('١٦هـ · ز-١-ب: Save للقائمة كاملة بإسناد (دالة + سجل + copyCount) · لا وسم stage 3 على Save المكان', tplCount('async function saveOthersList(ownerUid, cityId){', 1).ok && tplCount("await mpData.copies.record(currentUser.uid, 'list', ownerUid + '_' + cityId, 'userCityLists')", 1).ok && tplCount("showSoon('Save to my list — stage 3')", 0).ok, '');
+    B.x("window.__geoAuto = 'skip'");
     ok('١٦هـ · r72u: الإسناد باسم الحساب فقط · حفظ الملف يحذف displayName القديم · القياسية بأيقونة إخفاء بوضع التحرير · cmOpenList يثبّت مصدر الأماكن', tplCount("patch.displayName = mpData.fieldDelete();", 1).ok && tplCount("hideable: c.id.indexOf('mylist_') !== 0", 1).ok && tplCount("(st.edit && it.hideable && !it.custom)", 1).ok && tplCount("communityTab = 'places'; personLayerOnly = null; await viewCommunityUser(owner); openCommunityCityList(cityId);", 1).ok && tplCount("viewingUserData.displayName", 0).ok, '');
     cap('lists.split');
     // r72t: الأسطر الثمانية بالكود
@@ -1240,7 +1274,7 @@ function citiesSeed(){
   }, ['screen.market.header']);
 
   await must('ش٦ · ٦/د بطاقة السوق: مفكرة بعدّاد · Save بوسمه · 📤 · Open (الشاشة)', async () => {
-    const a = sees('cmMarket', ['pc-a bmk', 'bmk-cnt', 'Save <span class="dim">3', '📤', 'Open →', 'class="curpill cmpill"']); // r72r-3: بطاقة القائمة بنمط بطاقة المكان ورأس المستخدم كبسولة
+    const a = sees('cmMarket', ['pc-a bmk', 'bmk-cnt', '>Save<', '📤', 'Open →', 'class="curpill cmpill"']); // ز-١-ب: Save حي // r72r-3: بطاقة القائمة بنمط بطاقة المكان ورأس المستخدم كبسولة
     ok('ش٦ · عناصر البطاقة الستة', a.ok, a.why);
   }, ['screen.market.card']);
 
