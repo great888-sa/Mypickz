@@ -1,0 +1,755 @@
+{
+ "note": "عينة تقييم حل الروابط — روابط المالك بأسمائها المعروفة (بلا إحداثيات)",
+ "sample": [
+  {
+   "src": "want",
+   "name": "إيرث كافيه - Urth Caffé",
+   "url": "https://www.google.com/maps/place/%D8%A5%D9%8A%D8%B1%D8%AB+%D9%83%D8%A7%D9%81%D9%8A%D9%87+-+Urth+Caff%C3%A9%E2%80%AD/data=!4m2!3m1!1s0x3e2ee100204b1cdb:0x2f5d31f4da656c3d"
+  },
+  {
+   "src": "want",
+   "name": "بيت المونة",
+   "url": "https://www.google.com/maps/place/%D8%A8%D9%8A%D8%AA+%D8%A7%D9%84%D9%85%D9%88%D9%86%D8%A9%E2%80%AD/data=!4m2!3m1!1s0x3e2ee5f290e8a3b7:0xe55560051a1bdddb"
+  },
+  {
+   "src": "want",
+   "name": "ريشو - Richoux Restaurant",
+   "url": "https://www.google.com/maps/place/%D8%B1%D9%8A%D8%B4%D9%88+-+Richoux+Restaurant%E2%80%AD/data=!4m2!3m1!1s0x3e2ee3a0b6a89841:0x6e62696f06a28de"
+  },
+  {
+   "src": "want",
+   "name": "Chaiche شاي شايجي",
+   "url": "https://www.google.com/maps/place/Chaiche+%D8%B4%D8%A7%D9%8A+%D8%B4%D8%A7%D9%8A%D8%AC%D9%8A%E2%80%AD/data=!4m2!3m1!1s0x3e45c3124c1ea823:0x71745b1d0ee11dbb"
+  },
+  {
+   "src": "want",
+   "name": "قهوة الأكابر",
+   "url": "https://www.google.com/maps/place/%D9%82%D9%87%D9%88%D8%A9+%D8%A7%D9%84%D8%A3%D9%83%D8%A7%D8%A8%D8%B1%E2%80%AD/data=!4m2!3m1!1s0x15c3dbbfa93a27ed:0xf2f7db18cda7d3db"
+  },
+  {
+   "src": "want",
+   "name": "بن فاضل كافيه BFV",
+   "url": "https://www.google.com/maps/place/%D8%A8%D9%86+%D9%81%D8%A7%D8%B6%D9%84+%D9%83%D8%A7%D9%81%D9%8A%D9%87+BFV%E2%80%AD/data=!4m2!3m1!1s0x15e9ebba674d86eb:0x74e7e7021a03d81c"
+  },
+  {
+   "src": "want",
+   "name": "Easy bakery - ايزي بيكري",
+   "url": "https://www.google.com/maps/place/Easy+bakery+-+%D8%A7%D9%8A%D8%B2%D9%8A+%D8%A8%D9%8A%D9%83%D8%B1%D9%8A%E2%80%AD/data=!4m2!3m1!1s0x3e2ee531c64f91e7:0x38223e89144eb3d0"
+  },
+  {
+   "src": "want",
+   "name": "ستة صباحا",
+   "url": "https://www.google.com/maps/place/%D8%B3%D8%AA%D8%A9+%D8%B5%D8%A8%D8%A7%D8%AD%D8%A7%E2%80%AD/data=!4m2!3m1!1s0x3e2ee3d0eb1783ed:0xcb1e33c6145be22"
+  },
+  {
+   "src": "want",
+   "name": "مذاق زمان",
+   "url": "https://www.google.com/maps/place/%D9%85%D8%B0%D8%A7%D9%82+%D8%B2%D9%85%D8%A7%D9%86%E2%80%AD/data=!4m2!3m1!1s0x15c3dab0c9282f67:0xcfe3035a27a4c4d5"
+  },
+  {
+   "src": "want",
+   "name": "آلو بشير",
+   "url": "https://www.google.com/maps/place/%D8%A2%D9%84%D9%88+%D8%A8%D8%B4%D9%8A%D8%B1%E2%80%AD/data=!4m2!3m1!1s0x3e49af5e3fd96ccf:0xa6d7a57ca1819cdf"
+  },
+  {
+   "src": "want",
+   "name": "The Wolseley",
+   "url": "https://www.google.com/maps/place/The+Wolseley/data=!4m2!3m1!1s0x4876052f571cfeaf:0x5350dedd3b5bb322"
+  },
+  {
+   "src": "want",
+   "name": "La Mascotte",
+   "url": "https://www.google.com/maps/place/La+Mascotte/data=!4m2!3m1!1s0x47e66fdd7b869f65:0xd0e82f966fe61b0b"
+  },
+  {
+   "src": "want",
+   "name": "Easy Bakery",
+   "url": "https://www.google.com/maps/place/Easy+Bakery/data=!4m2!3m1!1s0x3e2f1d83604bf7dd:0x6fcd0687bde7aad8"
+  },
+  {
+   "src": "want",
+   "name": "Sant",
+   "url": "https://www.google.com/maps/place/Sant/data=!4m2!3m1!1s0x3e49e90073b84637:0x1f71d538d9c4c1b5"
+  },
+  {
+   "src": "want",
+   "name": "Le Départ Saint-Michel",
+   "url": "https://www.google.com/maps/place/Le+D%C3%A9part+Saint-Michel/data=!4m2!3m1!1s0x47e671dfd4a72c15:0x4c978bd0561a571b"
+  },
+  {
+   "src": "want",
+   "name": "Timmy Green",
+   "url": "https://www.google.com/maps/place/Timmy+Green/data=!4m2!3m1!1s0x48760520dfe87b5f:0xbb712b04f8b4deb7"
+  },
+  {
+   "src": "want",
+   "name": "Cafe-Restaurant Zauner",
+   "url": "https://www.google.com/maps/place/Cafe-Restaurant+Zauner/data=!4m2!3m1!1s0x47714d26d6e7040d:0x319454af4b2fbf8d"
+  },
+  {
+   "src": "want",
+   "name": "Bakeries Necker",
+   "url": "https://www.google.com/maps/place/Bakeries+Necker/data=!4m2!3m1!1s0x4776b17a166e77c1:0xd13d4163b36778e9"
+  },
+  {
+   "src": "want",
+   "name": "Claridge's ArtSpace Café",
+   "url": "https://www.google.com/maps/place/Claridge's+ArtSpace+Caf%C3%A9/data=!4m2!3m1!1s0x4876056959f26535:0x427d26dcff70b895"
+  },
+  {
+   "src": "want",
+   "name": "Carette",
+   "url": "https://www.google.com/maps/place/Carette/data=!4m2!3m1!1s0x47e66e0018741147:0xde0ccb9a9516eafa"
+  },
+  {
+   "src": "want",
+   "name": "Federal Cafè Gòtic",
+   "url": "https://www.google.com/maps/place/Federal+Caf%C3%A8+G%C3%B2tic/data=!4m2!3m1!1s0x12a4a256f6edcdd1:0x957c1799400745bc"
+  },
+  {
+   "src": "want",
+   "name": "JOE & THE JUICE",
+   "url": "https://www.google.com/maps/place/JOE+%26+THE+JUICE/data=!4m2!3m1!1s0x3e49b140988c693d:0xb6f903a207dfb913"
+  },
+  {
+   "src": "want",
+   "name": "Chez maram",
+   "url": "https://www.google.com/maps/place/Chez+maram/data=!4m2!3m1!1s0x47e66fe52049aaf5:0x16eac2014780c910"
+  },
+  {
+   "src": "want",
+   "name": "Dear Breakfast - Chiado",
+   "url": "https://www.google.com/maps/place/Dear+Breakfast+-+Chiado/data=!4m2!3m1!1s0xd193521f7d2f86d:0x62723308dd205061"
+  },
+  {
+   "src": "want",
+   "name": "Eataly NYC Flatiron",
+   "url": "https://www.google.com/maps/place/Eataly+NYC+Flatiron/data=!4m2!3m1!1s0x89c259a4119ce269:0x9dec0c979b575972"
+  },
+  {
+   "src": "want",
+   "name": "Edison & Jupiter Specialty Cafe and gastrolab",
+   "url": "https://www.google.com/maps/place/Edison+%26+Jupiter+Specialty+Cafe+and+gastrolab/data=!4m2!3m1!1s0x4741dd459138660b:0xa4e4369fe568154a"
+  },
+  {
+   "src": "want",
+   "name": "Dlish Difc",
+   "url": "https://www.google.com/maps/place/Dlish+Difc/data=!4m2!3m1!1s0x3e5f4382b5de360f:0x949b52d1f1a08675"
+  },
+  {
+   "src": "want",
+   "name": "Bar gelateria Punta Lido",
+   "url": "https://www.google.com/maps/place/Bar+gelateria+Punta+Lido/data=!4m2!3m1!1s0x478217285f4f0043:0x145de1428be6e746"
+  },
+  {
+   "src": "want",
+   "name": "The Peninsula Boutique & Café",
+   "url": "https://www.google.com/maps/place/The+Peninsula+Boutique+%26+Caf%C3%A9/data=!4m2!3m1!1s0x487605b9b1aaabc3:0x9609776aa26940a7"
+  },
+  {
+   "src": "want",
+   "name": "JOE & THE JUICE",
+   "url": "https://www.google.com/maps/place/JOE+%26+THE+JUICE/data=!4m2!3m1!1s0x3e5f69c01b72b851:0x8440b1afaac4bca4"
+  },
+  {
+   "src": "want",
+   "name": "Banketbakkerij Het Koekemannetje",
+   "url": "https://www.google.com/maps/place/Banketbakkerij+Het+Koekemannetje/data=!4m2!3m1!1s0x47c609e52df9fc35:0x39b26a518b683b76"
+  },
+  {
+   "src": "want",
+   "name": "Rachel´s Eco Love",
+   "url": "https://www.google.com/maps/place/Rachel%C2%B4s+Eco+Love/data=!4m2!3m1!1s0xd732825e407f8b9:0xf6a33b1fa0269824"
+  },
+  {
+   "src": "want",
+   "name": "Pasticceria Cova Astir Marina",
+   "url": "https://www.google.com/maps/place/Pasticceria+Cova+Astir+Marina/data=!4m2!3m1!1s0x14a1ebcb8514a187:0x5378ee50277c5027"
+  },
+  {
+   "src": "want",
+   "name": "JŌHŌ coffee",
+   "url": "https://www.google.com/maps/place/J%C5%8CH%C5%8C+coffee/data=!4m2!3m1!1s0x47e66fc712aa2337:0x30dd02a8de1d1d1a"
+  },
+  {
+   "src": "want",
+   "name": "Crème",
+   "url": "https://www.google.com/maps/place/Cr%C3%A8me/data=!4m2!3m1!1s0x4876051d65845cdb:0x9b5da15019fa960c"
+  },
+  {
+   "src": "want",
+   "name": "Ladurée",
+   "url": "https://www.google.com/maps/place/Ladur%C3%A9e/data=!4m2!3m1!1s0x89c2598c6bbbbe33:0x72df042a34bc2a5f"
+  },
+  {
+   "src": "want",
+   "name": "Buonocore Gelateria Pasticceria Gastronomia e Tavola Calda",
+   "url": "https://www.google.com/maps/place/Buonocore+Gelateria+Pasticceria+Gastronomia+e+Tavola+Calda/data=!4m2!3m1!1s0x133b790294699911:0x1f5db46ffc070876"
+  },
+  {
+   "src": "want",
+   "name": "IHOP",
+   "url": "https://www.google.com/maps/place/IHOP/data=!4m2!3m1!1s0x88dd7eba4d062e9b:0x28cf1ef083a06771"
+  },
+  {
+   "src": "want",
+   "name": "Kozy Kanopé",
+   "url": "https://www.google.com/maps/place/Kozy+Kanop%C3%A9/data=!4m2!3m1!1s0x47e66e38ce767ea9:0x582f9c6f463a0409"
+  },
+  {
+   "src": "want",
+   "name": "Flour & Firewood",
+   "url": "https://www.google.com/maps/place/Flour+%26+Firewood/data=!4m2!3m1!1s0x3e2f03f9bc2f4923:0x4ba0d32a8e9b3a4e"
+  },
+  {
+   "src": "want",
+   "name": "Café de la Paix",
+   "url": "https://www.google.com/maps/place/Caf%C3%A9+de+la+Paix/data=!4m2!3m1!1s0x47e66e30db866d95:0x5bf022a5baba2986"
+  },
+  {
+   "src": "want",
+   "name": "Gideon's Bakehouse",
+   "url": "https://www.google.com/maps/place/Gideon's+Bakehouse/data=!4m2!3m1!1s0x88dd7ff20194de3d:0xc24b632e1974e53f"
+  },
+  {
+   "src": "want",
+   "name": "Cappuccino Valldemossa",
+   "url": "https://www.google.com/maps/place/Cappuccino+Valldemossa/data=!4m2!3m1!1s0x1297ee03df8df243:0x798289e4652f1e2"
+  },
+  {
+   "src": "want",
+   "name": "Rosas cafe",
+   "url": "https://www.google.com/maps/place/Rosas+cafe/data=!4m2!3m1!1s0xd7329b501f61203:0x7f0e91b30eef59e2"
+  },
+  {
+   "src": "want",
+   "name": "Pere Ubu",
+   "url": "https://www.google.com/maps/place/Pere+Ubu/data=!4m2!3m1!1s0x14a1bfd111e38f43:0x248cca647b7812dd"
+  },
+  {
+   "src": "want",
+   "name": "Blank Street Coffee",
+   "url": "https://www.google.com/maps/place/Blank+Street+Coffee/data=!4m2!3m1!1s0x4876056caa84b53b:0x4d8270ae2d7aaae"
+  },
+  {
+   "src": "want",
+   "name": "Chun Café Berenstraat",
+   "url": "https://www.google.com/maps/place/Chun+Caf%C3%A9+Berenstraat/data=!4m2!3m1!1s0x47c609d0b483fc77:0x6081b2179cd48d92"
+  },
+  {
+   "src": "want",
+   "name": "L'ETO London",
+   "url": "https://www.google.com/maps/place/L'ETO+London/data=!4m2!3m1!1s0x4876053c7352102b:0x96f55ee850a12700"
+  },
+  {
+   "src": "want",
+   "name": "DeLaCrem | Enric Granados",
+   "url": "https://www.google.com/maps/place/DeLaCrem+%7C+Enric+Granados/data=!4m2!3m1!1s0x12a4a28c512e33dd:0x5937a8881694af"
+  },
+  {
+   "src": "want",
+   "name": "Fait Maison Berkeley street",
+   "url": "https://www.google.com/maps/place/Fait+Maison+Berkeley+street/data=!4m2!3m1!1s0x48760526b70ede6f:0x64d6384aede718a1"
+  },
+  {
+   "src": "fav",
+   "name": "قرية السهول",
+   "url": "https://www.google.com/maps/place/%D9%82%D8%B1%D9%8A%D8%A9+%D8%A7%D9%84%D8%B3%D9%87%D9%88%D9%84%E2%80%AD/data=!4m2!3m1!1s0x3e5f6de3493297b3:0x894adf17f06e0e7a"
+  },
+  {
+   "src": "fav",
+   "name": "العاذرية (موسم الرياض)",
+   "url": "https://www.google.com/maps/place/%D8%A7%D9%84%D8%B9%D8%A7%D8%B0%D8%B1%D9%8A%D8%A9+(%D9%85%D9%88%D8%B3%D9%85+%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6)%E2%80%AD/data=!4m2!3m1!1s0x3e2e932b688ddc59:0x19945d6a42cbe0c6"
+  },
+  {
+   "src": "fav",
+   "name": "Cenomi U Walk Jeddah | سينومي يو ووك جدة",
+   "url": "https://www.google.com/maps/place/Cenomi+U+Walk+Jeddah+%7C+%D8%B3%D9%8A%D9%86%D9%88%D9%85%D9%8A+%D9%8A%D9%88+%D9%88%D9%88%D9%83+%D8%AC%D8%AF%D8%A9%E2%80%AD/data=!4m2!3m1!1s0x15c3db3456014783:0xf74d6f5966a56b10"
+  },
+  {
+   "src": "fav",
+   "name": "إصلاح جنوط مخرطة ابوثنيان فرع1",
+   "url": "https://www.google.com/maps/place/%D8%A5%D8%B5%D9%84%D8%A7%D8%AD+%D8%AC%D9%86%D9%88%D8%B7+%D9%85%D8%AE%D8%B1%D8%B7%D8%A9+%D8%A7%D8%A8%D9%88%D8%AB%D9%86%D9%8A%D8%A7%D9%86+%D9%81%D8%B1%D8%B91%E2%80%AD/data=!4m2!3m1!1s0x3e2f05dc1c9a94a5:0x40d8fc22e6b96448"
+  },
+  {
+   "src": "fav",
+   "name": "مخيم سحاب",
+   "url": "https://www.google.com/maps/place/%D9%85%D8%AE%D9%8A%D9%85+%D8%B3%D8%AD%D8%A7%D8%A8%E2%80%AD/data=!4m2!3m1!1s0x3e2e91906981b96b:0x63f127fc120ac765"
+  },
+  {
+   "src": "fav",
+   "name": "الصالحية مول",
+   "url": "https://www.google.com/maps/place/%D8%A7%D9%84%D8%B5%D8%A7%D9%84%D8%AD%D9%8A%D8%A9+%D9%85%D9%88%D9%84%E2%80%AD/data=!4m2!3m1!1s0x3fcf9a1fdf2628d3:0xaf664b243ac5a8a1"
+  },
+  {
+   "src": "fav",
+   "name": "S Square اس سكوير",
+   "url": "https://www.google.com/maps/place/S+Square+%D8%A7%D8%B3+%D8%B3%D9%83%D9%88%D9%8A%D8%B1%E2%80%AD/data=!4m2!3m1!1s0x15c3db3bffed7a4f:0xd216b00aef5a96ec"
+  },
+  {
+   "src": "fav",
+   "name": "مسجد التخيفي",
+   "url": "https://www.google.com/maps/place/%D9%85%D8%B3%D8%AC%D8%AF+%D8%A7%D9%84%D8%AA%D8%AE%D9%8A%D9%81%D9%8A%E2%80%AD/data=!4m2!3m1!1s0x3e2f05e17845bc43:0xf618d3138ce14c27"
+  },
+  {
+   "src": "fav",
+   "name": "فعالية الأعشى",
+   "url": "https://www.google.com/maps/place/%D9%81%D8%B9%D8%A7%D9%84%D9%8A%D8%A9+%D8%A7%D9%84%D8%A3%D8%B9%D8%B4%D9%89%E2%80%AD/data=!4m2!3m1!1s0x3e2f0fe6e314c1e1:0x308408236d4758b5"
+  },
+  {
+   "src": "fav",
+   "name": "مزرعة علي بن محمد الرويغ",
+   "url": "https://www.google.com/maps/place/%D9%85%D8%B2%D8%B1%D8%B9%D8%A9+%D8%B9%D9%84%D9%8A+%D8%A8%D9%86+%D9%85%D8%AD%D9%85%D8%AF+%D8%A7%D9%84%D8%B1%D9%88%D9%8A%D8%BA%E2%80%AD/data=!4m2!3m1!1s0x3e2ec7ac6b69cb31:0x9abcd8256e3bce8"
+  },
+  {
+   "src": "fav",
+   "name": "Grand House",
+   "url": "https://www.google.com/maps/place/Grand+House/data=!4m2!3m1!1s0x3e49e9080914b843:0xe5ae8653cf234197"
+  },
+  {
+   "src": "fav",
+   "name": "Varenna",
+   "url": "https://www.google.com/maps/place/Varenna/data=!4m2!3m1!1s0x4784178c693424d9:0x40678022e686e90"
+  },
+  {
+   "src": "fav",
+   "name": "Castello San Marco hotel & spa",
+   "url": "https://www.google.com/maps/place/Castello+San+Marco+hotel+%26+spa/data=!4m2!3m1!1s0x13140fc0bc737f61:0x81a2ed634dae33eb"
+  },
+  {
+   "src": "fav",
+   "name": "La Vallée Des Couleurs Nature Park",
+   "url": "https://www.google.com/maps/place/La+Vall%C3%A9e+Des+Couleurs+Nature+Park/data=!4m2!3m1!1s0x217c660c34d06607:0xf2f4b6423852b31b"
+  },
+  {
+   "src": "fav",
+   "name": "Grecotel Eva Palace Corfu",
+   "url": "https://www.google.com/maps/place/Grecotel+Eva+Palace+Corfu/data=!4m2!3m1!1s0x135b5c807443027f:0x6e98e3900d541f28"
+  },
+  {
+   "src": "fav",
+   "name": "Chiostro del Paradiso",
+   "url": "https://www.google.com/maps/place/Chiostro+del+Paradiso/data=!4m2!3m1!1s0x133b95ae7b9c3cf3:0x97effe9645c145e3"
+  },
+  {
+   "src": "fav",
+   "name": "La Digue",
+   "url": "https://www.google.com/maps/place/La+Digue/data=!4m2!3m1!1s0x231fed2903c6ac59:0x286d99ba224821b2"
+  },
+  {
+   "src": "fav",
+   "name": "Giusti Garden",
+   "url": "https://www.google.com/maps/place/Giusti+Garden/data=!4m2!3m1!1s0x477f5f34025ce797:0x58390fb50e2fa991"
+  },
+  {
+   "src": "fav",
+   "name": "Av. de la Constitución",
+   "url": "https://www.google.com/maps/place/Av.+de+la+Constituci%C3%B3n/data=!4m2!3m1!1s0xd126c19defb2a55:0xabcf285ef255c57e"
+  },
+  {
+   "src": "fav",
+   "name": "Española Wy",
+   "url": "https://www.google.com/maps/place/Espa%C3%B1ola+Wy/data=!4m2!3m1!1s0x88d9b48f98e6a179:0x65b861983de231b5"
+  },
+  {
+   "src": "fav",
+   "name": "Altstadt",
+   "url": "https://www.google.com/maps/place/Altstadt/data=!4m2!3m1!1s0x47911c9e94513031:0xe7d89beaca0b6393"
+  },
+  {
+   "src": "fav",
+   "name": "Es Trenc",
+   "url": "https://www.google.com/maps/place/Es+Trenc/data=!4m2!3m1!1s0x1297a921798e0b77:0x5d3dfd4c84e1c7f1"
+  },
+  {
+   "src": "fav",
+   "name": "Maradiva Villas Resort & Spa",
+   "url": "https://www.google.com/maps/place/Maradiva+Villas+Resort+%26+Spa/data=!4m2!3m1!1s0x217c41861654b937:0x3dd94b7c3ee0002f"
+  },
+  {
+   "src": "fav",
+   "name": "The Highline Outlet",
+   "url": "https://www.google.com/maps/place/The+Highline+Outlet/data=!4m2!3m1!1s0x4786c6a56e347d21:0xf6e7c861f0b00463"
+  },
+  {
+   "src": "fav",
+   "name": "Parking Laufen Castle (Rhine Falls)",
+   "url": "https://www.google.com/maps/place/Parking+Laufen+Castle+(Rhine+Falls)/data=!4m2!3m1!1s0x479078b47fcd5285:0xb570b30306cc0386"
+  },
+  {
+   "src": "fav",
+   "name": "Inntel Hotels Amsterdam Centre",
+   "url": "https://www.google.com/maps/place/Inntel+Hotels+Amsterdam+Centre/data=!4m2!3m1!1s0x47c609c7c077cabf:0x455411d8e679df3e"
+  },
+  {
+   "src": "fav",
+   "name": "Villa Ephrussi de Rothschild",
+   "url": "https://www.google.com/maps/place/Villa+Ephrussi+de+Rothschild/data=!4m2!3m1!1s0x12cddb3861282f8d:0xb1c3e4b067b2324f"
+  },
+  {
+   "src": "fav",
+   "name": "Alcázar de Toledo",
+   "url": "https://www.google.com/maps/place/Alc%C3%A1zar+de+Toledo/data=!4m2!3m1!1s0xd6a0ba4554d32ff:0xc5d940fb5fb95c60"
+  },
+  {
+   "src": "fav",
+   "name": "Montmin",
+   "url": "https://www.google.com/maps/place/Montmin/data=!4m2!3m1!1s0x478b94af69a06311:0xf196f139824c192a"
+  },
+  {
+   "src": "fav",
+   "name": "El Corte Inglés Serrano",
+   "url": "https://www.google.com/maps/place/El+Corte+Ingl%C3%A9s+Serrano/data=!4m2!3m1!1s0xd4228940fbf3183:0x5d2616dbcada3905"
+  },
+  {
+   "src": "fav",
+   "name": "El Corte Inglés Plaça de Catalunya",
+   "url": "https://www.google.com/maps/place/El+Corte+Ingl%C3%A9s+Pla%C3%A7a+de+Catalunya/data=!4m2!3m1!1s0x12a4a2f16d92b825:0xc8e62e2f8f1fa5b6"
+  },
+  {
+   "src": "fav",
+   "name": "Enterprise Alquiler de Coches - Aeropuerto De Palma De Mallorca",
+   "url": "https://www.google.com/maps/place/Enterprise+Alquiler+de+Coches+-+Aeropuerto+De+Palma+De+Mallorca/data=!4m2!3m1!1s0x1297942fd604866d:0xb2827fea21bb2b04"
+  },
+  {
+   "src": "fav",
+   "name": "Spiaggia di Liscia Ruja COSTA SMERALDA",
+   "url": "https://www.google.com/maps/place/Spiaggia+di+Liscia+Ruja+COSTA+SMERALDA/data=!4m2!3m1!1s0x12d9474befc7524d:0xd022917b59442799"
+  },
+  {
+   "src": "fav",
+   "name": "Upper Buena Vista",
+   "url": "https://www.google.com/maps/place/Upper+Buena+Vista/data=!4m2!3m1!1s0x88d9b12ab40ade7f:0x84edfc9a8035cb61"
+  },
+  {
+   "src": "fav",
+   "name": "Bürgenstock Resort Lake Lucerne – Waldhotel Health & Wellbeing",
+   "url": "https://www.google.com/maps/place/B%C3%BCrgenstock+Resort+Lake+Lucerne+%E2%80%93+Waldhotel+Health+%26+Wellbeing/data=!4m2!3m1!1s0x478ff83258f0c549:0x3d38ca03f68074a8"
+  },
+  {
+   "src": "fav",
+   "name": "San Candido",
+   "url": "https://www.google.com/maps/place/San+Candido/data=!4m2!3m1!1s0x47782b1591753257:0x8f6c34292cdadd89"
+  },
+  {
+   "src": "fav",
+   "name": "Hotel Bijou",
+   "url": "https://www.google.com/maps/place/Hotel+Bijou/data=!4m2!3m1!1s0x12d5098b1d849001:0x121af8bcd265b492"
+  },
+  {
+   "src": "fav",
+   "name": "Deauville",
+   "url": "https://www.google.com/maps/place/Deauville/data=!4m2!3m1!1s0x47e1d4bac4578671:0x40c14484fbcf150"
+  },
+  {
+   "src": "fav",
+   "name": "Port Louis Waterfront by Landscope Mauritius",
+   "url": "https://www.google.com/maps/place/Port+Louis+Waterfront+by+Landscope+Mauritius/data=!4m2!3m1!1s0x217c51ac8c2d7a39:0xd45905d99d6d0cc0"
+  },
+  {
+   "src": "fav",
+   "name": "Blue Waters Island Parking",
+   "url": "https://www.google.com/maps/place/Blue+Waters+Island+Parking/data=!4m2!3m1!1s0x3e5f15891934a609:0x9bd74cc3ad34b422"
+  },
+  {
+   "src": "fav",
+   "name": "Kensington Gardens",
+   "url": "https://www.google.com/maps/place/Kensington+Gardens/data=!4m2!3m1!1s0x48760550e0a7a33d:0x62eea98228b6b77c"
+  },
+  {
+   "src": "fav",
+   "name": "La Roca Village",
+   "url": "https://www.google.com/maps/place/La+Roca+Village/data=!4m2!3m1!1s0x12a4c80b3504a2a7:0x933fe40d2603813d"
+  },
+  {
+   "src": "fav",
+   "name": "Cibeles Fountain",
+   "url": "https://www.google.com/maps/place/Cibeles+Fountain/data=!4m2!3m1!1s0xd422884b69e1855:0x325f7e929ee22f72"
+  },
+  {
+   "src": "fav",
+   "name": "MC Beach",
+   "url": "https://www.google.com/maps/place/MC+Beach/data=!4m2!3m1!1s0xd732821a2a3dec3:0x6bb3dc112bdbf61a"
+  },
+  {
+   "src": "fav",
+   "name": "Urtijëi",
+   "url": "https://www.google.com/maps/place/Urtij%C3%ABi/data=!4m2!3m1!1s0x477812f9a780dbb9:0x3ad835b22896a03b"
+  },
+  {
+   "src": "fav",
+   "name": "Piazza IX Aprile",
+   "url": "https://www.google.com/maps/place/Piazza+IX+Aprile/data=!4m2!3m1!1s0x1314110023525a85:0x15f63f2d24b2cc30"
+  },
+  {
+   "src": "fav",
+   "name": "Pavilion Rd",
+   "url": "https://www.google.com/maps/place/Pavilion+Rd/data=!4m2!3m1!1s0x4876053e8bc3d70b:0x7e8c6bd4d80e60e6"
+  },
+  {
+   "src": "fav",
+   "name": "Corso Umberto",
+   "url": "https://www.google.com/maps/place/Corso+Umberto/data=!4m2!3m1!1s0x131411a47857d923:0xf12a6485931cc541"
+  },
+  {
+   "src": "fav",
+   "name": "Rockefeller Park",
+   "url": "https://www.google.com/maps/place/Rockefeller+Park/data=!4m2!3m1!1s0x89c25a11c214c60f:0xb525cde92467ef16"
+  },
+  {
+   "src": "fav",
+   "name": "Weggis",
+   "url": "https://www.google.com/maps/place/Weggis/data=!4m2!3m1!1s0x478ff88ff92180d1:0x400ff8840190870"
+  },
+  {
+   "src": "cid",
+   "name": "رستوران دربند Darband Restaurant",
+   "url": "http://maps.google.com/?cid=16687976868273706685"
+  },
+  {
+   "src": "cid",
+   "name": "Bay La Sun Hotel & Marina | فندق ومارينا البيلسان",
+   "url": "http://maps.google.com/?cid=16521845297956527185"
+  },
+  {
+   "src": "cid",
+   "name": "سيزيوني Sezione",
+   "url": "http://maps.google.com/?cid=17070048659342450809"
+  },
+  {
+   "src": "cid",
+   "name": "Tackle Baks | تاكل بوكس",
+   "url": "http://maps.google.com/?cid=13620972757282052051"
+  },
+  {
+   "src": "cid",
+   "name": "Lou Burger لو برجر",
+   "url": "http://maps.google.com/?cid=2674672631095196590"
+  },
+  {
+   "src": "cid",
+   "name": "شيفز برجر | Chef's Burger",
+   "url": "http://maps.google.com/?cid=16209233067883812890"
+  },
+  {
+   "src": "cid",
+   "name": "مطعم توينا للمأكولات البحرية - صاري",
+   "url": "http://maps.google.com/?cid=9993788683149007836"
+  },
+  {
+   "src": "cid",
+   "name": "أبليز برقر",
+   "url": "http://maps.google.com/?cid=1954321707608531078"
+  },
+  {
+   "src": "cid",
+   "name": "شيفز برجر | Chef's Burger",
+   "url": "http://maps.google.com/?cid=4398605491131208824"
+  },
+  {
+   "src": "cid",
+   "name": "دروازة الصيّاد البحري للمأكولات البحرية",
+   "url": "http://maps.google.com/?cid=383018093075259434"
+  },
+  {
+   "src": "cid",
+   "name": "Kinugawa Rive Gauche",
+   "url": "http://maps.google.com/?cid=7796449264988064732"
+  },
+  {
+   "src": "cid",
+   "name": "Amazónico",
+   "url": "http://maps.google.com/?cid=14855301337401889053"
+  },
+  {
+   "src": "cid",
+   "name": "Restaurant Le Mas Provençal",
+   "url": "http://maps.google.com/?cid=1637341173231726812"
+  },
+  {
+   "src": "cid",
+   "name": "Trapani - Msheireb Downtown",
+   "url": "http://maps.google.com/?cid=1509080577850527286"
+  },
+  {
+   "src": "cid",
+   "name": "AL CHARQ",
+   "url": "http://maps.google.com/?cid=2497378155992604710"
+  },
+  {
+   "src": "cid",
+   "name": "Bens Pizza",
+   "url": "http://maps.google.com/?cid=14559297081746739243"
+  },
+  {
+   "src": "cid",
+   "name": "Eli’s Restaurant",
+   "url": "http://maps.google.com/?cid=2637695936820971666"
+  },
+  {
+   "src": "cid",
+   "name": "ferdi",
+   "url": "http://maps.google.com/?cid=15736299370001691120"
+  },
+  {
+   "src": "cid",
+   "name": "Bagatelle St. Tropez",
+   "url": "http://maps.google.com/?cid=4201709652825700962"
+  },
+  {
+   "src": "cid",
+   "name": "Shababik",
+   "url": "http://maps.google.com/?cid=18216265243814720791"
+  },
+  {
+   "src": "cid",
+   "name": "Sexy Fish",
+   "url": "http://maps.google.com/?cid=7363303017015403604"
+  },
+  {
+   "src": "cid",
+   "name": "La Petite Maison (LPM) Dubai",
+   "url": "http://maps.google.com/?cid=16953190820800450934"
+  },
+  {
+   "src": "cid",
+   "name": "Zuma Ibiza",
+   "url": "http://maps.google.com/?cid=18142443198173346610"
+  },
+  {
+   "src": "cid",
+   "name": "Torcuato | Rooftop Madrid",
+   "url": "http://maps.google.com/?cid=11136760331823635619"
+  },
+  {
+   "src": "cid",
+   "name": "NESPO",
+   "url": "http://maps.google.com/?cid=7555781737176493784"
+  },
+  {
+   "src": "cid",
+   "name": "Spilia Restaurant",
+   "url": "http://maps.google.com/?cid=3409527188691161230"
+  },
+  {
+   "src": "cid",
+   "name": "Kiki On The River",
+   "url": "http://maps.google.com/?cid=14070472388769882992"
+  },
+  {
+   "src": "cid",
+   "name": "Santa Marina, a Luxury Collection Resort, Mykonos",
+   "url": "http://maps.google.com/?cid=5641079777505902195"
+  },
+  {
+   "src": "cid",
+   "name": "Katz's Delicatessen",
+   "url": "http://maps.google.com/?cid=3545819340560108778"
+  },
+  {
+   "src": "cid",
+   "name": "TOO Restaurant",
+   "url": "http://maps.google.com/?cid=1272521728891228968"
+  },
+  {
+   "src": "cid",
+   "name": "SeaWorld San Diego",
+   "url": "http://maps.google.com/?cid=13310571727965373438"
+  },
+  {
+   "src": "cid",
+   "name": "L'ORTO - Italian Restaurant",
+   "url": "http://maps.google.com/?cid=5501684347127115735"
+  },
+  {
+   "src": "cid",
+   "name": "San Carlo Cicchetti Jeddah",
+   "url": "http://maps.google.com/?cid=2043016529115235223"
+  },
+  {
+   "src": "cid",
+   "name": "Gymkhana",
+   "url": "http://maps.google.com/?cid=14784365971836433154"
+  },
+  {
+   "src": "cid",
+   "name": "Ristorante Pizzeria Verginiello",
+   "url": "http://maps.google.com/?cid=1818970228330109364"
+  },
+  {
+   "src": "cid",
+   "name": "La Réserve",
+   "url": "http://maps.google.com/?cid=1028520356783393453"
+  },
+  {
+   "src": "cid",
+   "name": "District One",
+   "url": "http://maps.google.com/?cid=7623338164690955205"
+  },
+  {
+   "src": "cid",
+   "name": "Supernova",
+   "url": "http://maps.google.com/?cid=14513426116353074544"
+  },
+  {
+   "src": "cid",
+   "name": "MARBLE",
+   "url": "http://maps.google.com/?cid=7152333442728383085"
+  },
+  {
+   "src": "cid",
+   "name": "Greenstreet Cafe",
+   "url": "http://maps.google.com/?cid=15673657074445156058"
+  },
+  {
+   "src": "cid",
+   "name": "Foodhallen",
+   "url": "http://maps.google.com/?cid=2109472980424455660"
+  },
+  {
+   "src": "cid",
+   "name": "Nova Sushi Bar & Asian Bistro",
+   "url": "http://maps.google.com/?cid=18311277869073582477"
+  },
+  {
+   "src": "cid",
+   "name": "Juliana’s",
+   "url": "http://maps.google.com/?cid=10575318337310560516"
+  },
+  {
+   "src": "cid",
+   "name": "Restaurant Salama",
+   "url": "http://maps.google.com/?cid=17497348018692062713"
+  },
+  {
+   "src": "cid",
+   "name": "BARON DOHA",
+   "url": "http://maps.google.com/?cid=12218509796126994979"
+  },
+  {
+   "src": "cid",
+   "name": "Ristorante Osteria Nostrana",
+   "url": "http://maps.google.com/?cid=10129371926537249381"
+  },
+  {
+   "src": "cid",
+   "name": "Ruka",
+   "url": "http://maps.google.com/?cid=9648035875253308910"
+  },
+  {
+   "src": "cid",
+   "name": "BACO",
+   "url": "http://maps.google.com/?cid=15650347938104900446"
+  },
+  {
+   "src": "cid",
+   "name": "Carbone Miami",
+   "url": "http://maps.google.com/?cid=5841673489619623217"
+  },
+  {
+   "src": "cid",
+   "name": "Osteria da Fortunata - Rinascimento",
+   "url": "http://maps.google.com/?cid=14521810144986826313"
+  }
+ ]
+}
