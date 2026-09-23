@@ -1,4 +1,4 @@
-// MyPickz — scripts/match-eval.js (ز-١ · تقييم جودة المطابقة بالأرقام لا بالعين)
+// MyPickz — scripts/match-eval.js v2 (ز-١ · تقييم جودة المطابقة بالأرقام لا بالعين) — v2: يحفظ المرشَّحين العشرة بالتقرير ليُضبط الترتيب دون شبكة (scripts/match-score.js)
 // يطابق كل مكان بالمجموعة الذهبية (scripts/eval/golden-set.json) على Foursquare Places API بالاسم والمدينة، ويقيس:
 //   correct  = وُجدت نتيجة ضمن MAX_M متر من الحقيقة الأرضية (إحداثيات التصدير — للقياس فقط، لا تُكتب بأي مكان)
 //   wrong    = وُجدت نتيجة أبعد من MAX_M (الأخطر: مكان آخر بالاسم نفسه)
@@ -16,11 +16,11 @@ function cleanName(n){ return String(n).replace(/\s*[|｜]\s*.*$/, '').replace(/
 // نوعا المفاتيح: القديم (v3 — يبدأ بـ fsq3) والجديد (Service API Key — Bearer + إصدار الواجهة)
 const LEGACY = false; // ٢٣ سبتمبر: الواجهة القديمة أُوقفت (HTTP 410) — الجديدة دائمًا بترويسة Bearer وإصدار الواجهة، مهما كان شكل المفتاح
 async function fsq(name, city){
-  const [lat, lng] = CITY_CENTER[city]; const qs = new URLSearchParams({ query: name, ll: lat + ',' + lng, radius: '30000', limit: '3', fields: LEGACY ? 'fsq_id,name,geocodes,location' : 'fsq_place_id,name,latitude,longitude,location' });
+  const [lat, lng] = CITY_CENTER[city]; const qs = new URLSearchParams({ query: name, ll: lat + ',' + lng, radius: '30000', limit: '10', fields: LEGACY ? 'fsq_id,name,geocodes,location' : 'fsq_place_id,name,latitude,longitude,location' });
   const url = (LEGACY ? 'https://api.foursquare.com/v3/places/search?' : 'https://places-api.foursquare.com/places/search?') + qs;
   const headers = LEGACY ? { Authorization: KEY, Accept: 'application/json' } : { Authorization: 'Bearer ' + KEY, Accept: 'application/json', 'X-Places-Api-Version': '2025-06-17' };
   const r = await fetch(url, { headers: headers }); if (!r.ok){ let body = ''; try{ body = (await r.text()).slice(0, 300); }catch(_){} return { error: r.status, body: body }; } const j = await r.json();
-  const results = (j.results || []).map(function(x){ return { fsq_id: x.fsq_id || x.fsq_place_id, name: x.name, geocodes: x.geocodes || ((typeof x.latitude === 'number') ? { main: { latitude: x.latitude, longitude: x.longitude } } : null) }; });
+  const results = (j.results || []).map(function(x){ return { fsq_id: x.fsq_id || x.fsq_place_id, name: x.name, address: (x.location && (x.location.formatted_address || x.location.address)) || '', locality: (x.location && x.location.locality) || '', geocodes: x.geocodes || ((typeof x.latitude === 'number') ? { main: { latitude: x.latitude, longitude: x.longitude } } : null) }; });
   return { results: results };
 }
 (async () => {
@@ -32,10 +32,11 @@ async function fsq(name, city){
     if (res.error){ out.error++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'error ' + res.error }); if (out.error === 1) console.log('FIRST ERROR · HTTP ' + res.error + ' · key type: ' + (LEGACY ? 'legacy (fsq3)' : 'service (Bearer)') + ' · body: ' + (res.body || '').replace(/\s+/g, ' ')); if (out.error >= 5 && out.correct + out.wrong + out.none === 0){ console.log('ABORT: 5 errors in a row — fix the key/endpoint first'); break; } continue; }
     if (!res.results.length && q !== p.name){ res = await fsq(p.name, p.city); }
     if (!res.results.length){ out.none++; c.none++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'none' }); continue; }
-    const best = res.results[0]; const g = best.geocodes && (best.geocodes.main || best.geocodes.roof); if (!g){ out.none++; c.none++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'none (no geocode)' }); continue; }
-    const d = Math.round(dist(p.truth, { lat: g.latitude, lng: g.longitude }));
-    if (d <= MAX_M){ out.correct++; c.correct++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'correct', m: d, fsq_id: best.fsq_id, fsq_name: best.name }); }
-    else { out.wrong++; c.wrong++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'wrong', m: d, fsq_id: best.fsq_id, fsq_name: best.name }); }
+    const cands = res.results.map(function(x){ const g = x.geocodes && (x.geocodes.main || x.geocodes.roof); return { fsq_id: x.fsq_id, name: x.name, address: x.address, locality: x.locality, lat: g ? g.latitude : null, lng: g ? g.longitude : null, m: g ? Math.round(dist(p.truth, { lat: g.latitude, lng: g.longitude })) : null }; }); // v2: المرشَّحون كلهم للضبط دون شبكة
+    const best = cands[0]; if (best.m === null){ out.none++; c.none++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'none (no geocode)', cands: cands }); continue; }
+    const d = best.m;
+    if (d <= MAX_M){ out.correct++; c.correct++; out.rows.push({ id: p.id, name: p.name, addr: p.addr || '', city: p.city, verdict: 'correct', m: d, fsq_id: best.fsq_id, fsq_name: best.name, cands: cands }); }
+    else { out.wrong++; c.wrong++; out.rows.push({ id: p.id, name: p.name, addr: p.addr || '', city: p.city, verdict: 'wrong', m: d, fsq_id: best.fsq_id, fsq_name: best.name, cands: cands }); }
     await new Promise(r => setTimeout(r, 120)); // احترام الحصة
   }
   const n = gold.length, pct = x => n ? (100 * x / n).toFixed(1) + '%' : '—';
