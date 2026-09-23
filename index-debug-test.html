@@ -3952,7 +3952,7 @@ function renderTripDetail(wrap){
   const totalPlaces = resolved.reduce((a, d) => a + Object.values(d.places || {}).reduce((x, arr) => x + (arr ? arr.length : 0), 0), 0);
   let html = `<div class="headrow">
     <button type="button" class="backchip" onclick="backToTripsList()">← Back</button>
-    <span class="actn label">View: <b>Days</b> · Map <span class="dim">Soon</span></span>
+    <button type="button" class="actn" onclick="tripToggleView()">${tripView === 'map' ? 'View: <b>Map</b> · Days' : 'View: <b>Days</b> · Map'}</button>
     ${(!viewingSharedTrip && !currentUserSuspended && !tripViewMode) ? `<button type="button" class="actn" onclick="toggleTripViewMode()">✓ Done</button>` : ''}
     <button type="button" class="actn" onclick="openExportPreview('trip', '${currentTripId}')" title="Preview and send">📤</button>
   </div>
@@ -3969,6 +3969,8 @@ function renderTripDetail(wrap){
     if (tripSrcOpen && anyPlace) html += tripSourcesCardHtml(trip, -1);
   }
 
+  if (tripView === 'map'){ const __pts = []; resolved.forEach(function(day, dIdx){ Object.keys(day.places || {}).forEach(function(catId){ (day.places[catId] || []).forEach(function(p){ if (p && p._available !== false && p.geo && typeof p.geo.lat === 'number') __pts.push(Object.assign({}, p, { _day: day.dayNumber || (dIdx + 1) })); }); }); }); const __all = resolved.reduce(function(a, day){ return a + Object.keys(day.places || {}).reduce(function(b, c){ return b + (day.places[c] || []).length; }, 0); }, 0);
+    html += '<div class="ctx" style="text-align:center;">' + __pts.length + ' of ' + __all + ' places have a pin · numbers = day</div><div id="tripMapInline" class="geo-map"></div>'; wrap.innerHTML = html; renderInlineMap('tripMapInline', __pts, function(p){ return p._day; }); return; } // ز-١-ب: عرض الخريطة للرحلة بأرقام الأيام
   resolved.forEach((day, dIdx) => {
     html += `<div class="dayhead" id="tripday-${dIdx}">
       <span class="daynum">${day.dayNumber}</span>
@@ -5125,9 +5127,9 @@ function renderPlacesMine(){
     + '</div>'
     + catPairRow({ id: 'plFilter', main: plFilterMain, sub: plFilterSub, allowAll: true, allLabel: 'All categories', allSubLabel: 'All in this category', countOf: plCatCount, placesOf: plPlaceNamesOf, rerender: 'renderPlacesMine' }) // ر٧٠ط (N-082): التصفية رئيسي ← فرعي
     + '<div class="chipgrid c3 headgrid">' // ر٦٩ش (N-056): الصف الثالث — أدوات العرض والتصدير بثلاثة أعمدة
-    + '<button type="button" class="actn" onclick="showSoon(\'Map view arrives with the map batch\')">View: <b>List</b> · Map <span class="dim">Soon</span></button>'
+    + '<button type="button" class="actn" onclick="plToggleView()">' + (plView === 'map' ? 'View: <b>Map</b> · List' : 'View: <b>List</b> · Map') + '</button>' // ز-١-ب: العرض القائم يصير حيًّا (List ⇄ Map)
     + '<button type="button" class="actn soon" onclick="showSoon(\'Day plans arrive with the day-plan batch\')">🗓 Day plan <span class="dim">Soon</span></button>'
-    + '<button type="button" class="actn" onclick="openExportPreview(\'list\')" title="Preview and send this city list">📤 Export places list</button><button type="button" class="act" onclick="plOpenCityMap()" title="Show my places in this city on the map">🗺 Map</button>'
+    + '<button type="button" class="actn" onclick="openExportPreview(\'list\')" title="Preview and send this city list">📤 Export places list</button>'
     + '</div><div class="ctx" id="plCtx"><b>My places</b></div>';
 
   /* ر٧٠ب (N-011 · ق٠٩-٠٧-٠٥): اللوحات الثلاث بلوحة الاختيار المشتركة — الدول (بعلمها N-067) · المدن (عدّاد ثابت · المختارة بنقطة · الحذف بوضع التحرير على مدني الخاصة · ＋ Add city أسفل النتائج) · التصنيفات (＋ على كل تصنيف بما فيه الفارغ) */
@@ -5191,6 +5193,7 @@ function renderPlacesMine(){
     + '<button type="button" class="cta" onclick="plTogglePanel(\'cats\')"><b>＋</b> Add place</button>'
     + '<button type="button" class="actn" onclick="selectPlacesSource(\'community\')">Browse curators &amp; community</button></div>') : plEmptyGuideHtml()); // أ-١٢-٢: بلا مكان بالحساب كله تُعرض لوحة الأبواب الأربعة
   if (isOwner) outerHtml += '<div class="pl-ownerpanel"><b>👑 Owner · edit mode</b><div class="pl-sub" id="plMigrLine">Guide places migration — counter and run arrive in stage 5 of this step.</div><button type="button" class="cta" onclick="showToast(\'Migration runs in stage 5 — city by city, counts matched\')">Move guide places to my lists</button></div>';
+  if (plView === 'map'){ const __places = Object.keys(myCityListData.categories || {}).flatMap(function(k){ return ((myCityListData.categories[k] || {}).places || []).filter(function(q){ return q && (q.name || q.url); }); }); const __withGeo = __places.filter(function(q){ return q.geo && typeof q.geo.lat === 'number'; }); outerHtml = outerHtml.replace(/<div class="pl-sechead"[\s\S]*$/, '') + '<div class="ctx" style="text-align:center;">' + __withGeo.length + ' of ' + __places.length + ' places have a pin' + (__withGeo.length ? '' : ' — confirm places on the map when you add them') + '</div><div id="plMapInline" class="geo-map"></div>'; body.innerHTML = outerHtml; renderInlineMap('plMapInline', __places, null); return; } // ز-١-ب: عرض الخريطة بدل القائمة
   body.innerHTML = outerHtml;
 }
 
@@ -5316,7 +5319,7 @@ function parseMapsShare(raw){ // المحلّل بثلاث درجات: اسم+ع
   else if (lines.length === 1){ const l = lines[0]; const i = l.indexOf(', '); if (i > 0 && i < 60){ name = l.slice(0, i); address = l.slice(i + 2); } else name = l; }
   name = name.replace(/[,·]+$/, '').trim();
   const parts = address.split(/,\s*/).map(function(x){ return x.replace(/\b\d{4,6}\b/g, '').trim(); }).filter(Boolean);
-  const area = parts.length ? parts[0] : '';
+  const area = parts.length ? parts[0] : (parisArrFrom(address) || ''); // باريس: الدائرة من الرمز البريدي حين لا حي بالحروف
   return { url: url, name: name, address: address, area: area, parts: parts, grade: (name && address) ? 3 : (name ? 2 : (url ? 1 : 0)) };
 }
 function inferCityFrom(parts){ const cities = myListAllCities(); for (let i = 0; i < parts.length; i++){ const k = pickerNormalize(parts[i]); if (!k) continue; const c = cities.find(function(x){ return pickerNormalize(x.name) === k || (x.alt || []).some(function(a){ return pickerNormalize(a) === k; }); }); if (c) return c; } return null; }
@@ -5332,10 +5335,11 @@ function plParseShare(){
   showToast(r.url ? (r.grade === 3 ? 'Read ✓ — name and area filled' : r.grade === 2 ? 'Read ✓ — name filled' : 'Link only — type the name') : 'No link found in the pasted text');
 }
 let plResolvedAddr = ''; // ز-١-ب: عنوان الرابط بعد حلّه (للمطابقة فقط)
+function parisArrFrom(addr){ if (myListCityId !== 'paris') return ''; const m = String(addr || '').match(/\b750(\d{2})\b/); if (!m) return ''; const n = parseInt(m[1], 10); if (!n || n > 20) return ''; return n + (n === 1 ? 'er' : 'e') + ' arr.'; } // باريس: الحي بالرقم (الدائرة) من الرمز البريدي 750XX
 async function plResolveLink(url){
   try{ const r = await mpData.geo.resolve(url); if (!r) return; plResolvedAddr = r.addr || '';
     const nm = document.getElementById('plName'); if (r.name && nm && !nm.value.trim()){ nm.value = r.name; showToast('Name read from the link ✓'); }
-    const ar = document.getElementById('plArea'); if (r.addr && ar && !ar.value.trim()){ const first = r.addr.split(',').map(function(x){ return x.trim(); }).filter(Boolean)[0]; if (first && !/\d{4,6}/.test(first)) ar.value = first; }
+    const ar = document.getElementById('plArea'); if (r.addr && ar && !ar.value.trim()){ const parts = r.addr.split(',').map(function(x){ return x.trim(); }).filter(Boolean).slice(0, -1); const known = allCities().map(function(c){ return pickerNormalize(c.name); }); const cand = parts.filter(function(x){ return !/\d/.test(x) && !/\b(rd|road|st|street|ave|avenue|rue|via|calle|شارع|طريق)\b/i.test(x) && known.indexOf(pickerNormalize(x)) < 0 && !/^(saudi arabia|bahrain|france|italy|uae|united arab emirates|spain|uk|united kingdom|usa)$/i.test(x); }); if (cand.length) ar.value = cand[cand.length - 1]; else { const arr = parisArrFrom(r.addr); if (arr) ar.value = arr; } } // ز-١-ب: الحي = آخر جزء بلا أرقام ولا طريق ولا مدينة/دولة (As Sahafah · حي المحمدية) · باريس: الدائرة من الرمز البريدي
   }catch(e){ mpSwallow(e, 'resolve'); }
 }
 async function plPasteUrl(){
@@ -5360,6 +5364,20 @@ async function openContextMap(places, title, focusId){ // ز-١-ب: خريطة �
   const group = []; withGeo.forEach(function(p){ const m = L.marker([p.geo.lat, p.geo.lng]).addTo(ctxMap).bindPopup('<b>' + escapeHtml(p.name || 'Place') + '</b>' + (p.area ? '<br>' + escapeHtml(p.area) : '') + (p.url ? '<br><a href="' + attrStr(p.url) + '" target="_blank" rel="noopener">Maps ↗</a>' : '')); group.push(m); if (focus && p === focus) setTimeout(function(){ m.openPopup(); }, 80); });
   if (!focus && group.length > 1){ try{ ctxMap.fitBounds(L.featureGroup(group).getBounds().pad(0.2)); }catch(_){} }
   setTimeout(function(){ try{ ctxMap.invalidateSize(); }catch(_){} }, 60);
+}
+let plView = 'list', tripView = 'days';
+function plToggleView(){ plView = plView === 'map' ? 'list' : 'map'; renderPlacesMine(); }
+function tripToggleView(){ tripView = tripView === 'map' ? 'days' : 'map'; renderMyTripsModal(); } // العرض يُعاد بالمسار الطبيعي (جسم الرحلات)
+const inlineMaps = {};
+async function renderInlineMap(elId, places, labelOf){ // خريطة داخل الشاشة (لا نافذة): دبابيس ما له إحداثيات، بوسم اختياري (رقم اليوم)
+  try{ await ensureLeaflet(); }catch(e){ const el0 = document.getElementById(elId); if (el0) el0.innerHTML = '<div class="mp-empty mini">Map could not load</div>'; return; }
+  const el = document.getElementById(elId); if (!el) return; if (inlineMaps[elId]){ try{ inlineMaps[elId].remove(); }catch(_){} delete inlineMaps[elId]; }
+  const withGeo = (places || []).filter(function(p){ return p && p.geo && typeof p.geo.lat === 'number'; });
+  const center = withGeo.length ? [withGeo[0].geo.lat, withGeo[0].geo.lng] : (cityCenterOf(myListCityId) || [24.7136, 46.6753]);
+  const map = L.map(el).setView(center, withGeo.length ? 13 : 11); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map); inlineMaps[elId] = map;
+  const group = []; withGeo.forEach(function(p){ const lbl = labelOf ? labelOf(p) : ''; const m = (lbl ? L.marker([p.geo.lat, p.geo.lng], { icon: L.divIcon({ className: 'geo-num', html: '<b>' + escapeHtml(String(lbl)) + '</b>', iconSize: [22, 22] }) }) : L.marker([p.geo.lat, p.geo.lng])).addTo(map).bindPopup('<b>' + escapeHtml(p.name || 'Place') + '</b>' + (p.area ? '<br>' + escapeHtml(p.area) : '') + (p.url ? '<br><a href="' + attrStr(p.url) + '" target="_blank" rel="noopener">Maps ↗</a>' : '')); group.push(m); });
+  if (group.length > 1){ try{ map.fitBounds(L.featureGroup(group).getBounds().pad(0.2)); }catch(_){} }
+  setTimeout(function(){ try{ map.invalidateSize(); }catch(_){} }, 60);
 }
 function plOpenCityMap(focusId){ const places = myCityListData ? Object.keys(myCityListData.categories || {}).flatMap(function(k){ return ((myCityListData.categories[k] || {}).places || []); }) : []; openContextMap(places, plCityName() + ' · my places', focusId); }
 function placeCopyOf(ownerUid, cityId, catId, placeId){ // هل نسخت هذا المكان من قبل؟ (بحث بالذاكرة بقائمتي للمدينة المحمَّلة أو بسجل النسخ المحلي)
