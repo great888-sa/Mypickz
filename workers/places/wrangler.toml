@@ -1,0 +1,11 @@
+# MyPickz — workers/places/wrangler.toml (ز-١-أ): عامل الأماكن — مطابقة Overture من R2 + حل روابط جوجل · بلا مفاتيح · نطاق places.mypickz.app
+name = "mypickz-places"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+workers_dev = false
+routes = [
+  { pattern = "places.mypickz.app", custom_domain = true }
+]
+[[r2_buckets]]
+binding = "PLACES"
+bucket_name = "mypickz-places"
