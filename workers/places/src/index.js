@@ -18,6 +18,10 @@ async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويست�
   let u; try{ u = new URL(raw.trim()); }catch(_){ return { error: 'bad url' }; } if (!GOOGLE_HOSTS.test(u.hostname)) return { error: 'not a google maps link' };
   const H = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'Accept-Language': 'en,ar;q=0.8', 'Accept': 'text/html' };
   let final = u.href, html = '';
+  const SHORT0 = /^(maps\.app\.goo\.gl|goo\.gl)$/i;
+  if (SHORT0.test(u.hostname)){ // الرابط المختصر: بهوية غير متصفح تعيد المنصة إعادة توجيه صريحة إلى الوجهة (بدل صفحة «فتح بالتطبيق»)
+    try{ const r0 = await fetch(u.href, { redirect: 'manual', headers: { 'User-Agent': 'curl/8.6.0', 'Accept': '*/*' } }); const loc = r0.headers.get('location'); if (loc) u = new URL(loc, u.href); }catch(_){ }
+  }
   try{ let r = await fetch(u.href, { redirect: 'follow', headers: H, cf: { cacheTtl: 86400 } }); final = r.url || final;
     if (/consent\.google\./i.test(new URL(final).hostname)){ const c = new URL(final).searchParams.get('continue'); if (c){ r = await fetch(c, { redirect: 'follow', headers: Object.assign({}, H, { Cookie: 'CONSENT=YES+; SOCS=CAI' }) }); final = r.url || c; } }
     let txt = await r.text(); html = txt.slice(0, 400000);
