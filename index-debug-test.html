@@ -1127,6 +1127,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <div class="modal geo-modal">
       <h3 id="geoTitle" style="text-align:center;">Place</h3>
       <div id="geoStatus" class="ctx" style="text-align:center;">Finding it on the map…</div>
+      <div id="geoMismatch"></div>
       <div id="geoCands" class="chiprow"></div>
       <div id="geoMap" class="geo-map"></div>
       <div style="display:flex; gap:8px; margin-top:10px;">
@@ -5334,12 +5335,17 @@ function plParseShare(){
   if (hint){ if (c && c.id !== myListCityId){ hint.style.display = ''; hint.innerHTML = 'Looks like <b>' + escapeHtml(c.name) + '</b> — <button type="button" class="linklike" onclick="plUseInferredCity(\'' + attrStr(c.id) + '\')">switch city</button>'; } else { hint.style.display = 'none'; hint.innerHTML = ''; } }
   showToast(r.url ? (r.grade === 3 ? 'Read ✓ — name and area filled' : r.grade === 2 ? 'Read ✓ — name filled' : 'Link only — type the name') : 'No link found in the pasted text');
 }
-let plResolvedAddr = ''; // ز-١-ب: عنوان الرابط بعد حلّه (للمطابقة فقط)
+let plResolvedAddr = '', plResolvedCity = ''; // ز-١-ب: عنوان الرابط بعد حلّه (للمطابقة فقط) · مدينة المكان المستنتَجة من العنوان
+const KNOWN_CITY_NAMES = { riyadh: ['riyadh', 'الرياض'], jeddah: ['jeddah', 'جدة', 'جده'], khobar: ['al khobar', 'khobar', 'الخبر'], dammam: ['dammam', 'الدمام'], makkah: ['makkah', 'mecca', 'مكة'], medina: ['medina', 'madinah', 'المدينة'], manama: ['manama', 'المنامة'], dubai: ['dubai', 'دبي'], abudhabi: ['abu dhabi', 'أبوظبي', 'ابوظبي'], doha: ['doha', 'الدوحة'], kuwait: ['kuwait city', 'kuwait', 'الكويت'], muscat: ['muscat', 'مسقط'], beirut: ['beirut', 'بيروت'], cairo: ['cairo', 'القاهرة'], paris: ['paris', 'باريس'], london: ['london', 'لندن'], madrid: ['madrid'], barcelona: ['barcelona'], rome: ['rome', 'roma'], milan: ['milan', 'milano'], florence: ['florence', 'firenze'], geneva: ['geneva', 'genève', 'geneve'], athens: ['athens'], cannes: ['cannes'], nyc: ['new york'], capri: ['capri'], stockholm: ['stockholm'], taormina: ['taormina'], istanbul: ['istanbul', 'إسطنبول', 'اسطنبول'], amman: ['amman', 'عمان'] };
+const KNOWN_COUNTRIES = ['saudi arabia', 'السعودية', 'bahrain', 'البحرين', 'united arab emirates', 'uae', 'الإمارات', 'qatar', 'قطر', 'kuwait', 'oman', 'عمان', 'lebanon', 'لبنان', 'egypt', 'مصر', 'france', 'italy', 'spain', 'switzerland', 'greece', 'united kingdom', 'uk', 'united states', 'usa', 'sweden', 'turkey', 'jordan', 'الأردن'];
+function cityIdFromAddress(addr){ const parts = String(addr || '').split(',').map(function(x){ return pickerNormalize(x.replace(/\d+/g, '').trim()); }).filter(Boolean); for (let i = parts.length - 1; i >= 0; i--){ for (const id in KNOWN_CITY_NAMES){ if (KNOWN_CITY_NAMES[id].some(function(n){ return parts[i] === pickerNormalize(n); })) return id; } } return ''; }
+function isCityOrCountry(x){ const n = pickerNormalize(String(x || '').replace(/\d+/g, '').trim()); if (!n) return true; if (KNOWN_COUNTRIES.some(function(c){ return pickerNormalize(c) === n; })) return true; for (const id in KNOWN_CITY_NAMES){ if (KNOWN_CITY_NAMES[id].some(function(c){ return pickerNormalize(c) === n; })) return true; } return allCities().some(function(c){ return pickerNormalize(c.name) === n; }) || pickerNormalize(plCityName()) === n; }
 function parisArrFrom(addr){ if (myListCityId !== 'paris') return ''; const m = String(addr || '').match(/\b750(\d{2})\b/); if (!m) return ''; const n = parseInt(m[1], 10); if (!n || n > 20) return ''; return n + (n === 1 ? 'er' : 'e') + ' arr.'; } // باريس: الحي بالرقم (الدائرة) من الرمز البريدي 750XX
 async function plResolveLink(url){
   try{ const r = await mpData.geo.resolve(url); if (!r) return; plResolvedAddr = r.addr || '';
     const nm = document.getElementById('plName'); if (r.name && nm && !nm.value.trim()){ nm.value = r.name; showToast('Name read from the link ✓'); }
-    const ar = document.getElementById('plArea'); if (r.addr && ar && !ar.value.trim()){ const parts = r.addr.split(',').map(function(x){ return x.trim(); }).filter(Boolean).slice(0, -1); const known = allCities().map(function(c){ return pickerNormalize(c.name); }); const cand = parts.filter(function(x){ return !/\d/.test(x) && !/\b(rd|road|st|street|ave|avenue|rue|via|calle|شارع|طريق)\b/i.test(x) && known.indexOf(pickerNormalize(x)) < 0 && !/^(saudi arabia|bahrain|france|italy|uae|united arab emirates|spain|uk|united kingdom|usa)$/i.test(x); }); if (cand.length) ar.value = cand[cand.length - 1]; else { const arr = parisArrFrom(r.addr); if (arr) ar.value = arr; } } // ز-١-ب: الحي = آخر جزء بلا أرقام ولا طريق ولا مدينة/دولة (As Sahafah · حي المحمدية) · باريس: الدائرة من الرمز البريدي
+    const ar = document.getElementById('plArea'); if (r.addr && ar && !ar.value.trim()){ const parts = r.addr.split(',').map(function(x){ return x.trim(); }).filter(Boolean).slice(0, -1); const known = allCities().map(function(c){ return pickerNormalize(c.name); }); const cand = parts.filter(function(x){ return !/\d/.test(x) && !/\b(rd|road|st|street|ave|avenue|rue|via|calle|شارع|طريق)\b/i.test(x) && known.indexOf(pickerNormalize(x)) < 0 && !isCityOrCountry(x); }); if (cand.length) ar.value = cand[cand.length - 1]; else { const arr = parisArrFrom(r.addr); if (arr) ar.value = arr; } }
+    plResolvedCity = cityIdFromAddress(r.addr); // ز-١-ب: مدينة المكان (لتنبيه الاختلاف بخطوة الخريطة) // ز-١-ب: الحي = آخر جزء بلا أرقام ولا طريق ولا مدينة/دولة (As Sahafah · حي المحمدية) · باريس: الدائرة من الرمز البريدي
   }catch(e){ mpSwallow(e, 'resolve'); }
 }
 async function plPasteUrl(){
@@ -5435,10 +5441,12 @@ async function openGeoStep(place){
   const bd = document.getElementById('geoBackdrop'); if (!bd) { plGeoConfirmed = true; return savePlPlace(); }
   document.getElementById('geoTitle').textContent = place.name || 'Place'; document.getElementById('geoStatus').textContent = 'Finding it on the map…'; document.getElementById('geoCands').innerHTML = ''; geoPick = null; geoCands = [];
   bd.classList.add('show');
-  let res = { candidates: [] }; try{ res = await mpData.geo.match(myListCityId, place.name, plResolvedAddr || place.area || ''); }catch(e){ mpSwallow(e, 'match'); }
+  const matchCity = plResolvedCity || myListCityId; const mismatch = plResolvedCity && plResolvedCity !== myListCityId && !plEdit;
+  let res = { candidates: [] }; try{ res = await mpData.geo.match(matchCity, place.name, plResolvedAddr || place.area || ''); }catch(e){ mpSwallow(e, 'match'); }
   geoCands = (res.candidates || []).slice(0, 3); const auto = res.auto || null; geoPick = auto || (place.geo && typeof place.geo.lat === 'number' ? { lat: place.geo.lat, lng: place.geo.lng, id: place.openId || null, name: place.name, addr: place.area || '', keep: true } : (geoCands[0] || null));
-  const center = geoPick ? [geoPick.lat, geoPick.lng] : (cityCenterOf(myListCityId) || [24.7136, 46.6753]);
+  const center = geoPick ? [geoPick.lat, geoPick.lng] : (cityCenterOf(matchCity) || cityCenterOf(myListCityId) || [24.7136, 46.6753]);
   document.getElementById('geoStatus').textContent = auto ? 'Is this the place? Confirm or drag the pin.' : (geoCands.length ? 'Pick the right one, or drag the pin.' : 'Not found in our data — drag the pin to where it is, or skip.');
+  const gm = document.getElementById('geoMismatch'); if (gm){ const cn = mismatch ? ((KNOWN_CITY_NAMES[plResolvedCity] || [plResolvedCity])[0]) : ''; gm.innerHTML = mismatch ? '<div class="ctx" style="text-align:center;">This place seems to be in <b>' + escapeHtml(cn.replace(/\b\w/g, function(ch){ return ch.toUpperCase(); })) + '</b> — you are adding it to <b>' + escapeHtml(plCityName()) + '</b>. <button type="button" class="actn on" onclick="geoSwitchCity()">Switch to ' + escapeHtml(cn.replace(/\b\w/g, function(ch){ return ch.toUpperCase(); })) + '</button></div>' : ''; }
   document.getElementById('geoCands').innerHTML = geoCands.map(function(c, i){ return '<button type="button" class="chip geo-cand' + (geoPick && geoPick.id === c.id ? ' on' : '') + '" onclick="geoChoose(' + i + ')">' + (i + 1) + ' · ' + escapeHtml(c.name) + (c.addr ? ' <span class="dim">' + escapeHtml(c.addr) + '</span>' : '') + '</button>'; }).join('');
   try{ await ensureLeaflet(); }catch(e){ document.getElementById('geoStatus').textContent = 'Map could not load — you can skip.'; return; }
   const el = document.getElementById('geoMap'); if (geoMap){ geoMap.remove(); geoMap = null; }
@@ -5446,6 +5454,12 @@ async function openGeoStep(place){
   geoCands.forEach(function(c, i){ const m = L.marker([c.lat, c.lng], { icon: L.divIcon({ className: 'geo-num', html: '<b>' + (i + 1) + '</b>', iconSize: [22, 22] }) }).addTo(geoMap); m.on('click', function(){ geoChoose(i); }); });
   geoPin = L.marker(center, { draggable: true }).addTo(geoMap); geoPin.on('dragend', function(){ const ll = geoPin.getLatLng(); geoPick = { lat: ll.lat, lng: ll.lng, id: null, name: place.name, addr: '', dragged: true }; document.getElementById('geoStatus').textContent = 'Pin placed by you.'; document.querySelectorAll('.geo-cand').forEach(function(b){ b.classList.remove('on'); }); });
   setTimeout(function(){ try{ geoMap.invalidateSize(); }catch(_){} }, 60);
+}
+async function geoSwitchCity(){ // ز-١-ب: تحويل القائمة إلى مدينة المكان (قياسية بالدليل، أو خاصة تُنشأ باسمها) ثم إعادة خطوة الخريطة
+  const id = plResolvedCity; if (!id) return; const nm = (KNOWN_CITY_NAMES[id] || [id])[0].replace(/\b\w/g, function(ch){ return ch.toUpperCase(); });
+  if (!allCities().find(function(c){ return c.id === id; })){ if (!Array.isArray(userListData.customCities)) userListData.customCities = []; if (!userListData.customCities.find(function(c){ return c.id === id; })){ userListData.customCities.push({ id: id, name: nm, country: '' }); try{ await saveUserListGeneral(); }catch(e){} } }
+  const c = allCities().find(function(x){ return x.id === id; }); if (c && c.country) myListCountry = c.country; myListCityId = id; await loadMyCityList(id); showToast('Switched to ' + nm);
+  closeModalById('geoBackdrop'); plGeoConfirmed = false; await savePlPlace();
 }
 function geoChoose(i){ const c = geoCands[i]; if (!c) return; geoPick = Object.assign({}, c); if (geoPin) geoPin.setLatLng([c.lat, c.lng]); if (geoMap) geoMap.setView([c.lat, c.lng], 16); document.querySelectorAll('.geo-cand').forEach(function(b, k){ b.classList.toggle('on', k === i); }); document.getElementById('geoStatus').textContent = 'Selected ' + (i + 1) + ' — confirm or drag.'; }
 async function geoConfirm(){
