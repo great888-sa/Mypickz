@@ -1,0 +1,6 @@
+# MyPickz — أسرار لا تدخل المستودع أبدًا (مفاتيح الخدمات تُقرأ من متغيّرات البيئة أو أسرار الناشر/العامل)
+.env
+.env.*
+*.key
+key.json
+scripts/eval/match-report.json
