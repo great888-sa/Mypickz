@@ -1,0 +1,41 @@
+# MyPickz — نشر بيانات Overture إلى مخزن R2 للعامل (ز-١-أ) — يدوي، فصليًّا · يتطلب حاوية R2 باسم mypickz-places (تُنشأ مرة من لوحة Cloudflare)
+name: Overture publish (R2)
+on:
+  workflow_dispatch:
+    inputs:
+      cities:
+        description: 'city ids separated by space (empty = all)'
+        required: false
+        default: ''
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install DuckDB
+        run: pip install duckdb==1.1.3
+      - name: Extract Overture places
+        run: python scripts/overture-extract.py ${{ github.event.inputs.cities }}
+      - name: Build R2 shards
+        run: node scripts/overture-index.mjs
+      - name: Upload shards to R2 (wrangler)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cd scripts/eval/r2
+          n=0
+          for f in $(find ovt -type f -name '*.json' | sort); do
+            npx --yes wrangler@4 r2 object put "mypickz-places/$f" --file "$f" --content-type application/json --remote >/dev/null 2>&1 || npx --yes wrangler@4 r2 object put "mypickz-places/$f" --file "$f" --content-type application/json --remote
+            n=$((n+1)); if [ $((n % 200)) -eq 0 ]; then echo "uploaded $n"; fi
+          done
+          echo "uploaded total $n"
+      - name: Manifest
+        run: cat scripts/eval/r2/ovt/manifest.json
