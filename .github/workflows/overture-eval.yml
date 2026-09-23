@@ -33,11 +33,17 @@ jobs:
         run: python scripts/overture-extract.py ${{ github.event.inputs.cities }}
       - name: Score against golden set
         run: node scripts/match-score.js --source=overture --min=${{ github.event.inputs.min }} --max=${{ github.event.inputs.max }} || true
-      - name: Upload extracted data and report
+      - name: Upload small tuning files (report + top candidates)
         uses: actions/upload-artifact@v4
         with:
-          name: overture-eval
+          name: overture-tuning
           path: |
-            scripts/eval/overture/*.json
             scripts/eval/score-report-overture.json
+            scripts/eval/score-cands-overture.json
+          if-no-files-found: warn
+      - name: Upload extracted city data (large — for the worker later)
+        uses: actions/upload-artifact@v4
+        with:
+          name: overture-cities
+          path: scripts/eval/overture/*.json
           if-no-files-found: warn
