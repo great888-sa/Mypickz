@@ -10,7 +10,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,17 +25,15 @@ jobs:
         run: python scripts/overture-extract.py ${{ github.event.inputs.cities }}
       - name: Build R2 shards
         run: node scripts/overture-index.mjs
-      - name: Upload shards to R2 (wrangler)
+      - name: Upload shards to R2 (wrangler, 8 in parallel)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          npm install --no-save wrangler@4 >/dev/null 2>&1
           cd scripts/eval/r2
-          n=0
-          for f in $(find ovt -type f -name '*.json' | sort); do
-            npx --yes wrangler@4 r2 object put "mypickz-places/$f" --file "$f" --content-type application/json --remote >/dev/null 2>&1 || npx --yes wrangler@4 r2 object put "mypickz-places/$f" --file "$f" --content-type application/json --remote
-            n=$((n+1)); if [ $((n % 200)) -eq 0 ]; then echo "uploaded $n"; fi
-          done
-          echo "uploaded total $n"
+          total=$(find ovt -type f -name '*.json' | wc -l); echo "files to upload: $total"
+          find ovt -type f -name '*.json' | sort | xargs -P 8 -I{} sh -c 'npx --no-install wrangler r2 object put "mypickz-places/{}" --file "{}" --content-type application/json --remote >/dev/null 2>&1 || npx --no-install wrangler r2 object put "mypickz-places/{}" --file "{}" --content-type application/json --remote >/dev/null 2>&1 || echo "FAILED {}"'
+          echo "upload finished"
       - name: Manifest
         run: cat scripts/eval/r2/ovt/manifest.json
