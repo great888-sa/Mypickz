@@ -48,7 +48,9 @@ async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويست�
   const out = { name: name.slice(0, 120), addr: addr.slice(0, 160), host }; // لا lat/lng إطلاقًا
   if (debug){ let path = ''; try{ const f = new URL(final); path = (f.pathname + f.search).replace(/@-?\d+\.?\d*,-?\d+\.?\d*[^/]*/g, '@…').replace(/[?&](ll|q|center|sll|near)=-?\d+\.?\d*,-?\d+\.?\d*/g, '?…').slice(0, 200); }catch(_){ }
     const t = (html.match(/<title>([^<]{0,160})<\/title>/i) || [])[1] || ''; const og = (html.match(/property=["']og:title["'][^>]+content=["']([^"']{0,160})["']/i) || [])[1] || '';
-    out.debug = { path, title: t, og, htmlBytes: html.length, hasConsent: /consent\.google/i.test(final) }; } // المسار بلا إحداثيات
+    const mask = x => String(x).replace(/-?\d{1,3}\.\d{3,}/g, '#').replace(/\s+/g, ' ');
+    const urls = [...new Set((html.match(/https?:\/\/[^"'<>\s\\]{8,160}/g) || []).map(x => { try{ return new URL(x.replace(/&amp;/g, '&')).hostname + new URL(x.replace(/&amp;/g, '&')).pathname.slice(0, 40); }catch(_){ return ''; } }).filter(Boolean))].slice(0, 12);
+    out.debug = { path, title: t, og, htmlBytes: html.length, hasConsent: /consent\.google/i.test(final), urls, snippet: mask(html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ')).slice(0, 600) }; } // المسار بلا إحداثيات
   return out;
 }
 
