@@ -10,7 +10,7 @@ for (const f of fs.readdirSync(SRC).filter(x => x.endsWith('.json'))){
   arr.forEach((p, i) => { if (typeof p.lat !== 'number' || !p.name) return; const id = String(i);
     const entry = { name: p.name, names: (p.names || []).filter(x => x && x !== p.name).slice(0, 3), addr: (p.addr || '').slice(0, 80), locality: (p.locality || '').slice(0, 40), cat: p.cat || '', lat: +p.lat.toFixed(5), lng: +p.lng.toFixed(5) };
     const T = toks(p.name + ' ' + entry.names.join(' ')); if (!T.size) return; n++;
-    T.forEach(t => { const b = bucketOf(t); const sh = shards[b] = shards[b] || { tokens: {}, entries: {} }; (sh.tokens[t] = sh.tokens[t] || []).push(id); sh.entries[id] = entry; }); });
+    T.forEach(t => { const b = bucketOf(t); const sh = shards[b] = shards[b] || { tokens: Object.create(null), entries: Object.create(null) }; (sh.tokens[t] = sh.tokens[t] || []).push(id); sh.entries[id] = entry; }); }); // كائنات بلا وراثة: رمز مثل constructor لا يختلط بخاصية موروثة
   const dir = path.join(OUT, city); fs.mkdirSync(dir, { recursive: true }); let bytes = 0;
   Object.keys(shards).forEach(b => { const s = JSON.stringify(shards[b]); bytes += s.length; fs.writeFileSync(path.join(dir, b + '.json'), s); });
   manifest.cities[city] = { places: n, shards: Object.keys(shards).length, mb: +(bytes / 1048576).toFixed(1) };
