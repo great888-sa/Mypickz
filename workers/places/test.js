@@ -7,5 +7,6 @@ const amb = decide('Dalmata', '', C); ok('ambiguous: same name, two places, no a
 ok('none: unrelated name → no candidates', decide('Em Sherif', '', C).candidates.length === 0);
 ok('arabic normalization: «شيفز برجر | Chef\'s Burger» matches Chef\'s Burger', nameSim("شيفز برجر | Chef's Burger", { name: "Chef's Burger", names: [] }) >= 0.9);
 ok('city tokens ignored: «Bâoli Dubai» → tokens without dubai', !toks('Bâoli Dubai').has('dubai'));
+ok('no address in request: exact name → auto (score = name only, ≥ 0.9)', (decide('Le Peloton Café', '', C).auto || {}).id === 'ovt:3');
 ok('bucketOf is stable 2-hex', /^[0-9a-f]{2}$/.test(bucketOf('dalmata')) && bucketOf('dalmata') === bucketOf('dalmata'));
 console.log(fails ? ('FAILED ' + fails) : 'ALL PASS'); process.exit(fails ? 1 : 0);
