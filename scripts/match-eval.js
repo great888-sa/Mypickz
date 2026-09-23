@@ -19,7 +19,7 @@ async function fsq(name, city){
   const [lat, lng] = CITY_CENTER[city]; const qs = new URLSearchParams({ query: name, ll: lat + ',' + lng, radius: '30000', limit: '3', fields: LEGACY ? 'fsq_id,name,geocodes,location' : 'fsq_place_id,name,latitude,longitude,location' });
   const url = (LEGACY ? 'https://api.foursquare.com/v3/places/search?' : 'https://places-api.foursquare.com/places/search?') + qs;
   const headers = LEGACY ? { Authorization: KEY, Accept: 'application/json' } : { Authorization: 'Bearer ' + KEY, Accept: 'application/json', 'X-Places-Api-Version': '2025-06-17' };
-  const r = await fetch(url, { headers: headers }); if (!r.ok) return { error: r.status }; const j = await r.json();
+  const r = await fetch(url, { headers: headers }); if (!r.ok){ let body = ''; try{ body = (await r.text()).slice(0, 300); }catch(_){} return { error: r.status, body: body }; } const j = await r.json();
   const results = (j.results || []).map(function(x){ return { fsq_id: x.fsq_id || x.fsq_place_id, name: x.name, geocodes: x.geocodes || ((typeof x.latitude === 'number') ? { main: { latitude: x.latitude, longitude: x.longitude } } : null) }; });
   return { results: results };
 }
@@ -28,7 +28,8 @@ async function fsq(name, city){
   const out = { correct: 0, wrong: 0, none: 0, error: 0, byCity: {}, rows: [] }; const t0 = Date.now();
   for (const p of gold){
     const c = out.byCity[p.city] = out.byCity[p.city] || { n: 0, correct: 0, wrong: 0, none: 0 }; c.n++;
-    let q = cleanName(p.name); let res = await fsq(q, p.city); if (res.error){ out.error++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'error ' + res.error }); continue; }
+    let q = cleanName(p.name); let res = await fsq(q, p.city);
+    if (res.error){ out.error++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'error ' + res.error }); if (out.error === 1) console.log('FIRST ERROR · HTTP ' + res.error + ' · key type: ' + (LEGACY ? 'legacy (fsq3)' : 'service (Bearer)') + ' · body: ' + (res.body || '').replace(/\s+/g, ' ')); if (out.error >= 5 && out.correct + out.wrong + out.none === 0){ console.log('ABORT: 5 errors in a row — fix the key/endpoint first'); break; } continue; }
     if (!res.results.length && q !== p.name){ res = await fsq(p.name, p.city); }
     if (!res.results.length){ out.none++; c.none++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'none' }); continue; }
     const best = res.results[0]; const g = best.geocodes && (best.geocodes.main || best.geocodes.roof); if (!g){ out.none++; c.none++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'none (no geocode)' }); continue; }
