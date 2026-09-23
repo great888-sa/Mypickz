@@ -3,7 +3,7 @@
 // الدرجة = تشابه الاسم (رموز · بادئة · عربي/إنجليزي) + تشابه العنوان (رموز الشارع/الحي) · الرفض دون MIN → none (أسلم من الخطأ)
 const fs = require('fs');
 const arg = (n, d) => { const a = process.argv.find(x => x.startsWith('--' + n + '=')); return a ? a.split('=')[1] : d; };
-const SRC = arg('source', 'overture'), MAX_M = parseInt(arg('max', '300'), 10), MIN = parseFloat(arg('min', '0.6')), CITY = arg('city', ''), WN = parseFloat(arg('wn', '0.6')), WA = parseFloat(arg('wa', '0.4')), MIN_NS = parseFloat(arg('minns', '0.5')); // v3: الأوزان من البحث الشبكي (٢٣ سبتمبر)
+const SRC = arg('source', 'overture'), MAX_M = parseInt(arg('max', '300'), 10), MIN = parseFloat(arg('min', '0.55')), CITY = arg('city', ''), WN = parseFloat(arg('wn', '0.5')), WA = parseFloat(arg('wa', '0.5')), MIN_NS = parseFloat(arg('minns', '0.5')), GAP = parseFloat(arg('gap', '0.1')); // v4: الأوزان النهائية من البحث الشبكي (٢٣ سبتمبر): الوضع الآمن (خاطئ ≤ ٣٪) — الاسم والعنوان بالتساوي · عتبة ٠٫٥٥ · تعادل غامض (فرق < ٠٫١ ومواضع مختلفة) → لا حكم آلي
 const norm = s => String(s || '').toLowerCase().replace(/[’'`´]/g, '').replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').replace(/\s+/g, ' ').trim();
 const AR = { 'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ة': 'ه', 'ى': 'ي', 'ؤ': 'و', 'ئ': 'ي' };
 const normAr = s => norm(s).replace(/[أإآةىؤئ]/g, ch => AR[ch]).replace(/[\u064B-\u0652]/g, '').replace(/\bال/g, '');
@@ -38,7 +38,8 @@ for (const p of gold){
   let best = null, bestS = 0; const scored = [];
   for (const cand of candidates(p)){ if (typeof cand.lat !== 'number') continue; const ns = nameSim(p.name, cand), as = addrSim(p.addr, cand); if (ns < MIN_NS) continue; const s = ns * WN + as * WA; scored.push({ name: cand.name, names: cand.names, addr: cand.addr, locality: cand.locality, lat: cand.lat, lng: cand.lng, cat: cand.cat, ns: +ns.toFixed(2), as: +as.toFixed(2), s: +s.toFixed(2), m: Math.round(dist(p.truth, { lat: cand.lat, lng: cand.lng })) }); if (s > bestS){ bestS = s; best = cand; } }
   scored.sort((a, b) => b.s - a.s); CANDS.push({ id: p.id, name: p.name, addr: p.addr, city: p.city, cands: scored.slice(0, 20) }); // للضبط دون شبكة
-  if (!best || bestS < MIN){ out.none++; c.none++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'none', score: +bestS.toFixed(2), top: best && best.name }); continue; }
+  const ambiguous = scored.length > 1 && (scored[0].s - scored[1].s) < GAP && dist({ lat: scored[0].lat, lng: scored[0].lng }, { lat: scored[1].lat, lng: scored[1].lng }) > MAX_M; // v4: مرشَّحان متقاربان بموضعين مختلفين → يُعرضان للمستخدم
+  if (!best || bestS < MIN || ambiguous){ out.none++; c.none++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'none', score: +bestS.toFixed(2), top: best && best.name }); continue; }
   const d = Math.round(dist(p.truth, { lat: best.lat, lng: best.lng }));
   if (d <= MAX_M){ out.correct++; c.correct++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'correct', m: d, score: +bestS.toFixed(2), match: best.name }); }
   else { out.wrong++; c.wrong++; out.rows.push({ id: p.id, name: p.name, city: p.city, verdict: 'wrong', m: d, score: +bestS.toFixed(2), match: best.name, addr: p.addr, caddr: best.addr }); }
