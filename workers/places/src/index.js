@@ -20,7 +20,13 @@ async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويست�
   let final = u.href, html = '';
   try{ let r = await fetch(u.href, { redirect: 'follow', headers: H, cf: { cacheTtl: 86400 } }); final = r.url || final;
     if (/consent\.google\./i.test(new URL(final).hostname)){ const c = new URL(final).searchParams.get('continue'); if (c){ r = await fetch(c, { redirect: 'follow', headers: Object.assign({}, H, { Cookie: 'CONSENT=YES+; SOCS=CAI' }) }); final = r.url || c; } }
-    const txt = await r.text(); html = txt.slice(0, 400000); }catch(_){ }
+    let txt = await r.text(); html = txt.slice(0, 400000);
+    const SHORT = /^(maps\.app\.goo\.gl|goo\.gl)$/i;
+    if (SHORT.test(new URL(final).hostname)){ // صفحة وسيطة بلا إعادة توجيه: (١) الطلب بلا معلمات (g_st) · (٢) رابط الوجهة داخل نص الصفحة
+      const bare = new URL(u.href); bare.search = '';
+      try{ const r2 = await fetch(bare.href, { redirect: 'follow', headers: H }); if (r2.url && !SHORT.test(new URL(r2.url).hostname)){ final = r2.url; txt = await r2.text(); html = txt.slice(0, 400000); } }catch(_){ }
+      if (SHORT.test(new URL(final).hostname)){ const mm = html.match(/https?:\/\/(?:www\.google\.[a-z.]+|maps\.google\.[a-z.]+)\/maps[^"'<>\s\\]{0,600}/); if (mm){ final = mm[0].replace(/&amp;/g, '&').replace(/\\u0026/g, '&'); try{ const r3 = await fetch(final, { redirect: 'follow', headers: H }); final = r3.url || final; txt = await r3.text(); html = txt.slice(0, 400000); }catch(_){ } } }
+    } }catch(_){ }
   const looksLikeToken = s => !/[A-Za-z\u0600-\u06FF]/.test(s) || (s.length > 40 && !/\s/.test(s));
   let name = '', addr = '';
   const m = final.match(/\/maps\/place\/([^/?#]+)/);
