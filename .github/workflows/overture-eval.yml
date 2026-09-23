@@ -1,0 +1,43 @@
+# MyPickz — استخراج أماكن مدن الدليل من Overture (بيانات مفتوحة) ثم تقييم المطابقة بالمجموعة الذهبية — بلا مفتاح ولا حصة
+name: Overture eval
+on:
+  workflow_dispatch:
+    inputs:
+      cities:
+        description: 'city ids separated by space (empty = all)'
+        required: false
+        default: ''
+      min:
+        description: 'reject below this score'
+        required: false
+        default: '0.45'
+      max:
+        description: 'max meters counted as correct'
+        required: false
+        default: '300'
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install DuckDB
+        run: pip install duckdb==1.1.3
+      - name: Extract Overture places for guide cities
+        run: python scripts/overture-extract.py ${{ github.event.inputs.cities }}
+      - name: Score against golden set
+        run: node scripts/match-score.js --source=overture --min=${{ github.event.inputs.min }} --max=${{ github.event.inputs.max }} || true
+      - name: Upload extracted data and report
+        uses: actions/upload-artifact@v4
+        with:
+          name: overture-eval
+          path: |
+            scripts/eval/overture/*.json
+            scripts/eval/score-report-overture.json
+          if-no-files-found: warn
