@@ -10,8 +10,9 @@ async function shard(env, city, b){ const k = city + '/' + b; if (shardCache.has
 async function candidatesFor(env, city, name){
   const qs = new Set(); splitName(name).forEach(n => toks(n).forEach(t => qs.add(t))); if (!qs.size) return [];
   const hits = new Map(); const entries = {};
-  for (const t of qs){ const sh = await shard(env, city, bucketOf(t)); const ids = sh.tokens[t] || []; const rare = 1 / Math.sqrt(ids.length || 1); ids.forEach(id => { hits.set(id, (hits.get(id) || 0) + rare); if (sh.entries[id]) entries[id] = sh.entries[id]; }); }
-  return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).map(e => Object.assign({ id: 'ovt:' + e[0] }, entries[e[0]])).filter(x => typeof x.lat === 'number');
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); // رمز مثل constructor لا يختلط بخاصية موروثة
+  for (const t of qs){ const sh = await shard(env, city, bucketOf(t)); const ids = own(sh.tokens, t) ? sh.tokens[t] : []; const rare = 1 / Math.sqrt(ids.length || 1); ids.forEach(id => { hits.set(id, (hits.get(id) || 0) + rare); if (own(sh.entries, id)) entries[id] = sh.entries[id]; }); }
+  return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).filter(e => own(entries, e[0])).map(e => Object.assign({ id: 'ovt:' + e[0] }, entries[e[0]])).filter(x => typeof x.lat === 'number');
 }
 async function resolveGoogle(raw){ // يتتبّع الرابط ويستخرج الاسم من مسار /maps/place/<name>/… — لا يقرأ الإحداثيات
   let u; try{ u = new URL(raw); }catch(_){ return { error: 'bad url' }; } if (!GOOGLE_HOSTS.test(u.hostname)) return { error: 'not a google maps link' };
