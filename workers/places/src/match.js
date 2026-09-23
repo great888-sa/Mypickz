@@ -20,12 +20,12 @@ export const WEIGHTS = { wn: 0.5, wa: 0.5, min: 0.55, minNs: 0.5, gap: 0.1, maxM
 export function bucketOf(tok){ let h = 0; for (let i = 0; i < tok.length; i++) h = (h * 31 + tok.charCodeAt(i)) >>> 0; return (h % 256).toString(16).padStart(2, '0'); } // شظية الرمز (٢٥٦ لكل مدينة)
 // ترتيب المرشَّحين وحكمهم: {auto} عند اليقين · {candidates:[≤3]} عند الشك · {} عند الغياب
 export function decide(name, addr, cands, W = WEIGHTS){
-  const scored = [];
-  for (const c of cands){ if (typeof c.lat !== 'number') continue; const ns = nameSim(name, c); if (ns < W.minNs) continue; const as = addrSim(addr, c); scored.push({ c, s: ns * W.wn + as * W.wa }); }
+  const scored = []; const noAddr = !toks(addr).size; // بلا عنوان بالطلب: الدرجة = تشابه الاسم وحده، واليقين عند ≥ ٠٫٩ (القياس بالمجموعة الذهبية كان بعناوين دائمًا)
+  for (const c of cands){ if (typeof c.lat !== 'number') continue; const ns = nameSim(name, c); if (ns < W.minNs) continue; const as = addrSim(addr, c); scored.push({ c, s: noAddr ? ns : (ns * W.wn + as * W.wa) }); }
   scored.sort((a, b) => b.s - a.s);
   const top = scored.slice(0, 3).map(x => ({ id: x.c.id, name: x.c.name, addr: x.c.addr || '', locality: x.c.locality || '', lat: x.c.lat, lng: x.c.lng, score: +x.s.toFixed(2) }));
   if (!top.length) return { candidates: [] };
   const ambiguous = scored.length > 1 && (scored[0].s - scored[1].s) < W.gap && dist(scored[0].c, scored[1].c) > W.maxM;
-  if (top[0].score >= W.min && !ambiguous) return { auto: top[0], candidates: top };
+  if (top[0].score >= (noAddr ? 0.9 : W.min) && !ambiguous) return { auto: top[0], candidates: top };
   return { candidates: top };
 }
