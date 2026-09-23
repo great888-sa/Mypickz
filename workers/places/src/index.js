@@ -32,6 +32,11 @@ async function resolveGoogle(raw){ // يتتبّع الرابط ويستخرج �
     if (t && !/^Google Maps$/i.test(t)){ const parts = t.split(/\s*[·•]\s*/); name = parts[0].trim(); addr = parts.slice(1).join(' · ').trim(); }
   }
   if (!name){ try{ const q = new URL(final).searchParams.get('q'); if (q && !/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(q)) name = q; }catch(_){ } }
+  for (let k = 0; k < 3 && /^https?:\/\//i.test(name); k++){ // رابط متداخل (maps?q=… أو /maps/place/…) → يُفكّ حتى يبقى نص
+    try{ const inner = new URL(name); const q = inner.searchParams.get('q'); const mm = inner.pathname.match(/\/maps\/place\/([^/?#]+)/); name = q || (mm ? decodeURIComponent(mm[1].replace(/\+/g, ' ')) : ''); }catch(_){ name = ''; }
+  }
+  if (name && !addr && name.indexOf(',') > 0){ const parts = name.split(',').map(x => x.trim()).filter(Boolean); name = parts[0]; addr = parts.slice(1).join(', '); } // «Molto, Al Imam Saud Rd, As Sahafah, Riyadh» → الاسم والعنوان
+  if (/^-?\d+(\.\d+)?$/.test(name)) name = ''; // لا نقبل رقمًا (إحداثية) اسمًا
   let host = ''; try{ host = new URL(final).hostname; }catch(_){ }
   return { name: name.slice(0, 120), addr: addr.slice(0, 160), host }; // لا lat/lng إطلاقًا
 }
