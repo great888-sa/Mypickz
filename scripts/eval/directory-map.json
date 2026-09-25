@@ -1,0 +1,40 @@
+{
+ "note": "مدن الدليل القديمة (المعرّف · الاسم · الدولة) — لمطابقتها إلى معرّف المعجم بسكربت الهجرة",
+ "cities": [
+  {
+   "id": "paris",
+   "name": "Paris",
+   "country": "France"
+  },
+  {
+   "id": "marbella",
+   "name": "Marbella",
+   "country": "Spain"
+  },
+  {
+   "id": "london",
+   "name": "London",
+   "country": "UK"
+  },
+  {
+   "id": "barcelona",
+   "name": "Barcelona",
+   "country": "Spain"
+  },
+  {
+   "id": "geneva",
+   "name": "Geneva",
+   "country": "Switzerland"
+  },
+  {
+   "id": "madrid",
+   "name": "Madrid",
+   "country": "Spain"
+  },
+  {
+   "id": "mallorca",
+   "name": "Mallorca",
+   "country": "Spain"
+  }
+ ]
+}
