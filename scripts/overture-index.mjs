@@ -1,19 +1,25 @@
-// MyPickz — scripts/overture-index.mjs (ز-١-أ): يحوّل scripts/eval/overture/<city>.json إلى شظايا R2: ovt/<city>/<bucket>.json = { tokens: {tok: [ids]}, entries: {id: {name, names, addr, locality, cat, lat, lng}} }
-// ٢٥٦ شظية لكل مدينة بتجزئة الرمز (bucketOf) — العامل يقرأ شظايا رموز الاستعلام فقط · المخرج: scripts/eval/r2/ + manifest.json
-import fs from 'fs'; import path from 'path';
+// MyPickz — scripts/overture-index.mjs v3 (ز-١-ج-١ v1.2): من ملفات الخلايا (scripts/eval/cells/cell=<c>/…jsonl) إلى شظايا R2 مضغوطة: cells/<c>.json.gz = { tokens: {tok: [ids]}, entries: {id: {…}} }
+// الخلية الكبيرة (> 25k مدخل) تُقسَّم إلى أجزاء بتجزئة الرمز: cells/<c>.<k>.json.gz · المخرج: scripts/eval/r2/cells/ + cells/manifest.json { release, cells: {c: parts} }
+import fs from 'fs'; import path from 'path'; import zlib from 'zlib';
 import { toks, bucketOf } from '../workers/places/src/match.js';
-const SRC = 'scripts/eval/overture', OUT = 'scripts/eval/r2/ovt'; fs.mkdirSync(OUT, { recursive: true });
-const manifest = { builtAt: new Date().toISOString(), cities: {} };
-for (const f of fs.readdirSync(SRC).filter(x => x.endsWith('.json'))){
-  const city = f.replace(/\.json$/, ''); const arr = JSON.parse(fs.readFileSync(path.join(SRC, f), 'utf8'));
-  const shards = {}; let n = 0;
-  arr.forEach((p, i) => { if (typeof p.lat !== 'number' || !p.name) return; const id = String(i);
-    const entry = { name: p.name, names: (p.names || []).filter(x => x && x !== p.name).slice(0, 3), addr: (p.addr || '').slice(0, 80), locality: (p.locality || '').slice(0, 40), cat: p.cat || '', lat: +p.lat.toFixed(5), lng: +p.lng.toFixed(5) };
-    const T = toks(p.name + ' ' + entry.names.join(' ')); if (!T.size) return; n++;
-    T.forEach(t => { const b = bucketOf(t); const sh = shards[b] = shards[b] || { tokens: Object.create(null), entries: Object.create(null) }; (sh.tokens[t] = sh.tokens[t] || []).push(id); sh.entries[id] = entry; }); }); // كائنات بلا وراثة: رمز مثل constructor لا يختلط بخاصية موروثة
-  const dir = path.join(OUT, city); fs.mkdirSync(dir, { recursive: true }); let bytes = 0;
-  Object.keys(shards).forEach(b => { const s = JSON.stringify(shards[b]); bytes += s.length; fs.writeFileSync(path.join(dir, b + '.json'), s); });
-  manifest.cities[city] = { places: n, shards: Object.keys(shards).length, mb: +(bytes / 1048576).toFixed(1) };
-  console.log(city.padEnd(10), 'places', String(n).padStart(7), 'shards', Object.keys(shards).length, (bytes / 1048576).toFixed(1) + ' MB');
+const SRC = 'scripts/eval/cells', OUT = 'scripts/eval/r2/cells'; fs.mkdirSync(OUT, { recursive: true });
+const prevPath = OUT + '/manifest.json'; const prev = fs.existsSync(prevPath) ? JSON.parse(fs.readFileSync(prevPath, 'utf8')) : { cells: {} };
+const extract = fs.existsSync(SRC + '/_extract.json') ? JSON.parse(fs.readFileSync(SRC + '/_extract.json', 'utf8')) : {};
+const manifest = { builtAt: new Date().toISOString(), release: extract.release || prev.release || '', cells: prev.cells || {} };
+const MAX = 25000, PARTS = 8; let cellsDone = 0, places = 0, bytes = 0;
+for (const dir of fs.readdirSync(SRC).filter(d => d.startsWith('cell='))){
+  const cell = dir.slice(5); const entries = Object.create(null); const seen = new Set();
+  for (const f of fs.readdirSync(path.join(SRC, dir))){
+    const lines = fs.readFileSync(path.join(SRC, dir, f), 'utf8').split('\n');
+    for (const line of lines){ if (!line.trim()) continue; let p; try{ p = JSON.parse(line); }catch(_){ continue; } if (!p.name || typeof p.lat !== 'number' || seen.has(p.id)) continue; seen.add(p.id);
+      let names = []; if (p.common && typeof p.common === 'object') names = Object.values(p.common).filter(x => x && x !== p.name).slice(0, 3);
+      entries[p.id] = { name: p.name, names, addr: String(p.addr || '').slice(0, 80), locality: String(p.locality || '').slice(0, 40), cat: p.cat || '', lat: +(+p.lat).toFixed(5), lng: +(+p.lng).toFixed(5) }; }
+  }
+  const ids = Object.keys(entries); if (!ids.length) continue; places += ids.length;
+  const parts = ids.length > MAX ? PARTS : 1; const shards = Array.from({ length: parts }, () => ({ tokens: Object.create(null), entries: Object.create(null) }));
+  ids.forEach(id => { const e = entries[id]; const T = toks(e.name + ' ' + e.names.join(' ')); T.forEach(t => { const k = parts === 1 ? 0 : (parseInt(bucketOf(t), 16) % parts); const sh = shards[k]; (sh.tokens[t] = sh.tokens[t] || []).push(id); sh.entries[id] = e; }); });
+  shards.forEach((sh, k) => { const gz = zlib.gzipSync(Buffer.from(JSON.stringify(sh)), { level: 9 }); bytes += gz.length; fs.writeFileSync(path.join(OUT, cell + (parts === 1 ? '' : '.' + k) + '.json.gz'), gz); });
+  manifest.cells[cell] = parts; cellsDone++;
 }
-fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 1)); console.log('DONE', JSON.stringify(manifest.cities).length ? 'manifest written' : '');
+fs.writeFileSync(prevPath, JSON.stringify(manifest)); // كبير (~٢ ميغابايت للمناطق) — يُقرأ مرة لكل عزلة بالعامل
+console.log('cells', cellsDone, '· places', places, '· ' + (bytes / 1048576).toFixed(1) + ' MB gz · manifest cells', Object.keys(manifest.cells).length, '· release', manifest.release);
