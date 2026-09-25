@@ -1,5 +1,6 @@
 // MyPickz — tests/rules-sim.js
 // يختبر firestore.rules على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// v3.11 (٢٤ سبتمبر ٢٠٢٦ — سجل هوية الأماكن): + القسم ٢٤ (١٤ حالة).
 // M4.26 (٢٢ سبتمبر ٢٠٢٦ — التقسيم والأسطر الثمانية): + القسم ٢٣ (~٥٠ حالة).
 // M4.25 (١٧ سبتمبر ٢٠٢٦ — النشرة الجامعة على أ-٦): + القسم ٢٢ — ٦٤ حالة (hasTop للموثَّق · geoSources/legSources/flagsUsed/catsV · copyCount بسجل copies ذرّيًّا
 //   · عدّاد المتابعين للموثَّقين بلا محتوى وبالدفعة (existsAfter) · curatorCityNotes · curatorRequests · reports · stats_cities · مفاتيح الإحصاء الجديدة والقديمة) — المجموع ٥١١.
@@ -937,6 +938,23 @@ const no = (label, f) => expect(false, label, f);
   // (٨) hiddenCities بمستند صاحبه
   await ok('M4.26 userLists hiddenCities by self allow', () => a.doc('userLists/' + A).set({ hiddenCities: ['paris'] }, { merge: true }));
   await no('M4.26 userLists hiddenCities by other deny', () => b.doc('userLists/' + A).set({ hiddenCities: [] }, { merge: true }));
+
+  // ================= ٢٤) v3.11 — سجل هوية الأماكن placeIdentity (٢٤ سبتمبر ٢٠٢٦) =================
+  const PI = { lat: 48.86453, lng: 2.34943, source: 'overture', openId: 'ovt:155747', n: 'Dalmata', cityId: '2988507', by: A, at: 1 };
+  await ok('v3.11 identity create by signed-in allow', () => a.doc('placeIdentity/h_dalmata').set(PI));
+  await ok('v3.11 identity read by guest allow', () => guest.doc('placeIdentity/h_dalmata').get());
+  await ok('v3.11 identity update by another user allow (last confirmer wins)', () => b.doc('placeIdentity/h_dalmata').set(Object.assign({}, PI, { by: B, source: 'user_pin', at: 2 })));
+  await no('v3.11 identity create by guest deny', () => guest.doc('placeIdentity/h_g').set(PI));
+  await no('v3.11 identity by mismatched uid deny', () => a.doc('placeIdentity/h_x1').set(Object.assign({}, PI, { by: B })));
+  await no('v3.11 identity bad source deny', () => a.doc('placeIdentity/h_x2').set(Object.assign({}, PI, { source: 'google' })));
+  await no('v3.11 identity lat out of range deny', () => a.doc('placeIdentity/h_x3').set(Object.assign({}, PI, { lat: 95 })));
+  await no('v3.11 identity extra field deny', () => a.doc('placeIdentity/h_x4').set(Object.assign({}, PI, { extra: 1 })));
+  await no('v3.11 identity googleLat deny', () => a.doc('placeIdentity/h_x5').set(Object.assign({}, PI, { googleLat: 1 })));
+  await no('v3.11 identity missing lng deny', () => a.doc('placeIdentity/h_x6').set({ lat: 1, source: 'user_pin', by: A, at: 1 }));
+  await no('v3.11 identity name too long deny', () => a.doc('placeIdentity/h_x7').set(Object.assign({}, PI, { n: 'x'.repeat(121) })));
+  await no('v3.11 identity delete by user deny', () => a.doc('placeIdentity/h_dalmata').delete());
+  await ok('v3.11 identity delete by OWNER allow', () => owner.doc('placeIdentity/h_dalmata').delete());
+  await no('v3.11 identity by suspended user deny', () => s.doc('placeIdentity/h_x8').set(Object.assign({}, PI, { by: S })));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
