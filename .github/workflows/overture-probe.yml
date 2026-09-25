@@ -1,0 +1,43 @@
+# MyPickz — فحص إصدار Overture الجديد شهريًّا (ز-١-ج-١ v1.2): يجرّبه على مدينة صغيرة (كابري) بالمخطط المتوقع؛ ينجح → يرفع التثبيت ويلتزمه · يفشل → أحمر (بريد) والتثبيت القديم يبقى
+name: Overture probe (monthly)
+on:
+  schedule:
+    - cron: "0 1 25 * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Probe newest release on Capri
+        run: |
+          pip install duckdb==1.1.3 >/dev/null
+          python - <<'PY'
+          import duckdb, re, urllib.request, sys
+          xml = urllib.request.urlopen('https://overturemaps-us-west-2.s3.amazonaws.com/?prefix=release/&delimiter=/').read().decode()
+          rels = sorted(set(re.findall(r'release/(\d{4}-\d{2}-\d{2}\.\d+)/', xml))); newest = rels[-1]; pinned = open('scripts/eval/overture-release.txt').read().strip()
+          print('pinned', pinned, '· newest', newest)
+          if newest == pinned: print('up to date'); open('/tmp/bump', 'w').write(''); sys.exit(0)
+          con = duckdb.connect(); con.execute("INSTALL httpfs; LOAD httpfs; INSTALL spatial; LOAD spatial; SET s3_region='us-west-2';")
+          src = f"s3://overturemaps-us-west-2/release/{newest}/theme=places/type=place/*.parquet"
+          ok = False
+          for cat in ['taxonomy.primary', 'categories.primary']:
+              try:
+                  n = con.execute(f"SELECT count(*) FROM (SELECT id, names.primary AS name, {cat} AS cat, ST_Y(geometry) AS lat, ST_X(geometry) AS lng, addresses[1].freeform AS addr FROM read_parquet('{src}', hive_partitioning=1) WHERE bbox.xmin >= 14.2 AND bbox.xmax <= 14.28 AND bbox.ymin >= 40.53 AND bbox.ymax <= 40.57)").fetchone()[0]
+                  print('probe ok with', cat, '· capri places', n); ok = n > 500; break
+              except Exception as e: print('probe failed with', cat, ':', str(e)[:200])
+          if not ok: print('PROBE FAILED — keep pinned', pinned); sys.exit(1)
+          open('/tmp/bump', 'w').write(newest)
+          PY
+      - name: Bump pinned release
+        run: |
+          new=$(cat /tmp/bump); if [ -z "$new" ]; then echo "no bump"; exit 0; fi
+          echo "$new" > scripts/eval/overture-release.txt
+          git config user.name "mypickz-bot"; git config user.email "bot@mypickz.app"
+          git add scripts/eval/overture-release.txt && git commit -m "Overture: pin release $new (probe passed)" && git push
