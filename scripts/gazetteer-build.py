@@ -41,6 +41,16 @@ for r in rows:
     if a: e['a'] = a
     if r['id'] in ar: e['ar'] = ar[r['id']]
     by_cc[r['cc']].append(e)
+# الجزر — تُدمج بالمعجم كمدخلات بنصف قطر (r) (قرار المالك: الجزر فقط)
+try:
+    for a in json.load(open('scripts/eval/islands.json', encoding='utf-8'))['islands']:
+        e = {'id': a['id'], 'n': a['n'], 'lat': a['lat'], 'lng': a['lng'], 'p': 200000, 'r': a['r'], 'island': True}
+        if a.get('a'): e['a'] = a['a']
+        if a.get('ar'): e['ar'] = a['ar']
+        by_cc[a['cc']].append(e)
+    print('islands merged')
+except Exception as ex:
+    print('islands skipped:', str(ex)[:120])
 os.makedirs('cities', exist_ok=True)
 for cc, arr in by_cc.items():
     arr.sort(key=lambda x: -x['p']); json.dump(arr, open(f'cities/{cc}.json', 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
@@ -57,7 +67,7 @@ for cc, arr in by_cc.items():
         if e.get('ar'):
             k = norm_ar(e['ar'])[:2]
             if len(k) == 2: keys.add(k)
-        for k in keys: idx[k].append({'id': e['id'], 'n': e['n'], 'ar': e.get('ar', ''), 'cc': cc, 'lat': e['lat'], 'lng': e['lng'], 'p': e['p']})
+        for k in keys: idx[k].append({'id': e['id'], 'n': e['n'], 'ar': e.get('ar', ''), 'cc': cc, 'lat': e['lat'], 'lng': e['lng'], 'p': e['p'], **({'r': e['r'], 'island': True} if e.get('island') else {})})
 for k, arr in idx.items():
     arr.sort(key=lambda x: -x['p']); safe = ''.join('%04x' % ord(ch) for ch in k)
     json.dump(arr[:400], open(f'scripts/eval/gaz/idx/{safe}.json', 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
