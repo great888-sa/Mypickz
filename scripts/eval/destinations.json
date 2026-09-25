@@ -1,0 +1,727 @@
+{
+ "note": "قائمة الوجهات — المصدر ١: Euromonitor Top 100 City Destinations Index (نُشرت بمقال Forbes ٢٠٢٥) · المصدر ٢: منتجعات ووجهات مسافري الخليج المعتادة (مقيَّدة للمراجعة والزيادة) · تُحلّ إلى معرّفات المعجم بالاسم والدولة",
+ "euromonitor_top100": [
+  {
+   "n": "Paris",
+   "cc": "FR"
+  },
+  {
+   "n": "Madrid",
+   "cc": "ES"
+  },
+  {
+   "n": "Tokyo",
+   "cc": "JP"
+  },
+  {
+   "n": "Rome",
+   "cc": "IT"
+  },
+  {
+   "n": "Milan",
+   "cc": "IT"
+  },
+  {
+   "n": "New York City",
+   "cc": "US"
+  },
+  {
+   "n": "Amsterdam",
+   "cc": "NL"
+  },
+  {
+   "n": "Sydney",
+   "cc": "AU"
+  },
+  {
+   "n": "Singapore",
+   "cc": "SG"
+  },
+  {
+   "n": "Barcelona",
+   "cc": "ES"
+  },
+  {
+   "n": "Taipei",
+   "cc": "TW"
+  },
+  {
+   "n": "Seoul",
+   "cc": "KR"
+  },
+  {
+   "n": "London",
+   "cc": "GB"
+  },
+  {
+   "n": "Dubai",
+   "cc": "AE"
+  },
+  {
+   "n": "Berlin",
+   "cc": "DE"
+  },
+  {
+   "n": "Osaka",
+   "cc": "JP"
+  },
+  {
+   "n": "Bangkok",
+   "cc": "TH"
+  },
+  {
+   "n": "Los Angeles",
+   "cc": "US"
+  },
+  {
+   "n": "Istanbul",
+   "cc": "TR"
+  },
+  {
+   "n": "Melbourne",
+   "cc": "AU"
+  },
+  {
+   "n": "Hong Kong",
+   "cc": "HK"
+  },
+  {
+   "n": "Munich",
+   "cc": "DE"
+  },
+  {
+   "n": "Las Vegas",
+   "cc": "US"
+  },
+  {
+   "n": "Florence",
+   "cc": "IT"
+  },
+  {
+   "n": "Prague",
+   "cc": "CZ"
+  },
+  {
+   "n": "Dublin",
+   "cc": "IE"
+  },
+  {
+   "n": "Kyoto",
+   "cc": "JP"
+  },
+  {
+   "n": "Vienna",
+   "cc": "AT"
+  },
+  {
+   "n": "Lisbon",
+   "cc": "PT"
+  },
+  {
+   "n": "Venice",
+   "cc": "IT"
+  },
+  {
+   "n": "Kuala Lumpur",
+   "cc": "MY"
+  },
+  {
+   "n": "Athens",
+   "cc": "GR"
+  },
+  {
+   "n": "Orlando",
+   "cc": "US"
+  },
+  {
+   "n": "Toronto",
+   "cc": "CA"
+  },
+  {
+   "n": "Miami",
+   "cc": "US"
+  },
+  {
+   "n": "San Francisco",
+   "cc": "US"
+  },
+  {
+   "n": "Shanghai",
+   "cc": "CN"
+  },
+  {
+   "n": "Frankfurt am Main",
+   "cc": "DE"
+  },
+  {
+   "n": "Copenhagen",
+   "cc": "DK"
+  },
+  {
+   "n": "Zürich",
+   "cc": "CH"
+  },
+  {
+   "n": "Washington",
+   "cc": "US"
+  },
+  {
+   "n": "Pattaya",
+   "cc": "TH"
+  },
+  {
+   "n": "Vancouver",
+   "cc": "CA"
+  },
+  {
+   "n": "Stockholm",
+   "cc": "SE"
+  },
+  {
+   "n": "Mexico City",
+   "cc": "MX"
+  },
+  {
+   "n": "Oslo",
+   "cc": "NO"
+  },
+  {
+   "n": "São Paulo",
+   "cc": "BR"
+  },
+  {
+   "n": "Phuket",
+   "cc": "TH"
+  },
+  {
+   "n": "Helsinki",
+   "cc": "FI"
+  },
+  {
+   "n": "Brussels",
+   "cc": "BE"
+  },
+  {
+   "n": "Budapest",
+   "cc": "HU"
+  },
+  {
+   "n": "Guangzhou",
+   "cc": "CN"
+  },
+  {
+   "n": "Nice",
+   "cc": "FR"
+  },
+  {
+   "n": "Palma",
+   "cc": "ES"
+  },
+  {
+   "n": "Honolulu",
+   "cc": "US"
+  },
+  {
+   "n": "Beijing",
+   "cc": "CN"
+  },
+  {
+   "n": "Warsaw",
+   "cc": "PL"
+  },
+  {
+   "n": "Sevilla",
+   "cc": "ES"
+  },
+  {
+   "n": "Valencia",
+   "cc": "ES"
+  },
+  {
+   "n": "Shenzhen",
+   "cc": "CN"
+  },
+  {
+   "n": "Doha",
+   "cc": "QA"
+  },
+  {
+   "n": "Abu Dhabi",
+   "cc": "AE"
+  },
+  {
+   "n": "Antalya",
+   "cc": "TR"
+  },
+  {
+   "n": "Fukuoka",
+   "cc": "JP"
+  },
+  {
+   "n": "Sapporo",
+   "cc": "JP"
+  },
+  {
+   "n": "Busan",
+   "cc": "KR"
+  },
+  {
+   "n": "Macau",
+   "cc": "MO"
+  },
+  {
+   "n": "Edinburgh",
+   "cc": "GB"
+  },
+  {
+   "n": "Montréal",
+   "cc": "CA"
+  },
+  {
+   "n": "Cancún",
+   "cc": "MX"
+  },
+  {
+   "n": "Bologna",
+   "cc": "IT"
+  },
+  {
+   "n": "Rhodes",
+   "cc": "GR"
+  },
+  {
+   "n": "Verona",
+   "cc": "IT"
+  },
+  {
+   "n": "Delhi",
+   "cc": "IN"
+  },
+  {
+   "n": "Porto",
+   "cc": "PT"
+  },
+  {
+   "n": "Ho Chi Minh City",
+   "cc": "VN"
+  },
+  {
+   "n": "Buenos Aires",
+   "cc": "AR"
+  },
+  {
+   "n": "Rio de Janeiro",
+   "cc": "BR"
+  },
+  {
+   "n": "Kraków",
+   "cc": "PL"
+  },
+  {
+   "n": "Heraklion",
+   "cc": "GR"
+  },
+  {
+   "n": "Johor Bahru",
+   "cc": "MY"
+  },
+  {
+   "n": "Hanoi",
+   "cc": "VN"
+  },
+  {
+   "n": "Sharjah",
+   "cc": "AE"
+  },
+  {
+   "n": "Thessaloníki",
+   "cc": "GR"
+  },
+  {
+   "n": "Lima",
+   "cc": "PE"
+  },
+  {
+   "n": "Medina",
+   "cc": "SA"
+  },
+  {
+   "n": "Tbilisi",
+   "cc": "GE"
+  },
+  {
+   "n": "Riyadh",
+   "cc": "SA"
+  },
+  {
+   "n": "Tallinn",
+   "cc": "EE"
+  },
+  {
+   "n": "Marrakesh",
+   "cc": "MA"
+  },
+  {
+   "n": "Mecca",
+   "cc": "SA"
+  },
+  {
+   "n": "Denpasar",
+   "cc": "ID"
+  },
+  {
+   "n": "Punta Cana",
+   "cc": "DO"
+  },
+  {
+   "n": "Santiago",
+   "cc": "CL"
+  },
+  {
+   "n": "Vilnius",
+   "cc": "LT"
+  },
+  {
+   "n": "Cairo",
+   "cc": "EG"
+  }
+ ],
+ "resorts_and_regional": [
+  {
+   "n": "Taormina",
+   "cc": "IT"
+  },
+  {
+   "n": "Capri",
+   "cc": "IT"
+  },
+  {
+   "n": "Positano",
+   "cc": "IT"
+  },
+  {
+   "n": "Amalfi",
+   "cc": "IT"
+  },
+  {
+   "n": "Sorrento",
+   "cc": "IT"
+  },
+  {
+   "n": "Portofino",
+   "cc": "IT"
+  },
+  {
+   "n": "Como",
+   "cc": "IT"
+  },
+  {
+   "n": "Bellagio",
+   "cc": "IT"
+  },
+  {
+   "n": "Naples",
+   "cc": "IT"
+  },
+  {
+   "n": "Palermo",
+   "cc": "IT"
+  },
+  {
+   "n": "Catania",
+   "cc": "IT"
+  },
+  {
+   "n": "Siena",
+   "cc": "IT"
+  },
+  {
+   "n": "Lucca",
+   "cc": "IT"
+  },
+  {
+   "n": "Pisa",
+   "cc": "IT"
+  },
+  {
+   "n": "Turin",
+   "cc": "IT"
+  },
+  {
+   "n": "Genoa",
+   "cc": "IT"
+  },
+  {
+   "n": "Cannes",
+   "cc": "FR"
+  },
+  {
+   "n": "Saint-Tropez",
+   "cc": "FR"
+  },
+  {
+   "n": "Antibes",
+   "cc": "FR"
+  },
+  {
+   "n": "Monaco",
+   "cc": "MC"
+  },
+  {
+   "n": "Lyon",
+   "cc": "FR"
+  },
+  {
+   "n": "Marseille",
+   "cc": "FR"
+  },
+  {
+   "n": "Bordeaux",
+   "cc": "FR"
+  },
+  {
+   "n": "Marbella",
+   "cc": "ES"
+  },
+  {
+   "n": "Málaga",
+   "cc": "ES"
+  },
+  {
+   "n": "Ibiza",
+   "cc": "ES"
+  },
+  {
+   "n": "Granada",
+   "cc": "ES"
+  },
+  {
+   "n": "San Sebastián",
+   "cc": "ES"
+  },
+  {
+   "n": "Bilbao",
+   "cc": "ES"
+  },
+  {
+   "n": "Mykonos",
+   "cc": "GR"
+  },
+  {
+   "n": "Santorini",
+   "cc": "GR"
+  },
+  {
+   "n": "Bodrum",
+   "cc": "TR"
+  },
+  {
+   "n": "Interlaken",
+   "cc": "CH"
+  },
+  {
+   "n": "Lucerne",
+   "cc": "CH"
+  },
+  {
+   "n": "Montreux",
+   "cc": "CH"
+  },
+  {
+   "n": "Geneva",
+   "cc": "CH"
+  },
+  {
+   "n": "Lugano",
+   "cc": "CH"
+  },
+  {
+   "n": "Zermatt",
+   "cc": "CH"
+  },
+  {
+   "n": "Gstaad",
+   "cc": "CH"
+  },
+  {
+   "n": "Salzburg",
+   "cc": "AT"
+  },
+  {
+   "n": "Innsbruck",
+   "cc": "AT"
+  },
+  {
+   "n": "Manchester",
+   "cc": "GB"
+  },
+  {
+   "n": "Bath",
+   "cc": "GB"
+  },
+  {
+   "n": "Oxford",
+   "cc": "GB"
+  },
+  {
+   "n": "Cambridge",
+   "cc": "GB"
+  },
+  {
+   "n": "Bruges",
+   "cc": "BE"
+  },
+  {
+   "n": "Rotterdam",
+   "cc": "NL"
+  },
+  {
+   "n": "Sarajevo",
+   "cc": "BA"
+  },
+  {
+   "n": "Baku",
+   "cc": "AZ"
+  },
+  {
+   "n": "Beirut",
+   "cc": "LB"
+  },
+  {
+   "n": "Amman",
+   "cc": "JO"
+  },
+  {
+   "n": "Aqaba",
+   "cc": "JO"
+  },
+  {
+   "n": "Muscat",
+   "cc": "OM"
+  },
+  {
+   "n": "Salalah",
+   "cc": "OM"
+  },
+  {
+   "n": "Manama",
+   "cc": "BH"
+  },
+  {
+   "n": "Kuwait City",
+   "cc": "KW"
+  },
+  {
+   "n": "Jeddah",
+   "cc": "SA"
+  },
+  {
+   "n": "Al Khobar",
+   "cc": "SA"
+  },
+  {
+   "n": "AlUla",
+   "cc": "SA"
+  },
+  {
+   "n": "Abha",
+   "cc": "SA"
+  },
+  {
+   "n": "Taif",
+   "cc": "SA"
+  },
+  {
+   "n": "Alexandria",
+   "cc": "EG"
+  },
+  {
+   "n": "Sharm el-Sheikh",
+   "cc": "EG"
+  },
+  {
+   "n": "El Gouna",
+   "cc": "EG"
+  },
+  {
+   "n": "Casablanca",
+   "cc": "MA"
+  },
+  {
+   "n": "Rabat",
+   "cc": "MA"
+  },
+  {
+   "n": "Tangier",
+   "cc": "MA"
+  },
+  {
+   "n": "Fes",
+   "cc": "MA"
+  },
+  {
+   "n": "Tunis",
+   "cc": "TN"
+  },
+  {
+   "n": "Hammamet",
+   "cc": "TN"
+  },
+  {
+   "n": "Sousse",
+   "cc": "TN"
+  },
+  {
+   "n": "Maldives",
+   "cc": "MV"
+  },
+  {
+   "n": "Malé",
+   "cc": "MV"
+  },
+  {
+   "n": "Kuta",
+   "cc": "ID"
+  },
+  {
+   "n": "Ubud",
+   "cc": "ID"
+  },
+  {
+   "n": "Nusa Dua",
+   "cc": "ID"
+  },
+  {
+   "n": "Langkawi",
+   "cc": "MY"
+  },
+  {
+   "n": "Penang",
+   "cc": "MY"
+  },
+  {
+   "n": "Chiang Mai",
+   "cc": "TH"
+  },
+  {
+   "n": "Koh Samui",
+   "cc": "TH"
+  },
+  {
+   "n": "Krabi",
+   "cc": "TH"
+  },
+  {
+   "n": "Colombo",
+   "cc": "LK"
+  },
+  {
+   "n": "Zanzibar",
+   "cc": "TZ"
+  },
+  {
+   "n": "Cape Town",
+   "cc": "ZA"
+  }
+ ]
+}
