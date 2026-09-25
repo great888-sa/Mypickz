@@ -5,17 +5,20 @@ const admin = require('firebase-admin'); const fs = require('fs');
 admin.initializeApp(); const db = admin.firestore();
 const arg = (n, d) => { const a = process.argv.find(x => x.startsWith('--' + n + '=')); return a ? a.split('=')[1] : d; };
 const OWNER = arg('owner', ''), DRY = process.argv.includes('--dry'); if (!OWNER){ console.error('--owner=<UID> required'); process.exit(2); }
-const CC = { 'France': 'FR', 'Spain': 'ES', 'UK': 'GB', 'United Kingdom': 'GB', 'Switzerland': 'CH', 'Italy': 'IT', 'Saudi Arabia': 'SA', 'UAE': 'AE', 'Bahrain': 'BH', 'Qatar': 'QA', 'Kuwait': 'KW', 'Lebanon': 'LB', 'Egypt': 'EG', 'Greece': 'GR', 'USA': 'US', 'Sweden': 'SE', 'Turkey': 'TR' };
+const CC = { 'France': 'FR', 'Spain': 'ES', 'UK': 'GB', 'United Kingdom': 'GB', 'England': 'GB', 'Scotland': 'GB', 'Switzerland': 'CH', 'Italy': 'IT', 'Saudi Arabia': 'SA', 'Saudi': 'SA', 'KSA': 'SA', 'UAE': 'AE', 'United Arab Emirates': 'AE', 'Bahrain': 'BH', 'Qatar': 'QA', 'Kuwait': 'KW', 'Oman': 'OM', 'Lebanon': 'LB', 'Egypt': 'EG', 'Jordan': 'JO', 'Morocco': 'MA', 'Greece': 'GR', 'USA': 'US', 'United States': 'US', 'Sweden': 'SE', 'Norway': 'NO', 'Denmark': 'DK', 'Finland': 'FI', 'Turkey': 'TR', 'Germany': 'DE', 'Netherlands': 'NL', 'Belgium': 'BE', 'Austria': 'AT', 'Portugal': 'PT', 'Ireland': 'IE', 'Czech Republic': 'CZ', 'Czechia': 'CZ', 'Poland': 'PL', 'Hungary': 'HU', 'Croatia': 'HR', 'Cyprus': 'CY', 'Malta': 'MT', 'Monaco': 'MC', 'Iceland': 'IS' };
 const CAT_ID_MAP = { coffee_bakery: 'coffee', fine_lebanese: 'lebanese', fine_italian: 'italian', fine_japanese: 'japanese', taco: 'other_cuisine', shawarma: 'sandwich' };
 const PRIVATE = ['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others'];
 const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').trim();
-function gazFind(name, country){ const cc = CC[country] || (/^[A-Z]{2}$/.test(country || '') ? country : ''); const files = cc ? ['cities/' + cc + '.json'] : fs.readdirSync('cities').filter(f => /^[A-Z]{2}\.json$/.test(f)).map(f => 'cities/' + f); let best = null;
+const ISLANDS = fs.existsSync('scripts/eval/islands.json') ? JSON.parse(fs.readFileSync('scripts/eval/islands.json', 'utf8')).islands : [];
+function gazFind(name, country){ const isl = ISLANDS.find(a => [a.n].concat(a.a || [], a.ar ? [a.ar] : []).some(x => norm(x) === norm(name))); if (isl) return { id: isl.id, n: isl.n, cc: isl.cc, lat: isl.lat, lng: isl.lng, p: 0, island: true }; // الجزر أولًا (مايوركا …)
+  const cc = CC[country] || (/^[A-Z]{2}$/.test(country || '') ? country : ''); const files = cc ? ['cities/' + cc + '.json'] : fs.readdirSync('cities').filter(f => /^[A-Z]{2}\.json$/.test(f)).map(f => 'cities/' + f); let best = null;
   for (const f of files){ if (!fs.existsSync(f)) continue; let arr; try{ arr = JSON.parse(fs.readFileSync(f, 'utf8')); }catch(_){ continue; } if (!Array.isArray(arr)) continue; // ملفات المعجم قوائم؛ غيرها يُتجاهل
     for (const e of arr){ if (!e || !e.n) continue; const names = [e.n].concat(e.a || [], e.ar ? [e.ar] : []); if (names.some(x => norm(x) === norm(name))){ if (!best || (e.p || 0) > (best.p || 0)) best = Object.assign({ cc: f.slice(7, 9) }, e); } } }
   return best; }
 function bucketOf(){ return null; }
 (async () => {
   const map = JSON.parse(fs.readFileSync('scripts/eval/directory-map.json', 'utf8')).cities;
+  try{ const cl = await db.collection('settings').doc('cities-list').get(); if (cl.exists) (cl.data().cities || []).forEach(c => { if (c && c.id && !map.find(m => m.id === c.id)) map.push({ id: c.id, name: c.name, country: c.country || '' }); }); console.log('directory cities from settings/cities-list:', map.length); }catch(e){ console.log('cities-list not readable', String(e).slice(0, 80)); } // مدن الدليل المضافة: أسماؤها ودولها بمستند القائمة
   const snap = await db.collection('cities').get(); let totalBefore = 0, totalAfter = 0, moved = 0; const unmatched = [];
   for (const doc of snap.docs){
     const data = doc.data() || {}; const links = data.links || {}; const dir = map.find(c => c.id === doc.id) || { id: doc.id, name: data.cityName || data.name || doc.id, country: data.country || '' }; // خارج الدليل: الاسم والدولة من المستند
