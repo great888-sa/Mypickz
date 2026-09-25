@@ -1,3 +1,6 @@
+// firestore rules v3.11 (ز-١-ج · سجل هوية الأماكن · ٢٤ سبتمبر ٢٠٢٦): + مجموعة placeIdentity/{hash} — بصمة رابط جوجل (بعد حلّه) أو (الاسم المطبَّع + المدينة) ← موضع مصدَّق (Overture أو دبوس مستخدم)
+//   القراءة للجميع · الإنشاء/التحديث للمصادَق غير الموقوف بحقول محدودة (lat · lng · source ∈ overture/fsq/user_pin · openId? · n · cityId · by · at) · الحذف للمالك فقط · لا إحداثيات جوجل (noGoogleCoords)
+//   الامتحان: tests/rules-sim.js القسم ٢٤ · التراجع: firestore_rules_M4-26.txt (v3.10)
 // firestore rules v3.10 (M4.26 + أ-١٤ — النشرة الأخيرة قبل الإطلاق · ٢٢ سبتمبر ٢٠٢٦؛ على المواصفة أ-٦ §١٢ وبيان M4.26؛ الهجرة بسكربت — انتقالية: الأم تقبل categories أو index):
 //   (أ) التقسيم: الأم userCityLists فهرسًا (index · splitV · بلا categories بعد الهجرة) · الفرعي userCityListCats/{uid}_{city}_{cat} يحمل نسخة شرط القراءة (public · sharedWith) — لا get() للأم
 //   (١) العدّاد اللحظي للنسخ: حذف copies لصاحبه · copyCount −١ من غير المالك بغياب السجل (!existsAfter)
@@ -485,6 +488,23 @@ service cloud.firestore {
       // ⚠️ delete بلا !isSuspended() عمدًا — نفس مبرر trips أعلاه
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+    }
+
+    // v3.11 (ز-١-ج): سجل هوية الأماكن — معلومة نملكها تتراكم مع كل تأكيد على الخريطة
+    match /placeIdentity/{hash} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && !isSuspended()
+        && request.resource.data.keys().hasOnly(['lat', 'lng', 'source', 'openId', 'n', 'cityId', 'by', 'at'])
+        && request.resource.data.keys().hasAll(['lat', 'lng', 'source', 'by', 'at'])
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+        && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+        && request.resource.data.source in ['overture', 'fsq', 'user_pin']
+        && (!('openId' in request.resource.data) || (request.resource.data.openId is string && request.resource.data.openId.size() <= 80))
+        && (!('n' in request.resource.data) || (request.resource.data.n is string && request.resource.data.n.size() <= 120))
+        && (!('cityId' in request.resource.data) || (request.resource.data.cityId is string && request.resource.data.cityId.size() <= 40))
+        && hash.size() <= 80;
+      allow delete: if isOwner();
     }
 
     // M4.26 (أ): المستند الفرعي — مكان لكل تصنيف · شرط القراءة منسوخ فيه (public · sharedWith) فلا قراءة للأم · الكتابة لصاحبه فقط
