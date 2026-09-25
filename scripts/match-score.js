@@ -24,7 +24,20 @@ function dist(a, b){ const R = 6371000, toR = x => x * Math.PI / 180; const dLat
 const gold = JSON.parse(fs.readFileSync(__dirname + '/eval/golden-set.json', 'utf8')).places.filter(p => !CITY || p.city === CITY);
 const pool = {}; let fsqRows = null;
 if (SRC === 'fsq'){ fsqRows = JSON.parse(fs.readFileSync(__dirname + '/eval/match-report.json', 'utf8')).rows; }
+const zlib = require('zlib'); const CELL_DIR = __dirname + '/eval/r2/cells'; let cellManifest = null; const cellCache = new Map();
+const CITY_CENTER = { riyadh: [24.7136, 46.6753], jeddah: [21.5433, 39.1728], khobar: [26.2172, 50.1971], paris: [48.8566, 2.3522], madrid: [40.4168, -3.7038], cannes: [43.5528, 7.0174], milan: [45.4642, 9.19], geneva: [46.2044, 6.1432], rome: [41.9028, 12.4964], florence: [43.7696, 11.2558], london: [51.5074, -0.1278], dubai: [25.2048, 55.2708], athens: [37.9838, 23.7275], barcelona: [41.3874, 2.1686], capri: [40.5532, 14.2222], nyc: [40.7128, -74.006], beirut: [33.8938, 35.5018], manama: [26.2285, 50.586] };
+function cellsAround(lat, lng, rKm){ const size = 11.1; const dl = Math.min(4, Math.ceil(rKm / size)); const dg = Math.min(6, Math.ceil(rKm / (size * Math.max(0.2, Math.cos(lat * Math.PI / 180))))); const cy = Math.floor(lat * 10), cx = Math.floor(lng * 10); const out = []; for (let y = cy - dl; y <= cy + dl; y++) for (let x = cx - dg; x <= cx + dg; x++) out.push('c' + y + '_' + x); return out.slice(0, 81); }
+function bucketOf(tok){ let h = 0; for (let i = 0; i < tok.length; i++) h = (h * 31 + tok.charCodeAt(i)) >>> 0; return (h % 256).toString(16).padStart(2, '0'); }
+function cellShard(key){ if (cellCache.has(key)) return cellCache.get(key); const f = CELL_DIR + '/' + key + '.json.gz'; let d = { tokens: {}, entries: {} }; if (fs.existsSync(f)) d = JSON.parse(zlib.gunzipSync(fs.readFileSync(f)).toString()); if (cellCache.size > 300) cellCache.clear(); cellCache.set(key, d); return d; }
+function candidatesCells(p){ // كما بالعامل v1.2: الخلايا حول مركز المدينة (r = 15 كم بالتقييم) — يقيس أثر التقسيم بالخلايا على الأرقام نفسها
+  if (!cellManifest) cellManifest = fs.existsSync(CELL_DIR + '/manifest.json') ? JSON.parse(fs.readFileSync(CELL_DIR + '/manifest.json', 'utf8')) : { cells: {} };
+  const c = CITY_CENTER[p.city]; if (!c) return []; const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  const qs = new Set(); splitName(p.name).forEach(n => toks(n).forEach(t => qs.add(t))); const cells = cellsAround(c[0], c[1], 15).filter(x => own(cellManifest.cells || {}, x)); const hits = new Map(); const entries = {};
+  for (const cell of cells){ const parts = cellManifest.cells[cell] || 1; for (const t of qs){ const key = parts === 1 ? cell : (cell + '.' + (parseInt(bucketOf(t), 16) % parts)); const sh = cellShard(key); const ids = own(sh.tokens, t) ? sh.tokens[t] : []; const rare = 1 / Math.sqrt(ids.length || 1); ids.forEach(id => { hits.set(id, (hits.get(id) || 0) + rare); if (own(sh.entries, id)) entries[id] = sh.entries[id]; }); } }
+  return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).filter(e => own(entries, e[0])).map(e => Object.assign({ id: 'ovt:' + e[0] }, entries[e[0]]));
+}
 function candidates(p){
+  if (SRC === 'cells') return candidatesCells(p);
   if (fsqRows){ const r = fsqRows.find(x => x.id === p.id); return (r && r.cands || []).map(c => ({ id: c.fsq_id, name: c.name, names: [], addr: c.address, locality: c.locality, lat: c.lat, lng: c.lng })); }
   if (!pool[p.city]){ const f = __dirname + '/eval/overture/' + p.city + '.json'; const arr = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : []; const idx = new Map(); // v3: فهرس مقلوب رمز → مواضع (مرة لكل مدينة)
     arr.forEach((c, i) => { toks(c.name + ' ' + (c.names || []).join(' ')).forEach(t => { if (!idx.has(t)) idx.set(t, []); idx.get(t).push(i); }); }); pool[p.city] = { arr, idx }; }
@@ -48,7 +61,7 @@ const n = gold.length, pct = x => (100 * x / n).toFixed(1) + '%';
 const r3 = CANDS.filter(x => x.cands.slice(0, 3).some(c => c.m <= MAX_M)).length; console.log('RECALL@3 (true place among top 3 shown to the user): ' + pct(r3));
 console.log('MATCH-SCORE · source=' + SRC + ' · min=' + MIN + ' · max=' + MAX_M + 'm · n=' + n + ' · correct ' + out.correct + ' (' + pct(out.correct) + ') · wrong ' + out.wrong + ' (' + pct(out.wrong) + ') · none ' + out.none + ' (' + pct(out.none) + ')');
 Object.keys(out.byCity).sort().forEach(k => { const c = out.byCity[k]; console.log('  ' + k.padEnd(10) + ' n=' + String(c.n).padStart(3) + '  correct ' + String(c.correct).padStart(3) + '  wrong ' + String(c.wrong).padStart(2) + '  none ' + String(c.none).padStart(3)); });
-const pass = (out.correct / n) >= 0.85 && (out.wrong / n) <= 0.03;
-console.log(pass ? 'VERDICT: PASS' : 'VERDICT: FAIL');
+const pass = (out.wrong / n) <= 0.03 && (r3 / n) >= 0.80; // v4 (قرار التصميم ٢٣ سبتمبر): المطابق يقترح والمستخدم يؤكد — المعيار: خطأ صامت ≤ ٣٪ والحقيقي ضمن أفضل ٣ ≥ ٨٠٪
+console.log(pass ? 'VERDICT: PASS (silent wrong ≤ 3% · true place in top-3 ≥ 80%)' : 'VERDICT: FAIL');
 fs.writeFileSync(__dirname + '/eval/score-report-' + SRC + '.json', JSON.stringify({ n, summary: { correct: out.correct, wrong: out.wrong, none: out.none }, byCity: out.byCity, rows: out.rows }, null, 1));
 fs.writeFileSync(__dirname + '/eval/score-cands-' + SRC + '.json', JSON.stringify(CANDS)); // أفضل ٢٠ مرشَّحًا لكل مكان — الملف الصغير للضبط
