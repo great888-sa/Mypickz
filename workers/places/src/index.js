@@ -1,17 +1,21 @@
 // MyPickz — workers/places/src/index.js (ز-١-أ): عامل الأماكن — /match (Overture بمخزن R2، كلفة صفر) · /resolve (اسم المكان من رابط جوجل — لا إحداثيات من جوجل أبدًا: الثابت السابع)
-import { toks, splitName, decide, bucketOf } from './match.js';
+import { toks, splitName, decide, bucketOf, normAr } from './match.js';
 const ALLOWED_ORIGINS = ['https://mypickz.app', 'https://test.mypickz.app'];
-const CITIES = new Set(['riyadh', 'jeddah', 'khobar', 'paris', 'madrid', 'cannes', 'milan', 'geneva', 'rome', 'florence', 'london', 'dubai', 'athens', 'barcelona', 'capri', 'nyc', 'beirut', 'manama']);
+// ز-١-ج v1.2: التغطية بالخلايا الجغرافية (٠٫١° ≈ ١١ كم) — manifest الخلايا يُقرأ من R2 مرة لكل عزلة (~٢ ميغابايت للمناطق الكاملة)
+let manifestCache = null, manifestAt = 0;
+async function manifest(env){ if (manifestCache && Date.now() - manifestAt < 900000) return manifestCache; try{ const o = await env.PLACES.get('cells/manifest.json'); manifestCache = o ? await o.json() : { cells: {} }; }catch(_){ manifestCache = { cells: {} }; } manifestAt = Date.now(); return manifestCache; }
+function cellsAround(lat, lng, rKm){ const size = 11.1; const dl = Math.min(4, Math.ceil(rKm / size)); const dg = Math.min(6, Math.ceil(rKm / (size * Math.max(0.2, Math.cos(lat * Math.PI / 180))))); const cy = Math.floor(lat * 10), cx = Math.floor(lng * 10); const out = []; for (let y = cy - dl; y <= cy + dl; y++) for (let x = cx - dg; x <= cx + dg; x++) out.push('c' + y + '_' + x); return out.slice(0, 81); }
+async function readJson(env, key){ const o = await env.PLACES.get(key); if (!o) return null; if (key.endsWith('.gz')){ const ds = new DecompressionStream('gzip'); const txt = await new Response(o.body.pipeThrough(ds)).text(); return JSON.parse(txt); } return o.json(); }
 const GOOGLE_HOSTS = /^(maps\.app\.goo\.gl|goo\.gl|www\.google\.[a-z.]+|google\.[a-z.]+|maps\.google\.[a-z.]+)$/i;
 function cors(origin){ const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]; return { 'Access-Control-Allow-Origin': allow, 'Vary': 'Origin', 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }; }
 const json = (obj, origin, status = 200) => new Response(JSON.stringify(obj), { status, headers: cors(origin) });
 const shardCache = new Map(); // ذاكرة العزلة: مدينة/شظية → {tokens, entries}
-async function shard(env, city, b){ const k = city + '/' + b; if (shardCache.has(k)) return shardCache.get(k); const obj = await env.PLACES.get('ovt/' + city + '/' + b + '.json'); const data = obj ? await obj.json() : { tokens: {}, entries: {} }; if (shardCache.size > 64) shardCache.clear(); shardCache.set(k, data); return data; }
-async function candidatesFor(env, city, name){
+async function cellShard(env, key){ if (shardCache.has(key)) return shardCache.get(key); let data = null; try{ data = await readJson(env, 'cells/' + key + '.json.gz'); }catch(_){ } data = data || { tokens: {}, entries: {} }; if (shardCache.size > 96) shardCache.clear(); shardCache.set(key, data); return data; }
+async function candidatesFor(env, m, lat, lng, rKm, name){ // v1.2: الخلايا حول مركز المدينة (لا معرّف المدينة) — يعيد null إن لم توجد تغطية
   const qs = new Set(); splitName(name).forEach(n => toks(n).forEach(t => qs.add(t))); if (!qs.size) return [];
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const cells = cellsAround(lat, lng, rKm).filter(c => own(m.cells || {}, c)); if (!cells.length) return null;
   const hits = new Map(); const entries = {};
-  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); // رمز مثل constructor لا يختلط بخاصية موروثة
-  for (const t of qs){ const sh = await shard(env, city, bucketOf(t)); const ids = own(sh.tokens, t) ? sh.tokens[t] : []; const rare = 1 / Math.sqrt(ids.length || 1); ids.forEach(id => { hits.set(id, (hits.get(id) || 0) + rare); if (own(sh.entries, id)) entries[id] = sh.entries[id]; }); }
+  for (const c of cells){ const parts = m.cells[c] || 1; for (const t of qs){ const key = parts === 1 ? c : (c + '.' + (parseInt(bucketOf(t), 16) % parts)); const sh = await cellShard(env, key); const ids = own(sh.tokens, t) ? sh.tokens[t] : []; const rare = 1 / Math.sqrt(ids.length || 1); ids.forEach(id => { hits.set(id, (hits.get(id) || 0) + rare); if (own(sh.entries, id)) entries[id] = sh.entries[id]; }); } }
   return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).filter(e => own(entries, e[0])).map(e => Object.assign({ id: 'ovt:' + e[0] }, entries[e[0]])).filter(x => typeof x.lat === 'number');
 }
 const UNIT_RE = /\b(shop|unit|building|bldg|floor|office|suite|store|tower|block|villa|gate|plot|no\.?|رقم|محل|مبنى|الدور|مكتب|شارع|طريق|حي|road|rd|st|street|ave|avenue|rue|via|calle|strasse|str|blvd|boulevard|highway|hwy|district)\b/i;
@@ -64,19 +68,34 @@ async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويست�
   return out;
 }
 
+const gazCache = new Map();
+async function gazShard(env, key){ if (gazCache.has(key)) return gazCache.get(key); let d = null; try{ d = await readJson(env, 'gaz/idx/' + key + '.json'); }catch(_){ } d = d || []; if (gazCache.size > 128) gazCache.clear(); gazCache.set(key, d); return d; }
+const hexOf = s => [...s].map(ch => ch.codePointAt(0).toString(16).padStart(4, '0')).join('');
+async function searchCities(env, q, cc){ // ز-١-ج: بحث بالمعجم — شظية البادئة (حرفان) ثم ترشيح بالبادئة الكاملة وترتيب بالسكان
+  const nq = normAr(q); if (nq.length < 2) return []; const key = hexOf(nq.slice(0, 2)); const arr = await gazShard(env, key);
+  const hits = arr.filter(c => (!cc || c.cc === cc) && (normAr(c.n).startsWith(nq) || normAr(c.ar || '').startsWith(nq) || normAr(c.n).split(' ').some(w => w.startsWith(nq))));
+  return hits.sort((a, b) => b.p - a.p).slice(0, 8).map(c => ({ id: String(c.id), name: c.n, nameAr: c.ar || '', cc: c.cc, lat: c.lat, lng: c.lng }));
+}
+async function logRequest(env, city){ try{ const k = 'req/' + city; if (!(await env.PLACES.head(k))) await env.PLACES.put(k, JSON.stringify({ city, at: new Date().toISOString() })); }catch(_){ } } // مدينة طُلبت ولا بيانات لها — يجهّزها السير الأسبوعي
+export const cellsAroundForTest = cellsAround; // للاختبار
 export default {
   async fetch(request, env){
     const url = new URL(request.url); const origin = request.headers.get('Origin') || '';
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
     if (request.method !== 'GET') return json({ error: 'method' }, origin, 405);
-    if (url.pathname === '/match'){
-      const city = (url.searchParams.get('city') || '').toLowerCase(), name = (url.searchParams.get('name') || '').slice(0, 120), addr = (url.searchParams.get('addr') || '').slice(0, 160);
-      if (!CITIES.has(city)) return json({ error: 'city not indexed', candidates: [] }, origin, 200);
+    if (url.pathname === '/match'){ // v1.2: ?city=<geonameid>&lat=&lng=&r=<km>&name=&addr=
+      const city = (url.searchParams.get('city') || '').trim(), name = (url.searchParams.get('name') || '').slice(0, 120), addr = (url.searchParams.get('addr') || '').slice(0, 160);
+      const lat = parseFloat(url.searchParams.get('lat')), lng = parseFloat(url.searchParams.get('lng')), rKm = Math.min(30, Math.max(3, parseFloat(url.searchParams.get('r')) || 12));
       if (!name.trim()) return json({ error: 'name required', candidates: [] }, origin, 400);
-      const cands = await candidatesFor(env, city, name); return json(decide(name, addr, cands), origin);
+      if (!(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180)) return json({ error: 'lat/lng required', candidates: [] }, origin, 400);
+      const m = await manifest(env); const cands = await candidatesFor(env, m, lat, lng, rKm, name);
+      if (cands === null){ if (/^[A-Za-z0-9_-]{1,40}$/.test(city)) await logRequest(env, city); return json({ noData: true, candidates: [] }, origin, 200); } // لا تغطية — ليس خطأ؛ الخريطة والدبوس يعملان · الطلب يُسجَّل للخلفي
+      return json(decide(name, addr, cands), origin);
     }
+    if (url.pathname === '/cities'){ const q = (url.searchParams.get('q') || '').slice(0, 60), cc = (url.searchParams.get('cc') || '').toUpperCase().slice(0, 2); return json({ results: await searchCities(env, q, cc) }, origin); } // ز-١-ج
+    if (url.pathname === '/requests'){ const list = await env.PLACES.list({ prefix: 'req/' }); return json({ cities: (list.objects || []).map(o => o.key.slice(4)) }, origin); } // للسير الأسبوعي
     if (url.pathname === '/resolve'){ const raw = url.searchParams.get('url') || ''; if (!raw) return json({ error: 'url required' }, origin, 400); return json(await resolveGoogle(raw, url.searchParams.get('debug') === '1'), origin); }
-    if (url.pathname === '/health'){ const obj = await env.PLACES.head('ovt/manifest.json'); return json({ ok: true, data: !!obj, at: new Date().toISOString() }, origin); }
+    if (url.pathname === '/health'){ const m = await manifest(env); const g = await env.PLACES.head('gaz/manifest.json'); return json({ ok: true, data: Object.keys(m.cells || {}).length > 0, cells: Object.keys(m.cells || {}).length, release: m.release || '', gazetteer: !!g, at: new Date().toISOString() }, origin); }
     return new Response('MyPickz places', { status: 404, headers: { 'Content-Type': 'text/plain' } });
   }
 };
