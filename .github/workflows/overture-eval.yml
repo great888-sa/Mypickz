@@ -1,12 +1,8 @@
-# MyPickz — استخراج أماكن مدن الدليل من Overture (بيانات مفتوحة) ثم تقييم المطابقة بالمجموعة الذهبية — بلا مفتاح ولا حصة
+# MyPickz — قياس المطابقة على المجموعة الذهبية بالتقسيم بالخلايا (ز-١-ج-١ v1.2 · القياس أ) — بلا مفتاح · الإصدار المثبَّت
 name: Overture eval
 on:
   workflow_dispatch:
     inputs:
-      cities:
-        description: 'city ids separated by space (empty = all)'
-        required: false
-        default: ''
       min:
         description: 'reject below this score'
         required: false
@@ -18,7 +14,7 @@ on:
 jobs:
   eval:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,21 +25,27 @@ jobs:
           node-version: '20'
       - name: Install DuckDB
         run: pip install duckdb==1.1.3
-      - name: Extract Overture places for guide cities
-        run: python scripts/overture-extract.py ${{ github.event.inputs.cities }}
-      - name: Score against golden set
-        run: node scripts/match-score.js --source=overture --min=${{ github.event.inputs.min }} --max=${{ github.event.inputs.max }} || true
-      - name: Upload small tuning files (report + top candidates)
-        uses: actions/upload-artifact@v4
+      - name: Golden cities list (18) from cities-bbox centers
+        run: |
+          python - <<'PY'
+          import json
+          bb = json.load(open('scripts/eval/cities-bbox.json', encoding='utf-8')); bb.pop('note', None)
+          cities = []
+          for cid, b in bb.items():
+              cities.append({'id': cid, 'n': cid, 'lat': (b[1] + b[3]) / 2, 'lng': (b[0] + b[2]) / 2, 'p': 1500000})
+          json.dump({'cities': cities}, open('/tmp/golden-cities.json', 'w'))
+          print(len(cities), 'cities')
+          PY
+      - name: Extract (city boxes → cells)
+        run: python scripts/overture-extract.py --cities=/tmp/golden-cities.json
+      - name: Index cells
+        run: node scripts/overture-index.mjs
+      - name: Score (cells)
+        run: node scripts/match-score.js --source=cells --min=${{ github.event.inputs.min }} --max=${{ github.event.inputs.max }} || true
+      - uses: actions/upload-artifact@v4
         with:
           name: overture-tuning
           path: |
-            scripts/eval/score-report-overture.json
-            scripts/eval/score-cands-overture.json
-          if-no-files-found: warn
-      - name: Upload extracted city data (large — for the worker later)
-        uses: actions/upload-artifact@v4
-        with:
-          name: overture-cities
-          path: scripts/eval/overture/*.json
+            scripts/eval/score-report-cells.json
+            scripts/eval/score-cands-cells.json
           if-no-files-found: warn
