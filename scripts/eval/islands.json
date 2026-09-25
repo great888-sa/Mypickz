@@ -1,0 +1,451 @@
+{
+ "note": "الجزر ذات الشهرة (المتوسط · المحيط الهندي · البحر الأحمر · الأطلسي القريب) — تُختار كمدينة؛ قرار المالك ٢٦ سبتمبر «ثبت» · مالطا وقبرص وسريلانكا دول بمدنها · كابري وبالي مدن بالمعجم · r = نصف قطر المطابقة بالكيلومتر",
+ "count": 39,
+ "islands": [
+  {
+   "id": "i_mallorca",
+   "n": "Mallorca",
+   "a": [
+    "Majorca"
+   ],
+   "ar": "مايوركا",
+   "cc": "ES",
+   "lat": 39.6,
+   "lng": 2.95,
+   "r": 55
+  },
+  {
+   "id": "i_ibiza",
+   "n": "Ibiza",
+   "a": [
+    "Eivissa"
+   ],
+   "ar": "إيبيزا",
+   "cc": "ES",
+   "lat": 38.98,
+   "lng": 1.43,
+   "r": 30
+  },
+  {
+   "id": "i_menorca",
+   "n": "Menorca",
+   "a": [
+    "Minorca"
+   ],
+   "ar": "مينوركا",
+   "cc": "ES",
+   "lat": 39.95,
+   "lng": 4.1,
+   "r": 30
+  },
+  {
+   "id": "i_formentera",
+   "n": "Formentera",
+   "a": [],
+   "ar": "فورمينتيرا",
+   "cc": "ES",
+   "lat": 38.7,
+   "lng": 1.45,
+   "r": 12
+  },
+  {
+   "id": "i_sicily",
+   "n": "Sicily",
+   "a": [
+    "Sicilia"
+   ],
+   "ar": "صقلية",
+   "cc": "IT",
+   "lat": 37.6,
+   "lng": 14.0,
+   "r": 140
+  },
+  {
+   "id": "i_sardinia",
+   "n": "Sardinia",
+   "a": [
+    "Sardegna"
+   ],
+   "ar": "سردينيا",
+   "cc": "IT",
+   "lat": 40.1,
+   "lng": 9.1,
+   "r": 130
+  },
+  {
+   "id": "i_ischia",
+   "n": "Ischia",
+   "a": [],
+   "ar": "إيسكيا",
+   "cc": "IT",
+   "lat": 40.73,
+   "lng": 13.9,
+   "r": 8
+  },
+  {
+   "id": "i_elba",
+   "n": "Elba",
+   "a": [],
+   "ar": "إلبا",
+   "cc": "IT",
+   "lat": 42.78,
+   "lng": 10.25,
+   "r": 15
+  },
+  {
+   "id": "i_corsica",
+   "n": "Corsica",
+   "a": [
+    "Corse"
+   ],
+   "ar": "كورسيكا",
+   "cc": "FR",
+   "lat": 42.15,
+   "lng": 9.1,
+   "r": 95
+  },
+  {
+   "id": "i_crete",
+   "n": "Crete",
+   "a": [
+    "Kriti"
+   ],
+   "ar": "كريت",
+   "cc": "GR",
+   "lat": 35.3,
+   "lng": 24.8,
+   "r": 120
+  },
+  {
+   "id": "i_santorini",
+   "n": "Santorini",
+   "a": [
+    "Thira",
+    "Thera"
+   ],
+   "ar": "سانتوريني",
+   "cc": "GR",
+   "lat": 36.4,
+   "lng": 25.43,
+   "r": 18
+  },
+  {
+   "id": "i_mykonos",
+   "n": "Mykonos",
+   "a": [],
+   "ar": "ميكونوس",
+   "cc": "GR",
+   "lat": 37.45,
+   "lng": 25.35,
+   "r": 15
+  },
+  {
+   "id": "i_rhodes",
+   "n": "Rhodes",
+   "a": [
+    "Rodos"
+   ],
+   "ar": "رودس",
+   "cc": "GR",
+   "lat": 36.25,
+   "lng": 28.0,
+   "r": 45
+  },
+  {
+   "id": "i_corfu",
+   "n": "Corfu",
+   "a": [
+    "Kerkyra"
+   ],
+   "ar": "كورفو",
+   "cc": "GR",
+   "lat": 39.62,
+   "lng": 19.9,
+   "r": 35
+  },
+  {
+   "id": "i_zakynthos",
+   "n": "Zakynthos",
+   "a": [
+    "Zante"
+   ],
+   "ar": "زاكينثوس",
+   "cc": "GR",
+   "lat": 37.78,
+   "lng": 20.8,
+   "r": 25
+  },
+  {
+   "id": "i_kos",
+   "n": "Kos",
+   "a": [],
+   "ar": "كوس",
+   "cc": "GR",
+   "lat": 36.85,
+   "lng": 27.1,
+   "r": 25
+  },
+  {
+   "id": "i_paros",
+   "n": "Paros",
+   "a": [],
+   "ar": "باروس",
+   "cc": "GR",
+   "lat": 37.08,
+   "lng": 25.15,
+   "r": 15
+  },
+  {
+   "id": "i_naxos",
+   "n": "Naxos",
+   "a": [],
+   "ar": "ناكسوس",
+   "cc": "GR",
+   "lat": 37.05,
+   "lng": 25.5,
+   "r": 22
+  },
+  {
+   "id": "i_skiathos",
+   "n": "Skiathos",
+   "a": [],
+   "ar": "سكياثوس",
+   "cc": "GR",
+   "lat": 39.16,
+   "lng": 23.47,
+   "r": 8
+  },
+  {
+   "id": "i_hvar",
+   "n": "Hvar",
+   "a": [],
+   "ar": "هفار",
+   "cc": "HR",
+   "lat": 43.15,
+   "lng": 16.7,
+   "r": 35
+  },
+  {
+   "id": "i_brac",
+   "n": "Brač",
+   "a": [
+    "Brac"
+   ],
+   "ar": "براتش",
+   "cc": "HR",
+   "lat": 43.33,
+   "lng": 16.65,
+   "r": 25
+  },
+  {
+   "id": "i_korcula",
+   "n": "Korčula",
+   "a": [
+    "Korcula"
+   ],
+   "ar": "كورتشولا",
+   "cc": "HR",
+   "lat": 42.93,
+   "lng": 16.9,
+   "r": 30
+  },
+  {
+   "id": "i_djerba",
+   "n": "Djerba",
+   "a": [
+    "Jerba"
+   ],
+   "ar": "جربة",
+   "cc": "TN",
+   "lat": 33.8,
+   "lng": 10.85,
+   "r": 25
+  },
+  {
+   "id": "i_maldives",
+   "n": "Maldives",
+   "a": [
+    "Malé",
+    "Male"
+   ],
+   "ar": "المالديف",
+   "cc": "MV",
+   "lat": 4.17,
+   "lng": 73.5,
+   "r": 250
+  },
+  {
+   "id": "i_mauritius",
+   "n": "Mauritius",
+   "a": [],
+   "ar": "موريشيوس",
+   "cc": "MU",
+   "lat": -20.28,
+   "lng": 57.55,
+   "r": 40
+  },
+  {
+   "id": "i_seychelles_mahe",
+   "n": "Seychelles (Mahé)",
+   "a": [
+    "Mahe",
+    "Victoria"
+   ],
+   "ar": "سيشل — ماهي",
+   "cc": "SC",
+   "lat": -4.68,
+   "lng": 55.48,
+   "r": 25
+  },
+  {
+   "id": "i_seychelles_praslin",
+   "n": "Praslin",
+   "a": [
+    "La Digue"
+   ],
+   "ar": "براسلين",
+   "cc": "SC",
+   "lat": -4.32,
+   "lng": 55.72,
+   "r": 15
+  },
+  {
+   "id": "i_zanzibar",
+   "n": "Zanzibar",
+   "a": [
+    "Unguja",
+    "Stone Town"
+   ],
+   "ar": "زنجبار",
+   "cc": "TZ",
+   "lat": -6.1,
+   "lng": 39.3,
+   "r": 50
+  },
+  {
+   "id": "i_farasan",
+   "n": "Farasan Islands",
+   "a": [
+    "Farasan"
+   ],
+   "ar": "جزر فرسان",
+   "cc": "SA",
+   "lat": 16.7,
+   "lng": 42.0,
+   "r": 40
+  },
+  {
+   "id": "i_umluj",
+   "n": "Umluj Islands",
+   "a": [
+    "Umluj",
+    "Red Sea Islands"
+   ],
+   "ar": "جزر أملج",
+   "cc": "SA",
+   "lat": 25.05,
+   "lng": 37.25,
+   "r": 45
+  },
+  {
+   "id": "i_sindalah",
+   "n": "Sindalah",
+   "a": [],
+   "ar": "سندالة",
+   "cc": "SA",
+   "lat": 27.9,
+   "lng": 35.3,
+   "r": 12
+  },
+  {
+   "id": "i_tiran",
+   "n": "Tiran Island",
+   "a": [
+    "Tiran"
+   ],
+   "ar": "جزيرة تيران",
+   "cc": "SA",
+   "lat": 27.95,
+   "lng": 34.55,
+   "r": 12
+  },
+  {
+   "id": "i_giftun",
+   "n": "Giftun Islands",
+   "a": [
+    "Giftun",
+    "Hurghada islands"
+   ],
+   "ar": "جزر الجفتون",
+   "cc": "EG",
+   "lat": 27.2,
+   "lng": 33.95,
+   "r": 15
+  },
+  {
+   "id": "i_tenerife",
+   "n": "Tenerife",
+   "a": [],
+   "ar": "تينيريفي",
+   "cc": "ES",
+   "lat": 28.3,
+   "lng": -16.6,
+   "r": 50
+  },
+  {
+   "id": "i_gran_canaria",
+   "n": "Gran Canaria",
+   "a": [],
+   "ar": "غران كناريا",
+   "cc": "ES",
+   "lat": 27.95,
+   "lng": -15.6,
+   "r": 35
+  },
+  {
+   "id": "i_lanzarote",
+   "n": "Lanzarote",
+   "a": [],
+   "ar": "لانزاروت",
+   "cc": "ES",
+   "lat": 29.0,
+   "lng": -13.6,
+   "r": 35
+  },
+  {
+   "id": "i_fuerteventura",
+   "n": "Fuerteventura",
+   "a": [],
+   "ar": "فويرتيفنتورا",
+   "cc": "ES",
+   "lat": 28.35,
+   "lng": -14.0,
+   "r": 55
+  },
+  {
+   "id": "i_madeira",
+   "n": "Madeira",
+   "a": [
+    "Funchal"
+   ],
+   "ar": "ماديرا",
+   "cc": "PT",
+   "lat": 32.7,
+   "lng": -16.9,
+   "r": 35
+  },
+  {
+   "id": "i_azores",
+   "n": "Azores",
+   "a": [
+    "Açores",
+    "Ponta Delgada"
+   ],
+   "ar": "الأزور",
+   "cc": "PT",
+   "lat": 37.75,
+   "lng": -25.5,
+   "r": 110
+  }
+ ]
+}
