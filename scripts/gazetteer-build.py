@@ -62,36 +62,6 @@ for k, arr in idx.items():
     arr.sort(key=lambda x: -x['p']); safe = ''.join('%04x' % ord(ch) for ch in k)
     json.dump(arr[:400], open(f'scripts/eval/gaz/idx/{safe}.json', 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 print('prefix shards', len(idx))
-# المجموعة الأساسية لبيانات الأماكن (قرار المالك ٢٤ سبتمبر): (١) السوق الأول — الخليج الست + مصر + الأردن + المغرب + تونس ≥ ١٠٠ ألف نسمة · (٢) قائمة الوجهات (Euromonitor Top 100 + منتجعات ووجهات إقليمية) · (٣) مدن المالك (الدليل · المجموعة الذهبية) — تُعرض للمراجعة قبل الاستخراج
-FIRST_MARKET = ['SA','AE','QA','KW','BH','OM','EG','JO','MA','TN']
-base = {}
-def add(e, cc, why):
-    k = str(e['id'])
-    if k not in base: base[k] = {'id': e['id'], 'n': e['n'], 'ar': e.get('ar', ''), 'cc': cc, 'lat': e['lat'], 'lng': e['lng'], 'p': e['p'], 'why': why}
-for cc in FIRST_MARKET:
-    for e in by_cc.get(cc, []):
-        if e['p'] >= 100000: add(e, cc, 'first-market')
-def find(name, cc):
-    n = norm(name); best = None
-    for e in by_cc.get(cc, []):
-        names = [e['n']] + e.get('a', [])
-        if any(norm(x) == n for x in names):
-            if not best or e['p'] > best['p']: best = e
-    return best
-dest = json.load(open('scripts/eval/destinations.json', encoding='utf-8'))
-missing = []
-for grp, why in [('euromonitor_top100', 'euromonitor'), ('resorts_and_regional', 'resort')]:
-    for d in dest.get(grp, []):
-        e = find(d['n'], d['cc'])
-        if e: add(e, d['cc'], why)
-        else: missing.append(d['n'] + ' (' + d['cc'] + ')')
-own = json.load(open('scripts/eval/directory-map.json', encoding='utf-8'))['cities'] if os.path.exists('scripts/eval/directory-map.json') else []
-CCMAP = {'France': 'FR', 'Spain': 'ES', 'UK': 'GB', 'Switzerland': 'CH', 'Italy': 'IT'}
-for c in own:
-    e = find(c['name'], CCMAP.get(c['country'], ''))
-    if e: add(e, CCMAP.get(c['country'], ''), 'owner')
-base_list = sorted(base.values(), key=lambda x: (x['why'] != 'first-market', x['cc'], -x['p']))
-json.dump({'note': 'المجموعة الأساسية لتجهيز بيانات الأماكن — للمراجعة قبل الاستخراج', 'count': len(base_list), 'missing_from_gazetteer': missing, 'cities': base_list}, open('scripts/eval/gaz/base-cities.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
-print('destinations not found in gazetteer (fix names):', missing)
-base = base_list
-print('base cities', len(base)); print('DONE')
+# (v1.2 · قرار المالك ٢٥ سبتمبر) لا مجموعة أساسية ولا قائمة وجهات: تغطية الأماكن بالمناطق الكاملة (scripts/eval/country-bbox.json) وما عداها بالخلفي عند الطلب
+print('DONE')
+
