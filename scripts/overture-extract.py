@@ -1,7 +1,7 @@
 # MyPickz — scripts/overture-extract.py v3 (ز-١-ج-١ v1.2): استخراج أماكن Overture (CDLA) بالدولة كاملة أو بقائمة مدن → ملفات مقسَّمة بخلايا جغرافية (٠٫١° ≈ ١١ كم)
 # الإصدار مثبَّت بملف scripts/eval/overture-release.txt (يُرفع بسير الفحص الشهري فقط) · يقرأ taxonomy.primary وإن غاب يسقط إلى categories.primary
 # التشغيل: python scripts/overture-extract.py --regions first_market,europe,usa | --countries SA,BH | --cities <list.json> [ids...]
-# المخرج: scripts/eval/cells/<label>/cell=<cell>/*.json (سطر لكل مكان) — مجلد لكل صندوق (لا APPEND بصيغة JSON) — تُفهرَس بـ overture-index.mjs
+# المخرج: scripts/eval/cells/<label>.jsonl (سطر لكل مكان، مرتَّب بالخلية) — تُفهرَس بـ overture-index.mjs سطرًا سطرًا (ذاكرة ثابتة)
 import duckdb, json, os, sys, re, math, urllib.request
 def arg(name, default=''):
     a = [x for x in sys.argv if x.startswith('--' + name + '=')]; return a[0].split('=', 1)[1] if a else default
@@ -37,7 +37,7 @@ def run(label, x0, y0, x1, y1):
                    'c' || CAST(CAST(floor(ST_Y(geometry) * 10) AS INTEGER) AS VARCHAR) || '_' || CAST(CAST(floor(ST_X(geometry) * 10) AS INTEGER) AS VARCHAR) AS cell
             FROM read_parquet('{src}', hive_partitioning=1)
             WHERE bbox.xmin >= {x0} AND bbox.xmax <= {x1} AND bbox.ymin >= {y0} AND bbox.ymax <= {y1}
-          ) TO '{out}/{label}' (FORMAT JSON, PARTITION_BY (cell), OVERWRITE_OR_IGNORE)
+          ORDER BY cell) TO '{out}/{label}.jsonl' (FORMAT JSON)
         """
         try:
             con.execute(q); n = con.execute(f"SELECT count(*) FROM read_parquet('{src}', hive_partitioning=1) WHERE bbox.xmin >= {x0} AND bbox.xmax <= {x1} AND bbox.ymin >= {y0} AND bbox.ymax <= {y1}").fetchone()[0]
