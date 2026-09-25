@@ -13,6 +13,12 @@ const TARGETS = [
     name: 'test',
     url: 'https://test.mypickz.app/index-debug-test.html',
     must: ['function initFirebase', 'function loadCity', 'function openAuthModal', 'projectId: "mypickz-6f809"', 'BUILD:']
+  },
+  { // ز-١-ج-١: عامل الأماكن (المطابقة · حل الروابط · بحث المدن) — بيانات موجودة وصحة الخدمة
+    name: 'places',
+    url: 'https://places.mypickz.app/health',
+    must: ['"ok":true', '"data":true'],
+    minBytes: 20
   }
 ];
 const MIN_BYTES = 100000;
@@ -27,7 +33,7 @@ async function checkOnce(t){
   const ms = Date.now() - started;
   if (res.status !== 200) return { ok: false, name: t.name, ms, why: 'HTTP ' + res.status };
   const text = await res.text();
-  if (text.length < MIN_BYTES) return { ok: false, name: t.name, ms, why: 'body too small (' + text.length + ' bytes)' };
+  if (text.length < (t.minBytes || MIN_BYTES)) return { ok: false, name: t.name, ms, why: 'body too small (' + text.length + ' bytes)' };
   const missing = t.must.filter(s => !text.includes(s));
   if (missing.length) return { ok: false, name: t.name, ms, why: 'missing: ' + missing.join(', ') };
   return { ok: true, name: t.name, ms, why: '' };
