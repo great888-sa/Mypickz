@@ -1,5 +1,6 @@
 // MyPickz — tests/rules-sim.js
 // يختبر firestore.rules على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// v3.12 (٢٩ سبتمبر ٢٠٢٦ — others عام): + القسم ٢٥ (٦ حالات) · تُحدَّث حالات others القديمة.
 // v3.11 (٢٤ سبتمبر ٢٠٢٦ — سجل هوية الأماكن): + القسم ٢٤ (١٤ حالة).
 // M4.26 (٢٢ سبتمبر ٢٠٢٦ — التقسيم والأسطر الثمانية): + القسم ٢٣ (~٥٠ حالة).
 // M4.25 (١٧ سبتمبر ٢٠٢٦ — النشرة الجامعة على أ-٦): + القسم ٢٢ — ٦٤ حالة (hasTop للموثَّق · geoSources/legSources/flagsUsed/catsV · copyCount بسجل copies ذرّيًّا
@@ -955,6 +956,14 @@ const no = (label, f) => expect(false, label, f);
   await no('v3.11 identity delete by user deny', () => a.doc('placeIdentity/h_dalmata').delete());
   await ok('v3.11 identity delete by OWNER allow', () => owner.doc('placeIdentity/h_dalmata').delete());
   await no('v3.11 identity by suspended user deny', () => s.doc('placeIdentity/h_x8').set(Object.assign({}, PI, { by: S })));
+
+  // ================= ٢٥) v3.12 — others تصنيف عام (٢٩ سبتمبر ٢٠٢٦) =================
+  await ok('v3.12 others: public list parent with categories.others allow', () => a.doc('userCityLists/' + A + '_o12').set({ ownerId: A, cityId: 'o12', cityName: 'O', public: true, sharedWith: [], catsV: 3, categories: { others: { active: true, places: [{ id: 'p1', name: 'Odd spot', url: 'https://maps.app.goo.gl/o1' }] } } }));
+  await ok('v3.12 others: public split cat doc others allow', () => a.doc('userCityListCats/' + A + '_o12_others').set({ ownerId: A, cityId: 'o12', catId: 'others', public: true, sharedWith: [], active: true, places: [{ id: 'p1', name: 'Odd spot', url: 'https://maps.app.goo.gl/o1' }], updatedAt: 1 }));
+  await ok('v3.12 others: guest reads the public others cat', () => guest.doc('userCityListCats/' + A + '_o12_others').get());
+  await no('v3.12 private keys still denied on public parent (personal_home)', () => a.doc('userCityLists/' + A + '_o13').set({ ownerId: A, cityId: 'o13', cityName: 'O', public: true, sharedWith: [], catsV: 3, categories: { personal_home: { active: true, places: [] } } }));
+  await no('v3.12 private cat doc still denied (hospitals_clinics)', () => a.doc('userCityListCats/' + A + '_o13_hospitals_clinics').set({ ownerId: A, cityId: 'o13', catId: 'hospitals_clinics', public: true, sharedWith: [], active: true, places: [], updatedAt: 1 }));
+  await no('v3.12 private cat doc still denied (personal_friends)', () => a.doc('userCityListCats/' + A + '_o13_personal_friends').set({ ownerId: A, cityId: 'o13', catId: 'personal_friends', public: true, sharedWith: [], active: true, places: [], updatedAt: 1 }));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
