@@ -1,5 +1,7 @@
 // MyPickz — workers/places/src/index.js (ز-١-أ): عامل الأماكن — /match (Overture بمخزن R2، كلفة صفر) · /resolve (اسم المكان من رابط جوجل — لا إحداثيات من جوجل أبدًا: الثابت السابع)
 import { toks, splitName, decide, bucketOf, normAr } from './match.js';
+import { parseTilePath, tileCenter, countriesFor, R2Source } from './tiles.js';
+import { PMTiles } from 'pmtiles'; // خ-١: قراءة ملفات Protomaps من R2 بطلبات مدى (المكتبة تُحزم عند النشر)
 const ALLOWED_ORIGINS = ['https://mypickz.app', 'https://test.mypickz.app'];
 // ز-١-ج v1.2: التغطية بالخلايا الجغرافية (٠٫١° ≈ ١١ كم) — manifest الخلايا يُقرأ من R2 مرة لكل عزلة (~٢ ميغابايت للمناطق الكاملة)
 let manifestCache = null, manifestAt = 0;
@@ -77,6 +79,18 @@ async function searchCities(env, q, cc){ // ز-١-ج: بحث بالمعجم — 
   return hits.sort((a, b) => b.p - a.p).slice(0, 8).map(c => ({ id: String(c.id), name: c.n, nameAr: c.ar || '', cc: c.cc, lat: c.lat, lng: c.lng }));
 }
 async function logRequest(env, city){ try{ const k = 'req/' + city; if (!(await env.PLACES.head(k))) await env.PLACES.put(k, JSON.stringify({ city, at: new Date().toISOString() })); }catch(_){ } } // مدينة طُلبت ولا بيانات لها — يجهّزها السير الأسبوعي
+// ═══ خ-١: خلفية الخريطة — /tiles/{z}/{x}/{y}.mvt من ملفات الدول بـR2 · /tiles/style/{light|dark}.json · /tiles/assets/* (الخطوط والرموز من مخزننا)
+let tileBoxes = null; const pmCache = new Map();
+async function tileBoxesOf(env){ if (tileBoxes) return tileBoxes; try{ const o = await env.PLACES.get('tiles/manifest.json'); const m = o ? await o.json() : null; tileBoxes = (m && m.bbox) || {}; }catch(_){ tileBoxes = {}; } return tileBoxes; }
+function pmOf(env, cc){ if (!pmCache.has(cc)) pmCache.set(cc, new PMTiles(new R2Source(env.PLACES, 'tiles/' + cc + '.pmtiles'))); return pmCache.get(cc); }
+async function serveTile(request, env, t, origin){
+  const cache = caches.default; const cacheKey = new Request(new URL(request.url).origin + '/tiles/' + t.z + '/' + t.x + '/' + t.y + '.mvt'); const hit = await cache.match(cacheKey); if (hit) return hit;
+  const c = tileCenter(t.z, t.x, t.y); const ccs = countriesFor(c.lat, c.lng, await tileBoxesOf(env)); let data = null;
+  for (const cc of ccs.slice(0, 3)){ try{ const r = await pmOf(env, cc).getZxy(t.z, t.x, t.y); if (r && r.data && r.data.byteLength){ data = r.data; break; } }catch(_){ } }
+  if (!data) return new Response('', { status: 204, headers: { 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] } }); // لا بلاطة (بحر/خارج المناطق) — فارغة لا خطأ
+  const res = new Response(data, { status: 200, headers: { 'Content-Type': 'application/x-protobuf', 'Cache-Control': 'public, max-age=604800', 'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0], 'Vary': 'Origin' } });
+  try{ await cache.put(cacheKey, res.clone()); }catch(_){ } return res;
+}
 export const cellsAroundForTest = cellsAround; // للاختبار
 export default {
   async fetch(request, env){
@@ -92,10 +106,13 @@ export default {
       if (cands === null){ if (/^[A-Za-z0-9_-]{1,40}$/.test(city)) await logRequest(env, city); return json({ noData: true, candidates: [] }, origin, 200); } // لا تغطية — ليس خطأ؛ الخريطة والدبوس يعملان · الطلب يُسجَّل للخلفي
       return json(decide(name, addr, cands), origin);
     }
+    const tile = parseTilePath(url.pathname); if (tile) return serveTile(request, env, tile, origin); // خ-١
+    if (/^\/tiles\/style\/(light|dark)\.json$/.test(url.pathname)){ const fl = url.pathname.split('/').pop().replace('.json', ''); const o = await env.PLACES.get('tiles/style-' + fl + '.json'); if (!o) return json({ error: 'style missing' }, origin, 404); const txt = (await o.text()).split('{ORIGIN}').join(url.origin); return new Response(txt, { status: 200, headers: Object.assign(cors(origin), { 'Cache-Control': 'public, max-age=3600' }) }); }
+    if (url.pathname.startsWith('/tiles/assets/')){ const key = 'assets/' + url.pathname.slice('/tiles/assets/'.length).replace(/\.\./g, ''); const o = await env.PLACES.get(key); if (!o) return new Response('', { status: 404 }); const ct = key.endsWith('.json') ? 'application/json' : key.endsWith('.png') ? 'image/png' : key.endsWith('.pbf') ? 'application/x-protobuf' : 'application/octet-stream'; return new Response(o.body, { status: 200, headers: { 'Content-Type': ct, 'Cache-Control': 'public, max-age=604800', 'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] } }); }
     if (url.pathname === '/cities'){ const q = (url.searchParams.get('q') || '').slice(0, 60), cc = (url.searchParams.get('cc') || '').toUpperCase().slice(0, 2); return json({ results: await searchCities(env, q, cc) }, origin); } // ز-١-ج
     if (url.pathname === '/requests'){ const list = await env.PLACES.list({ prefix: 'req/' }); return json({ cities: (list.objects || []).map(o => o.key.slice(4)) }, origin); } // للسير الأسبوعي
     if (url.pathname === '/resolve'){ const raw = url.searchParams.get('url') || ''; if (!raw) return json({ error: 'url required' }, origin, 400); return json(await resolveGoogle(raw, url.searchParams.get('debug') === '1'), origin); }
-    if (url.pathname === '/health'){ const m = await manifest(env); const g = await env.PLACES.head('gaz/manifest.json'); return json({ ok: true, data: Object.keys(m.cells || {}).length > 0, cells: Object.keys(m.cells || {}).length, release: m.release || '', gazetteer: !!g, at: new Date().toISOString() }, origin); }
+    if (url.pathname === '/health'){ const m = await manifest(env); const g = await env.PLACES.head('gaz/manifest.json'); let tiles = null; try{ const o = await env.PLACES.get('tiles/manifest.json'); tiles = o ? await o.json() : null; }catch(_){} return json({ ok: true, data: Object.keys(m.cells || {}).length > 0, cells: Object.keys(m.cells || {}).length, release: m.release || '', gazetteer: !!g, tiles: tiles ? { countries: Object.keys(tiles.bbox || {}).length, build: tiles.build || '', gb: tiles.gb || 0 } : null, at: new Date().toISOString() }, origin); }
     return new Response('MyPickz places', { status: 404, headers: { 'Content-Type': 'text/plain' } });
   }
 };
