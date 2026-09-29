@@ -2,7 +2,7 @@
 // السؤال الواحد = ≤ ٥ قراءات صغيرة مهما كبرت المدينة · الكلمات الشائعة جدًّا بالدولة (> STOP_MAX ظهورًا) تُسقط وتُسجَّل بـ stop.json · المرور على الملف بمراحل (حزم أدلاء) لضبط الذاكرة
 import fs from 'fs'; import path from 'path'; import zlib from 'zlib'; import readline from 'readline';
 import { toks, bucketOf } from '../workers/places/src/match.js';
-const SRC = 'scripts/eval/cells', OUT = 'scripts/eval/r2/tok'; const BUCKETS = 4096, PASSES = 4, STOP_MAX = 30000;
+const SRC = 'scripts/eval/cells', OUT = 'scripts/eval/r2/tok'; const BUCKETS = 4096, PASSES = 4, STOP_MAX = 12000; // كلمة > ١٢ ألف ظهور بالدولة = توقف (الدلو يبقى صغيرًا)
 function bucket4096(t){ let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h % BUCKETS; }
 const report = {};
 for (const f of fs.readdirSync(SRC).filter(x => x.endsWith('.jsonl'))){
@@ -18,7 +18,7 @@ for (const f of fs.readdirSync(SRC).filter(x => x.endsWith('.jsonl'))){
     for await (const line of rl){ if (!line.trim()) continue; let p; try{ p = JSON.parse(line); }catch(_){ continue; } if (!p.name || typeof p.lat !== 'number') continue;
       const names = [p.name].concat(p.common && typeof p.common === 'object' ? Object.values(p.common).filter(x => x && x !== p.name).slice(0, 3) : []); const T = toks(names.join(' '));
       const entry = [p.id, +(+p.lat).toFixed(5), +(+p.lng).toFixed(5), String(p.name).slice(0, 80), String(p.addr || '').slice(0, 60), String(p.locality || '').slice(0, 30)];
-      T.forEach(t => { if (stopSet.has(t)) return; const b = bucket4096(t); if (b < lo || b >= hi) return; if (!buckets.has(b)) buckets.set(b, {}); const bk = buckets.get(b); (bk[t] = bk[t] || []).push(entry); }); }
+      T.forEach(t => { if (stopSet.has(t)) return; const b = bucket4096(t); if (b < lo || b >= hi) return; if (!buckets.has(b)) buckets.set(b, Object.create(null)); const bk = buckets.get(b); (bk[t] = bk[t] || []).push(entry); }); } // كائن بلا وراثة: «constructor» كلمة لا خاصية
     for (const [b, bk] of buckets){ const raw = JSON.stringify(bk); const gz = zlib.gzipSync(Buffer.from(raw), { level: 9 }); bytes += gz.length; if (gz.length > maxBucket) maxBucket = gz.length; Object.values(bk).forEach(a => { postings += a.length; }); fs.writeFileSync(path.join(dir, b + '.json.gz'), gz); }
     buckets.clear();
   }
