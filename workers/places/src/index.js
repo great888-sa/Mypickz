@@ -15,9 +15,12 @@ const shardCache = new Map(); // ذاكرة العزلة: مدينة/شظية �
 async function cellShard(env, key){ if (shardCache.has(key)) return shardCache.get(key); let data = null; try{ data = await readJson(env, 'cells/' + key + '.json.gz'); }catch(_){ } data = data || { tokens: {}, entries: {} }; if (shardCache.size > 96) shardCache.clear(); shardCache.set(key, data); return data; }
 async function candidatesFor(env, m, lat, lng, rKm, name){ // v1.2: الخلايا حول مركز المدينة (لا معرّف المدينة) — يعيد null إن لم توجد تغطية
   const qs = new Set(); splitName(name).forEach(n => toks(n).forEach(t => qs.add(t))); if (!qs.size) return [];
-  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const cells = cellsAround(lat, lng, rKm).filter(c => own(m.cells || {}, c)); if (!cells.length) return null;
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const cy = Math.floor(lat * 10), cx = Math.floor(lng * 10);
+  const cells = cellsAround(lat, lng, rKm).filter(c => own(m.cells || {}, c)).map(c => { const mm = /^c(-?\d+)_(-?\d+)$/.exec(c); const dy = mm ? (+mm[1] - cy) : 0, dx = mm ? (+mm[2] - cx) : 0; return { c, d: dx * dx + dy * dy }; }).sort((a, b) => a.d - b.d).slice(0, 25).map(x => x.c); if (!cells.length) return null; // خ-٢: الأقرب أولًا، بسقف ٢٥ خلية (المدن الكبيرة كانت تتجاوز المهلة)
   const hits = new Map(); const entries = {};
-  for (const c of cells){ const parts = m.cells[c] || 1; for (const t of qs){ const key = parts === 1 ? c : (c + '.' + (parseInt(bucketOf(t), 16) % parts)); const sh = await cellShard(env, key); const ids = own(sh.tokens, t) ? sh.tokens[t] : []; const rare = 1 / Math.sqrt(ids.length || 1); ids.forEach(id => { hits.set(id, (hits.get(id) || 0) + rare); if (own(sh.entries, id)) entries[id] = sh.entries[id]; }); } }
+  for (let i = 0; i < cells.length; i += 5){ // دفعات متوازية من ٥ خلايا
+    await Promise.all(cells.slice(i, i + 5).map(async c => { const parts = m.cells[c] || 1; await Promise.all([...qs].map(async t => { const key = parts === 1 ? c : (c + '.' + (parseInt(bucketOf(t), 16) % parts)); const sh = await cellShard(env, key); const ids = own(sh.tokens, t) ? sh.tokens[t] : []; const rare = 1 / Math.sqrt(ids.length || 1); ids.forEach(id => { hits.set(id, (hits.get(id) || 0) + rare); if (own(sh.entries, id)) entries[id] = sh.entries[id]; }); })); }));
+  } // لا توقف مبكر: الكلمات الشائعة تُغرق العدّاد وتُخفي خلايا الأطراف (ملاحظة المالك: مونترو)
   return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).filter(e => own(entries, e[0])).map(e => Object.assign({ id: 'ovt:' + e[0] }, entries[e[0]])).filter(x => typeof x.lat === 'number');
 }
 const UNIT_RE = /\b(shop|unit|building|bldg|floor|office|suite|store|tower|block|villa|gate|plot|no\.?|رقم|محل|مبنى|الدور|مكتب|شارع|طريق|حي|road|rd|st|street|ave|avenue|rue|via|calle|strasse|str|blvd|boulevard|highway|hwy|district)\b/i;
