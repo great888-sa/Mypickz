@@ -551,6 +551,8 @@ function idGuard(label, s){
     const all = noOutletCol.concat(noOutletField);
     const unknown = all.filter(x => !KNOWN_NO_OUTLET.includes(x));
     check(unknown.length === 0, T + 'rules capabilities without an outlet are recorded (doc 8) — ' + collections.size + ' collections', 'unrecorded: ' + unknown.join(', '));
+    const bareToast = (code.match(/onclick=\\?["']showToast\(/g) || []).length; // ز-١-ج-٣: لا زر يعد بميزة ثم يعرض رسالة فقط — المؤجَّل يُوسم بـsoonChip/showSoon
+    check(bareToast === 0, T + 'no bare showToast buttons (deferred features use soonChip/showSoon)', bareToast + ' found');
     const recordedNow = KNOWN_NO_OUTLET.filter(x => all.includes(x));
     console.log('INFO  ' + T + 'capabilities awaiting an outlet = ' + recordedNow.length + ' (' + recordedNow.join(', ') + ')');
     const opened = KNOWN_NO_OUTLET.filter(x => !all.includes(x));
