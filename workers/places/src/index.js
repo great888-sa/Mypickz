@@ -1,12 +1,12 @@
 // MyPickz — workers/places/src/index.js (ز-١-أ): عامل الأماكن — /match (Overture بمخزن R2، كلفة صفر) · /resolve (اسم المكان من رابط جوجل — لا إحداثيات من جوجل أبدًا: الثابت السابع)
-import { toks, splitName, decide, bucketOf, normAr } from './match.js';
+import { toks, splitName, decide, bucketOf, normAr, cellsAround } from './match.js';
 import { parseTilePath, tileCenter, countriesFor, R2Source } from './tiles.js';
 import { PMTiles } from 'pmtiles'; // خ-١: قراءة ملفات Protomaps من R2 بطلبات مدى (المكتبة تُحزم عند النشر)
 const ALLOWED_ORIGINS = ['https://mypickz.app', 'https://test.mypickz.app'];
 // ز-١-ج v1.2: التغطية بالخلايا الجغرافية (٠٫١° ≈ ١١ كم) — manifest الخلايا يُقرأ من R2 مرة لكل عزلة (~٢ ميغابايت للمناطق الكاملة)
 let manifestCache = null, manifestAt = 0;
 async function manifest(env){ if (manifestCache && Date.now() - manifestAt < 900000) return manifestCache; try{ const o = await env.PLACES.get('cells/manifest.json'); manifestCache = o ? await o.json() : { cells: {} }; }catch(_){ manifestCache = { cells: {} }; } manifestAt = Date.now(); return manifestCache; }
-function cellsAround(lat, lng, rKm){ const size = 11.1; const dl = Math.min(4, Math.ceil(rKm / size)); const dg = Math.min(6, Math.ceil(rKm / (size * Math.max(0.2, Math.cos(lat * Math.PI / 180))))); const cy = Math.floor(lat * 10), cx = Math.floor(lng * 10); const out = []; for (let y = cy - dl; y <= cy + dl; y++) for (let x = cx - dg; x <= cx + dg; x++) out.push('c' + y + '_' + x); return out.slice(0, 81); }
+
 async function readJson(env, key){ const o = await env.PLACES.get(key); if (!o) return null; if (key.endsWith('.gz')){ const ds = new DecompressionStream('gzip'); const txt = await new Response(o.body.pipeThrough(ds)).text(); return JSON.parse(txt); } return o.json(); }
 const GOOGLE_HOSTS = /^(maps\.app\.goo\.gl|goo\.gl|www\.google\.[a-z.]+|google\.[a-z.]+|maps\.google\.[a-z.]+)$/i;
 function cors(origin){ const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]; return { 'Access-Control-Allow-Origin': allow, 'Vary': 'Origin', 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }; }
@@ -91,7 +91,6 @@ async function serveTile(request, env, t, origin){
   const res = new Response(data, { status: 200, headers: { 'Content-Type': 'application/x-protobuf', 'Cache-Control': 'public, max-age=604800', 'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0], 'Vary': 'Origin' } });
   try{ await cache.put(cacheKey, res.clone()); }catch(_){ } return res;
 }
-export const cellsAroundForTest = cellsAround; // للاختبار
 export default {
   async fetch(request, env){
     const url = new URL(request.url); const origin = request.headers.get('Origin') || '';
