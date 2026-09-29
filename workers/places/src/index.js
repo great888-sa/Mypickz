@@ -80,14 +80,14 @@ async function searchCities(env, q, cc){ // ز-١-ج: بحث بالمعجم — 
 }
 async function logRequest(env, city){ try{ const k = 'req/' + city; if (!(await env.PLACES.head(k))) await env.PLACES.put(k, JSON.stringify({ city, at: new Date().toISOString() })); }catch(_){ } } // مدينة طُلبت ولا بيانات لها — يجهّزها السير الأسبوعي
 // ═══ خ-١: خلفية الخريطة — /tiles/{z}/{x}/{y}.mvt من ملفات الدول بـR2 · /tiles/style/{light|dark}.json · /tiles/assets/* (الخطوط والرموز من مخزننا)
-let tileBoxes = null; const pmCache = new Map();
-async function tileBoxesOf(env){ if (tileBoxes) return tileBoxes; try{ const o = await env.PLACES.get('tiles/manifest.json'); const m = o ? await o.json() : null; tileBoxes = (m && m.bbox) || {}; }catch(_){ tileBoxes = {}; } return tileBoxes; }
+let tileBoxes = null, tileBoxesAt = 0; const pmCache = new Map();
+async function tileBoxesOf(env){ if (tileBoxes && Date.now() - tileBoxesAt < 600000) return tileBoxes; try{ const o = await env.PLACES.get('tiles/manifest.json'); const m = o ? await o.json() : null; tileBoxes = (m && m.bbox) || {}; }catch(_){ tileBoxes = tileBoxes || {}; } tileBoxesAt = Date.now(); return tileBoxes; } // خ-٢: تنتهي كل ١٠ دقائق (عزلة قديمة كانت تحمل دولتين فقط → بلاطات فارغة)
 function pmOf(env, cc){ if (!pmCache.has(cc)) pmCache.set(cc, new PMTiles(new R2Source(env.PLACES, 'tiles/' + cc + '.pmtiles'))); return pmCache.get(cc); }
 async function serveTile(request, env, t, origin){
   const cache = caches.default; const cacheKey = new Request(new URL(request.url).origin + '/tiles/' + t.z + '/' + t.x + '/' + t.y + '.mvt'); const hit = await cache.match(cacheKey); if (hit) return hit;
   const c = tileCenter(t.z, t.x, t.y); const ccs = countriesFor(c.lat, c.lng, await tileBoxesOf(env)); let data = null;
   for (const cc of ccs.slice(0, 3)){ try{ const r = await pmOf(env, cc).getZxy(t.z, t.x, t.y); if (r && r.data && r.data.byteLength){ data = r.data; break; } }catch(_){ } }
-  if (!data) return new Response('', { status: 204, headers: { 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] } }); // لا بلاطة (بحر/خارج المناطق) — فارغة لا خطأ
+  if (!data) return new Response('', { status: 204, headers: { 'Cache-Control': 'public, max-age=60', 'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] } }); // لا بلاطة (بحر/خارج المناطق) — فارغة لا خطأ، ولا تُحفظ طويلًا
   const res = new Response(data, { status: 200, headers: { 'Content-Type': 'application/x-protobuf', 'Cache-Control': 'public, max-age=604800', 'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0], 'Vary': 'Origin' } });
   try{ await cache.put(cacheKey, res.clone()); }catch(_){ } return res;
 }
