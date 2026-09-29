@@ -1,0 +1,62 @@
+# MyPickz — الفهرس بالكلمة أولًا لكل دولة (tok/<CC>/…) من إصدار Overture المثبَّت → R2 · يدوي (بمنطقة/دول) وشهري بعد التحديث (اليوم ٢٨) · تقرير الأدلاء والحجم لكل دولة
+name: Token index publish (R2)
+on:
+  workflow_dispatch:
+    inputs:
+      regions:
+        description: 'regions: first_market,europe,usa (empty = all)'
+        required: false
+        default: ''
+      countries:
+        description: 'or country codes: SA,CH (overrides regions)'
+        required: false
+        default: ''
+  schedule:
+    - cron: "0 2 28 * *"
+concurrency:
+  group: token-index
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      RCLONE_CONFIG_R2_ACL: private
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install DuckDB + rclone
+        run: pip install duckdb==1.1.3 && curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null 2>&1
+      - name: Extract per country (pinned release) → build token index → upload → free disk (country by country)
+        run: |
+          python3 - <<'PY'
+          import json, subprocess, os, shutil
+          cb = json.load(open('scripts/eval/country-bbox.json', encoding='utf-8'))
+          only = [c for c in "${{ github.event.inputs.countries }}".split(',') if c]
+          regs = [r for r in "${{ github.event.inputs.regions }}".split(',') if r] or ['first_market', 'europe', 'usa']
+          ccs = only or [c for r in regs for c in cb['regions'][r]]
+          report = {}
+          for cc in ccs:
+              shutil.rmtree('scripts/eval/cells', ignore_errors=True); shutil.rmtree('scripts/eval/r2/tok', ignore_errors=True)
+              r = subprocess.run(['python', 'scripts/overture-extract.py', f'--countries={cc}'], capture_output=True, text=True); print(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr[-200:])
+              if not os.path.exists(f'scripts/eval/cells/{cc}.jsonl'): print(cc, 'no extract'); continue
+              r = subprocess.run(['node', '--max-old-space-size=6144', 'scripts/token-index.mjs'], capture_output=True, text=True); print(r.stdout.strip()); 
+              if r.returncode != 0: print(cc, 'INDEX FAILED', r.stderr[-300:]); continue
+              subprocess.run(['rclone', 'copy', f'scripts/eval/r2/tok/{cc}', f'r2:mypickz-places/tok/{cc}', '--transfers', '48', '--checkers', '48', '--stats-one-line'], check=True)
+              try: report[cc] = json.load(open(f'scripts/eval/r2/tok/{cc}/manifest.json'))
+              except Exception: pass
+          json.dump({'countries': report, 'mb': round(sum(v.get('mb', 0) for v in report.values()), 1)}, open('/tmp/tok-report.json', 'w'))
+          subprocess.run(['rclone', 'copyto', '/tmp/tok-report.json', 'r2:mypickz-places/tok/report.json'], check=True)
+          print('TOKEN INDEX countries', len(report), 'total MB', round(sum(v.get('mb', 0) for v in report.values()), 1), 'max bucket KB', max([v.get('maxBucketKB', 0) for v in report.values()] or [0]))
+          PY
