@@ -13,7 +13,22 @@ function cors(origin){ const allow = ALLOWED_ORIGINS.includes(origin) ? origin :
 const json = (obj, origin, status = 200) => new Response(JSON.stringify(obj), { status, headers: cors(origin) });
 const shardCache = new Map(); // ذاكرة العزلة: مدينة/شظية → {tokens, entries}
 async function cellShard(env, key){ if (shardCache.has(key)) return shardCache.get(key); let data = null; try{ data = await readJson(env, 'cells/' + key + '.json.gz'); }catch(_){ } data = data || { tokens: {}, entries: {} }; if (shardCache.size > 400) shardCache.clear(); shardCache.set(key, data); return data; } // ذاكرة العزلة أوسع (المدن الكبيرة)
-async function candidatesFor(env, m, lat, lng, rKm, name){ const r = await candidatesBatch(env, m, lat, lng, rKm, [name]); return r === null ? null : r[0]; }
+// ═══ الفهرس بالكلمة أولًا لكل دولة (tok/<CC>/<bucket>.json.gz) — السؤال ≤ ٥ قراءات صغيرة مهما كبرت المدينة؛ إن لم يوجد للدولة → الخلايا (احتياط حتى يكتمل التعميم)
+const tokMeta = new Map(); const tokCache = new Map();
+function bucket4096(t){ let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h % 4096; }
+async function tokMetaOf(env, cc){ if (tokMeta.has(cc) && Date.now() - tokMeta.get(cc).at < 600000) return tokMeta.get(cc); let m = null; try{ const o = await env.PLACES.get('tok/' + cc + '/manifest.json'); if (o){ m = await o.json(); const so = await env.PLACES.get('tok/' + cc + '/stop.json'); m.stop = new Set(so ? await so.json() : []); } }catch(_){ m = null; } tokMeta.set(cc, { at: Date.now(), m }); return tokMeta.get(cc); }
+async function tokBucket(env, cc, b){ const key = cc + '/' + b; if (tokCache.has(key)) return tokCache.get(key); let d = null; try{ d = await readJson(env, 'tok/' + cc + '/' + b + '.json.gz'); }catch(_){ } d = d || {}; if (tokCache.size > 300) tokCache.clear(); tokCache.set(key, d); return d; }
+function geoDist(aLat, aLng, bLat, bLng){ const R = 6371, t = x => x * Math.PI / 180; const dLat = t(bLat - aLat), dLng = t(bLng - aLng); const q = Math.sin(dLat / 2) ** 2 + Math.cos(t(aLat)) * Math.cos(t(bLat)) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(q)); }
+async function candidatesByToken(env, cc, meta, lat, lng, rKm, names){
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const qsets = names.map(n => { const qs = new Set(); splitName(n).forEach(x => toks(x).forEach(t => { if (!meta.stop.has(t)) qs.add(t); })); return qs; });
+  const buckets = new Set(); qsets.forEach(qs => qs.forEach(t => buckets.add(bucket4096(t)))); const bl = [...buckets].slice(0, 120); const loaded = {}; for (let i = 0; i < bl.length; i += 12) await Promise.all(bl.slice(i, i + 12).map(async b => { loaded[b] = await tokBucket(env, cc, b); }));
+  const R = rKm * 1.3; // هامش لأطراف المدينة
+  return qsets.map(qs => { const hits = new Map(); const entries = {};
+    for (const t of qs){ const bk = loaded[bucket4096(t)]; if (!bk || !own(bk, t)) continue; const arr = bk[t]; const rare = 1 / Math.sqrt(arr.length || 1); for (const e of arr){ if (geoDist(lat, lng, e[1], e[2]) > R) continue; hits.set(e[0], (hits.get(e[0]) || 0) + rare); entries[e[0]] = e; } }
+    return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).map(x => { const e = entries[x[0]]; return { id: 'ovt:' + e[0], lat: e[1], lng: e[2], name: e[3], addr: e[4] || '', locality: e[5] || '', names: [] }; }); });
+}
+async function candidatesFor(env, m, lat, lng, rKm, name, cc){ const r = await candidatesAny(env, m, lat, lng, rKm, [name], cc); return r === null ? null : r[0]; }
+async function candidatesAny(env, m, lat, lng, rKm, names, cc){ if (cc && /^[A-Z]{2}$/.test(cc)){ const meta = await tokMetaOf(env, cc); if (meta && meta.m) return candidatesByToken(env, cc, meta.m, lat, lng, rKm, names); } return candidatesBatch(env, m, lat, lng, rKm, names); }
 async function candidatesBatch(env, m, lat, lng, rKm, names){ // خ-٢: دفعة أسماء لمدينة واحدة — الشظايا تُقرأ مرة (مفهرسة بلا تكرار، بسقف ٤٠ قراءة: حد النداءات الفرعية بالخطة المجانية ٥٠) ثم تُقيَّم الأسماء كلها بالذاكرة
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const cy = Math.floor(lat * 10), cx = Math.floor(lng * 10);
   const cells = cellsAround(lat, lng, rKm).filter(c => own(m.cells || {}, c)).map(c => { const mm = /^c(-?\d+)_(-?\d+)$/.exec(c); const dy = mm ? (+mm[1] - cy) : 0, dx = mm ? (+mm[2] - cx) : 0; return { c, d: dx * dx + dy * dy }; }).sort((a, b) => a.d - b.d).map(x => x.c); if (!cells.length) return null;
@@ -100,22 +115,22 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
     if (request.method !== 'GET' && !(request.method === 'POST' && url.pathname === '/match-batch')) return json({ error: 'method' }, origin, 405);
     if (url.pathname === '/match'){ // v1.2: ?city=<geonameid>&lat=&lng=&r=<km>&name=&addr=
-      const city = (url.searchParams.get('city') || '').trim(), name = (url.searchParams.get('name') || '').slice(0, 120), addr = (url.searchParams.get('addr') || '').slice(0, 160);
-      const lat = parseFloat(url.searchParams.get('lat')), lng = parseFloat(url.searchParams.get('lng')), rKm = Math.min(30, Math.max(3, parseFloat(url.searchParams.get('r')) || 12));
+      const city = (url.searchParams.get('city') || '').trim(), name = (url.searchParams.get('name') || '').slice(0, 120), addr = (url.searchParams.get('addr') || '').slice(0, 160), cc = (url.searchParams.get('cc') || '').toUpperCase().slice(0, 2);
+      const lat = parseFloat(url.searchParams.get('lat')), lng = parseFloat(url.searchParams.get('lng')), rKm = Math.min(60, Math.max(3, parseFloat(url.searchParams.get('r')) || 12));
       if (!name.trim()) return json({ error: 'name required', candidates: [] }, origin, 400);
       if (!(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180)) return json({ error: 'lat/lng required', candidates: [] }, origin, 400);
-      const m = await manifest(env); const cands = await candidatesFor(env, m, lat, lng, rKm, name);
+      const m = await manifest(env); const cands = await candidatesFor(env, m, lat, lng, rKm, name, cc);
       if (cands === null){ if (/^[A-Za-z0-9_-]{1,40}$/.test(city)) await logRequest(env, city); return json({ noData: true, candidates: [] }, origin, 200); } // لا تغطية — ليس خطأ؛ الخريطة والدبوس يعملان · الطلب يُسجَّل للخلفي
       return json(decide(name, addr, cands), origin);
     }
     const tile = parseTilePath(url.pathname); if (tile) return serveTile(request, env, tile, origin); // خ-١
     if (/^\/tiles\/style\/(light|dark)\.json$/.test(url.pathname)){ const fl = url.pathname.split('/').pop().replace('.json', ''); const o = await env.PLACES.get('tiles/style-' + fl + '.json'); if (!o) return json({ error: 'style missing' }, origin, 404); const txt = (await o.text()).split('{ORIGIN}').join(url.origin); return new Response(txt, { status: 200, headers: Object.assign(cors(origin), { 'Cache-Control': 'public, max-age=3600' }) }); }
     if (url.pathname.startsWith('/tiles/assets/')){ let key = 'assets/' + url.pathname.slice('/tiles/assets/'.length).replace(/\.\./g, ''); try{ key = decodeURIComponent(key); }catch(_){} const acao = { 'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0], 'Vary': 'Origin' }; const o = await env.PLACES.get(key); if (!o) return new Response('', { status: 404, headers: acao }); const ct = key.endsWith('.json') ? 'application/json' : key.endsWith('.png') ? 'image/png' : key.endsWith('.pbf') ? 'application/x-protobuf' : 'application/octet-stream'; return new Response(o.body, { status: 200, headers: Object.assign({ 'Content-Type': ct, 'Cache-Control': 'public, max-age=604800' }, acao) }); } // خ-٢: أسماء الخطوط فيها فراغات (%20) → تُفكّ · ACAO حتى على 404 (سفاري يعدّ غيابه فشل تحميل)
-    if (url.pathname === '/match-batch' && request.method === 'POST'){ let body = null; try{ body = await request.json(); }catch(_){ return json({ error: 'bad json' }, origin, 400); } const city = String((body && body.city) || '').trim(), lat = parseFloat(body && body.lat), lng = parseFloat(body && body.lng), rKm = Math.min(30, Math.max(3, parseFloat(body && body.r) || 12)); const items = Array.isArray(body && body.items) ? body.items.slice(0, 50) : [];
+    if (url.pathname === '/match-batch' && request.method === 'POST'){ let body = null; try{ body = await request.json(); }catch(_){ return json({ error: 'bad json' }, origin, 400); } const city = String((body && body.city) || '').trim(), cc = String((body && body.cc) || '').toUpperCase().slice(0, 2), lat = parseFloat(body && body.lat), lng = parseFloat(body && body.lng), rKm = Math.min(60, Math.max(3, parseFloat(body && body.r) || 12)); const items = Array.isArray(body && body.items) ? body.items.slice(0, 50) : [];
       if (!(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) || !items.length) return json({ error: 'lat/lng and items required' }, origin, 400);
-      const m = await manifest(env); const lists = await candidatesBatch(env, m, lat, lng, rKm, items.map(it => String(it.name || '').slice(0, 120)));
+      const m = await manifest(env); const lists = await candidatesAny(env, m, lat, lng, rKm, items.map(it => String(it.name || '').slice(0, 120)), cc);
       if (lists === null){ if (/^[A-Za-z0-9_-]{1,40}$/.test(city)) await logRequest(env, city); return json({ noData: true, results: items.map(() => ({ candidates: [] })) }, origin, 200); }
-      return json({ results: items.map((it, i) => decide(String(it.name || ''), String(it.addr || '').slice(0, 160), lists[i])) }, origin); } // خ-٢: اقتراحات الخريطة دفعةً واحدة
+      return json({ index: (cc && tokMeta.get(cc) && tokMeta.get(cc).m) ? 'token' : 'cells', results: items.map((it, i) => decide(String(it.name || ''), String(it.addr || '').slice(0, 160), lists[i])) }, origin); } // خ-٢: اقتراحات الخريطة دفعةً واحدة · index يقول أي فهرس أجاب
     if (url.pathname === '/cities'){ const q = (url.searchParams.get('q') || '').slice(0, 60), cc = (url.searchParams.get('cc') || '').toUpperCase().slice(0, 2); return json({ results: await searchCities(env, q, cc) }, origin); } // ز-١-ج
     if (url.pathname === '/requests'){ const list = await env.PLACES.list({ prefix: 'req/' }); return json({ cities: (list.objects || []).map(o => o.key.slice(4)) }, origin); } // للسير الأسبوعي
     if (url.pathname === '/resolve'){ const raw = url.searchParams.get('url') || ''; if (!raw) return json({ error: 'url required' }, origin, 400); return json(await resolveGoogle(raw, url.searchParams.get('debug') === '1'), origin); }
