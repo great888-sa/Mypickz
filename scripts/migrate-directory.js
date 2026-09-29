@@ -7,7 +7,7 @@ const arg = (n, d) => { const a = process.argv.find(x => x.startsWith('--' + n +
 const OWNER = arg('owner', ''), DRY = process.argv.includes('--dry'); if (!OWNER){ console.error('--owner=<UID> required'); process.exit(2); }
 const CC = { 'France': 'FR', 'Spain': 'ES', 'UK': 'GB', 'United Kingdom': 'GB', 'England': 'GB', 'Scotland': 'GB', 'Switzerland': 'CH', 'Italy': 'IT', 'Saudi Arabia': 'SA', 'Saudi': 'SA', 'KSA': 'SA', 'UAE': 'AE', 'United Arab Emirates': 'AE', 'Bahrain': 'BH', 'Qatar': 'QA', 'Kuwait': 'KW', 'Oman': 'OM', 'Lebanon': 'LB', 'Egypt': 'EG', 'Jordan': 'JO', 'Morocco': 'MA', 'Greece': 'GR', 'USA': 'US', 'United States': 'US', 'Sweden': 'SE', 'Norway': 'NO', 'Denmark': 'DK', 'Finland': 'FI', 'Turkey': 'TR', 'Germany': 'DE', 'Netherlands': 'NL', 'Belgium': 'BE', 'Austria': 'AT', 'Portugal': 'PT', 'Ireland': 'IE', 'Czech Republic': 'CZ', 'Czechia': 'CZ', 'Poland': 'PL', 'Hungary': 'HU', 'Croatia': 'HR', 'Cyprus': 'CY', 'Malta': 'MT', 'Monaco': 'MC', 'Iceland': 'IS' };
 const CAT_ID_MAP = { coffee_bakery: 'coffee', fine_lebanese: 'lebanese', fine_italian: 'italian', fine_japanese: 'japanese', taco: 'other_cuisine', shawarma: 'sandwich' };
-const PRIVATE = ['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others'];
+const PRIVATE = ['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends']; // v3.12: others عام
 const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').trim();
 const ISLANDS = fs.existsSync('scripts/eval/islands.json') ? JSON.parse(fs.readFileSync('scripts/eval/islands.json', 'utf8')).islands : [];
 function gazFind(name, country){ const isl = ISLANDS.find(a => [a.n].concat(a.a || [], a.ar ? [a.ar] : []).some(x => norm(x) === norm(name))); if (isl) return { id: isl.id, n: isl.n, cc: isl.cc, lat: isl.lat, lng: isl.lng, p: 0, island: true }; // الجزر أولًا (مايوركا …)
@@ -16,7 +16,12 @@ function gazFind(name, country){ const isl = ISLANDS.find(a => [a.n].concat(a.a 
     for (const e of arr){ if (!e || !e.n) continue; const names = [e.n].concat(e.a || [], e.ar ? [e.ar] : []); if (names.some(x => norm(x) === norm(name))){ if (!best || (e.p || 0) > (best.p || 0)) best = Object.assign({ cc: f.slice(7, 9) }, e); } } }
   return best; }
 function bucketOf(){ return null; }
+function v3CatIds(){ // معيار القبول (٢): كل تصنيف منقول معروف بالشجرة v3 (من ملف التطبيق) أو بالتصنيفات المخصَّصة (القالب)
+  try{ const html = fs.readFileSync('index-debug-test.html', 'utf8'); const i = html.indexOf('const DATA = ['); const j = html.indexOf('\n];', i); return new Set([...html.slice(i, j).matchAll(/\{id:"([a-z_]+)"/g)].map(m => m[1])); }catch(_){ return new Set(); }
+}
 (async () => {
+  const known = v3CatIds(); let custom = new Set(); try{ const t = await db.collection('settings').doc('category-template').get(); if (t.exists) (t.data().customItems || []).forEach(c => c && c.id && custom.add(c.id)); }catch(_){}
+  const unknownCats = {};
   const map = JSON.parse(fs.readFileSync('scripts/eval/directory-map.json', 'utf8')).cities;
   try{ const cl = await db.collection('settings').doc('cities-list').get(); if (cl.exists) (cl.data().cities || []).forEach(c => { if (c && c.id && !map.find(m => m.id === c.id)) map.push({ id: c.id, name: c.name, country: c.country || '' }); }); console.log('directory cities from settings/cities-list:', map.length); }catch(e){ console.log('cities-list not readable', String(e).slice(0, 80)); } // مدن الدليل المضافة: أسماؤها ودولها بمستند القائمة
   const snap = await db.collection('cities').get(); let totalBefore = 0, totalAfter = 0, moved = 0; const unmatched = [];
@@ -30,6 +35,7 @@ function bucketOf(){ return null; }
     const index = []; Object.keys(cats).forEach(k => cats[k].places.forEach(p => { const o = { id: p.id, name: p.name || '', catId: k }; if (p.topPlace === true) o.top = true; if (p.topAt || p.updatedAt) o.at = p.topAt || p.updatedAt; index.push(o); }));
     totalAfter += index.length; moved++;
     console.log((DRY ? '[dry] ' : '') + doc.id + ' → ' + cityId + ' (' + g.n + ', ' + g.cc + ') · cats ' + Object.keys(cats).length + ' · places ' + index.length);
+    Object.keys(cats).forEach(k => { if (!known.has(k) && !custom.has(k)) unknownCats[k] = (unknownCats[k] || 0) + cats[k].places.length; }); // معيار القبول (٢)
     if (DRY) continue;
     const parentId = OWNER + '_' + cityId; const b = db.batch();
     b.set(db.collection('userCityLists').doc(parentId), { ownerId: OWNER, cityId: cityId, cityName: g.n, country: g.cc, public: true, sharedWith: [], catsV: 3, splitV: 1, index: index, hasTop: index.some(x => x.top), geoSources: [], flagsUsed: [], bookmarkCount: 0, viewCount: 0, copyCount: 0, updatedAt: Date.now(), migratedFrom: 'cities/' + doc.id }, { merge: true });
@@ -38,6 +44,8 @@ function bucketOf(){ return null; }
     await db.collection('communityProfiles').doc(OWNER).set({ publicCityIds: admin.firestore.FieldValue.arrayUnion(cityId), hasAnyPublicContent: true, updatedAt: Date.now() }, { merge: true }); // الملف العام للمالك بوصفه منتقيًا
   }
   const unmatchedPlaces = unmatched.reduce((a, u) => a + u.places, 0);
-  console.log('DONE cities=' + moved + ' places before=' + totalBefore + ' after=' + totalAfter + (totalBefore - unmatchedPlaces === totalAfter ? ' ✓' : ' ✗ MISMATCH') + (unmatched.length ? ' · UNMATCHED cities=' + unmatched.length + ' places=' + unmatchedPlaces + ' (not migrated)' : ''));
-  process.exit(totalBefore - unmatchedPlaces === totalAfter ? 0 : 1);
+  const unk = Object.keys(unknownCats); if (unk.length) console.log('UNKNOWN categories (not in tree v3 nor custom items — these places would be invisible): ' + unk.map(k => k + '×' + unknownCats[k]).join(', '));
+  const countsOk = totalBefore - unmatchedPlaces === totalAfter;
+  console.log('DONE cities=' + moved + ' places before=' + totalBefore + ' after=' + totalAfter + (countsOk ? ' ✓' : ' ✗ MISMATCH') + (unmatched.length ? ' · UNMATCHED cities=' + unmatched.length + ' places=' + unmatchedPlaces + ' (not migrated)' : '') + (unk.length ? ' · UNKNOWN cats=' + unk.length + ' ✗' : ' · all categories known ✓'));
+  process.exit(countsOk && (!unk.length || process.argv.includes('--allow-unknown')) ? 0 : 1); // معيار القبول الثلاثي: العدّ + كل تصنيف معروف (+ المعاينة بالمحاكاة عند التسليم)
 })();
