@@ -16,16 +16,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Unit tests (match logic · no network)
-        run: node workers/places/test.js
-      - name: Dry-run deploy (validates config and bindings)
-        run: npx wrangler@4 deploy --dry-run --config workers/places/wrangler.toml --outdir /tmp/places-dry
+      - name: Install worker dependencies (pmtiles)
+        run: cd workers/places && npm install --no-audit --no-fund
+      - name: Unit tests (match + tiles · no network)
+        run: cd workers/places && npm test
+      - name: Dry-run deploy (validates config, bindings and bundling)
+        run: cd workers/places && npx wrangler@4 deploy --dry-run --outdir /tmp/places-dry
 
   deploy:
     needs: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: cd workers/places && npm install --no-audit --no-fund
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
