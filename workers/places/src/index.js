@@ -9,7 +9,7 @@ async function manifest(env){ if (manifestCache && Date.now() - manifestAt < 900
 
 async function readJson(env, key){ const o = await env.PLACES.get(key); if (!o) return null; if (key.endsWith('.gz')){ const ds = new DecompressionStream('gzip'); const txt = await new Response(o.body.pipeThrough(ds)).text(); return JSON.parse(txt); } return o.json(); }
 const GOOGLE_HOSTS = /^(maps\.app\.goo\.gl|goo\.gl|www\.google\.[a-z.]+|google\.[a-z.]+|maps\.google\.[a-z.]+)$/i;
-function cors(origin){ const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]; return { 'Access-Control-Allow-Origin': allow, 'Vary': 'Origin', 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }; }
+function cors(origin){ const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]; return { 'Access-Control-Allow-Origin': allow, 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400', 'Vary': 'Origin', 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }; } // خ-٢: الفحص المسبق لـPOST (الدفعة)
 const json = (obj, origin, status = 200) => new Response(JSON.stringify(obj), { status, headers: cors(origin) });
 const shardCache = new Map(); // ذاكرة العزلة: مدينة/شظية → {tokens, entries}
 async function cellShard(env, key){ if (shardCache.has(key)) return shardCache.get(key); let data = null; try{ data = await readJson(env, 'cells/' + key + '.json.gz'); }catch(_){ } data = data || { tokens: {}, entries: {} }; if (shardCache.size > 400) shardCache.clear(); shardCache.set(key, data); return data; } // ذاكرة العزلة أوسع (المدن الكبيرة)
