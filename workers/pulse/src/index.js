@@ -36,6 +36,7 @@ async function checkOnce(t){
   if (text.length < (t.minBytes || MIN_BYTES)) return { ok: false, name: t.name, ms, why: 'body too small (' + text.length + ' bytes)' };
   const missing = t.must.filter(s => !text.includes(s));
   if (missing.length) return { ok: false, name: t.name, ms, why: 'missing: ' + missing.join(', ') };
+  if (t.name === 'places'){ try{ const j = JSON.parse(text); const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(j.release || ''); if (m){ const age = (Date.now() - Date.UTC(+m[1], +m[2] - 1, +m[3])) / 86400000; if (age > 50) return { ok: false, name: t.name, ms, why: 'pinned Overture release ' + j.release + ' is ' + Math.round(age) + ' days old — public releases are removed after 60 days; run Overture probe' }; } }catch(_){} } // ز-١-ج-٣
   return { ok: true, name: t.name, ms, why: '' };
 }
 
