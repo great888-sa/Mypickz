@@ -1,0 +1,93 @@
+# MyPickz — خرائطنا (خ-١): بلاطات Protomaps (ODbL) لدول مناطقنا الثلاث بمستوى ١٤ → ملف PMTiles لكل دولة على R2 (tiles/<CC>.pmtiles) + أسلوب MapLibre وأصوله من مخزننا · قياس الحجم والزمن · شهري (اليوم ٢٧) ويدوي · سقف المراقبة ٧ غ.ب
+name: Basemap publish (R2)
+on:
+  workflow_dispatch:
+    inputs:
+      countries:
+        description: 'country codes: SA,BH (empty = all regions)'
+        required: false
+        default: ''
+      maxzoom:
+        description: 'max zoom'
+        required: false
+        default: '14'
+      cap_gb:
+        description: 'stop uploading beyond this total (GB)'
+        required: false
+        default: '7'
+  schedule:
+    - cron: "0 2 27 * *"
+concurrency:
+  group: basemap-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      RCLONE_CONFIG_R2_ACL: private
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install pmtiles CLI + rclone
+        run: |
+          url=$(curl -s https://api.github.com/repos/protomaps/go-pmtiles/releases/latest | grep browser_download_url | grep -i linux_x86_64 | head -1 | cut -d '"' -f 4)
+          echo "pmtiles: $url"; curl -sL "$url" -o /tmp/pm.tgz && tar -xzf /tmp/pm.tgz -C /tmp && sudo mv /tmp/pmtiles /usr/local/bin/ && pmtiles version || pmtiles --help | head -2
+          curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null 2>&1
+      - name: Find latest Protomaps build
+        id: build
+        run: |
+          for i in $(seq 0 10); do d=$(date -u -d "-$i day" +%Y%m%d); if curl -sfI "https://build.protomaps.com/$d.pmtiles" >/dev/null; then echo "build=$d" >> $GITHUB_OUTPUT; echo "build $d"; break; fi; done
+      - name: Extract per country → upload → measure (streaming, disk-safe)
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, time
+          cb = json.load(open('scripts/eval/country-bbox.json', encoding='utf-8'))
+          only = [c for c in "${{ github.event.inputs.countries }}".split(',') if c]
+          ccs = only or [c for r in ('first_market', 'europe', 'usa') for c in cb['regions'][r]]
+          build = "${{ steps.build.outputs.build }}"; maxzoom = "${{ github.event.inputs.maxzoom }}" or "14"; cap = float("${{ github.event.inputs.cap_gb }}" or "7")
+          # ما هو مرفوع سلفًا (للتراكم والسقف)
+          sizes = {}
+          try:
+              subprocess.run(['rclone', 'copyto', 'r2:mypickz-places/tiles/manifest.json', '/tmp/tm.json'], check=True, capture_output=True); prev = json.load(open('/tmp/tm.json')); sizes = prev.get('sizes', {})
+          except Exception: prev = {}
+          total = sum(sizes.values()) / 1e9
+          for cc in ccs:
+              b = cb['bbox'][cc]; out = f'/tmp/{cc}.pmtiles'; t0 = time.time()
+              r = subprocess.run(['pmtiles', 'extract', f'https://build.protomaps.com/{build}.pmtiles', out, f'--bbox={b[0]},{b[1]},{b[2]},{b[3]}', f'--maxzoom={maxzoom}'], capture_output=True, text=True)
+              if r.returncode != 0 or not os.path.exists(out): print(cc, 'EXTRACT FAILED', r.stderr[-300:]); continue
+              sz = os.path.getsize(out); total = (sum(v for k, v in sizes.items() if k != cc) + sz) / 1e9
+              print(f'{cc} {sz/1e6:.0f} MB · {time.time()-t0:.0f}s · running total {total:.2f} GB')
+              if total > cap: print(f'CAP {cap} GB reached — {cc} not uploaded; stop'); os.remove(out); break
+              subprocess.run(['rclone', 'copyto', out, f'r2:mypickz-places/tiles/{cc}.pmtiles', '--s3-chunk-size', '64M', '--s3-upload-concurrency', '8'], check=True); sizes[cc] = sz; os.remove(out)
+          json.dump({'build': build, 'maxzoom': int(maxzoom), 'bbox': {cc: cb['bbox'][cc] for cc in sizes}, 'sizes': sizes, 'gb': round(sum(sizes.values()) / 1e9, 2), 'builtAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}, open('/tmp/tiles-manifest.json', 'w'))
+          subprocess.run(['rclone', 'copyto', '/tmp/tiles-manifest.json', 'r2:mypickz-places/tiles/manifest.json'], check=True)
+          print('MANIFEST countries', len(sizes), 'total GB', round(sum(sizes.values()) / 1e9, 2))
+          PY
+      - name: Style + assets (fonts used by the style, sprites) → R2
+        run: |
+          npm install --no-save @protomaps/basemaps@5 >/dev/null 2>&1
+          node scripts/basemap-style.mjs
+          git clone --depth 1 https://github.com/protomaps/basemaps-assets /tmp/assets >/dev/null 2>&1
+          fonts=$(node -e "const s=JSON.parse(require('fs').readFileSync('scripts/eval/basemap/style-light.json','utf8')); const f=new Set(); s.layers.forEach(l=>{ const tf=l.layout&&l.layout['text-font']; if(Array.isArray(tf)) tf.forEach(x=>{ if(typeof x==='string') f.add(x); }); }); console.log([...f].join('\n'))")
+          echo "fonts used: $fonts"
+          mkdir -p /tmp/up/assets/fonts /tmp/up/assets/sprites
+          echo "$fonts" | while read f; do [ -n "$f" ] && cp -r "/tmp/assets/fonts/$f" "/tmp/up/assets/fonts/" 2>/dev/null || true; done
+          cp -r /tmp/assets/sprites/v4 /tmp/up/assets/sprites/
+          rclone copy /tmp/up/assets r2:mypickz-places/assets --transfers 32 --checkers 32 --ignore-existing --stats-one-line
+          rclone copyto scripts/eval/basemap/style-light.json r2:mypickz-places/tiles/style-light.json
+          rclone copyto scripts/eval/basemap/style-dark.json r2:mypickz-places/tiles/style-dark.json
+          echo "style + assets uploaded"
+      - name: Measure (a) — tile latency from the worker (Paris z14, first then cached)
+        run: |
+          for i in 1 2 3; do curl -s -o /tmp/t.mvt -w "try $i: HTTP %{http_code} · %{size_download} bytes · %{time_total}s\n" "https://places.mypickz.app/tiles/14/8299/5636.mvt"; done
+          curl -s -o /dev/null -w "style: HTTP %{http_code} · %{size_download} bytes\n" "https://places.mypickz.app/tiles/style/light.json"
+          curl -s "https://places.mypickz.app/health"
