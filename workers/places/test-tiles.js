@@ -1,0 +1,10 @@
+import { parseTilePath, tileCenter, countriesFor } from './src/tiles.js';
+let fails = 0; const ok = (n, c, why) => { console.log((c ? 'PASS  ' : 'FAIL  ') + n + (c ? '' : '  →  ' + (why || ''))); if (!c) fails++; };
+ok('tile path parses z/x/y', JSON.stringify(parseTilePath('/tiles/14/8735/5665.mvt')) === '{"z":14,"x":8735,"y":5665}');
+ok('tile path rejects out of range and bad forms', parseTilePath('/tiles/3/9/1.mvt') === null && parseTilePath('/tiles/a/b/c.mvt') === null && parseTilePath('/tiles/14/1/1.png') === null);
+const c = tileCenter(14, 8299, 5636); ok('tile centre near Paris', Math.abs(c.lat - 48.86) < 0.05 && Math.abs(c.lng - 2.35) < 0.05, JSON.stringify(c));
+const bb = { FR: [-5.3, 41.3, 9.7, 51.2], ES: [-9.4, 35.9, 4.4, 43.9], MC: [7.3, 43.7, 7.5, 43.8] };
+ok('countries for Paris → FR only', countriesFor(48.86, 2.35, bb).join(',') === 'FR');
+ok('countries for Monaco → MC first (smallest) then FR', countriesFor(43.73, 7.42, bb).join(',') === 'MC,FR');
+ok('countries for the Atlantic → none', countriesFor(30, -40, bb).length === 0);
+console.log(fails ? ('FAILED ' + fails) : 'ALL PASS'); process.exit(fails ? 1 : 0);
