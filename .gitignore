@@ -4,3 +4,5 @@
 *.key
 key.json
 scripts/eval/match-report.json
+scripts/eval/resolve-report.json
+node_modules/
