@@ -1,3 +1,5 @@
+// firestore rules v3.12 (ز-١-ج-٣ · تصحيح الجذر · ٢٩ سبتمبر ٢٠٢٦): `others` تصنيف عام (كما بالتطبيق) — حُذف من قوائم المعرّفات الخاصة الثلاث (noPrivateKeys ×٢ · إنشاء الفرعية)
+//   السبب: تناقض بين القواعد والتطبيق أخفى الأماكن مجهولة التصنيف · الخاصة تبقى: العيادات والعناوين الشخصية · الامتحان: القسم ٢٥ · التراجع: firestore_rules_v3-11.txt
 // firestore rules v3.11 (ز-١-ج · سجل هوية الأماكن · ٢٤ سبتمبر ٢٠٢٦): + مجموعة placeIdentity/{hash} — بصمة رابط جوجل (بعد حلّه) أو (الاسم المطبَّع + المدينة) ← موضع مصدَّق (Overture أو دبوس مستخدم)
 //   القراءة للجميع · الإنشاء/التحديث للمصادَق غير الموقوف بحقول محدودة (lat · lng · source ∈ overture/fsq/user_pin · openId? · n · cityId · by · at) · الحذف للمالك فقط · لا إحداثيات جوجل (noGoogleCoords)
 //   الامتحان: tests/rules-sim.js القسم ٢٤ · التراجع: firestore_rules_M4-26.txt (v3.10)
@@ -440,7 +442,7 @@ service cloud.firestore {
         || resource.data.public == true
         || request.auth.uid in resource.data.sharedWith));
       function noPrivateKeys() {
-        return !request.resource.data.get('categories', {}).keys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others']);
+        return !request.resource.data.get('categories', {}).keys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends']);
       }
       function indexOk() { // M4.26 (أ): الفهرس قائمة (≤ ٢٠٠٠٠ مدخل) و splitV == 1 حين يوجد — الانتقالية تقبل الأم بلا فهرس
         return (!('index' in request.resource.data) || (request.resource.data.index is list && request.resource.data.index.size() <= 20000))
@@ -449,7 +451,7 @@ service cloud.firestore {
       function privateKeysOkOnUpdate() {
         return !('categories' in request.resource.data.diff(resource.data).affectedKeys())
           || !('categories' in request.resource.data)
-          || !request.resource.data.categories.diff(resource.data.get('categories', {})).addedKeys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others']);
+          || !request.resource.data.categories.diff(resource.data.get('categories', {})).addedKeys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends']);
       }
       // v3.8 (السطران ٣ و١٩): bookmarkCount وviewCount يبدآن صفرًا/غائبين (نمط ١٦)
       allow create: if isSignedIn() && !isSuspended()
@@ -516,7 +518,7 @@ service cloud.firestore {
         && docId.split('_')[0] == request.auth.uid
         && request.resource.data.keys().hasAll(['ownerId', 'cityId', 'catId', 'public', 'places'])
         && request.resource.data.places is list
-        && !(request.resource.data.catId in ['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends', 'others'])
+        && !(request.resource.data.catId in ['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends'])
         && noGoogleCoords();
       allow update: if isOwner() || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId && request.resource.data.catId == resource.data.catId && request.resource.data.cityId == resource.data.cityId
