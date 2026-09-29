@@ -1,0 +1,25 @@
+# MyPickz — القياس الحي: المجموعة الذهبية عبر دفعة العامل الحي كما يفعل التطبيق (بحدود الخطة الفعلية) — يدوي
+name: Live eval (worker batch)
+on:
+  workflow_dispatch:
+    inputs:
+      r:
+        description: 'force radius km (empty = per city)'
+        required: false
+        default: ''
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Golden set through the live worker
+        run: node scripts/live-eval.mjs --r=${{ github.event.inputs.r }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-report
+          path: scripts/eval/live-report.json
+          if-no-files-found: warn
