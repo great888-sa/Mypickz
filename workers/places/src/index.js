@@ -15,17 +15,21 @@ const shardCache = new Map(); // ذاكرة العزلة: مدينة/شظية �
 async function cellShard(env, key){ if (shardCache.has(key)) return shardCache.get(key); let data = null; try{ data = await readJson(env, 'cells/' + key + '.json.gz'); }catch(_){ } data = data || { tokens: {}, entries: {} }; if (shardCache.size > 400) shardCache.clear(); shardCache.set(key, data); return data; } // ذاكرة العزلة أوسع (المدن الكبيرة)
 // ═══ الفهرس بالكلمة أولًا لكل دولة (tok/<CC>/<bucket>.json.gz) — السؤال ≤ ٥ قراءات صغيرة مهما كبرت المدينة؛ إن لم يوجد للدولة → الخلايا (احتياط حتى يكتمل التعميم)
 const tokMeta = new Map(); const tokCache = new Map();
-function bucket4096(t){ let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h % 4096; }
+function bucketOfN(t, n){ let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h % (n || 4096); } // عدد الأدلاء من بيان الدولة
 async function tokMetaOf(env, cc){ if (tokMeta.has(cc) && Date.now() - tokMeta.get(cc).at < 600000) return tokMeta.get(cc); let m = null; try{ const o = await env.PLACES.get('tok/' + cc + '/manifest.json'); if (o){ m = await o.json(); const so = await env.PLACES.get('tok/' + cc + '/stop.json'); m.stop = new Set(so ? await so.json() : []); } }catch(_){ m = null; } tokMeta.set(cc, { at: Date.now(), m }); return tokMeta.get(cc); }
-async function tokBucket(env, cc, b){ const key = cc + '/' + b; if (tokCache.has(key)) return tokCache.get(key); let d = null; try{ d = await readJson(env, 'tok/' + cc + '/' + b + '.json.gz'); }catch(_){ } d = d || {}; if (tokCache.size > 300) tokCache.clear(); tokCache.set(key, d); return d; }
+async function tokBucket(env, cc, b){ const key = cc + '/' + b; if (tokCache.has(key)) return tokCache.get(key); let d = null; try{ d = await readJson(env, 'tok/' + cc + '/' + b + '.json.gz'); }catch(_){ } d = d || {}; if (tokCache.size > 60) tokCache.clear(); tokCache.set(key, d); return d; } // ذاكرة محدودة: ٦٠ دلوًا
 function geoDist(aLat, aLng, bLat, bLng){ const R = 6371, t = x => x * Math.PI / 180; const dLat = t(bLat - aLat), dLng = t(bLng - aLng); const q = Math.sin(dLat / 2) ** 2 + Math.cos(t(aLat)) * Math.cos(t(bLat)) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(q)); }
-async function candidatesByToken(env, cc, meta, lat, lng, rKm, names){
-  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const qsets = names.map(n => { const qs = new Set(); splitName(n).forEach(x => toks(x).forEach(t => { if (!meta.stop.has(t)) qs.add(t); })); return qs; });
-  const buckets = new Set(); qsets.forEach(qs => qs.forEach(t => buckets.add(bucket4096(t)))); const bl = [...buckets].slice(0, 120); const loaded = {}; for (let i = 0; i < bl.length; i += 12) await Promise.all(bl.slice(i, i + 12).map(async b => { loaded[b] = await tokBucket(env, cc, b); }));
-  const R = rKm * 1.3; // هامش لأطراف المدينة
-  return qsets.map(qs => { const hits = new Map(); const entries = {};
-    for (const t of qs){ const bk = loaded[bucket4096(t)]; if (!bk || !own(bk, t)) continue; const arr = bk[t]; const rare = 1 / Math.sqrt(arr.length || 1); for (const e of arr){ if (geoDist(lat, lng, e[1], e[2]) > R) continue; hits.set(e[0], (hits.get(e[0]) || 0) + rare); entries[e[0]] = e; } }
-    return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).map(x => { const e = entries[x[0]]; return { id: 'ovt:' + e[0], lat: e[1], lng: e[2], name: e[3], addr: e[4] || '', locality: e[5] || '', names: [] }; }); });
+async function candidatesByToken(env, cc, meta, lat, lng, rKm, names){ // الدفعة على أجزاء من ١٠ أسماء بالتتابع، وذاكرة الأدلاء تُفرَّغ بين الأجزاء (ذروة الذاكرة محدودة بالخطة المجانية)
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const N = meta.buckets || 4096; const R = rKm * 1.3; const out = [];
+  for (let g = 0; g < names.length; g += 10){ const part = names.slice(g, g + 10);
+    const qsets = part.map(n => { const qs = new Set(); splitName(n).forEach(x => toks(x).forEach(t => { if (!meta.stop.has(t)) qs.add(t); })); return qs; });
+    const buckets = new Set(); qsets.forEach(qs => qs.forEach(t => buckets.add(bucketOfN(t, N)))); const bl = [...buckets].slice(0, 40); const loaded = {}; for (let i = 0; i < bl.length; i += 8) await Promise.all(bl.slice(i, i + 8).map(async b => { loaded[b] = await tokBucket(env, cc, b); }));
+    qsets.forEach(qs => { const hits = new Map(); const entries = {};
+      for (const t of qs){ const bk = loaded[bucketOfN(t, N)]; if (!bk || !own(bk, t)) continue; const arr = bk[t]; const rare = 1 / Math.sqrt(arr.length || 1); for (const e of arr){ if (geoDist(lat, lng, e[1], e[2]) > R) continue; hits.set(e[0], (hits.get(e[0]) || 0) + rare); entries[e[0]] = e; } }
+      out.push([...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).map(x => { const e = entries[x[0]]; return { id: 'ovt:' + e[0], lat: e[1], lng: e[2], name: e[3], addr: e[4] || '', locality: e[5] || '', names: [] }; })); });
+    if (tokCache.size > 40) tokCache.clear(); // تفريغ بين الأجزاء
+  }
+  return out;
 }
 async function candidatesFor(env, m, lat, lng, rKm, name, cc){ const r = await candidatesAny(env, m, lat, lng, rKm, [name], cc); return r === null ? null : r[0]; }
 async function candidatesAny(env, m, lat, lng, rKm, names, cc){ if (cc && /^[A-Z]{2}$/.test(cc)){ const meta = await tokMetaOf(env, cc); if (meta && meta.m) return candidatesByToken(env, cc, meta.m, lat, lng, rKm, names); } return candidatesBatch(env, m, lat, lng, rKm, names); }
