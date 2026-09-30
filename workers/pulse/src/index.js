@@ -14,11 +14,24 @@ const TARGETS = [
     url: 'https://test.mypickz.app/index-debug-test.html',
     must: ['function initFirebase', 'function loadCity', 'function openAuthModal', 'projectId: "mypickz-6f809"', 'BUILD:']
   },
-  { // ز-١-ج-١: عامل الأماكن (المطابقة · حل الروابط · بحث المدن) — بيانات موجودة وصحة الخدمة
+  { // ز-١-ج-١ · خ-٣: عامل الأماكن — الفهرس (≥ ٤٢ دولة) · البلاطات (≥ ٤٢) · عمر الإصدار المثبَّت (يُفحص بعد التنزيل)
     name: 'places',
     url: 'https://places.mypickz.app/health',
     must: ['"ok":true', '"data":true'],
     minBytes: 20
+  },
+  { // خ-٣ (فحص المحتوى لا الرمز): بلاطة خريطة حقيقية من مخزننا (باريس z14) — يجب أن تكون MVT بحجم معقول
+    name: 'tile',
+    url: 'https://places.mypickz.app/tiles/14/8299/5636.mvt',
+    must: [],
+    minBytes: 20000,
+    binary: true
+  },
+  { // خ-٣: اقتراح حقيقي (مكان ذهبي بباريس) — الفهرس يعمل ويعيد يقينًا
+    name: 'match',
+    url: 'https://places.mypickz.app/match?cc=FR&lat=48.8566&lng=2.3522&r=12&name=Dalmata&addr=8%20Rue%20Tiquetonne',
+    must: ['"auto"', 'Tiquetonne'],
+    minBytes: 50
   }
 ];
 const MIN_BYTES = 100000;
@@ -32,11 +45,11 @@ async function checkOnce(t){
   const res = await fetch(t.url, { headers: { 'User-Agent': 'MyPickz-Pulse/1.0' }, cf: { cacheTtl: 0, cacheEverything: false } });
   const ms = Date.now() - started;
   if (res.status !== 200) return { ok: false, name: t.name, ms, why: 'HTTP ' + res.status };
-  const text = await res.text();
-  if (text.length < (t.minBytes || MIN_BYTES)) return { ok: false, name: t.name, ms, why: 'body too small (' + text.length + ' bytes)' };
+  const text = t.binary ? '' : await res.text(); const blen = t.binary ? (await res.arrayBuffer()).byteLength : text.length;
+  if (blen < (t.minBytes || MIN_BYTES)) return { ok: false, name: t.name, ms, why: 'body too small (' + blen + ' bytes)' };
   const missing = t.must.filter(s => !text.includes(s));
   if (missing.length) return { ok: false, name: t.name, ms, why: 'missing: ' + missing.join(', ') };
-  if (t.name === 'places'){ try{ const j = JSON.parse(text); const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(j.release || ''); if (m){ const age = (Date.now() - Date.UTC(+m[1], +m[2] - 1, +m[3])) / 86400000; if (age > 50) return { ok: false, name: t.name, ms, why: 'pinned Overture release ' + j.release + ' is ' + Math.round(age) + ' days old — public releases are removed after 60 days; run Overture probe' }; } }catch(_){} } // ز-١-ج-٣
+  if (t.name === 'places'){ try{ const j = JSON.parse(text); if ((j.countries || 0) < 42) return { ok: false, name: t.name, ms, why: 'index countries ' + j.countries + ' < 42' }; if (!j.tiles || (j.tiles.countries || 0) < 42) return { ok: false, name: t.name, ms, why: 'tiles countries ' + (j.tiles ? j.tiles.countries : 0) + ' < 42' }; const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(j.release || ''); if (m){ const age = (Date.now() - Date.UTC(+m[1], +m[2] - 1, +m[3])) / 86400000; if (age > 50) return { ok: false, name: t.name, ms, why: 'pinned Overture release ' + j.release + ' is ' + Math.round(age) + ' days old — public releases are removed after 60 days; run Overture probe' }; } }catch(_){} } // ز-١-ج-٣ · خ-٣: فحص المحتوى
   return { ok: true, name: t.name, ms, why: '' };
 }
 
