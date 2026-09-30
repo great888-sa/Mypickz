@@ -1,0 +1,39 @@
+# MyPickz — حدود الأحياء (خ-٤): Overture Divisions للدول → خلايا مضغوطة div/<CC>/… → R2 · يدوي بمنطقة/دول · شهري (اليوم ٢٩) · القياس بالحجم أولًا
+name: Divisions publish (R2)
+on:
+  workflow_dispatch:
+    inputs:
+      regions:
+        description: 'regions: first_market,europe,usa (empty = all)'
+        required: false
+        default: ''
+      countries:
+        description: 'or country codes (overrides regions)'
+        required: false
+        default: ''
+  schedule:
+    - cron: "0 2 29 * *"
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Extract divisions → upload
+        run: |
+          pip install duckdb==1.1.3 >/dev/null && curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null 2>&1
+          if [ -n "${{ github.event.inputs.countries }}" ]; then python scripts/divisions-extract.py --countries=${{ github.event.inputs.countries }};
+          elif [ -n "${{ github.event.inputs.regions }}" ]; then python scripts/divisions-extract.py --regions=${{ github.event.inputs.regions }};
+          else python scripts/divisions-extract.py --regions=first_market,europe,usa; fi
+          rclone copy scripts/eval/r2/div r2:mypickz-places/div --transfers 48 --checkers 48 --stats-one-line
+          echo "divisions uploaded"
