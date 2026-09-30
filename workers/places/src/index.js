@@ -20,7 +20,21 @@ function bucketOfN(t, n){ let h = 0; for (let i = 0; i < t.length; i++) h = (h *
 async function tokMetaOf(env, cc){ if (tokMeta.has(cc) && Date.now() - tokMeta.get(cc).at < 600000) return tokMeta.get(cc); let m = null; try{ const o = await env.PLACES.get('tok/' + cc + '/manifest.json'); if (o){ m = await o.json(); const so = await env.PLACES.get('tok/' + cc + '/stop.json'); m.stop = new Set(so ? await so.json() : []); } }catch(_){ m = null; } tokMeta.set(cc, { at: Date.now(), m }); return tokMeta.get(cc); }
 async function tokBucket(env, cc, b){ const key = cc + '/' + b; if (tokCache.has(key)){ const v = tokCache.get(key); tokCache.delete(key); tokCache.set(key, v); return v; } let d = null; try{ d = await readJson(env, 'tok/' + cc + '/' + b + '.json.gz'); }catch(_){ } d = d || {}; cachePut(tokCache, key, d, 40 * 1048576); return d; } // سقف ٤٠ م.ب مفكوكة (LRU)
 function geoDist(aLat, aLng, bLat, bLng){ const R = 6371, t = x => x * Math.PI / 180; const dLat = t(bLat - aLat), dLng = t(bLng - aLng); const q = Math.sin(dLat / 2) ** 2 + Math.cos(t(aLat)) * Math.cos(t(bLat)) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(q)); }
-async function candidatesByToken(env, cc, meta, lat, lng, rKm, names){ // الدفعة على أجزاء من ١٠ أسماء بالتتابع، وذاكرة الأدلاء تُفرَّغ بين الأجزاء (ذروة الذاكرة محدودة بالخطة المجانية)
+// الصيغة ٢ (قراءة بالمدى): الدليل الصغير للدلو ثم بايتات الكلمة وحدها — لا يُنزَّل ما لا يلزم؛ الذاكرة والجغرافيا لا تعودان عائقًا
+const dirCache = new Map(), blobCache = new Map();
+async function tokDir(env, cc, b){ const key = cc + '/' + b; if (dirCache.has(key)) return dirCache.get(key); let d = null; try{ d = await readJson(env, 'tok/' + cc + '/' + b + '.dir.json.gz'); }catch(_){ } d = d || {}; cachePut(dirCache, key, d, 16 * 1048576); return d; }
+async function tokBlob(env, cc, b, t, ent){ const key = cc + '/' + b + '/' + t; if (blobCache.has(key)) return blobCache.get(key); let arr = []; try{ const o = await env.PLACES.get('tok/' + cc + '/' + b + '.bin', { range: { offset: ent[0], length: ent[1] } }); if (o){ const txt = await new Response(o.body.pipeThrough(new DecompressionStream('gzip'))).text(); arr = JSON.parse(txt); try{ Object.defineProperty(arr, '__bytes', { value: txt.length, enumerable: false }); }catch(_){} } }catch(_){ } cachePut(blobCache, key, arr, 24 * 1048576); return arr; }
+async function candidatesByTokenV2(env, cc, meta, lat, lng, rKm, names){
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const N = meta.buckets || 4096; const R = rKm * 1.3;
+  const qsets = names.map(n => { const qs = new Set(); splitName(n).forEach(x => toks(x).forEach(t => { if (!meta.stop.has(t)) qs.add(t); })); return qs; });
+  const allToks = new Set(); qsets.forEach(qs => qs.forEach(t => allToks.add(t))); const tl = [...allToks];
+  const buckets = [...new Set(tl.map(t => bucketOfN(t, N)))]; const dirs = {}; for (let i = 0; i < buckets.length; i += 12) await Promise.all(buckets.slice(i, i + 12).map(async b => { dirs[b] = await tokDir(env, cc, b); }));
+  const postings = {}; for (let i = 0; i < tl.length; i += 12) await Promise.all(tl.slice(i, i + 12).map(async t => { const b = bucketOfN(t, N); const d = dirs[b]; const ent = d && own(d, t) ? d[t] : null; postings[t] = ent ? await tokBlob(env, cc, b, t, ent) : []; }));
+  return qsets.map(qs => { const hits = new Map(); const entries = {};
+    for (const t of qs){ const arr = postings[t] || []; const rare = 1 / Math.sqrt(arr.length || 1); for (const e of arr){ if (geoDist(lat, lng, e[1], e[2]) > R) continue; hits.set(e[0], (hits.get(e[0]) || 0) + rare); entries[e[0]] = e; } }
+    return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).map(x => { const e = entries[x[0]]; return { id: 'ovt:' + e[0], lat: e[1], lng: e[2], name: e[3], addr: e[4] || '', locality: e[5] || '', names: [] }; }); });
+}
+async function candidatesByToken(env, cc, meta, lat, lng, rKm, names){ // الصيغة ١ (أدلاء كاملة) — احتياط حتى يكتمل بناء الصيغة ٢ · الدفعة على أجزاء من ١٠ أسماء
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const N = meta.buckets || 4096; const R = rKm * 1.3; const out = [];
   for (let g = 0; g < names.length; g += 10){ const part = names.slice(g, g + 10);
     const qsets = part.map(n => { const qs = new Set(); splitName(n).forEach(x => toks(x).forEach(t => { if (!meta.stop.has(t)) qs.add(t); })); return qs; });
@@ -32,7 +46,7 @@ async function candidatesByToken(env, cc, meta, lat, lng, rKm, names){ // الد
   return out;
 }
 async function candidatesFor(env, m, lat, lng, rKm, name, cc){ const r = await candidatesAny(env, m, lat, lng, rKm, [name], cc); return r === null ? null : r[0]; }
-async function candidatesAny(env, m, lat, lng, rKm, names, cc){ if (cc && /^[A-Z]{2}$/.test(cc)){ const meta = await tokMetaOf(env, cc); if (meta && meta.m) return candidatesByToken(env, cc, meta.m, lat, lng, rKm, names); } return candidatesBatch(env, m, lat, lng, rKm, names); }
+async function candidatesAny(env, m, lat, lng, rKm, names, cc){ if (cc && /^[A-Z]{2}$/.test(cc)){ const meta = await tokMetaOf(env, cc); if (meta && meta.m) return meta.m.format === 2 ? candidatesByTokenV2(env, cc, meta.m, lat, lng, rKm, names) : candidatesByToken(env, cc, meta.m, lat, lng, rKm, names); } return candidatesBatch(env, m, lat, lng, rKm, names); }
 async function candidatesBatch(env, m, lat, lng, rKm, names){ // خ-٢: دفعة أسماء لمدينة واحدة — الشظايا تُقرأ مرة (مفهرسة بلا تكرار، بسقف ٤٠ قراءة: حد النداءات الفرعية بالخطة المجانية ٥٠) ثم تُقيَّم الأسماء كلها بالذاكرة
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const cy = Math.floor(lat * 10), cx = Math.floor(lng * 10);
   const cells = cellsAround(lat, lng, rKm).filter(c => own(m.cells || {}, c)).map(c => { const mm = /^c(-?\d+)_(-?\d+)$/.exec(c); const dy = mm ? (+mm[1] - cy) : 0, dx = mm ? (+mm[2] - cx) : 0; return { c, d: dx * dx + dy * dy }; }).sort((a, b) => a.d - b.d).map(x => x.c); if (!cells.length) return null;
@@ -134,7 +148,7 @@ export default {
       if (!(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) || !items.length) return json({ error: 'lat/lng and items required' }, origin, 400);
       const m = await manifest(env); const lists = await candidatesAny(env, m, lat, lng, rKm, items.map(it => String(it.name || '').slice(0, 120)), cc);
       if (lists === null){ if (/^[A-Za-z0-9_-]{1,40}$/.test(city)) await logRequest(env, city); return json({ noData: true, results: items.map(() => ({ candidates: [] })) }, origin, 200); }
-      return json({ index: (cc && tokMeta.get(cc) && tokMeta.get(cc).m) ? 'token' : 'cells', results: items.map((it, i) => decide(String(it.name || ''), String(it.addr || '').slice(0, 160), lists[i])) }, origin); } // خ-٢: اقتراحات الخريطة دفعةً واحدة · index يقول أي فهرس أجاب
+      return json({ index: (cc && tokMeta.get(cc) && tokMeta.get(cc).m) ? (tokMeta.get(cc).m.format === 2 ? 'token2' : 'token') : 'cells', results: items.map((it, i) => decide(String(it.name || ''), String(it.addr || '').slice(0, 160), lists[i])) }, origin); } // خ-٢: اقتراحات الخريطة دفعةً واحدة · index يقول أي فهرس أجاب
     if (url.pathname === '/cities'){ const q = (url.searchParams.get('q') || '').slice(0, 60), cc = (url.searchParams.get('cc') || '').toUpperCase().slice(0, 2); return json({ results: await searchCities(env, q, cc) }, origin); } // ز-١-ج
     if (url.pathname === '/requests'){ const list = await env.PLACES.list({ prefix: 'req/' }); return json({ cities: (list.objects || []).map(o => o.key.slice(4)) }, origin); } // للسير الأسبوعي
     if (url.pathname === '/resolve'){ const raw = url.searchParams.get('url') || ''; if (!raw) return json({ error: 'url required' }, origin, 400); return json(await resolveGoogle(raw, url.searchParams.get('debug') === '1'), origin); }
