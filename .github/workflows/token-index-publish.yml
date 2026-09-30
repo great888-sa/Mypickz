@@ -1,4 +1,4 @@
-# MyPickz — الفهرس بالكلمة أولًا لكل دولة (tok/<CC>/…) من إصدار Overture المثبَّت → R2 · يدوي (بمنطقة/دول) وشهري بعد التحديث (اليوم ٢٨) · تقرير الأدلاء والحجم لكل دولة
+# MyPickz — الفهرس بالكلمة أولًا v2 (قراءة بالمدى) لكل دولة (tok/<CC>/…) من إصدار Overture المثبَّت → R2 · يدوي (بمنطقة/دول) وشهري بعد إصدار Overture (اليوم ٢٨) · التقرير متراكم
 name: Token index publish (R2)
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ on:
   schedule:
     - cron: "0 2 28 * *"
 concurrency:
-  group: token-index
+  group: places-index
   cancel-in-progress: false
 jobs:
   publish:
@@ -46,7 +46,8 @@ jobs:
           only = [c for c in "${{ github.event.inputs.countries }}".split(',') if c]
           regs = [r for r in "${{ github.event.inputs.regions }}".split(',') if r] or ['first_market', 'europe', 'usa']
           ccs = only or [c for r in regs for c in cb['regions'][r]]
-          report = {}
+          try: report = json.loads(subprocess.run(['rclone', 'cat', 'r2:mypickz-places/tok/report.json'], capture_output=True, text=True).stdout or '{}').get('countries', {})
+          except Exception: report = {}
           for cc in ccs:
               shutil.rmtree('scripts/eval/cells', ignore_errors=True); shutil.rmtree('scripts/eval/r2/tok', ignore_errors=True)
               r = subprocess.run(['python', 'scripts/overture-extract.py', f'--countries={cc}'], capture_output=True, text=True); print(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr[-200:])
