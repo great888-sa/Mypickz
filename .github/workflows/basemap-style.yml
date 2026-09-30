@@ -1,0 +1,28 @@
+# MyPickz — رفع أسلوبَي MapLibre فقط (بلا إعادة البلاطات) — يدوي · دقيقة
+name: Basemap style publish
+on:
+  workflow_dispatch:
+jobs:
+  style:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Generate + upload styles
+        run: |
+          npm install --no-save @protomaps/basemaps@5 >/dev/null 2>&1
+          node scripts/basemap-style.mjs
+          curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null 2>&1
+          rclone copyto scripts/eval/basemap/style-light.json r2:mypickz-places/tiles/style-light.json
+          rclone copyto scripts/eval/basemap/style-dark.json r2:mypickz-places/tiles/style-dark.json
+          echo "styles uploaded"
