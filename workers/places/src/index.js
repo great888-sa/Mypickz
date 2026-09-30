@@ -3,17 +3,12 @@ import { toks, splitName, decide, bucketOf, normAr, cellsAround } from './match.
 import { parseTilePath, tileCenter, countriesFor, R2Source } from './tiles.js';
 import { PMTiles } from 'pmtiles'; // خ-١: قراءة ملفات Protomaps من R2 بطلبات مدى (المكتبة تُحزم عند النشر)
 const ALLOWED_ORIGINS = ['https://mypickz.app', 'https://test.mypickz.app'];
-// ز-١-ج v1.2: التغطية بالخلايا الجغرافية (٠٫١° ≈ ١١ كم) — manifest الخلايا يُقرأ من R2 مرة لكل عزلة (~٢ ميغابايت للمناطق الكاملة)
-let manifestCache = null, manifestAt = 0;
-async function manifest(env){ if (manifestCache && Date.now() - manifestAt < 900000) return manifestCache; try{ const o = await env.PLACES.get('cells/manifest.json'); manifestCache = o ? await o.json() : { cells: {} }; }catch(_){ manifestCache = { cells: {} }; } manifestAt = Date.now(); return manifestCache; }
 
 async function readJson(env, key){ const o = await env.PLACES.get(key); if (!o) return null; if (key.endsWith('.gz')){ const ds = new DecompressionStream('gzip'); const txt = await new Response(o.body.pipeThrough(ds)).text(); const v = JSON.parse(txt); try{ Object.defineProperty(v, '__bytes', { value: txt.length, enumerable: false }); }catch(_){} return v; } return o.json(); } // __bytes: حجم النص المفكوك (لتفريغ الذاكرة بالحجم)
 const GOOGLE_HOSTS = /^(maps\.app\.goo\.gl|goo\.gl|www\.google\.[a-z.]+|google\.[a-z.]+|maps\.google\.[a-z.]+)$/i;
 function cors(origin){ const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]; return { 'Access-Control-Allow-Origin': allow, 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400', 'Vary': 'Origin', 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }; } // خ-٢: الفحص المسبق لـPOST (الدفعة)
 const json = (obj, origin, status = 200) => new Response(JSON.stringify(obj), { status, headers: cors(origin) });
-const shardCache = new Map(); // ذاكرة العزلة: مدينة/شظية → {tokens, entries}
 function cachePut(map, key, data, capBytes){ const b = (data && data.__bytes) || 0; map.set(key, data); let total = 0; for (const v of map.values()) total += (v && v.__bytes) || 0; for (const k of map.keys()){ if (total <= capBytes) break; const v = map.get(k); total -= (v && v.__bytes) || 0; map.delete(k); } } // تفريغ بالحجم (الأقدم أولًا) — ذاكرة العزلة ١٢٨ م.ب ولا ترفعها الخطة
-async function cellShard(env, key){ if (shardCache.has(key)) return shardCache.get(key); let data = null; try{ data = await readJson(env, 'cells/' + key + '.json.gz'); }catch(_){ } data = data || { tokens: {}, entries: {} }; cachePut(shardCache, key, data, 24 * 1048576); return data; }
 // ═══ الفهرس بالكلمة أولًا لكل دولة (tok/<CC>/<bucket>.json.gz) — السؤال ≤ ٥ قراءات صغيرة مهما كبرت المدينة؛ إن لم يوجد للدولة → الخلايا (احتياط حتى يكتمل التعميم)
 const tokMeta = new Map(); const tokCache = new Map();
 function bucketOfN(t, n){ let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h % (n || 4096); } // عدد الأدلاء من بيان الدولة
@@ -34,28 +29,8 @@ async function candidatesByTokenV2(env, cc, meta, lat, lng, rKm, names){
     for (const t of qs){ const arr = postings[t] || []; const rare = 1 / Math.sqrt(arr.length || 1); for (const e of arr){ if (geoDist(lat, lng, e[1], e[2]) > R) continue; hits.set(e[0], (hits.get(e[0]) || 0) + rare); entries[e[0]] = e; } }
     return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).map(x => { const e = entries[x[0]]; return { id: 'ovt:' + e[0], lat: e[1], lng: e[2], name: e[3], addr: e[4] || '', locality: e[5] || '', names: [] }; }); });
 }
-async function candidatesByToken(env, cc, meta, lat, lng, rKm, names){ // الصيغة ١ (أدلاء كاملة) — احتياط حتى يكتمل بناء الصيغة ٢ · الدفعة على أجزاء من ١٠ أسماء
-  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const N = meta.buckets || 4096; const R = rKm * 1.3; const out = [];
-  for (let g = 0; g < names.length; g += 10){ const part = names.slice(g, g + 10);
-    const qsets = part.map(n => { const qs = new Set(); splitName(n).forEach(x => toks(x).forEach(t => { if (!meta.stop.has(t)) qs.add(t); })); return qs; });
-    const buckets = new Set(); qsets.forEach(qs => qs.forEach(t => buckets.add(bucketOfN(t, N)))); const bl = [...buckets].slice(0, 40); const loaded = {}; for (let i = 0; i < bl.length; i += 8) await Promise.all(bl.slice(i, i + 8).map(async b => { loaded[b] = await tokBucket(env, cc, b); }));
-    qsets.forEach(qs => { const hits = new Map(); const entries = {};
-      for (const t of qs){ const bk = loaded[bucketOfN(t, N)]; if (!bk || !own(bk, t)) continue; const arr = bk[t]; const rare = 1 / Math.sqrt(arr.length || 1); for (const e of arr){ if (geoDist(lat, lng, e[1], e[2]) > R) continue; hits.set(e[0], (hits.get(e[0]) || 0) + rare); entries[e[0]] = e; } }
-      out.push([...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).map(x => { const e = entries[x[0]]; return { id: 'ovt:' + e[0], lat: e[1], lng: e[2], name: e[3], addr: e[4] || '', locality: e[5] || '', names: [] }; })); });
-  }
-  return out;
-}
-async function candidatesFor(env, m, lat, lng, rKm, name, cc){ const r = await candidatesAny(env, m, lat, lng, rKm, [name], cc); return r === null ? null : r[0]; }
-async function candidatesAny(env, m, lat, lng, rKm, names, cc){ if (cc && /^[A-Z]{2}$/.test(cc)){ const meta = await tokMetaOf(env, cc); if (meta && meta.m) return meta.m.format === 2 ? candidatesByTokenV2(env, cc, meta.m, lat, lng, rKm, names) : candidatesByToken(env, cc, meta.m, lat, lng, rKm, names); } return candidatesBatch(env, m, lat, lng, rKm, names); }
-async function candidatesBatch(env, m, lat, lng, rKm, names){ // خ-٢: دفعة أسماء لمدينة واحدة — الشظايا تُقرأ مرة (مفهرسة بلا تكرار، بسقف ٤٠ قراءة: حد النداءات الفرعية بالخطة المجانية ٥٠) ثم تُقيَّم الأسماء كلها بالذاكرة
-  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const cy = Math.floor(lat * 10), cx = Math.floor(lng * 10);
-  const cells = cellsAround(lat, lng, rKm).filter(c => own(m.cells || {}, c)).map(c => { const mm = /^c(-?\d+)_(-?\d+)$/.exec(c); const dy = mm ? (+mm[1] - cy) : 0, dx = mm ? (+mm[2] - cx) : 0; return { c, d: dx * dx + dy * dy }; }).sort((a, b) => a.d - b.d).map(x => x.c); if (!cells.length) return null;
-  const qsets = names.map(n => { const qs = new Set(); splitName(n).forEach(x => toks(x).forEach(t => qs.add(t))); return qs; }); const allToks = new Set(); qsets.forEach(qs => qs.forEach(t => allToks.add(t))); if (!allToks.size) return names.map(() => []);
-  const keys = []; const seen = new Set(); for (const c of cells){ const parts = m.cells[c] || 1; const ks = parts === 1 ? [c] : [...new Set([...allToks].map(t => c + '.' + (parseInt(bucketOf(t), 16) % parts)))]; for (const k of ks){ if (!seen.has(k)){ seen.add(k); keys.push(k); } } if (keys.length >= 40) break; }
-  const shards = {}; for (let i = 0; i < keys.length; i += 8) await Promise.all(keys.slice(i, i + 8).map(async k => { shards[k] = await cellShard(env, k); }));
-  return qsets.map(qs => { const hits = new Map(); const entries = {}; for (const k of keys){ const sh = shards[k]; if (!sh) continue; for (const t of qs){ const ids = own(sh.tokens, t) ? sh.tokens[t] : []; const rare = 1 / Math.sqrt(ids.length || 1); ids.forEach(id => { hits.set(id, (hits.get(id) || 0) + rare); if (own(sh.entries, id)) entries[id] = sh.entries[id]; }); } }
-    return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).filter(e => own(entries, e[0])).map(e => Object.assign({ id: 'ovt:' + e[0] }, entries[e[0]])).filter(x => typeof x.lat === 'number'); });
-}
+async function candidatesFor(env, lat, lng, rKm, name, cc){ const r = await candidatesAny(env, lat, lng, rKm, [name], cc); return r === null ? null : r[0]; }
+async function candidatesAny(env, lat, lng, rKm, names, cc){ if (cc && /^[A-Z]{2}$/.test(cc)){ const meta = await tokMetaOf(env, cc); if (meta && meta.m && meta.m.format === 2) return candidatesByTokenV2(env, cc, meta.m, lat, lng, rKm, names); } return null; } // لا فهرس للدولة → noData (الخلفي يفهرسها)
 const UNIT_RE = /\b(shop|unit|building|bldg|floor|office|suite|store|tower|block|villa|gate|plot|no\.?|رقم|محل|مبنى|الدور|مكتب|شارع|طريق|حي|road|rd|st|street|ave|avenue|rue|via|calle|strasse|str|blvd|boulevard|highway|hwy|district)\b/i;
 function pickNamePart(parts){ // الجزء الذي يشبه اسم مكان: حروف أكثر، أرقام أقل، لا أوصاف وحدات/شوارع، ولا مدينة/دولة في الذيل
   let best = 0, bestS = -1e9; const n = parts.length;
@@ -114,7 +89,7 @@ async function searchCities(env, q, cc){ // ز-١-ج: بحث بالمعجم — 
   const hits = arr.filter(c => (!cc || c.cc === cc) && (normAr(c.n).startsWith(nq) || normAr(c.ar || '').startsWith(nq) || normAr(c.n).split(' ').some(w => w.startsWith(nq))));
   return hits.sort((a, b) => b.p - a.p).slice(0, 8).map(c => ({ id: String(c.id), name: c.n, nameAr: c.ar || '', cc: c.cc, lat: c.lat, lng: c.lng }));
 }
-async function logRequest(env, city){ try{ const k = 'req/' + city; if (!(await env.PLACES.head(k))) await env.PLACES.put(k, JSON.stringify({ city, at: new Date().toISOString() })); }catch(_){ } } // مدينة طُلبت ولا بيانات لها — يجهّزها السير الأسبوعي
+async function logRequest(env, cc){ try{ const k = 'req/' + cc; if (!(await env.PLACES.head(k))) await env.PLACES.put(k, JSON.stringify({ cc, at: new Date().toISOString() })); }catch(_){ } } // طلب دولة بلا فهرس — يخدمها الخلفي كل ساعة // مدينة طُلبت ولا بيانات لها — يجهّزها السير الأسبوعي
 // ═══ خ-١: خلفية الخريطة — /tiles/{z}/{x}/{y}.mvt من ملفات الدول بـR2 · /tiles/style/{light|dark}.json · /tiles/assets/* (الخطوط والرموز من مخزننا)
 let tileBoxes = null, tileBoxesAt = 0; const pmCache = new Map();
 async function tileBoxesOf(env){ if (tileBoxes && Date.now() - tileBoxesAt < 600000) return tileBoxes; try{ const o = await env.PLACES.get('tiles/manifest.json'); const m = o ? await o.json() : null; tileBoxes = (m && m.bbox) || {}; }catch(_){ tileBoxes = tileBoxes || {}; } tileBoxesAt = Date.now(); return tileBoxes; } // خ-٢: تنتهي كل ١٠ دقائق (عزلة قديمة كانت تحمل دولتين فقط → بلاطات فارغة)
@@ -137,8 +112,8 @@ export default {
       const lat = parseFloat(url.searchParams.get('lat')), lng = parseFloat(url.searchParams.get('lng')), rKm = Math.min(60, Math.max(3, parseFloat(url.searchParams.get('r')) || 12));
       if (!name.trim()) return json({ error: 'name required', candidates: [] }, origin, 400);
       if (!(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180)) return json({ error: 'lat/lng required', candidates: [] }, origin, 400);
-      const m = await manifest(env); const cands = await candidatesFor(env, m, lat, lng, rKm, name, cc);
-      if (cands === null){ if (/^[A-Za-z0-9_-]{1,40}$/.test(city)) await logRequest(env, city); return json({ noData: true, candidates: [] }, origin, 200); } // لا تغطية — ليس خطأ؛ الخريطة والدبوس يعملان · الطلب يُسجَّل للخلفي
+      const cands = await candidatesFor(env, lat, lng, rKm, name, cc);
+      if (cands === null){ if (/^[A-Z]{2}$/.test(cc)) await logRequest(env, cc); return json({ noData: true, candidates: [] }, origin, 200); } // لا تغطية — ليس خطأ؛ الخريطة والدبوس يعملان · الطلب يُسجَّل للخلفي
       const __v = (cc && tokMeta.get(cc) && tokMeta.get(cc).m) ? tokMeta.get(cc).m.vocab : null; return json(decide(name, addr, cands, undefined, __v), origin);
     }
     const tile = parseTilePath(url.pathname); if (tile) return serveTile(request, env, tile, origin); // خ-١
@@ -146,13 +121,13 @@ export default {
     if (url.pathname.startsWith('/tiles/assets/')){ let key = 'assets/' + url.pathname.slice('/tiles/assets/'.length).replace(/\.\./g, ''); try{ key = decodeURIComponent(key); }catch(_){} const acao = { 'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0], 'Vary': 'Origin' }; const o = await env.PLACES.get(key); if (!o) return new Response('', { status: 404, headers: acao }); const ct = key.endsWith('.json') ? 'application/json' : key.endsWith('.png') ? 'image/png' : key.endsWith('.pbf') ? 'application/x-protobuf' : 'application/octet-stream'; return new Response(o.body, { status: 200, headers: Object.assign({ 'Content-Type': ct, 'Cache-Control': 'public, max-age=604800' }, acao) }); } // خ-٢: أسماء الخطوط فيها فراغات (%20) → تُفكّ · ACAO حتى على 404 (سفاري يعدّ غيابه فشل تحميل)
     if (url.pathname === '/match-batch' && request.method === 'POST'){ let body = null; try{ body = await request.json(); }catch(_){ return json({ error: 'bad json' }, origin, 400); } const city = String((body && body.city) || '').trim(), cc = String((body && body.cc) || '').toUpperCase().slice(0, 2), lat = parseFloat(body && body.lat), lng = parseFloat(body && body.lng), rKm = Math.min(60, Math.max(3, parseFloat(body && body.r) || 12)); const items = Array.isArray(body && body.items) ? body.items.slice(0, 50) : [];
       if (!(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) || !items.length) return json({ error: 'lat/lng and items required' }, origin, 400);
-      const m = await manifest(env); const lists = await candidatesAny(env, m, lat, lng, rKm, items.map(it => String(it.name || '').slice(0, 120)), cc);
-      if (lists === null){ if (/^[A-Za-z0-9_-]{1,40}$/.test(city)) await logRequest(env, city); return json({ noData: true, results: items.map(() => ({ candidates: [] })) }, origin, 200); }
-      return json({ index: (cc && tokMeta.get(cc) && tokMeta.get(cc).m) ? (tokMeta.get(cc).m.format === 2 ? 'token2' : 'token') : 'cells', results: items.map((it, i) => decide(String(it.name || ''), String(it.addr || '').slice(0, 160), lists[i], undefined, (cc && tokMeta.get(cc) && tokMeta.get(cc).m) ? tokMeta.get(cc).m.vocab : null)) }, origin); } // خ-٢: اقتراحات الخريطة دفعةً واحدة · index يقول أي فهرس أجاب
+      const lists = await candidatesAny(env, lat, lng, rKm, items.map(it => String(it.name || '').slice(0, 120)), cc);
+      if (lists === null){ if (/^[A-Z]{2}$/.test(cc)) await logRequest(env, cc); return json({ noData: true, results: items.map(() => ({ candidates: [] })) }, origin, 200); }
+      return json({ index: 'token2', results: items.map((it, i) => decide(String(it.name || ''), String(it.addr || '').slice(0, 160), lists[i], undefined, (cc && tokMeta.get(cc) && tokMeta.get(cc).m) ? tokMeta.get(cc).m.vocab : null)) }, origin); } // خ-٢: اقتراحات الخريطة دفعةً واحدة · index يقول أي فهرس أجاب
     if (url.pathname === '/cities'){ const q = (url.searchParams.get('q') || '').slice(0, 60), cc = (url.searchParams.get('cc') || '').toUpperCase().slice(0, 2); return json({ results: await searchCities(env, q, cc) }, origin); } // ز-١-ج
-    if (url.pathname === '/requests'){ const list = await env.PLACES.list({ prefix: 'req/' }); return json({ cities: (list.objects || []).map(o => o.key.slice(4)) }, origin); } // للسير الأسبوعي
+    if (url.pathname === '/requests'){ const list = await env.PLACES.list({ prefix: 'req/' }); return json({ countries: (list.objects || []).map(o => o.key.slice(4)) }, origin); } // للسير الأسبوعي
     if (url.pathname === '/resolve'){ const raw = url.searchParams.get('url') || ''; if (!raw) return json({ error: 'url required' }, origin, 400); return json(await resolveGoogle(raw, url.searchParams.get('debug') === '1'), origin); }
-    if (url.pathname === '/health'){ const m = await manifest(env); const g = await env.PLACES.head('gaz/manifest.json'); let tiles = null; try{ const o = await env.PLACES.get('tiles/manifest.json'); tiles = o ? await o.json() : null; }catch(_){} return json({ ok: true, data: Object.keys(m.cells || {}).length > 0, cells: Object.keys(m.cells || {}).length, release: m.release || '', gazetteer: !!g, tiles: tiles ? { countries: Object.keys(tiles.bbox || {}).length, build: tiles.build || '', gb: tiles.gb || 0 } : null, at: new Date().toISOString() }, origin); }
+    if (url.pathname === '/health'){ let tok = null; try{ const o = await env.PLACES.get('tok/report.json'); tok = o ? await o.json() : null; }catch(_){} const g = await env.PLACES.head('gaz/manifest.json'); let tiles = null; try{ const o = await env.PLACES.get('tiles/manifest.json'); tiles = o ? await o.json() : null; }catch(_){} return json({ ok: true, data: !!(tok && tok.countries && Object.keys(tok.countries).length), countries: tok ? Object.keys(tok.countries || {}).length : 0, indexGB: tok ? +((tok.mb || 0) / 1024).toFixed(2) : 0, release: tok && tok.release ? tok.release : '', gazetteer: !!g, tiles: tiles ? { countries: Object.keys(tiles.bbox || {}).length, build: tiles.build || '', gb: tiles.gb || 0 } : null, at: new Date().toISOString() }, origin); }
     return new Response('MyPickz places', { status: 404, headers: { 'Content-Type': 'text/plain' } });
   }
 };
