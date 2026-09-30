@@ -129,7 +129,7 @@ export default {
       const cc = (url.searchParams.get('cc') || '').toUpperCase().slice(0, 2), lat = parseFloat(url.searchParams.get('lat')), lng = parseFloat(url.searchParams.get('lng'));
       if (!/^[A-Z]{2}$/.test(cc) || !(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180)) return json({ error: 'cc/lat/lng required' }, origin, 400);
       const key = 'div/' + cc + '/d' + Math.floor(lat * 2) + '_' + Math.floor(lng * 2) + '.json.gz'; let arr = null; try{ arr = await readJson(env, key); }catch(_){ } if (!arr) return json({ area: '', noData: true }, origin);
-      const rank = { microhood: 0, neighborhood: 1, locality: 2, localadmin: 3 }; const hits = arr.filter(a => a && a.ring && pointInRing(lng, lat, a.ring)).sort((a, b) => (rank[a.t] ?? 9) - (rank[b.t] ?? 9));
+      const rank = { microhood: 0, neighborhood: 1, macrohood: 2, locality: 3, localadmin: 4 }; const hits = arr.filter(a => a && a.ring && pointInRing(lng, lat, a.ring)).sort((a, b) => (rank[a.t] ?? 9) - (rank[b.t] ?? 9));
       return json({ area: hits.length ? hits[0].n : '', type: hits.length ? hits[0].t : '', chain: hits.map(h => h.n).slice(0, 3) }, origin); }
     if (url.pathname === '/cities'){ const q = (url.searchParams.get('q') || '').slice(0, 60), cc = (url.searchParams.get('cc') || '').toUpperCase().slice(0, 2); return json({ results: await searchCities(env, q, cc) }, origin); } // ز-١-ج
     if (url.pathname === '/requests'){ const list = await env.PLACES.list({ prefix: 'req/' }); return json({ countries: (list.objects || []).map(o => o.key.slice(4)) }, origin); } // للسير الأسبوعي
