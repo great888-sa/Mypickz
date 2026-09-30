@@ -1,5 +1,5 @@
 // اختبارات وحدة لمنطق المطابقة وحل الروابط (بلا شبكة) — تعمل بالناشر قبل النشر
-import { decide, toks, bucketOf, nameSim, cellsAround as cellsAroundForTest } from './src/match.js';
+import { decide, toks, bucketOf, nameSim, cellsAround as cellsAroundForTest, isStreetAddress } from './src/match.js';
 let fails = 0; const ok = (n, c, why) => { console.log((c ? 'PASS  ' : 'FAIL  ') + n + (c ? '' : '  →  ' + (why || ''))); if (!c) fails++; };
 const C = [{ id: 'ovt:1', name: 'Dalmata', addr: '8 Rue Tiquetonne', locality: 'Paris', lat: 48.865, lng: 2.348 }, { id: 'ovt:2', name: 'Dalmata Pizza', addr: '21 Rue de Charonne', locality: 'Paris', lat: 48.853, lng: 2.375 }, { id: 'ovt:3', name: 'Le Peloton Café', addr: '17 Rue du Pont Louis-Philippe', locality: 'Paris', lat: 48.855, lng: 2.356 }];
 ok('auto: name + address decide with certainty', (decide('Dalmata', '8 Rue Tiquetonne, 75002 Paris', C).auto || {}).id === 'ovt:1');
@@ -11,6 +11,8 @@ ok('no address in request: exact name → auto (score = name only, ≥ 0.9)', (d
 ok('district (not a street) does not penalise: exact name + area "2e arr." → auto (no competing branch)', (decide('Dalmata', '2e arr.', [C[0], C[2]]).auto || {}).id === 'ovt:1');
 ok('district with a competing branch (Dalmata vs Dalmata Pizza, far apart) → still ambiguous (no auto)', !decide('Dalmata', 'Marais', [C[0], C[1]]).auto);
 ok('long district name without digits (Saint-Germain-des-Prés) → not a street → exact name auto', (decide('Le Tout-Paris', 'Quartier Latin Rive Gauche', [{ id: 'ovt:t1', name: 'Le Tout-Paris', addr: '8 Quai du Louvre', lat: 48.86, lng: 2.34 }, { id: 'ovt:t2', name: 'Net Tout Net', addr: '5 place du Général de Gaulle', lat: 48.9, lng: 2.4 }]).auto || {}).id === 'ovt:t1');
+ok('street detection: "8 Quai du Louvre" · "Al Imam Saud Rd, Riyadh 13315" → street; "Louvre · 1er" · "Le Marais 3e/4e" · "2e arr." · "As Sahafah" → district', isStreetAddress('8 Quai du Louvre') && isStreetAddress('Al Imam Saud Ibn Faysal Rd, As Sahafah, Riyadh 13315') && !isStreetAddress('Louvre · 1er') && !isStreetAddress('Le Marais 3e/4e') && !isStreetAddress('2e arr.') && !isStreetAddress('As Sahafah'));
+ok('district with digits (Louvre · 1er) → exact name auto', (decide('Le Tout-Paris', 'Louvre · 1er', [{ id: 'ovt:t1', name: 'Le Tout-Paris', addr: '8 Quai du Louvre', lat: 48.86, lng: 2.34 }, { id: 'ovt:t2', name: 'Net Tout Net', addr: '5 place du Général de Gaulle', lat: 48.9, lng: 2.4 }]).auto || {}).id === 'ovt:t1');
 ok('bucketOf is stable 2-hex', /^[0-9a-f]{2}$/.test(bucketOf('dalmata')) && bucketOf('dalmata') === bucketOf('dalmata'));
 const cells = cellsAroundForTest(24.7136, 46.6753, 12); ok('cells around Riyadh center r=12km: includes c247_466 and is bounded', cells.includes('c247_466') && cells.length >= 9 && cells.length <= 81, cells.length + ' cells');
 console.log(fails ? ('FAILED ' + fails) : 'ALL PASS'); process.exit(fails ? 1 : 0);
