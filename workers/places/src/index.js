@@ -7,17 +7,18 @@ const ALLOWED_ORIGINS = ['https://mypickz.app', 'https://test.mypickz.app'];
 let manifestCache = null, manifestAt = 0;
 async function manifest(env){ if (manifestCache && Date.now() - manifestAt < 900000) return manifestCache; try{ const o = await env.PLACES.get('cells/manifest.json'); manifestCache = o ? await o.json() : { cells: {} }; }catch(_){ manifestCache = { cells: {} }; } manifestAt = Date.now(); return manifestCache; }
 
-async function readJson(env, key){ const o = await env.PLACES.get(key); if (!o) return null; if (key.endsWith('.gz')){ const ds = new DecompressionStream('gzip'); const txt = await new Response(o.body.pipeThrough(ds)).text(); return JSON.parse(txt); } return o.json(); }
+async function readJson(env, key){ const o = await env.PLACES.get(key); if (!o) return null; if (key.endsWith('.gz')){ const ds = new DecompressionStream('gzip'); const txt = await new Response(o.body.pipeThrough(ds)).text(); const v = JSON.parse(txt); try{ Object.defineProperty(v, '__bytes', { value: txt.length, enumerable: false }); }catch(_){} return v; } return o.json(); } // __bytes: حجم النص المفكوك (لتفريغ الذاكرة بالحجم)
 const GOOGLE_HOSTS = /^(maps\.app\.goo\.gl|goo\.gl|www\.google\.[a-z.]+|google\.[a-z.]+|maps\.google\.[a-z.]+)$/i;
 function cors(origin){ const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]; return { 'Access-Control-Allow-Origin': allow, 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400', 'Vary': 'Origin', 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }; } // خ-٢: الفحص المسبق لـPOST (الدفعة)
 const json = (obj, origin, status = 200) => new Response(JSON.stringify(obj), { status, headers: cors(origin) });
 const shardCache = new Map(); // ذاكرة العزلة: مدينة/شظية → {tokens, entries}
-async function cellShard(env, key){ if (shardCache.has(key)) return shardCache.get(key); let data = null; try{ data = await readJson(env, 'cells/' + key + '.json.gz'); }catch(_){ } data = data || { tokens: {}, entries: {} }; if (shardCache.size > 400) shardCache.clear(); shardCache.set(key, data); return data; } // ذاكرة العزلة أوسع (المدن الكبيرة)
+function cachePut(map, key, data, capBytes){ const b = (data && data.__bytes) || 0; map.set(key, data); let total = 0; for (const v of map.values()) total += (v && v.__bytes) || 0; for (const k of map.keys()){ if (total <= capBytes) break; const v = map.get(k); total -= (v && v.__bytes) || 0; map.delete(k); } } // تفريغ بالحجم (الأقدم أولًا) — ذاكرة العزلة ١٢٨ م.ب ولا ترفعها الخطة
+async function cellShard(env, key){ if (shardCache.has(key)) return shardCache.get(key); let data = null; try{ data = await readJson(env, 'cells/' + key + '.json.gz'); }catch(_){ } data = data || { tokens: {}, entries: {} }; cachePut(shardCache, key, data, 24 * 1048576); return data; }
 // ═══ الفهرس بالكلمة أولًا لكل دولة (tok/<CC>/<bucket>.json.gz) — السؤال ≤ ٥ قراءات صغيرة مهما كبرت المدينة؛ إن لم يوجد للدولة → الخلايا (احتياط حتى يكتمل التعميم)
 const tokMeta = new Map(); const tokCache = new Map();
 function bucketOfN(t, n){ let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h % (n || 4096); } // عدد الأدلاء من بيان الدولة
 async function tokMetaOf(env, cc){ if (tokMeta.has(cc) && Date.now() - tokMeta.get(cc).at < 600000) return tokMeta.get(cc); let m = null; try{ const o = await env.PLACES.get('tok/' + cc + '/manifest.json'); if (o){ m = await o.json(); const so = await env.PLACES.get('tok/' + cc + '/stop.json'); m.stop = new Set(so ? await so.json() : []); } }catch(_){ m = null; } tokMeta.set(cc, { at: Date.now(), m }); return tokMeta.get(cc); }
-async function tokBucket(env, cc, b){ const key = cc + '/' + b; if (tokCache.has(key)) return tokCache.get(key); let d = null; try{ d = await readJson(env, 'tok/' + cc + '/' + b + '.json.gz'); }catch(_){ } d = d || {}; if (tokCache.size > 60) tokCache.clear(); tokCache.set(key, d); return d; } // ذاكرة محدودة: ٦٠ دلوًا
+async function tokBucket(env, cc, b){ const key = cc + '/' + b; if (tokCache.has(key)){ const v = tokCache.get(key); tokCache.delete(key); tokCache.set(key, v); return v; } let d = null; try{ d = await readJson(env, 'tok/' + cc + '/' + b + '.json.gz'); }catch(_){ } d = d || {}; cachePut(tokCache, key, d, 40 * 1048576); return d; } // سقف ٤٠ م.ب مفكوكة (LRU)
 function geoDist(aLat, aLng, bLat, bLng){ const R = 6371, t = x => x * Math.PI / 180; const dLat = t(bLat - aLat), dLng = t(bLng - aLng); const q = Math.sin(dLat / 2) ** 2 + Math.cos(t(aLat)) * Math.cos(t(bLat)) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(q)); }
 async function candidatesByToken(env, cc, meta, lat, lng, rKm, names){ // الدفعة على أجزاء من ١٠ أسماء بالتتابع، وذاكرة الأدلاء تُفرَّغ بين الأجزاء (ذروة الذاكرة محدودة بالخطة المجانية)
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k); const N = meta.buckets || 4096; const R = rKm * 1.3; const out = [];
@@ -27,7 +28,6 @@ async function candidatesByToken(env, cc, meta, lat, lng, rKm, names){ // الد
     qsets.forEach(qs => { const hits = new Map(); const entries = {};
       for (const t of qs){ const bk = loaded[bucketOfN(t, N)]; if (!bk || !own(bk, t)) continue; const arr = bk[t]; const rare = 1 / Math.sqrt(arr.length || 1); for (const e of arr){ if (geoDist(lat, lng, e[1], e[2]) > R) continue; hits.set(e[0], (hits.get(e[0]) || 0) + rare); entries[e[0]] = e; } }
       out.push([...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).map(x => { const e = entries[x[0]]; return { id: 'ovt:' + e[0], lat: e[1], lng: e[2], name: e[3], addr: e[4] || '', locality: e[5] || '', names: [] }; })); });
-    if (tokCache.size > 40) tokCache.clear(); // تفريغ بين الأجزاء
   }
   return out;
 }
