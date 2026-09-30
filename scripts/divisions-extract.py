@@ -15,7 +15,7 @@ for cc in ccs:
     if not b: print(cc, 'no bbox'); continue
     out = f'scripts/eval/r2/div/{cc}'; os.makedirs(out, exist_ok=True)
     q = f"""SELECT names.primary AS n, subtype AS t, ST_AsGeoJSON(ST_Simplify(geometry, 0.0004)) AS g FROM read_parquet('{src}', hive_partitioning=1)
-            WHERE country = '{cc}' AND subtype IN ('locality','neighborhood','microhood','localadmin') AND bbox.xmin >= {b[0]} AND bbox.xmax <= {b[2]} AND bbox.ymin >= {b[1]} AND bbox.ymax <= {b[3]}"""
+            WHERE country = '{cc}' AND subtype IN ('locality','neighborhood','microhood','macrohood','localadmin') AND bbox.xmin >= {b[0]} AND bbox.xmax <= {b[2]} AND bbox.ymin >= {b[1]} AND bbox.ymax <= {b[3]}"""
     try:
         diag = con.execute(f"SELECT subtype, count(*) FROM read_parquet('{src}', hive_partitioning=1) WHERE country = '{cc}' GROUP BY subtype ORDER BY 2 DESC").fetchall()
         print(cc, 'division areas by subtype (no bbox filter):', diag)
@@ -26,9 +26,9 @@ for cc in ccs:
         if not name or not g: continue
         try: geo = json.loads(g)
         except Exception: continue
-        polys = geo['coordinates'] if geo['type'] == 'Polygon' else [p for mp in geo['coordinates'] for p in [mp]] if geo['type'] == 'MultiPolygon' else []
+        polys = [geo['coordinates']] if geo['type'] == 'Polygon' else (geo['coordinates'] if geo['type'] == 'MultiPolygon' else [])  # كل مضلع = [حلقة خارجية، ثقوب…]
         for poly in polys:
-            ring = poly[0] if geo['type'] == 'Polygon' else poly[0]
+            ring = poly[0] if poly else []  # الحلقة الخارجية
             if len(ring) < 4: continue
             ring = [[round(x, 5), round(y, 5)] for x, y in ring]
             lngs = [p[0] for p in ring]; lats = [p[1] for p in ring]
