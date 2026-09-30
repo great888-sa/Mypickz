@@ -90,6 +90,7 @@ async function searchCities(env, q, cc){ // ز-١-ج: بحث بالمعجم — 
   return hits.sort((a, b) => b.p - a.p).slice(0, 8).map(c => ({ id: String(c.id), name: c.n, nameAr: c.ar || '', cc: c.cc, lat: c.lat, lng: c.lng }));
 }
 async function logRequest(env, cc){ try{ const k = 'req/' + cc; if (!(await env.PLACES.head(k))) await env.PLACES.put(k, JSON.stringify({ cc, at: new Date().toISOString() })); }catch(_){ } } // طلب دولة بلا فهرس — يخدمها الخلفي كل ساعة // مدينة طُلبت ولا بيانات لها — يجهّزها السير الأسبوعي
+function pointInRing(x, y, ring){ let inside = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++){ const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1]; const inter = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi); if (inter) inside = !inside; } return inside; } // نقطة داخل مضلع (شعاع)
 // ═══ خ-١: خلفية الخريطة — /tiles/{z}/{x}/{y}.mvt من ملفات الدول بـR2 · /tiles/style/{light|dark}.json · /tiles/assets/* (الخطوط والرموز من مخزننا)
 let tileBoxes = null, tileBoxesAt = 0; const pmCache = new Map();
 async function tileBoxesOf(env){ if (tileBoxes && Date.now() - tileBoxesAt < 600000) return tileBoxes; try{ const o = await env.PLACES.get('tiles/manifest.json'); const m = o ? await o.json() : null; tileBoxes = (m && m.bbox) || {}; }catch(_){ tileBoxes = tileBoxes || {}; } tileBoxesAt = Date.now(); return tileBoxes; } // خ-٢: تنتهي كل ١٠ دقائق (عزلة قديمة كانت تحمل دولتين فقط → بلاطات فارغة)
@@ -124,6 +125,12 @@ export default {
       const lists = await candidatesAny(env, lat, lng, rKm, items.map(it => String(it.name || '').slice(0, 120)), cc);
       if (lists === null){ if (/^[A-Z]{2}$/.test(cc)) await logRequest(env, cc); return json({ noData: true, results: items.map(() => ({ candidates: [] })) }, origin, 200); }
       return json({ index: 'token2', results: items.map((it, i) => decide(String(it.name || ''), String(it.addr || '').slice(0, 160), lists[i], undefined, (cc && tokMeta.get(cc) && tokMeta.get(cc).m) ? tokMeta.get(cc).m.vocab : null)) }, origin); } // خ-٢: اقتراحات الخريطة دفعةً واحدة · index يقول أي فهرس أجاب
+    if (url.pathname === '/area'){ // خ-٤: الحي من الموضع — نقطة داخل حدود Overture Divisions المخزَّنة عندنا (الأصغر أولًا: microhood > neighborhood > locality > localadmin)
+      const cc = (url.searchParams.get('cc') || '').toUpperCase().slice(0, 2), lat = parseFloat(url.searchParams.get('lat')), lng = parseFloat(url.searchParams.get('lng'));
+      if (!/^[A-Z]{2}$/.test(cc) || !(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180)) return json({ error: 'cc/lat/lng required' }, origin, 400);
+      const key = 'div/' + cc + '/d' + Math.floor(lat * 2) + '_' + Math.floor(lng * 2) + '.json.gz'; let arr = null; try{ arr = await readJson(env, key); }catch(_){ } if (!arr) return json({ area: '', noData: true }, origin);
+      const rank = { microhood: 0, neighborhood: 1, locality: 2, localadmin: 3 }; const hits = arr.filter(a => a && a.ring && pointInRing(lng, lat, a.ring)).sort((a, b) => (rank[a.t] ?? 9) - (rank[b.t] ?? 9));
+      return json({ area: hits.length ? hits[0].n : '', type: hits.length ? hits[0].t : '', chain: hits.map(h => h.n).slice(0, 3) }, origin); }
     if (url.pathname === '/cities'){ const q = (url.searchParams.get('q') || '').slice(0, 60), cc = (url.searchParams.get('cc') || '').toUpperCase().slice(0, 2); return json({ results: await searchCities(env, q, cc) }, origin); } // ز-١-ج
     if (url.pathname === '/requests'){ const list = await env.PLACES.list({ prefix: 'req/' }); return json({ countries: (list.objects || []).map(o => o.key.slice(4)) }, origin); } // للسير الأسبوعي
     if (url.pathname === '/resolve'){ const raw = url.searchParams.get('url') || ''; if (!raw) return json({ error: 'url required' }, origin, 400); return json(await resolveGoogle(raw, url.searchParams.get('debug') === '1'), origin); }
