@@ -2,7 +2,8 @@
 // السؤال الواحد = ≤ ٥ قراءات صغيرة مهما كبرت المدينة · الكلمات الشائعة جدًّا بالدولة (> STOP_MAX ظهورًا) تُسقط وتُسجَّل بـ stop.json · المرور على الملف بمراحل (حزم أدلاء) لضبط الذاكرة
 import fs from 'fs'; import path from 'path'; import zlib from 'zlib'; import readline from 'readline';
 import { toks, bucketOf } from '../workers/places/src/match.js';
-const SRC = 'scripts/eval/cells', OUT = 'scripts/eval/r2/tok'; const BUCKETS = 4096, PASSES = 4, STOP_MAX = 12000; // كلمة > ١٢ ألف ظهور بالدولة = توقف (الدلو يبقى صغيرًا)
+const SRC = 'scripts/eval/cells', OUT = 'scripts/eval/r2/tok'; const PASSES = 4, STOP_MAX = 12000; // كلمة > ١٢ ألف ظهور بالدولة = توقف (الدلو يبقى صغيرًا)
+let BUCKETS = 4096; // الدول > مليوني مكان: ١٦٬٣٨٤ دلوًا (أكبر دلو ~٣٠٠ ك.ب) — العدد يُكتب ببيان الدولة ويقرؤه العامل
 function bucket4096(t){ let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h % BUCKETS; }
 const report = {};
 for (const f of fs.readdirSync(SRC).filter(x => x.endsWith('.jsonl'))){
@@ -10,10 +11,10 @@ for (const f of fs.readdirSync(SRC).filter(x => x.endsWith('.jsonl'))){
   const counts = new Map(); // ظهور كل كلمة بالدولة (للتوقف التلقائي) — مرور أول
   let places = 0;
   await (async () => { const rl = readline.createInterface({ input: fs.createReadStream(path.join(SRC, f)), crlfDelay: Infinity }); for await (const line of rl){ if (!line.trim()) continue; let p; try{ p = JSON.parse(line); }catch(_){ continue; } if (!p.name || typeof p.lat !== 'number') continue; places++; const names = [p.name].concat(p.common && typeof p.common === 'object' ? Object.values(p.common).filter(x => x && x !== p.name).slice(0, 3) : []); toks(names.join(' ')).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)); } })();
-  const stop = [...counts.entries()].filter(([, n]) => n > STOP_MAX).map(([t]) => t); const stopSet = new Set(stop);
+  const stop = [...counts.entries()].filter(([, n]) => n > STOP_MAX).map(([t]) => t); const stopSet = new Set(stop); BUCKETS = places > 2000000 ? 16384 : 4096;
   let bytes = 0, postings = 0, maxBucket = 0;
   for (let pass = 0; pass < PASSES; pass++){
-    const lo = pass * (BUCKETS / PASSES), hi = lo + BUCKETS / PASSES; const buckets = new Map();
+    const lo = pass * (BUCKETS / PASSES), hi = lo + BUCKETS / PASSES; // أجزاء متساوية من نطاق الأدلاء const buckets = new Map();
     const rl = readline.createInterface({ input: fs.createReadStream(path.join(SRC, f)), crlfDelay: Infinity });
     for await (const line of rl){ if (!line.trim()) continue; let p; try{ p = JSON.parse(line); }catch(_){ continue; } if (!p.name || typeof p.lat !== 'number') continue;
       const names = [p.name].concat(p.common && typeof p.common === 'object' ? Object.values(p.common).filter(x => x && x !== p.name).slice(0, 3) : []); const T = toks(names.join(' '));
