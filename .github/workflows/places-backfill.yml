@@ -58,7 +58,7 @@ jobs:
               try: rep['countries'][cc] = json.load(open(f'scripts/eval/r2/tok/{cc}/manifest.json'))
               except Exception: pass
               subprocess.run(['rclone', 'deletefile', f'r2:mypickz-places/req/{cc}'], capture_output=True)
-          rep['mb'] = round(sum(v.get('mb', 0) for v in rep['countries'].values()), 1)
+          rep['release'] = open('scripts/eval/overture-release.txt').read().strip(); rep['mb'] = round(sum(v.get('mb', 0) for v in rep['countries'].values()), 1)
           json.dump(rep, open('/tmp/tok-report.json', 'w')); subprocess.run(['rclone', 'copyto', '/tmp/tok-report.json', 'r2:mypickz-places/tok/report.json'], check=True)
           print('backfill done · countries indexed', len(rep['countries']))
           PY
