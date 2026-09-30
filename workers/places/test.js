@@ -10,6 +10,7 @@ ok('city tokens ignored: «Bâoli Dubai» → tokens without dubai', !toks('Bâo
 ok('no address in request: exact name → auto (score = name only, ≥ 0.9)', (decide('Le Peloton Café', '', C).auto || {}).id === 'ovt:3');
 ok('district (not a street) does not penalise: exact name + area "2e arr." → auto (no competing branch)', (decide('Dalmata', '2e arr.', [C[0], C[2]]).auto || {}).id === 'ovt:1');
 ok('district with a competing branch (Dalmata vs Dalmata Pizza, far apart) → still ambiguous (no auto)', !decide('Dalmata', 'Marais', [C[0], C[1]]).auto);
+ok('long district name without digits (Saint-Germain-des-Prés) → not a street → exact name auto', (decide('Le Tout-Paris', 'Quartier Latin Rive Gauche', [{ id: 'ovt:t1', name: 'Le Tout-Paris', addr: '8 Quai du Louvre', lat: 48.86, lng: 2.34 }, { id: 'ovt:t2', name: 'Net Tout Net', addr: '5 place du Général de Gaulle', lat: 48.9, lng: 2.4 }]).auto || {}).id === 'ovt:t1');
 ok('bucketOf is stable 2-hex', /^[0-9a-f]{2}$/.test(bucketOf('dalmata')) && bucketOf('dalmata') === bucketOf('dalmata'));
 const cells = cellsAroundForTest(24.7136, 46.6753, 12); ok('cells around Riyadh center r=12km: includes c247_466 and is bounded', cells.includes('c247_466') && cells.length >= 9 && cells.length <= 81, cells.length + ' cells');
 console.log(fails ? ('FAILED ' + fails) : 'ALL PASS'); process.exit(fails ? 1 : 0);
