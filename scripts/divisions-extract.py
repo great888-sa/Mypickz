@@ -16,8 +16,11 @@ for cc in ccs:
     out = f'scripts/eval/r2/div/{cc}'; os.makedirs(out, exist_ok=True)
     q = f"""SELECT names.primary AS n, subtype AS t, ST_AsGeoJSON(ST_Simplify(geometry, 0.0004)) AS g FROM read_parquet('{src}', hive_partitioning=1)
             WHERE country = '{cc}' AND subtype IN ('locality','neighborhood','microhood','localadmin') AND bbox.xmin >= {b[0]} AND bbox.xmax <= {b[2]} AND bbox.ymin >= {b[1]} AND bbox.ymax <= {b[3]}"""
-    try: rows = con.execute(q).fetchall()
-    except Exception as e: print(cc, 'ERROR', str(e)[:200]); continue
+    try:
+        diag = con.execute(f"SELECT subtype, count(*) FROM read_parquet('{src}', hive_partitioning=1) WHERE country = '{cc}' GROUP BY subtype ORDER BY 2 DESC").fetchall()
+        print(cc, 'division areas by subtype (no bbox filter):', diag)
+        rows = con.execute(q).fetchall()
+    except Exception as e: print(cc, 'ERROR', str(e)[:300]); continue
     cells = {}; n = 0
     for name, t, g in rows:
         if not name or not g: continue
