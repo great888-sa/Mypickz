@@ -1,22 +1,31 @@
-# MyPickz — الخلفي كل ساعة (ز-١-ج-١ · قرار المالك): أي مدينة طلبها مستخدم ولا بيانات لها تُجهَّز تلقائيًّا — خروج مبكر بلا طلبات · قفل تزامن
+# MyPickz — الخلفي كل رأس ساعة: دولة طلبها مستخدم ولا فهرس لها (req/<CC>) → استخراج من Overture المثبَّت → الفهرس v2 → R2 · خروج مبكر إن لا طلبات · قفل تزامن · الدول خارج المناطق الثلاث فقط (روسيا · تركيا · …)
 name: Places backfill (hourly)
 on:
   schedule:
-    - cron: "7 * * * *"
+    - cron: "0 * * * *"
   workflow_dispatch:
 concurrency:
-  group: places-backfill
+  group: places-index
   cancel-in-progress: false
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 340
+    timeout-minutes: 120
+    env:
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      RCLONE_CONFIG_R2_ACL: private
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
     steps:
-      - name: Any requests? (early exit)
+      - name: Requested countries (early exit)
         id: req
         run: |
-          curl -s https://places.mypickz.app/requests > /tmp/req.json || echo '{"cities":[]}' > /tmp/req.json
-          n=$(python3 -c "import json;print(len(json.load(open('/tmp/req.json')).get('cities',[])))"); echo "requests=$n"; echo "n=$n" >> $GITHUB_OUTPUT
+          curl -s https://places.mypickz.app/requests > /tmp/req.json || echo '{"countries":[]}' > /tmp/req.json
+          n=$(python3 -c "import json; d=json.load(open('/tmp/req.json')); cc=[c for c in d.get('countries',[]) if len(c)==2 and c.isalpha()]; print(len(cc))")
+          echo "n=$n" >> $GITHUB_OUTPUT; echo "requested countries: $n"
       - uses: actions/checkout@v4
         if: steps.req.outputs.n != '0'
       - uses: actions/setup-python@v5
@@ -27,39 +36,29 @@ jobs:
         if: steps.req.outputs.n != '0'
         with:
           node-version: '20'
-      - name: Requested cities → list file
+      - name: Extract → token index v2 → upload (country by country)
         if: steps.req.outputs.n != '0'
         run: |
-          pip install duckdb==1.1.3 >/dev/null
-          python - <<'PY'
-          import json, glob
-          req = set(json.load(open('/tmp/req.json')).get('cities', []))
-          out = []
-          for f in glob.glob('cities/*.json'):
-              cc = f.split('/')[-1][:-5]
-              for e in json.load(open(f, encoding='utf-8')):
-                  if str(e['id']) in req: out.append({'id': e['id'], 'n': e['n'], 'cc': cc, 'lat': e['lat'], 'lng': e['lng'], 'p': e.get('p', 0)})
-          json.dump({'cities': out}, open('/tmp/req-cities.json', 'w', encoding='utf-8'), ensure_ascii=False)
-          print('requested cities found in gazetteer:', len(out))
+          pip install duckdb==1.1.3 >/dev/null && curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null 2>&1
+          python3 - <<'PY'
+          import json, subprocess, os, shutil
+          cb = json.load(open('scripts/eval/country-bbox.json', encoding='utf-8'))
+          req = [c for c in json.load(open('/tmp/req.json')).get('countries', []) if len(c) == 2 and c.isalpha()]
+          try: rep = json.loads(subprocess.run(['rclone', 'cat', 'r2:mypickz-places/tok/report.json'], capture_output=True, text=True).stdout or '{}')
+          except Exception: rep = {}
+          rep.setdefault('countries', {})
+          for cc in req:
+              if cc not in cb['bbox']: print(cc, 'no bbox — add to country-bbox.json'); continue
+              shutil.rmtree('scripts/eval/cells', ignore_errors=True); shutil.rmtree('scripts/eval/r2/tok', ignore_errors=True)
+              r = subprocess.run(['python', 'scripts/overture-extract.py', f'--countries={cc}'], capture_output=True, text=True); print((r.stdout.strip().splitlines() or [''])[-1])
+              if not os.path.exists(f'scripts/eval/cells/{cc}.jsonl'): print(cc, 'no extract'); continue
+              r = subprocess.run(['node', '--max-old-space-size=6144', 'scripts/token-index.mjs'], capture_output=True, text=True); print(r.stdout.strip())
+              if r.returncode != 0: print(cc, 'INDEX FAILED', r.stderr[-300:]); continue
+              subprocess.run(['rclone', 'copy', f'scripts/eval/r2/tok/{cc}', f'r2:mypickz-places/tok/{cc}', '--transfers', '48', '--checkers', '48', '--stats-one-line'], check=True)
+              try: rep['countries'][cc] = json.load(open(f'scripts/eval/r2/tok/{cc}/manifest.json'))
+              except Exception: pass
+              subprocess.run(['rclone', 'deletefile', f'r2:mypickz-places/req/{cc}'], capture_output=True)
+          rep['mb'] = round(sum(v.get('mb', 0) for v in rep['countries'].values()), 1)
+          json.dump(rep, open('/tmp/tok-report.json', 'w')); subprocess.run(['rclone', 'copyto', '/tmp/tok-report.json', 'r2:mypickz-places/tok/report.json'], check=True)
+          print('backfill done · countries indexed', len(rep['countries']))
           PY
-      - name: Pull manifest, extract, index, upload (rclone)
-        if: steps.req.outputs.n != '0'
-        env:
-          RCLONE_CONFIG_R2_TYPE: s3
-          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
-          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
-          RCLONE_CONFIG_R2_ACL: private
-          RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
-        run: |
-          curl -fsSL https://rclone.org/install.sh | sudo bash >/dev/null 2>&1
-          mkdir -p scripts/eval/r2/cells
-          rclone copyto r2:mypickz-places/cells/manifest.json scripts/eval/r2/cells/manifest.json 2>/dev/null || echo '{"cells":{}}' > scripts/eval/r2/cells/manifest.json
-          python scripts/overture-extract.py --cities=/tmp/req-cities.json
-          node scripts/overture-index.mjs
-          cd scripts/eval/r2
-          rclone copy cells r2:mypickz-places/cells --transfers 32 --checkers 32 --exclude manifest.json --stats-one-line
-          rclone copyto cells/manifest.json r2:mypickz-places/cells/manifest.json
-          for c in $(python3 -c "import json;print(' '.join(str(x['id']) for x in json.load(open('/tmp/req-cities.json'))['cities']))"); do rclone deletefile "r2:mypickz-places/req/$c" 2>/dev/null || true; done
-          echo "backfill finished"
