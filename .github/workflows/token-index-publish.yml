@@ -57,7 +57,8 @@ jobs:
               subprocess.run(['rclone', 'copy', f'scripts/eval/r2/tok/{cc}', f'r2:mypickz-places/tok/{cc}', '--transfers', '48', '--checkers', '48', '--stats-one-line'], check=True)
               try: report[cc] = json.load(open(f'scripts/eval/r2/tok/{cc}/manifest.json'))
               except Exception: pass
-          json.dump({'countries': report, 'mb': round(sum(v.get('mb', 0) for v in report.values()), 1)}, open('/tmp/tok-report.json', 'w'))
+          rel = open('scripts/eval/overture-release.txt').read().strip()
+          json.dump({'countries': report, 'release': rel, 'mb': round(sum(v.get('mb', 0) for v in report.values()), 1)}, open('/tmp/tok-report.json', 'w'))
           subprocess.run(['rclone', 'copyto', '/tmp/tok-report.json', 'r2:mypickz-places/tok/report.json'], check=True)
           print('TOKEN INDEX countries', len(report), 'total MB', round(sum(v.get('mb', 0) for v in report.values()), 1), 'max bucket KB', max([v.get('maxBucketKB', 0) for v in report.values()] or [0]))
           PY
