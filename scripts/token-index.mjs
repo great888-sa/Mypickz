@@ -14,7 +14,7 @@ for (const f of fs.readdirSync(SRC).filter(x => x.endsWith('.jsonl'))){
   const stop = [...counts.entries()].filter(([, n]) => n > STOP_MAX).map(([t]) => t); const stopSet = new Set(stop); BUCKETS = places > 2000000 ? 16384 : 4096;
   let bytes = 0, postings = 0, maxBucket = 0;
   for (let pass = 0; pass < PASSES; pass++){
-    const lo = pass * (BUCKETS / PASSES), hi = lo + BUCKETS / PASSES; // أجزاء متساوية من نطاق الأدلاء const buckets = new Map();
+    const lo = pass * (BUCKETS / PASSES), hi = lo + BUCKETS / PASSES; const buckets = new Map(); // أجزاء متساوية من نطاق الأدلاء
     const rl = readline.createInterface({ input: fs.createReadStream(path.join(SRC, f)), crlfDelay: Infinity });
     for await (const line of rl){ if (!line.trim()) continue; let p; try{ p = JSON.parse(line); }catch(_){ continue; } if (!p.name || typeof p.lat !== 'number') continue;
       const names = [p.name].concat(p.common && typeof p.common === 'object' ? Object.values(p.common).filter(x => x && x !== p.name).slice(0, 3) : []); const T = toks(names.join(' '));
