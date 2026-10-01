@@ -148,7 +148,7 @@ const no = (label, f) => expect(false, label, f);
   // ================= ٤-ج) v3.3: analytics/events_* =================
   const EV = 'analytics/events_2026-08-19__2988507__cafes';
   await ok('events create {place_open:3} guest (real city)', () => guest.doc(EV).set({ place_open: 3 }));
-  await no('events create unknown city', () => guest.doc('analytics/events_2026-08-19__all__cafes').set({ place_open: 1 }));
+  await no('events create unknown city (not a gazetteer id)', () => guest.doc('analytics/events_2026-08-19__nowhere__cafes').set({ place_open: 1 }));
   await ok('events create city all / category all', () => guest.doc('analytics/events_2026-08-19__all__all').set({ visit_source: 1, signup_start: 1 }));
   await ok('events create reserved future key (share_card, curator_view)', () => guest.doc('analytics/events_2026-08-19__2988507__all').set({ share_card: 1, curator_view: 2 }));
   await no('events create unknown key', () => guest.doc('analytics/events_2026-08-19__2988507__bars').set({ hack: 1 }));
@@ -221,11 +221,11 @@ const no = (label, f) => expect(false, label, f);
   await no('stats_places read guest', () => guest.doc('stats_places/cA__0123456789abcdef').get());
 
   // ================= ٤-ز-٢) v3.3.1: stats_places — أماكن دليل المالك =================
-  await no('[v3.13 owner_ places gone] stats_places owner guide create (real city paris)', () => guest.doc('stats_places/owner_paris__0123456789abcdef').set({ open_total: 5 }));
+  await no('[v3.13 owner_ places gone] stats_places owner guide create (no such user list)', () => guest.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_total: 5 }));
   await no('stats_places owner guide unknown city', () => guest.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_total: 1 }));
   await no('stats_places owner guide uppercase city (bad id)', () => guest.doc('stats_places/owner_Paris__0123456789abcdef').set({ open_total: 1 }));
-  await no('[v3.13 owner_ places gone] stats_places owner guide update +1', () => guest.doc('stats_places/owner_paris__0123456789abcdef').update({ open_total: 6 }));
-  await no('[v3.13 owner_ places gone] stats_places owner guide read by app owner', () => owner.doc('stats_places/owner_paris__0123456789abcdef').get());
+  await no('[v3.13 owner_ places gone] stats_places owner guide update +1 (no such user list)', () => guest.doc('stats_places/owner_nowhere__0123456789abcdef').update({ open_total: 6 }));
+  await ok('stats_places read by app owner (any id)', () => owner.doc('stats_places/owner_paris__0123456789abcdef').get());
   await no('stats_places owner guide read by user', () => a.doc('stats_places/owner_paris__0123456789abcdef').get());
   await no('stats_places owner guide read guest', () => guest.doc('stats_places/owner_paris__0123456789abcdef').get());
   await env.withSecurityRulesDisabled(async (c) => c.firestore().doc('userCityLists/owner_paris').set({ ownerId: B, public: false, sharedWith: [] }));
@@ -966,7 +966,10 @@ const no = (label, f) => expect(false, label, f);
   await ok('v3.13 legacy parent: others bump viewCount allow (untouched categories)', () => b.doc('userCityLists/' + A + '_h13old').update({ viewCount: 1 }));
   await ok('v3.13 legacy parent: rewriting the doc without categories (migration write) allow', () => a.doc('userCityLists/' + A + '_h13old').set({ ownerId: A, cityId: '2988507', cityName: 'Paris FR', public: true, sharedWith: [], catsV: 3, splitV: 1, index: [], bookmarkCount: 0, viewCount: 1, copyCount: 0 }));
   await no('v3.13 cities collection: owner write denied (collection removed)', () => owner.doc('cities/paris').set({ links: {} }));
-  await no('v3.13 stats_places owner_ form denied', () => a.doc('stats_places/owner_paris__0123456789abcdef').set({ open_total: 1 }));
+  await env.withSecurityRulesDisabled(async (ctx) => { await ctx.firestore().doc('analytics/events_2026-10-01__all__all').set({ place_open: 1 }); });
+  await ok('v3.13 analytics update touching 4 keys allow (within cap)', () => guest.doc('analytics/events_2026-10-01__all__all').update({ place_open: 2, bookmark_add: 1, mylist_open: 1, mylist_save: 1 }));
+  await no('v3.13 analytics update touching more than 6 keys denied (cap)', () => guest.doc('analytics/events_2026-10-01__all__all').update({ place_open: 1, bookmark_add: 1, mylist_open: 1, mylist_save: 1, trip_open: 1, trip_save: 1, community_open: 1 }));
+  await no('v3.13 stats_places: id without an existing user list denied (owner_ guide form gone)', () => a.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_total: 1 }));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
