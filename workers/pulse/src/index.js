@@ -12,7 +12,7 @@ const TARGETS = [
   {
     name: 'test',
     url: 'https://test.mypickz.app/index-debug-test.html',
-    must: ['function initFirebase', 'function loadCity', 'function openAuthModal', 'projectId: "mypickz-6f809"', 'BUILD:']
+    must: ['function initFirebase', 'function renderPlacesBody', 'function openAuthModal', 'projectId: "mypickz-6f809"', 'BUILD:'] /* ر٧٣-أب (١): loadCity تقاعدت بنسخة الاختبار */
   },
   { // ز-١-ج-١ · خ-٣: عامل الأماكن — الفهرس (≥ ٤٢ دولة) · البلاطات (≥ ٤٢) · عمر الإصدار المثبَّت (يُفحص بعد التنزيل)
     name: 'places',
