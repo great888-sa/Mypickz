@@ -1934,10 +1934,6 @@ const mpData = (function(){
       }
     },
     nicknames: { // خ٥/م٢-ب (هجرة انتهازية — التصور المعتمد): قراءة اسم مستعار للمشاركة بالاسم
-      getMany: async function(keys){ /* ر٧٣-أب (١): ١٠ مفاتيح بقراءة واحدة · المجموعات بالتوازي · مهلة ٨ ث · إن فشل الاستعلام يعود إلى القراءة المفردة */ const out = {}; const ks = (keys || []).filter(Boolean); const chunks = []; for (let i = 0; i < ks.length; i += 10) chunks.push(ks.slice(i, i + 10));
-        const withTimeout = function(p, ms){ return Promise.race([p, new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('identity timeout')); }, ms); })]); };
-        await Promise.all(chunks.map(async function(chunk){ try{ const snap = await withTimeout(col('placeIdentity').where(firebase.firestore.FieldPath.documentId(), 'in', chunk).get(), 8000); snap.forEach(function(d){ out[d.id] = d.data(); }); }catch(e){ mpSwallow(e, 'identity.getMany'); await Promise.all(chunk.map(async function(k){ try{ const d = await withTimeout(col('placeIdentity').doc(k).get(), 8000); if (d.exists) out[k] = d.data(); }catch(_){} })); } }));
-        return out; },
       get: function(key){ return col('nicknames').doc(key).get(); },
       remove: function(key){ return col('nicknames').doc(key).delete(); } // ر٥٩ (نشرة التنظيف: حذف ذاتي بحقل الهوية)
     },
@@ -1996,6 +1992,10 @@ const mpData = (function(){
     },
     identity: { // v3.11: سجل هوية الأماكن — موضع مصدَّق يتراكم (أول مثبِّت يخدم الباقين)
       keyOf: function(cityId, name){ return 'k' + hashUrl(String(cityId || '') + '|' + pickerNormalize(name || '')); },
+      getMany: async function(keys){ /* ر٧٣-أب (١): ١٠ مفاتيح بقراءة واحدة · المجموعات بالتوازي · مهلة ٨ ث · إن فشل الاستعلام يعود إلى القراءة المفردة */ const out = {}; const ks = (keys || []).filter(Boolean); const chunks = []; for (let i = 0; i < ks.length; i += 10) chunks.push(ks.slice(i, i + 10));
+        const withTimeout = function(p, ms){ return Promise.race([p, new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('identity timeout')); }, ms); })]); };
+        await Promise.all(chunks.map(async function(chunk){ try{ const snap = await withTimeout(col('placeIdentity').where(firebase.firestore.FieldPath.documentId(), 'in', chunk).get(), 8000); snap.forEach(function(d){ out[d.id] = d.data(); }); }catch(e){ mpSwallow(e, 'identity.getMany'); await Promise.all(chunk.map(async function(k){ try{ const d = await withTimeout(col('placeIdentity').doc(k).get(), 8000); if (d.exists) out[k] = d.data(); }catch(_){} })); } }));
+        return out; },
       get: async function(key){ const d = await col('placeIdentity').doc(key).get(); return d.exists ? d.data() : null; },
       put: function(key, rec){ return col('placeIdentity').doc(key).set(rec); }
     },
