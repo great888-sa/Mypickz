@@ -140,6 +140,19 @@ service cloud.firestore {
             && request.resource.data[k] - resource.data.get(k, 0) >= 1
             && request.resource.data[k] - resource.data.get(k, 0) <= 50);
     }
+    // v3.13: نسختان تأخذان مجموعة المفاتيح المتأثرة محسوبةً مرة واحدة (let) — تخفض عدد التعبيرات المقيَّمة دون سقف الألف
+    function bu(aff, k) {
+      return !(k in aff)
+        || (request.resource.data[k] is int
+            && request.resource.data[k] - resource.data.get(k, 0) >= 1
+            && request.resource.data[k] - resource.data.get(k, 0) <= 50);
+    }
+    function buBig(aff, k) {
+      return !(k in aff)
+        || (request.resource.data[k] is int
+            && request.resource.data[k] - resource.data.get(k, 0) >= 1
+            && request.resource.data[k] - resource.data.get(k, 0) <= 7200);
+    }
     // الثواني (مجموع مدة الجلسات): حد أعلى ٧٢٠٠ لكل كتابة
     function bumpCBig(k) {
       return !(k in request.resource.data)
@@ -168,16 +181,15 @@ service cloud.firestore {
         && bumpC('Other')
         && bumpC('total');
     }
-    function errorsUpdateOk() {
-      return errorKeysOk()
-        && request.resource.data.diff(resource.data).affectedKeys().size() >= 1
-        && bumpU('TypeError')
-        && bumpU('ReferenceError')
-        && bumpU('SyntaxError')
-        && bumpU('NetworkError')
-        && bumpU('UnhandledRejection')
-        && bumpU('Other')
-        && bumpU('total');
+    function errorsUpdateOk() { let aff = request.resource.data.diff(resource.data).affectedKeys(); return errorKeysOk()
+        && aff.size() >= 1 && aff.size() <= 6
+        && bu(aff, 'TypeError')
+        && bu(aff, 'ReferenceError')
+        && bu(aff, 'SyntaxError')
+        && bu(aff, 'NetworkError')
+        && bu(aff, 'UnhandledRejection')
+        && bu(aff, 'Other')
+        && bu(aff, 'total');
     }
     function eventsCreateOk() {
       return eventKeysOk()
@@ -207,34 +219,33 @@ service cloud.firestore {
         && bumpC('reserved_2')
         && bumpC('reserved_3');
     }
-    function eventsUpdateOk() {
-      return eventKeysOk()
-        && request.resource.data.diff(resource.data).affectedKeys().size() >= 1
-        && bumpU('visit_source')
-        && bumpU('signup_start')
-        && bumpU('signup_done')
-        && bumpU('place_open')
-        && bumpU('bookmark_add')
-        && bumpU('mylist_open')
-        && bumpU('mylist_save')
-        && bumpU('trip_open')
-        && bumpU('trip_save')
-        && bumpU('community_open')
-        && bumpU('share_link')
-        && bumpU('share_card')
-        && bumpU('curator_view')
-        && bumpU('curator_contact')
-        && bumpU('curator_follow')
-        && bumpU('session_depth')
-        && bumpU('import_run')
-        && bumpU('import_place')
-        && bumpU('import_suggest_kept')
-        && bumpU('import_suggest_changed')
-        && bumpU('personal_open')
-        && bumpU('personal_save')
-        && bumpU('personal_place_open')
-        && bumpU('reserved_2')
-        && bumpU('reserved_3');
+    function eventsUpdateOk() { let aff = request.resource.data.diff(resource.data).affectedKeys(); return eventKeysOk()
+        && aff.size() >= 1 && aff.size() <= 6
+        && bu(aff, 'visit_source')
+        && bu(aff, 'signup_start')
+        && bu(aff, 'signup_done')
+        && bu(aff, 'place_open')
+        && bu(aff, 'bookmark_add')
+        && bu(aff, 'mylist_open')
+        && bu(aff, 'mylist_save')
+        && bu(aff, 'trip_open')
+        && bu(aff, 'trip_save')
+        && bu(aff, 'community_open')
+        && bu(aff, 'share_link')
+        && bu(aff, 'share_card')
+        && bu(aff, 'curator_view')
+        && bu(aff, 'curator_contact')
+        && bu(aff, 'curator_follow')
+        && bu(aff, 'session_depth')
+        && bu(aff, 'import_run')
+        && bu(aff, 'import_place')
+        && bu(aff, 'import_suggest_kept')
+        && bu(aff, 'import_suggest_changed')
+        && bu(aff, 'personal_open')
+        && bu(aff, 'personal_save')
+        && bu(aff, 'personal_place_open')
+        && bu(aff, 'reserved_2')
+        && bu(aff, 'reserved_3');
     }
 
     function sourcesKeysOk() { return request.resource.data.keys().hasOnly(['src_app', 'src_ulist', 'src_trip', 'src_community', 'src_curator', 'ref_ig', 'ref_tt', 'ref_sc', 'ref_card', 'ref_qr', 'ref_link', 'ref_direct']) && request.resource.data.keys().size() >= 1; }
@@ -250,18 +261,18 @@ service cloud.firestore {
         && bumpC('ref_qr')
         && bumpC('ref_link')
         && bumpC('ref_direct'); }
-    function sourcesUpdateOk() { return sourcesKeysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('src_app')
-        && bumpU('src_ulist')
-        && bumpU('src_trip')
-        && bumpU('src_community')
-        && bumpU('src_curator')
-        && bumpU('ref_ig')
-        && bumpU('ref_tt')
-        && bumpU('ref_sc')
-        && bumpU('ref_card')
-        && bumpU('ref_qr')
-        && bumpU('ref_link')
-        && bumpU('ref_direct'); }
+    function sourcesUpdateOk() { let aff = request.resource.data.diff(resource.data).affectedKeys(); return sourcesKeysOk() && aff.size() >= 1 && aff.size() <= 6 && bu(aff, 'src_app')
+        && bu(aff, 'src_ulist')
+        && bu(aff, 'src_trip')
+        && bu(aff, 'src_community')
+        && bu(aff, 'src_curator')
+        && bu(aff, 'ref_ig')
+        && bu(aff, 'ref_tt')
+        && bu(aff, 'ref_sc')
+        && bu(aff, 'ref_card')
+        && bu(aff, 'ref_qr')
+        && bu(aff, 'ref_link')
+        && bu(aff, 'ref_direct'); }
     function hoursKeysOk() { return request.resource.data.keys().hasOnly(['h00', 'h01', 'h02', 'h03', 'h04', 'h05', 'h06', 'h07', 'h08', 'h09', 'h10', 'h11', 'h12', 'h13', 'h14', 'h15', 'h16', 'h17', 'h18', 'h19', 'h20', 'h21', 'h22', 'h23']) && request.resource.data.keys().size() >= 1; }
     function hoursCreateOk() { return hoursKeysOk() && bumpC('h00')
         && bumpC('h01')
@@ -287,33 +298,33 @@ service cloud.firestore {
         && bumpC('h21')
         && bumpC('h22')
         && bumpC('h23'); }
-    function hoursUpdateOk() { return hoursKeysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('h00')
-        && bumpU('h01')
-        && bumpU('h02')
-        && bumpU('h03')
-        && bumpU('h04')
-        && bumpU('h05')
-        && bumpU('h06')
-        && bumpU('h07')
-        && bumpU('h08')
-        && bumpU('h09')
-        && bumpU('h10')
-        && bumpU('h11')
-        && bumpU('h12')
-        && bumpU('h13')
-        && bumpU('h14')
-        && bumpU('h15')
-        && bumpU('h16')
-        && bumpU('h17')
-        && bumpU('h18')
-        && bumpU('h19')
-        && bumpU('h20')
-        && bumpU('h21')
-        && bumpU('h22')
-        && bumpU('h23'); }
+    function hoursUpdateOk() { let aff = request.resource.data.diff(resource.data).affectedKeys(); return hoursKeysOk() && aff.size() >= 1 && aff.size() <= 6 && bu(aff, 'h00')
+        && bu(aff, 'h01')
+        && bu(aff, 'h02')
+        && bu(aff, 'h03')
+        && bu(aff, 'h04')
+        && bu(aff, 'h05')
+        && bu(aff, 'h06')
+        && bu(aff, 'h07')
+        && bu(aff, 'h08')
+        && bu(aff, 'h09')
+        && bu(aff, 'h10')
+        && bu(aff, 'h11')
+        && bu(aff, 'h12')
+        && bu(aff, 'h13')
+        && bu(aff, 'h14')
+        && bu(aff, 'h15')
+        && bu(aff, 'h16')
+        && bu(aff, 'h17')
+        && bu(aff, 'h18')
+        && bu(aff, 'h19')
+        && bu(aff, 'h20')
+        && bu(aff, 'h21')
+        && bu(aff, 'h22')
+        && bu(aff, 'h23'); }
     function sessionsKeysOk() { return request.resource.data.keys().hasOnly(['count', 'seconds', 'depth']) && request.resource.data.keys().size() >= 1; }
     function sessionsCreateOk() { return sessionsKeysOk() && bumpC('count') && bumpCBig('seconds') && bumpC('depth'); }
-    function sessionsUpdateOk() { return sessionsKeysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('count') && bumpUBig('seconds') && bumpU('depth'); }
+    function sessionsUpdateOk() { let aff = request.resource.data.diff(resource.data).affectedKeys(); return sessionsKeysOk() && aff.size() >= 1 && aff.size() <= 6 && bu(aff, 'count') && buBig(aff, 'seconds') && bu(aff, 'depth'); }
     // المدينة بمعرّفات المستندات اليومية: حقيقية أو 'all'
     function cityOk2(id) { return cityOk(id); } // v3.13: بالنمط
 
