@@ -1,3 +1,5 @@
+// firestore rules v3.13 (ر٧٣-أ · الإحكام · ١ أكتوبر ٢٠٢٦): إغلاق انتقالية M4.26 (الأم بلا categories نهائيًّا) · analytics: المدينة بالنمط لا بوجودها (لا exists) · حذف match /cities (الدليل مهاجَر ومحذوف)
+//   الامتحان: القسم ٢٦ · التراجع: firestore_rules_v3-12.txt
 // firestore rules v3.12 (ز-١-ج-٣ · تصحيح الجذر · ٢٩ سبتمبر ٢٠٢٦): `others` تصنيف عام (كما بالتطبيق) — حُذف من قوائم المعرّفات الخاصة الثلاث (noPrivateKeys ×٢ · إنشاء الفرعية)
 //   السبب: تناقض بين القواعد والتطبيق أخفى الأماكن مجهولة التصنيف · الخاصة تبقى: العيادات والعناوين الشخصية · الامتحان: القسم ٢٥ · التراجع: firestore_rules_v3-11.txt
 // firestore rules v3.11 (ز-١-ج · سجل هوية الأماكن · ٢٤ سبتمبر ٢٠٢٦): + مجموعة placeIdentity/{hash} — بصمة رابط جوجل (بعد حلّه) أو (الاسم المطبَّع + المدينة) ← موضع مصدَّق (Overture أو دبوس مستخدم)
@@ -100,11 +102,6 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
-    match /cities/{cityId} {
-      allow read: if true;
-      allow write: if isOwner();
-    }
-
     // ===== v3: سجل الإيقاف — ملكية المالك حصرًا =====
     // القراءة مقيَّدة بالمالك وصاحب الشأن (get/exists داخل القواعد لا تخضع لقواعد read، فالتقييد لا يكسر isSuspended)
     match /suspensions/{uid} {
@@ -129,9 +126,8 @@ service cloud.firestore {
     function isHoursDoc(id) { return id.matches('hours_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
     function isSessionsDoc(id) { return id.matches('sessions_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
     function isOwnerOnlyAnalytics(id) { return isErrorsDoc(id) || isEventsDoc(id) || isSourcesDoc(id) || isHoursDoc(id) || isSessionsDoc(id); }
-    function cityOk(id) {
-      return id.split('__')[1] == 'all'
-        || exists(/databases/$(database)/documents/cities/$(id.split('__')[1]));
+    function cityOk(id) { // v3.13: بالنمط فقط (معرّف المعجم أو جزيرة أو all) — لا قراءة exists (الدليل محذوف)
+      return id.split('__')[1].matches('all|[0-9]{3,9}|i_[a-z0-9_]{2,30}');
     }
     // إنشاء: كل حقل موجود عدد صحيح بين ١ و٥٠. تحديث: كل حقل متأثر زاد بين ١ و٥٠ (بلا إنقاص، بلا حذف حقول، بلا حقول غريبة).
     function bumpC(k) {
@@ -319,10 +315,7 @@ service cloud.firestore {
     function sessionsCreateOk() { return sessionsKeysOk() && bumpC('count') && bumpCBig('seconds') && bumpC('depth'); }
     function sessionsUpdateOk() { return sessionsKeysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('count') && bumpUBig('seconds') && bumpU('depth'); }
     // المدينة بمعرّفات المستندات اليومية: حقيقية أو 'all'
-    function cityOk2(id) {
-      return id.split('__')[1] == 'all'
-        || exists(/databases/$(database)/documents/cities/$(id.split('__')[1]));
-    }
+    function cityOk2(id) { return cityOk(id); } // v3.13: بالنمط
 
     match /analytics/{docId} {
       allow read: if !isOwnerOnlyAnalytics(docId) || isOwner();
@@ -441,17 +434,16 @@ service cloud.firestore {
         || (isSignedIn() && (resource.data.ownerId == request.auth.uid
         || resource.data.public == true
         || request.auth.uid in resource.data.sharedWith));
-      function noPrivateKeys() {
-        return !request.resource.data.get('categories', {}).keys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends']);
+      function noPrivateKeys() { // v3.13 (ر٧٣-أ): إغلاق انتقالية M4.26 — الأم بلا categories نهائيًّا (الشكل المقسَّم وحده: الفهرس + مستند لكل تصنيف)
+        return !('categories' in request.resource.data);
       }
-      function indexOk() { // M4.26 (أ): الفهرس قائمة (≤ ٢٠٠٠٠ مدخل) و splitV == 1 حين يوجد — الانتقالية تقبل الأم بلا فهرس
+      function indexOk() { // M4.26 (أ) · v3.13: الفهرس قائمة (≤ ٢٠٠٠٠ مدخل) حين يوجد · splitV == 1 حين يوجد
         return (!('index' in request.resource.data) || (request.resource.data.index is list && request.resource.data.index.size() <= 20000))
           && (!('splitV' in request.resource.data) || request.resource.data.splitV == 1);
       }
-      function privateKeysOkOnUpdate() {
+      function privateKeysOkOnUpdate() { // v3.13: التحديث لا يُضيف ولا يغيّر categories؛ بقاؤها دون مساس بمستند قديم أو حذفها مسموح (الفحص بالمفاتيح المتأثرة لا بصورة المستند — وإلا رُفض كل تحديث على أم قديمة)
         return !('categories' in request.resource.data.diff(resource.data).affectedKeys())
-          || !('categories' in request.resource.data)
-          || !request.resource.data.categories.diff(resource.data.get('categories', {})).addedKeys().hasAny(['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends']);
+          || !('categories' in request.resource.data);
       }
       // v3.8 (السطران ٣ و١٩): bookmarkCount وviewCount يبدآن صفرًا/غائبين (نمط ١٦)
       allow create: if isSignedIn() && !isSuspended()
@@ -751,16 +743,12 @@ service cloud.firestore {
       function createOk() { return keysOk() && bumpC('open_total') && bumpC('trip_add'); }
       function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('open_total') && bumpU('trip_add'); } // M4.25 (٩) §١٧-ج
       allow read: if isOwner() || (isSignedIn() && !docId.matches('owner_.*') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && get(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])).data.ownerId == request.auth.uid);
-      function ownerPlaceOk() {
-        return docId.matches('owner_[a-z0-9_-]{1,40}__[a-f0-9]{16}')
-          && exists(/databases/$(database)/documents/cities/$(docId.split('__')[0].split('owner_')[1]));
-      }
-      function userPlaceOk() {
+      function userPlaceOk() { // v3.13: أماكن المستخدمين فقط (أماكن الدليل owner_… أُلغيت — الدليل مهاجَر إلى قوائم المالك)
         return docId.matches('[A-Za-z0-9_-]{1,60}__[a-f0-9]{16}')
           && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0]));
       }
-      allow create: if (ownerPlaceOk() || userPlaceOk()) && createOk();
-      allow update: if (ownerPlaceOk() || userPlaceOk()) && updateOk();
+      allow create: if userPlaceOk() && createOk();
+      allow update: if userPlaceOk() && updateOk();
       allow delete: if isOwner();
     }
     // ===== v3.3 (أ) عدّادات الكيانات — stats_curators =====
