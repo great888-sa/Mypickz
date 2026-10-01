@@ -118,7 +118,6 @@ check(!fs.existsSync(path.join(ROOT, 'CNAME')), 'no CNAME (GitHub Pages leftover
 // نسخة الاختبار تُفحص دائمًا؛ الإنتاج يُفحص فقط بعد ترقيته لطبقة القياس (وجود وحدة mpTrack به).
 const MP_EXPECTED = [
   ["const mpTrack = (function(){", 1],
-  ["mpTrack.hit('mylist_open'", 1],
   ["mpTrack.hit('mylist_save')", 1],
   ["mpTrack.hit('trip_open'", 1],
   ["mpTrack.hit('trip_save')", { prod: 1, test: 2 }], // ر٥٢: + حفظ رحلة الآخرين (toggleTripSave) بجانب حدث saveTrip القائم
@@ -141,9 +140,8 @@ const MP_EXPECTED = [
   ["window.addEventListener('unhandledrejection'", 1],
   // خ٢ (٢٧ أغسطس): وجهة العناوين الشخصية تعرض روابطها بسماتها (data-mpsrc="app" · data-mppersonal="1") — إبرة إضافية بنسخة الاختبار
   //   حتى ترقية الإطار للإنتاج (حينها يصير العدد ٨/٣ بالملفين وتُوحَّد القيمة). القيمة إما رقم واحد للملفين أو {prod, test}.
-  ['data-mpsrc=', { prod: 7, test: 7 }], // r72w: رحلة الآخرين تمرّ بالبطاقة الموحَّدة (community) // ر٥٢: رابط نافذة My Favorites المتقاعدة كان يحمل السمة — زال معها
-  ['data-mppersonal=', { prod: 2, test: 3 }],
-  ['data-mpowner="1"', 1]
+  ['data-mpsrc=', { prod: 7, test: 6 }], // ر٧٣-أب (١): زالت سمة الدليل الموروث // r72w: رحلة الآخرين تمرّ بالبطاقة الموحَّدة (community) // ر٥٢: رابط نافذة My Favorites المتقاعدة كان يحمل السمة — زال معها
+  ['data-mppersonal=', { prod: 2, test: 2 }] // ر٧٣-أب (١): data-mpowner زالت مع الدليل
 ];
 function countOcc(haystack, needle){ return haystack.split(needle).length - 1; }
 function mpGuard(label, content){
@@ -551,6 +549,10 @@ function idGuard(label, s){
     const all = noOutletCol.concat(noOutletField);
     const unknown = all.filter(x => !KNOWN_NO_OUTLET.includes(x));
     check(unknown.length === 0, T + 'rules capabilities without an outlet are recorded (doc 8) — ' + collections.size + ' collections', 'unrecorded: ' + unknown.join(', '));
+    // ر٧٣-أب (١) — درس حادثة v3.13: كل مجموعة يقرؤها/يكتبها التطبيق يجب أن تكون معرَّفة بالقواعد (المعكوس من فحص المخرج) — القراءة لمجموعة محذوفة تُرفض عند الإقلاع وتختل بها سلسلة التحميل
+    const usedCols = new Set([...code.matchAll(/(?:col|collection)\(['"]([A-Za-z_]+)['"]\)/g)].map(m => m[1]));
+    const undefinedCols = [...usedCols].filter(c => !collections.has(c));
+    check(undefinedCols.length === 0, T + 'every collection the app touches is defined in the rules — ' + usedCols.size + ' used', 'not in rules: ' + undefinedCols.join(', '));
     const bareToast = (code.match(/onclick=\\?["']showToast\(/g) || []).length; // ز-١-ج-٣: لا زر يعد بميزة ثم يعرض رسالة فقط — المؤجَّل يُوسم بـsoonChip/showSoon
     check(bareToast === 0, T + 'no bare showToast buttons (deferred features use soonChip/showSoon)', bareToast + ' found');
     const recordedNow = KNOWN_NO_OUTLET.filter(x => all.includes(x));
