@@ -1266,6 +1266,11 @@ function citiesSeed(){
     // ر٧٣-أب (١): تغيير المدينة أثناء البحث يلغيه (الجيل يتقدّم) ولا تُحتسب نتائج الجيل القديم
     const genState = B.x("(function(){ var g0 = plSuggestGen; plSuggestGen++; return JSON.stringify({ advanced: plSuggestGen === g0 + 1, hasGetMany: typeof mpData.identity.getMany === 'function' }); })()");
     ok('١٦هـ · ر٧٣-أب(١): جيل البحث يتقدّم عند التغيير · القراءة الجماعية لسجل الهوية (getMany) موجودة · لا دليل موروثًا (loadCity · renderCityTabs · CITIES[0]) · EXPECTED_RULES v3.13', /"advanced":true/.test(genState) && /"hasGetMany":true/.test(genState) && tplCount('function loadCity(', 0).ok && tplCount('function renderCityTabs(', 0).ok && tplCount("collection('cities')", 0).ok && tplCount("const EXPECTED_RULES = 'v3.13';", 1).ok, genState);
+    // ر٧٣-أب (١): التصنيفات المخصَّصة من أدوات الإدارة — إضافة باسم وقسم (معرّف c_… فريد) وحذف
+    B.x("isOwner = true; mpData.settings.saveCategoryTemplate = async function(){}; customItems.length = 0; openAdminCustomCats(); document.getElementById('adminCatName').value = 'Rooftop bars'; document.getElementById('adminCatSec').value = (DATA.filter(function(x){ return !x.ownerOnly; })[0].id || DATA.filter(function(x){ return !x.ownerOnly; })[0].title)"); await B.x("adminCustomCatAdd()"); await new Promise(r => setTimeout(r, 30));
+    const ccat = B.x("JSON.stringify(customItems.map(function(c){ return [c.id, c.name, !!c.sectionId]; }))"); const cdoor = screen('dashBody');
+    ok('١٦هـ · ر٧٣-أب(١): «🏷 Custom categories» بالإدارة — إضافة تصنيف باسمه وقسمه بمعرّف c_ فريد والقائمة تعرضه مع 🗑', /\["c_rooftop_bars","Rooftop bars",true\]/.test(ccat) && cdoor.includes('Rooftop bars') && cdoor.includes('🗑') && tplCount('onclick="openAdminCustomCats()"', 1).ok, ccat);
+    B.x("customItems.length = 0; isOwner = false");
     B.x("window.__geoAuto = 'skip'");
     ok('١٦هـ · r72u: الإسناد باسم الحساب فقط · حفظ الملف يحذف displayName القديم · cmOpenList يثبّت مصدر الأماكن', tplCount("patch.displayName = mpData.fieldDelete();", 1).ok && tplCount("communityTab = 'places'; personLayerOnly = null; await viewCommunityUser(owner); openCommunityCityList(cityId);", 1).ok && tplCount("viewingUserData.displayName", 0).ok, '');
     cap('lists.split');
