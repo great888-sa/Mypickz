@@ -18,15 +18,15 @@ const ROOT = path.resolve(__dirname, '..');
 const FILES = ['index.html', 'index-debug-test.html'];
 // ر٥٨ (٣ سبتمبر ٢٠٢٦): القائمة انفصلت مشتركًا وخاصًّا بكل ملف — الإنتاج قبل نموذج الأفعال (القرار ٠٩)
 // ونسخة الاختبار بعده: loadFavorites تقاعدت بها وحلّت مداخل المفكرة والحفظ والمركّب الموقَّع.
-// عند ترقية الإنتاج لنموذج الأفعال: تُنقل قائمة الاختبار لتصير المشتركة ويُحذف سطر الإنتاج.
+// ر٧٣-أب (١): render وloadCity (شاشة الدليل الموروثة) تقاعدتا بنسخة الاختبار — بقيتا للإنتاج حتى ترقيته.
 const KEY_COMMON = [
-  'initFirebase', 'render', 'loadCity', 'openAuthModal', 'closeAuthModal', 'doSignIn', 'doSignUp',
+  'initFirebase', 'openAuthModal', 'closeAuthModal', 'doSignIn', 'doSignUp',
   'enforceNickname', 'syncOwnerMode', 'updateUserUI', 'loadUserList', 'loadUserTrips',
   'saveTrip', 'toggleSuspendUser', 'openUsersModal', 'closeTripPickerModal', 'withAuthRetry', 'trackVisit'
 ];
 const KEY_PER_FILE = {
-  'index.html': ['loadFavorites'],
-  'index-debug-test.html': ['togglePlaceBookmark', 'toggleListBookmark', 'toggleTripSave', 'mpSendText']
+  'index.html': ['loadFavorites', 'render', 'loadCity'],
+  'index-debug-test.html': ['togglePlaceBookmark', 'toggleListBookmark', 'toggleTripSave', 'mpSendText', 'renderPlacesBody', 'openGeoStep', 'openAdminCustomCats']
 };
 
 function findChrome(){
