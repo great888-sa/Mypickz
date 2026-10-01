@@ -20,21 +20,36 @@ jobs:
       - name: Fetch terms pages and compare fingerprints
         run: |
           python3 - <<'PY'
-          import json, hashlib, re, urllib.request, sys, os
+          import json, hashlib, re, urllib.request, sys, os, difflib
           deps = json.load(open('scripts/eval/dependencies.json', encoding='utf-8'))['deps']
           fp_path = 'scripts/eval/policy-fingerprints.json'; fps = json.load(open(fp_path)) if os.path.exists(fp_path) else {}
-          accept = "${{ github.event.inputs.accept }}" == 'true'; changed = []; os.makedirs('/tmp/policy', exist_ok=True)
+          os.makedirs('scripts/eval/policy', exist_ok=True); os.makedirs('/tmp/policy', exist_ok=True)
+          accept = "${{ github.event.inputs.accept }}" == 'true'; changed = []
+          def main_text(html):
+              m = re.search(r'<main[\s\S]*?</main>|<article[\s\S]*?</article>', html, re.I)  # المحتوى الرئيسي فقط (لا القوائم ولا الشريط)
+              body = m.group(0) if m else html
+              body = re.sub(r'<(script|style|nav|header|footer|aside)[\s\S]*?</\1>', '', body, flags=re.I)
+              text = re.sub(r'<[^>]+>', ' ', body); text = re.sub(r'\s+', ' ', text).strip()
+              text = re.sub(r'(Last updated|Updated on)[^.]{0,40}', '', text)  # تواريخ التحرير لا تُحتسب
+              return text
           for d in deps:
               try:
                   req = urllib.request.Request(d['terms'], headers={'User-Agent': 'Mozilla/5.0 (MyPickz policy watch)'}); html = urllib.request.urlopen(req, timeout=30).read().decode('utf-8', 'ignore')
               except Exception as e: print(d['id'], 'FETCH FAILED', str(e)[:80]); continue
-              text = re.sub(r'<script[\s\S]*?</script>|<style[\s\S]*?</style>', '', html); text = re.sub(r'<[^>]+>', ' ', text); text = re.sub(r'\s+', ' ', text).strip()
-              h = hashlib.sha256(text.encode()).hexdigest()[:16]; open(f"/tmp/policy/{d['id']}.txt", 'w').write(text[:20000])
-              if d['id'] in fps and fps[d['id']] != h: changed.append(d['id']); print(d['id'], 'CHANGED', fps[d['id']], '→', h)
+              text = main_text(html); h = hashlib.sha256(text.encode()).hexdigest()[:16]
+              prev_path = f"scripts/eval/policy/{d['id']}.txt"; prev = open(prev_path, encoding='utf-8').read() if os.path.exists(prev_path) else ''
+              open(f"/tmp/policy/{d['id']}.txt", 'w', encoding='utf-8').write(text[:60000])
+              if d['id'] in fps and fps[d['id']] != h:
+                  changed.append(d['id']); print(d['id'], 'CHANGED', fps[d['id']], '→', h)
+                  if prev:
+                      a = re.split(r'(?<=[.!?]) ', prev); b = re.split(r'(?<=[.!?]) ', text)
+                      diff = [l for l in difflib.unified_diff(a, b, lineterm='', n=0) if l.startswith(('+', '-')) and not l.startswith(('+++', '---'))]
+                      print('   diff (' + str(len(diff)) + ' sentences):'); [print('   ' + l[:220]) for l in diff[:20]]
               else: print(d['id'], 'ok' if d['id'] in fps else 'first fingerprint', h)
-              if accept or d['id'] not in fps: fps[d['id']] = h
+              if accept or d['id'] not in fps:
+                  fps[d['id']] = h; open(prev_path, 'w', encoding='utf-8').write(text[:60000])
           json.dump(fps, open(fp_path, 'w'), indent=1)
-          if changed and not accept: print('POLICY CHANGED:', ', '.join(changed), '— review the attached text, then rerun with accept=true'); sys.exit(1)
+          if changed and not accept: print('POLICY CHANGED:', ', '.join(changed), '— the differing sentences are printed above; rerun with accept=true after review'); sys.exit(1)
           PY
       - uses: actions/upload-artifact@v4
         if: always()
@@ -45,4 +60,4 @@ jobs:
         if: success()
         run: |
           git config user.name "mypickz-bot"; git config user.email "bot@mypickz.app"
-          git add scripts/eval/policy-fingerprints.json && (git commit -m "Policy watch: fingerprints" && git push) || echo "no change"
+          git add scripts/eval/policy-fingerprints.json scripts/eval/policy && (git commit -m "Policy watch: fingerprints + texts" && git push) || echo "no change"
