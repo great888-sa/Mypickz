@@ -1,5 +1,6 @@
 // MyPickz — tests/rules-sim.js
 // يختبر firestore.rules على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// v3.13 (١ أكتوبر ٢٠٢٦ — الإحكام): + القسم ٢٦ (٩ حالات) · حالات الأم بـcategories صارت مرفوضة · حالات cities حُذفت · المدن بالتحليلات بمعرّف المعجم.
 // v3.12 (٢٩ سبتمبر ٢٠٢٦ — others عام): + القسم ٢٥ (٦ حالات) · تُحدَّث حالات others القديمة.
 // v3.11 (٢٤ سبتمبر ٢٠٢٦ — سجل هوية الأماكن): + القسم ٢٤ (١٤ حالة).
 // M4.26 (٢٢ سبتمبر ٢٠٢٦ — التقسيم والأسطر الثمانية): + القسم ٢٣ (~٥٠ حالة).
@@ -54,7 +55,6 @@ const no = (label, f) => expect(false, label, f);
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
     await db.doc('settings/app').set({ ownerUid: OWNER });
-    await db.doc('cities/paris').set({ name: 'Paris', published: true, links: {} });
     await db.doc(`suspensions/${S}`).set({ at: 1, by: OWNER, email: 's@x' });
     await db.doc(`userLists/${A}`).set({ public: false, nickname: 'a', favoriteCount: 0 });
     await db.doc(`userLists/${B}`).set({ public: true, nickname: 'b', favoriteCount: 3 });
@@ -100,14 +100,6 @@ const no = (label, f) => expect(false, label, f);
   await ok('settings write owner', () => owner.doc('settings/app').set({ x: 1 }, { merge: true }));
 
   // ================= ٢) cities =================
-  await ok('cities read guest', () => guest.doc('cities/paris').get());
-  await ok('cities read user', () => a.doc('cities/paris').get());
-  await ok('cities read suspended', () => s.doc('cities/paris').get());
-  await ok('cities read owner', () => owner.doc('cities/paris').get());
-  await no('cities write guest', () => guest.doc('cities/paris').set({ x: 1 }, { merge: true }));
-  await no('cities write user', () => a.doc('cities/paris').set({ x: 1 }, { merge: true }));
-  await no('cities write suspended', () => s.doc('cities/paris').set({ x: 1 }, { merge: true }));
-  await ok('cities write owner', () => owner.doc('cities/paris').set({ x: 1 }, { merge: true }));
 
   // ================= ٣) suspensions =================
   await no('suspensions read guest', () => guest.doc(`suspensions/${S}`).get());
@@ -154,18 +146,18 @@ const no = (label, f) => expect(false, label, f);
   await ok('visits still public read after v3.3', () => guest.doc('analytics/visits').get());
 
   // ================= ٤-ج) v3.3: analytics/events_* =================
-  const EV = 'analytics/events_2026-08-19__paris__cafes';
+  const EV = 'analytics/events_2026-08-19__2988507__cafes';
   await ok('events create {place_open:3} guest (real city)', () => guest.doc(EV).set({ place_open: 3 }));
-  await no('events create unknown city', () => guest.doc('analytics/events_2026-08-19__nowhere__cafes').set({ place_open: 1 }));
+  await no('events create unknown city', () => guest.doc('analytics/events_2026-08-19__all__cafes').set({ place_open: 1 }));
   await ok('events create city all / category all', () => guest.doc('analytics/events_2026-08-19__all__all').set({ visit_source: 1, signup_start: 1 }));
-  await ok('events create reserved future key (share_card, curator_view)', () => guest.doc('analytics/events_2026-08-19__paris__all').set({ share_card: 1, curator_view: 2 }));
-  await no('events create unknown key', () => guest.doc('analytics/events_2026-08-19__paris__bars').set({ hack: 1 }));
-  await ok('events create import keys (reserved for ب-١)', () => guest.doc('analytics/events_2026-08-19__paris__import').set({ import_run: 1, import_place: 30, import_suggest_kept: 20, import_suggest_changed: 10 }));
+  await ok('events create reserved future key (share_card, curator_view)', () => guest.doc('analytics/events_2026-08-19__2988507__all').set({ share_card: 1, curator_view: 2 }));
+  await no('events create unknown key', () => guest.doc('analytics/events_2026-08-19__2988507__bars').set({ hack: 1 }));
+  await ok('events create import keys (reserved for ب-١)', () => guest.doc('analytics/events_2026-08-19__2988507__import').set({ import_run: 1, import_place: 30, import_suggest_kept: 20, import_suggest_changed: 10 }));
   await ok('events create bookmark_add (نشرة التنظيف — محل reserved_1)', () => guest.doc('analytics/events_2026-08-19__all__lists').set({ bookmark_add: 1 }));
   await no('events create reserved_1 (استُهلك — خرج من القائمة)', () => guest.doc('analytics/events_2026-08-19__all__list2').set({ reserved_1: 1 }));
   await ok('events create personal_* (aggregate only, city all)', () => guest.doc('analytics/events_2026-08-19__all__personal').set({ personal_open: 3, personal_save: 1, personal_place_open: 2 }));
   await no('events create uppercase city (bad id)', () => guest.doc('analytics/events_2026-08-19__Paris__cafes').set({ place_open: 1 }));
-  await no('events create with uid field', () => guest.doc('analytics/events_2026-08-19__paris__hotels').set({ place_open: 1, uid: 'x' }));
+  await no('events create with uid field', () => guest.doc('analytics/events_2026-08-19__2988507__hotels').set({ place_open: 1, uid: 'x' }));
   await ok('events update +50 user', () => a.doc(EV).update({ place_open: 53 }));
   await no('events update +51', () => guest.doc(EV).update({ place_open: 104 }));
   await no('events update decrease', () => guest.doc(EV).update({ place_open: 1 }));
@@ -175,24 +167,24 @@ const no = (label, f) => expect(false, label, f);
   await no('events delete owner', () => owner.doc(EV).delete());
 
   // ================= ٤-د) v3.3: sources_* / hours_* / sessions_* =================
-  await ok('sources create guest (real city)', () => guest.doc('analytics/sources_2026-08-19__paris').set({ src_app: 3, ref_ig: 1 }));
+  await ok('sources create guest (real city)', () => guest.doc('analytics/sources_2026-08-19__2988507').set({ src_app: 3, ref_ig: 1 }));
   await no('sources create unknown key', () => guest.doc('analytics/sources_2026-08-19__all').set({ src_x: 1 }));
   await no('sources create unknown city', () => guest.doc('analytics/sources_2026-08-19__nowhere').set({ src_app: 1 }));
-  await ok('sources update +1', () => guest.doc('analytics/sources_2026-08-19__paris').update({ ref_card: 1 }));
-  await no('sources read user', () => a.doc('analytics/sources_2026-08-19__paris').get());
-  await ok('sources read owner', () => owner.doc('analytics/sources_2026-08-19__paris').get());
-  await ok('hours create guest', () => guest.doc('analytics/hours_2026-08-19__paris').set({ h14: 5, h15: 2 }));
+  await ok('sources update +1', () => guest.doc('analytics/sources_2026-08-19__2988507').update({ ref_card: 1 }));
+  await no('sources read user', () => a.doc('analytics/sources_2026-08-19__2988507').get());
+  await ok('sources read owner', () => owner.doc('analytics/sources_2026-08-19__2988507').get());
+  await ok('hours create guest', () => guest.doc('analytics/hours_2026-08-19__2988507').set({ h14: 5, h15: 2 }));
   await no('hours create key h24', () => guest.doc('analytics/hours_2026-08-19__all').set({ h24: 1 }));
-  await ok('hours update +1', () => guest.doc('analytics/hours_2026-08-19__paris').update({ h14: 6 }));
-  await no('hours read user', () => a.doc('analytics/hours_2026-08-19__paris').get());
-  await ok('sessions create guest', () => guest.doc('analytics/sessions_2026-08-19__paris').set({ count: 1, seconds: 600, depth: 4 }));
+  await ok('hours update +1', () => guest.doc('analytics/hours_2026-08-19__2988507').update({ h14: 6 }));
+  await no('hours read user', () => a.doc('analytics/hours_2026-08-19__2988507').get());
+  await ok('sessions create guest', () => guest.doc('analytics/sessions_2026-08-19__2988507').set({ count: 1, seconds: 600, depth: 4 }));
   await no('sessions create seconds 9000 (>7200)', () => guest.doc('analytics/sessions_2026-08-19__all').set({ count: 1, seconds: 9000 }));
   await ok('sessions create seconds 7200 (max)', () => guest.doc('analytics/sessions_2026-08-19__all').set({ count: 1, seconds: 7200 }));
   await no('sessions create count 60 (>50)', () => guest.doc('analytics/sessions_2026-08-20__all').set({ count: 60 }));
-  await no('sessions create extra field', () => guest.doc('analytics/sessions_2026-08-20__paris').set({ count: 1, uid: 'x' }));
-  await ok('sessions update +seconds', () => guest.doc('analytics/sessions_2026-08-19__paris').update({ count: 2, seconds: 900 }));
-  await no('sessions read user', () => a.doc('analytics/sessions_2026-08-19__paris').get());
-  await ok('sessions read owner', () => owner.doc('analytics/sessions_2026-08-19__paris').get());
+  await no('sessions create extra field', () => guest.doc('analytics/sessions_2026-08-20__2988507').set({ count: 1, uid: 'x' }));
+  await ok('sessions update +seconds', () => guest.doc('analytics/sessions_2026-08-19__2988507').update({ count: 2, seconds: 900 }));
+  await no('sessions read user', () => a.doc('analytics/sessions_2026-08-19__2988507').get());
+  await ok('sessions read owner', () => owner.doc('analytics/sessions_2026-08-19__2988507').get());
 
   // ================= ٤-هـ) v3.3: stats_lists =================
   await ok('stats_lists create guest (existing list cA)', () => guest.doc('stats_lists/cA').set({ open_community: 1, open_app: 1 })); // M4.25: مفاتيح §١٧-ج
@@ -229,11 +221,11 @@ const no = (label, f) => expect(false, label, f);
   await no('stats_places read guest', () => guest.doc('stats_places/cA__0123456789abcdef').get());
 
   // ================= ٤-ز-٢) v3.3.1: stats_places — أماكن دليل المالك =================
-  await ok('stats_places owner guide create (real city paris)', () => guest.doc('stats_places/owner_paris__0123456789abcdef').set({ open_total: 5 }));
+  await no('[v3.13 owner_ places gone] stats_places owner guide create (real city paris)', () => guest.doc('stats_places/owner_paris__0123456789abcdef').set({ open_total: 5 }));
   await no('stats_places owner guide unknown city', () => guest.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_total: 1 }));
   await no('stats_places owner guide uppercase city (bad id)', () => guest.doc('stats_places/owner_Paris__0123456789abcdef').set({ open_total: 1 }));
-  await ok('stats_places owner guide update +1', () => guest.doc('stats_places/owner_paris__0123456789abcdef').update({ open_total: 6 }));
-  await ok('stats_places owner guide read by app owner', () => owner.doc('stats_places/owner_paris__0123456789abcdef').get());
+  await no('[v3.13 owner_ places gone] stats_places owner guide update +1', () => guest.doc('stats_places/owner_paris__0123456789abcdef').update({ open_total: 6 }));
+  await no('[v3.13 owner_ places gone] stats_places owner guide read by app owner', () => owner.doc('stats_places/owner_paris__0123456789abcdef').get());
   await no('stats_places owner guide read by user', () => a.doc('stats_places/owner_paris__0123456789abcdef').get());
   await no('stats_places owner guide read guest', () => guest.doc('stats_places/owner_paris__0123456789abcdef').get());
   await env.withSecurityRulesDisabled(async (c) => c.firestore().doc('userCityLists/owner_paris').set({ ownerId: B, public: false, sharedWith: [] }));
@@ -404,19 +396,19 @@ const no = (label, f) => expect(false, label, f);
   // ================= ١٥) A3-L3-r1: أشكال كتابة وحدة mpTrack =================
   await ok('mp batch: events(multi-field)+hours+sessions in one commit', () => {
     const btch = guest.batch();
-    btch.set(guest.doc('analytics/events_2026-08-19__paris__mp15'), { place_open: 3, mylist_open: 1 }, { merge: true });
+    btch.set(guest.doc('analytics/events_2026-08-19__2988507__mp15'), { place_open: 3, mylist_open: 1 }, { merge: true });
     btch.set(guest.doc('analytics/hours_2026-08-19__all'), { h09: 2 }, { merge: true });
-    btch.set(guest.doc('analytics/sessions_2026-08-21__paris'), { count: 1, seconds: 60, depth: 2 }, { merge: true });
+    btch.set(guest.doc('analytics/sessions_2026-08-21__2988507'), { count: 1, seconds: 60, depth: 2 }, { merge: true });
     return btch.commit();
   });
   await no('mp batch: one bad field sinks the whole commit', () => {
     const btch = guest.batch();
-    btch.set(guest.doc('analytics/events_2026-08-19__paris__mp15b'), { place_open: 1 }, { merge: true });
+    btch.set(guest.doc('analytics/events_2026-08-19__2988507__mp15b'), { place_open: 1 }, { merge: true });
     btch.set(guest.doc('analytics/hours_2026-08-21__all'), { hack: 1 }, { merge: true });
     return btch.commit();
   });
-  await no('mp create: per-field delta 51 rejected', () => guest.doc('analytics/events_2026-08-19__paris__mp15c').set({ place_open: 51 }, { merge: true }));
-  await no('mp update: decrease rejected on mp doc', () => guest.doc('analytics/events_2026-08-19__paris__mp15').update({ place_open: 2 }));
+  await no('mp create: per-field delta 51 rejected', () => guest.doc('analytics/events_2026-08-19__2988507__mp15c').set({ place_open: 51 }, { merge: true }));
+  await no('mp update: decrease rejected on mp doc', () => guest.doc('analytics/events_2026-08-19__2988507__mp15').update({ place_open: 2 }));
 
 
   // ================= ١٦) M3: إغلاق التغطية — الشبكة والحواف والأعلام التصميمية =================
@@ -431,9 +423,6 @@ const no = (label, f) => expect(false, label, f);
     await db.doc('analytics/visits').delete();
   });
 
-  await ok('cities create new doc by owner', () => owner.doc('cities/rome').set({ name: 'Rome', published: false }));
-  await no('cities delete by user', () => a.doc('cities/rome').delete());
-  await ok('cities delete by owner', () => owner.doc('cities/rome').delete());
   await no('suspensions write guest', () => guest.doc(`suspensions/${B}`).set({ at: 1 }));
 
   await no('visits create EMPTY object {} (hasOnly-empty edge)', () => guest.doc('analytics/visits').set({}));
@@ -443,11 +432,11 @@ const no = (label, f) => expect(false, label, f);
 
   await no('errors create EMPTY object {} (size>=1 edge)', () => guest.doc('analytics/errors_2026-08-25').set({}));
   await no('errors update no-op same values (affectedKeys>=1 edge)', () => guest.doc(ED).set({ TypeError: 2 }, { merge: true }));
-  await no('events create category over 40 chars', () => guest.doc('analytics/events_2026-08-19__paris__' + 'x'.repeat(41)).set({ place_open: 1 }));
-  await no('events create malformed id (missing category segment)', () => guest.doc('analytics/events_2026-08-19__paris').set({ place_open: 1 }));
+  await no('events create category over 40 chars', () => guest.doc('analytics/events_2026-08-19__2988507__' + 'x'.repeat(41)).set({ place_open: 1 }));
+  await no('events create malformed id (missing category segment)', () => guest.doc('analytics/events_2026-08-19__2988507').set({ place_open: 1 }));
   await ok('[ACK P1] events update +1 by suspended (measurement anonymous by design — owner-approved)', () => s.doc(EV).update({ bookmark_add: 2 }));
 
-  await ok('hours read owner', () => owner.doc('analytics/hours_2026-08-19__paris').get());
+  await ok('hours read owner', () => owner.doc('analytics/hours_2026-08-19__2988507').get());
 
   await no('stats update by guest', () => guest.doc('stats/users').update({ count: 6 }));
   await ok('[ACK P2] stats create by suspended (anonymous counters uniform policy — owner-approved)', () => s.doc('stats/new2').set({ count: 1 }));
@@ -535,9 +524,9 @@ const no = (label, f) => expect(false, label, f);
   await ok('v3.6 (3b) upp delete app owner allow', () => owner.doc(`userPrivatePlaces/${A}_rome`).delete());
   await no('v3.6 (3b) ucl create with private category key deny', () => a.doc(`userCityLists/${A}_rome`).set({ ownerId: A, public: false, sharedWith: [], categories: { personal_home: { places: [] } } }));
   await no('v3.6 (3b) ucl update adding private category key deny', () => a.doc('userCityLists/cA').update({ categories: { cafes: { active: true, places: [] }, hospitals_clinics: { places: [] } } }));
-  await ok('v3.6 (3b) ucl update public categories only allow', () => a.doc('userCityLists/cA').update({ categories: { cafes: { active: true, places: [] }, bakery: { places: [] } } }));
-  await ok('v3.6 (3b) LEGACY doc with inherited private key: changing it still allowed (safe before code batch)', () => a.doc('userCityLists/cLegacy').update({ categories: { cafes: { places: [] }, personal_home: { places: ['old', 'new'] } } }));
-  await ok('v3.6 (3b) LEGACY doc: removing the private key (migration write) allowed', () => a.doc('userCityLists/cLegacy').update({ categories: { cafes: { places: [] } } }));
+  await no('[v3.13 parent categories now rejected] v3.6 (3b) ucl update public categories only allow', () => a.doc('userCityLists/cA').update({ categories: { cafes: { active: true, places: [] }, bakery: { places: [] } } }));
+  await no('[v3.13 parent categories now rejected] v3.6 (3b) LEGACY doc with inherited private key: changing it still allowed (safe before code batch)', () => a.doc('userCityLists/cLegacy').update({ categories: { cafes: { places: [] }, personal_home: { places: ['old', 'new'] } } }));
+  await no('[v3.13 parent categories now rejected] v3.6 (3b) LEGACY doc: removing the private key (migration write) allowed', () => a.doc('userCityLists/cLegacy').update({ categories: { cafes: { places: [] } } }));
 
   await no('v3.6 (1) trip held-share: recipient denied while owner suspended', () => a.doc('trips/tHeld').get());
   await env.withSecurityRulesDisabled(async (c) => c.firestore().doc('trips/tHeld').update({ sharedWith: [A], sharedWithHeld: [] }));
@@ -755,22 +744,22 @@ const no = (label, f) => expect(false, label, f);
   });
   const v = env.authenticatedContext('userV').firestore();
   // (١) hasTop: موثَّق + عامة ✓ · موثَّق + خاصة ✗ · غير موثَّق ✗ · بلا الحقل ✓ · المالك ✓ · تحديث ذاتي
-  await ok('M4.25 hasTop create by VERIFIED owner on PUBLIC list allow', () => b.doc('userCityLists/userB_top1').set({ ownerId: B, public: true, sharedWith: [], hasTop: true, categories: {} }));
+  await ok('[v3.13 split shape] M4.25 hasTop create by VERIFIED owner on PUBLIC list allow', () => b.doc('userCityLists/userB_top1').set({ ownerId: B, public: true, sharedWith: [], hasTop: true}));
   await no('M4.25 hasTop create by VERIFIED owner on PRIVATE list deny', () => b.doc('userCityLists/userB_top2').set({ ownerId: B, public: false, sharedWith: [], hasTop: true, categories: {} }));
   await no('M4.25 hasTop create by NON-verified owner deny', () => a.doc('userCityLists/userA_top1').set({ ownerId: A, public: true, sharedWith: [], hasTop: true, categories: {} }));
-  await ok('M4.25 hasTop:false create by non-verified allow', () => a.doc('userCityLists/userA_top2').set({ ownerId: A, public: true, sharedWith: [], hasTop: false, categories: {} }));
-  await ok('M4.25 no hasTop field create allow (old shape)', () => a.doc('userCityLists/userA_top3').set({ ownerId: A, public: true, sharedWith: [], categories: {} }));
+  await ok('[v3.13 split shape] M4.25 hasTop:false create by non-verified allow', () => a.doc('userCityLists/userA_top2').set({ ownerId: A, public: true, sharedWith: [], hasTop: false}));
+  await ok('[v3.13 split shape] M4.25 no hasTop field create allow (old shape)', () => a.doc('userCityLists/userA_top3').set({ ownerId: A, public: true, sharedWith: []}));
   await no('M4.25 hasTop update by non-verified owner deny', () => a.doc('userCityLists/cApub').set({ hasTop: true }, { merge: true }));
   // (٢) الجغرافيا
-  await ok('M4.25 geoSources allowed set create allow', () => a.doc('userCityLists/userA_geo1').set({ ownerId: A, public: false, sharedWith: [], geoSources: ['user_pin', 'fsq'], categories: {} }));
+  await ok('[v3.13 split shape] M4.25 geoSources allowed set create allow', () => a.doc('userCityLists/userA_geo1').set({ ownerId: A, public: false, sharedWith: [], geoSources: ['user_pin', 'fsq']}));
   await no('M4.25 geoSources with google deny', () => a.doc('userCityLists/userA_geo2').set({ ownerId: A, public: false, sharedWith: [], geoSources: ['google'], categories: {} }));
   await no('M4.25 googleLat key on list deny', () => a.doc('userCityLists/userA_geo3').set({ ownerId: A, public: false, sharedWith: [], googleLat: 48.8, categories: {} }));
   await ok('M4.25 trip legSources allowed create allow', () => a.doc('trips/tA_leg1').set({ ownerId: A, public: false, sharedWith: [], legSources: ['estimate', 'osrm'], plan: {}, dayRoutes: [] }));
   await no('M4.25 trip legSources google deny', () => a.doc('trips/tA_leg2').set({ ownerId: A, public: false, sharedWith: [], legSources: ['google'] }));
   // (٣) القاموس
-  await ok('M4.25 catsV 3 allow', () => a.doc('userCityLists/userA_cv1').set({ ownerId: A, public: false, sharedWith: [], catsV: 3, categories: {} }));
+  await ok('[v3.13 split shape] M4.25 catsV 3 allow', () => a.doc('userCityLists/userA_cv1').set({ ownerId: A, public: false, sharedWith: [], catsV: 3}));
   await no('M4.25 catsV 2 deny', () => a.doc('userCityLists/userA_cv2').set({ ownerId: A, public: false, sharedWith: [], catsV: 2, categories: {} }));
-  await ok('M4.25 flagsUsed fine_dining allow', () => a.doc('userCityLists/userA_fl1').set({ ownerId: A, public: false, sharedWith: [], flagsUsed: ['fine_dining'], categories: {} }));
+  await ok('[v3.13 split shape] M4.25 flagsUsed fine_dining allow', () => a.doc('userCityLists/userA_fl1').set({ ownerId: A, public: false, sharedWith: [], flagsUsed: ['fine_dining']}));
   await no('M4.25 flagsUsed unknown flag deny', () => a.doc('userCityLists/userA_fl2').set({ ownerId: A, public: false, sharedWith: [], flagsUsed: ['michelin'], categories: {} }));
   await ok('M4.25 trip plan/dayRoutes by owner update allow', () => a.doc('trips/tA').set({ plan: { coffee: [] }, dayRoutes: [{ day: 1, variant: 'shortest', stops: [], legs: [] }] }, { merge: true }));
   await no('M4.25 trip owner touching copyCount deny', () => a.doc('trips/tA').set({ copyCount: 3 }, { merge: true }));
@@ -868,7 +857,7 @@ const no = (label, f) => expect(false, label, f);
   });
   // (أ) الأم فهرسًا — انتقالية: categories أو index
   await ok('M4.26 parent create with index+splitV allow', () => a.doc('userCityLists/userA_ix1').set({ ownerId: A, public: false, sharedWith: [], index: [], splitV: 1 }));
-  await ok('M4.26 parent create with categories (transitional) allow', () => a.doc('userCityLists/userA_ix2').set({ ownerId: A, public: false, sharedWith: [], categories: {} }));
+  await ok('[v3.13 split shape] M4.26 parent create with categories (transitional) allow', () => a.doc('userCityLists/userA_ix2').set({ ownerId: A, public: false, sharedWith: []}));
   await no('M4.26 parent splitV 2 deny', () => a.doc('userCityLists/userA_ix3').set({ ownerId: A, public: false, sharedWith: [], index: [], splitV: 2 }));
   await no('M4.26 parent index not a list deny', () => a.doc('userCityLists/userA_ix4').set({ ownerId: A, public: false, sharedWith: [], index: 'x', splitV: 1 }));
   // (أ) الفرعي
@@ -924,8 +913,6 @@ const no = (label, f) => expect(false, label, f);
   await no('M4.26 profile tagline 41 deny', () => a.doc('communityProfiles/' + A).set({ tagline: 'x'.repeat(41) }, { merge: true }));
   await ok('M4.26 profile contactUrl https still allowed (transitional)', () => a.doc('communityProfiles/' + A).set({ contactUrl: 'https://x.io/a' }, { merge: true }));
   // (٥) مدن المواسم — المالك يكتب
-  await ok('M4.26 cities event kind by OWNER allow', () => owner.doc('cities/season1').set({ name: 'Season', kind: 'event', from: '2026-11-01', to: '2026-12-31' }));
-  await no('M4.26 cities event kind by user deny', () => a.doc('cities/season2').set({ name: 'S', kind: 'event' }));
   // (٦) أنواع البلاغ
   await ok('M4.26 report kind notes allow', () => a.doc('reports/rn1').set({ by: A, kind: 'notes', docKey: 'cur_a__paris', reason: 'x' }));
   await ok('M4.26 report kind app without docKey allow', () => a.doc('reports/rapp1').set({ by: A, kind: 'app', reason: 'The button does nothing' }));
@@ -958,13 +945,28 @@ const no = (label, f) => expect(false, label, f);
   await no('v3.11 identity by suspended user deny', () => s.doc('placeIdentity/h_x8').set(Object.assign({}, PI, { by: S })));
 
   // ================= ٢٥) v3.12 — others تصنيف عام (٢٩ سبتمبر ٢٠٢٦) =================
-  await ok('v3.12 others: public list parent with categories.others allow', () => a.doc('userCityLists/' + A + '_o12').set({ ownerId: A, cityId: 'o12', cityName: 'O', public: true, sharedWith: [], catsV: 3, categories: { others: { active: true, places: [{ id: 'p1', name: 'Odd spot', url: 'https://maps.app.goo.gl/o1' }] } } }));
+  await ok('[v3.13 split shape] v3.12 others: public list parent with categories.others allow', () => a.doc('userCityLists/' + A + '_o12').set({ ownerId: A, cityId: 'o12', cityName: 'O', public: true, sharedWith: [], catsV: 3}));
   await ok('v3.12 others: public split cat doc others allow', () => a.doc('userCityListCats/' + A + '_o12_others').set({ ownerId: A, cityId: 'o12', catId: 'others', public: true, sharedWith: [], active: true, places: [{ id: 'p1', name: 'Odd spot', url: 'https://maps.app.goo.gl/o1' }], updatedAt: 1 }));
   await ok('v3.12 others: another signed-in user reads the public others cat', () => b.doc('userCityListCats/' + A + '_o12_others').get());
   await no('v3.12 others: guest still cannot read cats (sign-in gate)', () => guest.doc('userCityListCats/' + A + '_o12_others').get());
   await no('v3.12 private keys still denied on public parent (personal_home)', () => a.doc('userCityLists/' + A + '_o13').set({ ownerId: A, cityId: 'o13', cityName: 'O', public: true, sharedWith: [], catsV: 3, categories: { personal_home: { active: true, places: [] } } }));
   await no('v3.12 private cat doc still denied (hospitals_clinics)', () => a.doc('userCityListCats/' + A + '_o13_hospitals_clinics').set({ ownerId: A, cityId: 'o13', catId: 'hospitals_clinics', public: true, sharedWith: [], active: true, places: [], updatedAt: 1 }));
   await no('v3.12 private cat doc still denied (personal_friends)', () => a.doc('userCityListCats/' + A + '_o13_personal_friends').set({ ownerId: A, cityId: 'o13', catId: 'personal_friends', public: true, sharedWith: [], active: true, places: [], updatedAt: 1 }));
+
+  // ================= ٢٦) v3.13 — الإحكام (١ أكتوبر ٢٠٢٦) =================
+  await no('v3.13 parent list with categories on create denied (split shape only)', () => a.doc('userCityLists/' + A + '_h13').set({ ownerId: A, cityId: '2988507', cityName: 'Paris', public: true, sharedWith: [], catsV: 3, categories: { coffee: { active: true, places: [] } } }));
+  await ok('v3.13 parent list without categories (index + splitV) allow', () => a.doc('userCityLists/' + A + '_h13').set({ ownerId: A, cityId: '2988507', cityName: 'Paris', public: true, sharedWith: [], catsV: 3, splitV: 1, index: [] }));
+  await ok('v3.13 split cat doc allow', () => a.doc('userCityListCats/' + A + '_h13_coffee').set({ ownerId: A, cityId: '2988507', catId: 'coffee', public: true, sharedWith: [], active: true, places: [{ id: 'p1', name: 'X', url: 'https://maps.app.goo.gl/x' }], updatedAt: 1 }));
+  await no('v3.13 update adding categories to parent denied', () => a.doc('userCityLists/' + A + '_h13').update({ categories: { coffee: { active: true, places: [] } } }));
+  await ok('v3.13 analytics events with gazetteer city id allow', () => guest.doc('analytics/events_2026-10-01__2988507__coffee').set({ place_open: 1 }));
+  await ok('v3.13 analytics events with island id allow', () => guest.doc('analytics/events_2026-10-01__i_mallorca__all').set({ place_open: 1 }));
+  await no('v3.13 analytics events with a non-id city denied', () => guest.doc('analytics/events_2026-10-01__paris__coffee').set({ place_open: 1 }));
+  await env.withSecurityRulesDisabled(async (ctx) => { await ctx.firestore().doc('userCityLists/' + A + '_h13old').set({ ownerId: A, cityId: '2988507', cityName: 'Paris', public: true, sharedWith: [], catsV: 3, categories: { coffee: { active: true, places: [] } }, bookmarkCount: 0, viewCount: 0, copyCount: 0 }); });
+  await ok('v3.13 legacy parent still holding categories: owner update of another field allow (untouched categories)', () => a.doc('userCityLists/' + A + '_h13old').update({ cityName: 'Paris FR' }));
+  await ok('v3.13 legacy parent: others bump viewCount allow (untouched categories)', () => b.doc('userCityLists/' + A + '_h13old').update({ viewCount: 1 }));
+  await ok('v3.13 legacy parent: rewriting the doc without categories (migration write) allow', () => a.doc('userCityLists/' + A + '_h13old').set({ ownerId: A, cityId: '2988507', cityName: 'Paris FR', public: true, sharedWith: [], catsV: 3, splitV: 1, index: [], bookmarkCount: 0, viewCount: 1, copyCount: 0 }));
+  await no('v3.13 cities collection: owner write denied (collection removed)', () => owner.doc('cities/paris').set({ links: {} }));
+  await no('v3.13 stats_places owner_ form denied', () => a.doc('stats_places/owner_paris__0123456789abcdef').set({ open_total: 1 }));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
