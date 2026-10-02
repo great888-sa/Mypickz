@@ -232,7 +232,7 @@ if (countOcc(prod, 'firebase.appCheck().activate(') > 0) {
 // يعدّ نداءات المنصة المباشرة خارج الوحدتين المعزولتين (mpTrack · mpData). زيادة عن السقف = لا نشر.
 // خط الأساس: ٢١ أغسطس ٢٠٢٦ = ٨٢ (التأسيس) · ٢٥ أغسطس = ٧٧ (toggleFavorite) · ٢٦ أغسطس = ٦٢ (toggleSuspendUser · loadMyCityList · saveMyCityList · resolveTripPlaces).
 // سقف مستقل لكل ملف لأن نسخة الاختبار تسبق الإنتاج بدفعة (الاختبار أولًا): يُخفَّض سقف الإنتاج عند ترقيته. السقف يُخفَّض فقط ولا يُرفع أبدًا.
-const DAL_MAX = { [TEST]: 62, [PROD]: 62 };
+const DAL_MAX = { [TEST]: 0, [PROD]: 62 }; // ر٧٣-أب (٢) — قرار المالك: الوضع المثالي صفر (نسخة الاختبار)؛ الإنتاج القديم حتى ترقيته
 const DAL_MAX_LEGACY = 82;
 function sliceModule(s, startNeedle){
   const a = s.indexOf(startNeedle); if (a < 0) return '';
