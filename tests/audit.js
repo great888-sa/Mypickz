@@ -452,7 +452,7 @@ function idGuard(label, s){
   for (const m of code.matchAll(/classList\.(?:add|toggle|remove)\(\s*'([A-Za-z_][\w-]*)'/g)) used.add(m[1]);
   for (const m of code.matchAll(/className\s*=\s*'([^']+)'/g)) m[1].split(/\s+/).forEach(c => { if (c) used.add(c); });
   // أصناف الأنماط بهذا الملف كلها بحروف صغيرة وشرطات؛ ما عداه (متغيرات القوالب والمعاملات) يُستبعد
-  const usedClean = [...used].filter(c => /^[a-z][a-z0-9-]*$/.test(c) && !/^(true|false|null)$/.test(c) && !/^fa(-|$)|^mk|^st$/.test(c));
+  const usedClean = [...used].filter(c => /^[a-z][a-z0-9-]*$/.test(c) && !/^(true|false|null)$/.test(c) && !/^fa(-|$)|^mk|^st$/.test(c) && !/^(pinkey|geo-pin)-?$/.test(c)); // خ-٥: بادئتا الأصناف الديناميكية (pinkey-<fam> · geo-pin-<fam>) تُبنيان من المتغيّر؛ قواعدهما الكاملة بالهوية
   const noRule = usedClean.filter(c => !sClasses.has(c) && !iClasses.has(c));
   const newNoRule = noRule.filter(c => !KNOWN_UNSTYLED.includes(c));
   const knownNoRule = noRule.filter(c => KNOWN_UNSTYLED.includes(c));
