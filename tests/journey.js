@@ -159,6 +159,7 @@ function applyOp(op){
   if (op.merge){ const base = cur || {}; deepMerge(base, op.data); store.set(key, base); }
   else { const base = {}; deepMerge(base, op.data); store.set(key, base); }
 }
+const readLog = []; /* خ-٦: سجل القراءات — مستند (col/id) أو استعلام (Q:col) — لمحطات «تحميل المدينة عند فتحها» */
 function makeSnap(col, id){
   const key = col + '/' + id; const d = store.get(key);
   return { id, exists: !!d, data: () => clone(d) };
@@ -166,7 +167,7 @@ function makeSnap(col, id){
 function docRef(col, id){
   return {
     id,
-    get: async () => makeSnap(col, id),
+    get: async () => { readLog.push(col + '/' + id); return makeSnap(col, id); },
     set: async (data, opts) => { const op = { type: 'set', col, id, data, merge: !!(opts && opts.merge) }; rulesHook(op); applyOp(op); },
     update: async (data) => { const op = { type: 'update', col, id, data }; rulesHook(op); applyOp(op); },
     delete: async () => { const op = { type: 'delete', col, id }; rulesHook(op); applyOp(op); },
@@ -179,6 +180,7 @@ function colRef(col, filters){
     where: (f, opc, v) => colRef(col, filters.concat([[f, opc, v]])),
     orderBy: () => api, limit: () => api, startAt: () => api, endAt: () => api,
     get: async () => {
+      readLog.push('Q:' + col);
       const rows = [];
       for (const [key, d] of store){
         if (!key.startsWith(col + '/')) continue;
@@ -1154,7 +1156,7 @@ function citiesSeed(){
     await B.x("renderBookmarkedLists(document.getElementById('communityBody'), '')"); const bmv = screen('communityBody');
     ok('١٦هـ · r72s: My bookmarked from users — كبسولة المستخدم (Amal) · قائمته المميَّزة (Rome · Places # 1) بطاقةً · مكانه المميَّز (Ten Belles) بمجموعة رأسها «Paris · Specialty Coffee» مع Open list →', bmv.includes('class="curpill cmpill"') && bmv.includes('>Amal<') && bmv.includes('>Rome<') && bmv.includes('Places # 1') && /Paris · [^<]+ <span class="pg-n"># 1<\/span>/.test(bmv) && bmv.includes('>Ten Belles<') && bmv.includes('Open list →'), JSON.stringify({ rome: bmv.includes('>Rome<'), n1: bmv.includes('Places # 1'), grp: (bmv.match(/Paris · [^<]{0,40}/) || [])[0], tb: bmv.includes('>Ten Belles<') }));
     B.x("delete listBookmarksMap['cur_a_rome']; delete userListData.placeBookmarks['oid:cur_a:paris:p9']"); store.delete('userCityLists/cur_a_rome');
-    ok('١٦هـ · r72s: طبقة الشخص تجمع مدنه من الاستعلام ∪ الملف العام · الشاشات مخفية حتى تُعرف حالة المصادقة (لا وميض قبل البوابة)', tplCount("let __qRows = []; try{ __qRows = await mpData.cityLists.publicByOwnerFull(uid); }", 1).ok && tplCount('<body class="auth-pending">', 1).ok && tplCount("document.body.classList.remove('auth-pending');", 1).ok && tplCount('body.auth-pending .mp-screen, body.auth-pending .tabbar{visibility:hidden;}', 1).ok, '');
+    ok('١٦هـ · r72s: طبقة الشخص تجمع مدنه من الاستعلام ∪ الملف العام · الشاشات مخفية حتى تُعرف حالة المصادقة (لا وميض قبل البوابة)', tplCount("let __qRows = []; try{ __qRows = await mpData.cityLists.publicByOwner(uid); }", 1).ok /* خ-٦: بالفهرس */ && tplCount('<body class="auth-pending">', 1).ok && tplCount("document.body.classList.remove('auth-pending');", 1).ok && tplCount('body.auth-pending .mp-screen, body.auth-pending .tabbar{visibility:hidden;}', 1).ok, '');
     // r72t (M4.26 + أ-١٤): التقسيم — الحفظ يكتب الأم فهرسًا والفرعية بدفعة · get يركّب الشكل القديم · publicByOwner بالفهرس · remove يحذف الأم وفرعياتها · مستند قديم (بلا splitV) يُقرأ كما هو
     await B.x("mpData.cityLists.save(currentUser.uid, 'splitcity', { ownerId: currentUser.uid, cityId: 'splitcity', cityName: 'Split', public: true, sharedWith: [], catsV: 3, categories: { coffee: { active: true, places: [{ id: 's1', name: 'S1', url: 'u1', topPlace: true, topAt: 5 }, { id: 's2', name: 'S2', url: 'u2' }] }, pizza: { active: true, places: [{ id: 's3', name: 'S3', url: 'u3' }] } } })");
     const par = store.get('userCityLists/' + uid + '_splitcity') || {}; const c1 = store.get('userCityListCats/' + uid + '_splitcity_coffee') || {}; const c2 = store.get('userCityListCats/' + uid + '_splitcity_pizza') || {};
@@ -1296,6 +1298,35 @@ function citiesSeed(){
     const legacyGone = B.x("(function(){ var chip = document.getElementById('accountChipBtn'), gate = document.getElementById('authBackdrop'); var u0 = currentUser, n0 = (userListData || {}).nickname; var r = {}; try{ currentUser = { uid: 'u_r74b' }; userListData = userListData || {}; userListData.nickname = 'Nourah'; updateUserUI(); r.inChip = chip.style.display; r.inGate = gate.classList.contains('show'); r.av = document.getElementById('accountChipAv').textContent; } finally { currentUser = u0; if (userListData) userListData.nickname = n0; if (u0) updateUserUI(); } r.legacy = typeof handleUserButton; return JSON.stringify(r); })()");
     const uuiSrc = String(B.x('updateUserUI.toString()'));
     ok('١٦هـ · r74b-٣: لا #placesLegacy ولا #userIcon/#userLabel/#guestPromoBanner بالقالب · handleUserButton زالت · updateUserUI بلا الكتلة: لا خروج مبكر على عناصرها · الدخول (حيًّا) → الشارة ظاهرة بحرفَي الاسم والبوابة مغلقة · فرع الخروج (نصًّا) يخفي الشارة ويفتح البوابة', legacyGone === '{"inChip":"","inGate":false,"av":"No","legacy":"undefined"}' && uuiSrc.indexOf("if (!icon || !label) return;") < 0 && uuiSrc.indexOf("getElementById('userIcon')") < 0 && uuiSrc.indexOf("if (chipBtn) chipBtn.style.display = 'none';") > 0 && uuiSrc.indexOf('openGate();') > 0 && tplCount('id="placesLegacy"', 0).ok && tplCount('id="userIcon"', 0).ok && tplCount('guestPromoBanner', 0).ok && tplCount("getElementById('userLabel')", 0).ok, legacyGone);
+    /* خ-٦ (قرار ١٠-٠٣-٠٢): تحميل المدينة عند فتحها — صفحة المنتقي وطبقة الشخص تقرآن الفهرس وحده؛ المدينة تُركَّب عند فتحها؛ Latest يختار بالفهرس (up) ويقرأ مستندات التصنيفات المعنية فقط؛ أقسام أماكن الآخرين مطوية بالجلسة والتصفية تفتح المطابق */
+    const LZ = 'cur_lz000000000000000000';
+    await store.set('communityProfiles/' + LZ, { uid: LZ, nickname: 'Lazy', verified: true, publicCityIds: ['lz1', 'lz2'] });
+    await store.set('userCityLists/' + LZ + '_lz1', { ownerId: LZ, cityId: 'lz1', cityName: 'Lazy One', public: true, sharedWith: [], splitV: 1, index: [{ id: 'a1', name: 'Alpha', catId: 'coffee' }, { id: 'a2', name: 'Beta', catId: 'coffee', top: true, at: 90 }, { id: 'a3', name: 'Gamma', catId: 'pizza' }] });
+    await store.set('userCityListCats/' + LZ + '_lz1_coffee', { ownerId: LZ, cityId: 'lz1', catId: 'coffee', public: true, sharedWith: [], places: [{ id: 'a1', name: 'Alpha', url: 'https://maps.app.goo.gl/a1', area: 'Q1' }, { id: 'a2', name: 'Beta', url: 'https://maps.app.goo.gl/a2', topPlace: true, topAt: 90 }] });
+    await store.set('userCityListCats/' + LZ + '_lz1_pizza', { ownerId: LZ, cityId: 'lz1', catId: 'pizza', public: true, sharedWith: [], places: [{ id: 'a3', name: 'Gamma', url: 'https://maps.app.goo.gl/a3' }] });
+    await store.set('userCityLists/' + LZ + '_lz2', { ownerId: LZ, cityId: 'lz2', cityName: 'Lazy Two', public: true, sharedWith: [], splitV: 1, index: [{ id: 'b1', name: 'Delta', catId: 'bakery', up: 50, at: 50 }, { id: 'b2', name: 'Epsilon', catId: 'hotels' }] });
+    await store.set('userCityListCats/' + LZ + '_lz2_bakery', { ownerId: LZ, cityId: 'lz2', catId: 'bakery', public: true, sharedWith: [], places: [{ id: 'b1', name: 'Delta', url: 'https://maps.app.goo.gl/b1', updatedAt: 50 }] });
+    await store.set('userCityListCats/' + LZ + '_lz2_hotels', { ownerId: LZ, cityId: 'lz2', catId: 'hotels', public: true, sharedWith: [], places: [{ id: 'b2', name: 'Epsilon', url: 'https://maps.app.goo.gl/b2' }] });
+    const catReads = function(from){ return readLog.slice(from).filter(function(k){ return k.indexOf('userCityListCats') === 0 || k === 'Q:userCityListCats'; }); };
+    let r0 = readLog.length; const lzLoad = await B.x("(async function(){ delete curData['" + LZ + "']; const d = await curLoadContent('" + LZ + "'); return JSON.stringify({ n: d.cities.map(function(c){ return c.id + ':' + c.count + ':' + (c._full === true); }), stamped: d.cities.some(function(c){ return Object.keys(c.categories).some(function(k){ return c.categories[k].places.some(function(p){ return p.updatedAt; }); }); }) }); })()");
+    const lzReads0 = catReads(r0);
+    ok('١٦هـ · خ-٦ (١): صفحة المنتقي تحمّل الفهرس وحده — مدينتان بعدّيهما من الفهرس (٣ · ٢) غير مركَّبتين · صفر قراءة لمستندات التصنيفات · ختم التعديل (up) يصل من الفهرس فيختار Latest افتراضيًّا', lzLoad === '{"n":["lz1:3:false","lz2:2:false"],"stamped":true}' && lzReads0.length === 0, lzLoad + ' catReads=' + JSON.stringify(lzReads0));
+    r0 = readLog.length; const lzLatest = await B.x("(async function(){ const d = curData['" + LZ + "']; const items = curLatestItems(d); const hyd = await curHydrate('" + LZ + "', items); return JSON.stringify({ pick: items.map(function(i){ return i.city.id + '/' + i.cat + '/' + i.pl.id + ':' + (i.pl._index === true); }), full: hyd.map(function(i){ return i.pl.id + ':' + (i.pl.url || '') + ':' + (i.pl._index === true); }) }); })()");
+    const lzReads1 = catReads(r0);
+    ok('١٦هـ · خ-٦ (٢): Latest يختار بالفهرس بختم التعديل وحده (Delta بـup · لا Beta رغم top/at) ثم يقرأ مستند التصنيف المعنيّ فقط (bakery) فيعود المكان كاملًا برابطه', lzLatest === '{"pick":["lz2/bakery/b1:true"],"full":["b1:https://maps.app.goo.gl/b1:false"]}' && lzReads1.length === 1 && lzReads1[0] === 'userCityListCats/' + LZ + '_lz2_bakery', lzLatest + ' catReads=' + JSON.stringify(lzReads1));
+    r0 = readLog.length; const lzCity = await B.x("(async function(){ const c = await curEnsureCity('" + LZ + "', 'lz1'); const again = await curEnsureCity('" + LZ + "', 'lz1'); return JSON.stringify({ full: c._full === true, same: c === again, places: Object.keys(c.categories).map(function(k){ return k + ':' + c.categories[k].places.filter(function(p){ return p.url; }).length; }) }); })()");
+    const lzReads2 = catReads(r0);
+    ok('١٦هـ · خ-٦ (٣): فتح المدينة يركّبها كاملة مرة واحدة (استعلام فرعياتها مرة · الثانية من الذاكرة) والأماكن بروابطها', lzCity === '{"full":true,"same":true,"places":["coffee:2","pizza:1"]}' && lzReads2.filter(function(k){ return k === 'Q:userCityListCats'; }).length === 1, lzCity + ' catReads=' + JSON.stringify(lzReads2));
+    r0 = readLog.length; await B.x("viewCommunityUser('" + LZ + "')"); const lzReads3 = catReads(r0);
+    const lzView = B.x("JSON.stringify(viewingUserCities.map(function(c){ return c.id + ':' + (c._full === true); }))");
+    ok('١٦هـ · خ-٦ (٤): طبقة الشخص بالمجتمع تحمّل الفهرس وحده — مدينتان غير مركَّبتين · صفر قراءة لمستندات التصنيفات', lzView === '["lz1:false","lz2:false"]' && lzReads3.length === 0 && tplCount('publicByOwnerFull', 0).ok /* القارئ الكامل للقوائم زال من الطبقة؛ get(uid, city) هو الطريق إلى المدينة الكاملة */, lzView + ' catReads=' + JSON.stringify(lzReads3));
+    B.x("cmFilterMain = ''; cmFilterSub = ''; cmSecCollapsed = {}; openCommunityCityList('lz2')"); const lzLoading = screen('communityBody').indexOf('Loading…') >= 0; await new Promise(function(r){ setTimeout(r, 30); }); const lzLayer = screen('communityBody');
+    const lzHeads = (lzLayer.match(/pl-sechead closed/g) || []).length; const lzRows = (lzLayer.match(/maps\.app\.goo\.gl\/b/g) || []).length;
+    B.x("cmToggleSection('" + LZ + "|lz2|cafes_sweets')"); const lzOpen = screen('communityBody'); const lzOpenRows = (lzOpen.match(/maps\.app\.goo\.gl\/b1/g) || []).length; const lzStillClosed = (lzOpen.match(/pl-sechead closed/g) || []).length;
+    B.x("cmSecCollapsed = {}; cmFilterMain = ''; cmFilterSub = 'hotels'; renderCommunityModal()"); const lzFilt = screen('communityBody'); const lzFiltOpen = (lzFilt.match(/maps\.app\.goo\.gl\/b2/g) || []).length; const lzFiltOther = lzFilt.indexOf('Delta') >= 0;
+    B.x("cmFilterMain = ''; cmFilterSub = ''; cmSecCollapsed = {}");
+    ok('١٦هـ · خ-٦ (٥): فتح مدينة الشخص يعرض Loading ثم يركّبها · القسمان (ذوا المحتوى) مطويان افتراضيًّا بلا صفوف · ضغط رأس القسم يفتحه وحده (Delta ظاهر · الآخر مطوي) · التصفية بفرعي تفتح قسمه وحده (Epsilon ظاهر · Delta غائب) · الطيّ بالجلسة يُصفَّر بالخروج', lzLoading && lzHeads === 2 && lzRows === 0 && lzOpenRows >= 1 && lzStillClosed === 1 && lzFiltOpen >= 1 && !lzFiltOther && tplCount('cmSecCollapsed = {}; /* خ-٦ */', 1).ok && tplCount('function secHeadHtml(', 1).ok && tplCount('secHeadHtml(', 3).ok, JSON.stringify({ lzLoading, lzHeads, lzRows, lzOpenRows, lzStillClosed, lzFiltOpen, lzFiltOther }));
+    B.x("viewingUserUid = null; communityUserLayer = null; viewingUserCities = []; delete curData['" + LZ + "']"); ['communityProfiles/' + LZ, 'userCityLists/' + LZ + '_lz1', 'userCityLists/' + LZ + '_lz2', 'userCityListCats/' + LZ + '_lz1_coffee', 'userCityListCats/' + LZ + '_lz1_pizza', 'userCityListCats/' + LZ + '_lz2_bakery', 'userCityListCats/' + LZ + '_lz2_hotels'].forEach(function(k){ store.delete(k); });
     ok('١٦هـ · r72u: الإسناد باسم الحساب فقط · حفظ الملف يحذف displayName القديم · cmOpenList يثبّت مصدر الأماكن', tplCount("patch.displayName = mpData.fieldDelete();", 1).ok && tplCount("communityTab = 'places'; personLayerOnly = null; await viewCommunityUser(owner); openCommunityCityList(cityId);", 1).ok && tplCount("viewingUserData.displayName", 0).ok, '');
     cap('lists.split');
     // r72t: الأسطر الثمانية بالكود
