@@ -28,19 +28,10 @@
 body{margin:0; font-family:'Tajawal', sans-serif; min-height:100vh; min-height:100dvh; padding:0 0 calc(60px + env(safe-area-inset-bottom));} /* ر٧٠ل-٣: الطول بالارتفاع الديناميكي ومنطقة الأمان أسفل iPhone */
 h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0 4px;}
 .sub{font-size:14px; max-width:460px; margin:0 auto; line-height:1.7;}
-.tab-label{max-width:900px; margin:18px auto 6px; padding:0 20px; font-family:'Cairo',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase;}
-.city-tabs{max-width:900px; margin:22px auto 0; padding:0 16px; display:flex; gap:8px; overflow-x:auto; padding-bottom:6px;}
-.city-tab{flex:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; padding:9px 18px; border-radius:999px; border:1.5px solid; cursor:pointer; white-space:nowrap;}
-.toolbar{max-width:760px; margin:20px auto 6px; padding:0 20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;}
-.action-bar{max-width:420px; margin:24px auto 6px; border:1px solid; border-radius:20px; display:flex; flex-wrap:wrap; justify-content:center; padding:10px 4px;}
-.action-btn{flex:0 0 auto; width:76px; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; padding:6px 2px; border-radius:14px; transition:background .15s ease;}
-.action-icon{width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px;}
-.action-label{font-family:'Cairo',sans-serif; font-size:10.5px; font-weight:700;}
 .btn{font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; border:none; border-radius:999px; padding:10px 18px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;}
 .btn-ghost{border:1.5px solid;}
 .quick-nav{position:sticky; top:44px; z-index:20; /* خ١: تحت الشريط العلوي الثابت */
     max-width:760px; margin:0 auto 18px; padding:10px 20px; backdrop-filter:blur(6px); display:flex; gap:8px; overflow-x:auto; border-bottom:1px solid;}
-.quick-nav-btn{flex:none; border:1px solid; border-radius:999px; width:46px; height:46px; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer;}
 .show-more-btn{display:block; margin:10px auto 0; border:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; cursor:pointer; padding:6px 12px;}
 .section{max-width:760px; margin:30px auto 0; padding:0 20px;}
 .area-filter-row{display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px;}
@@ -58,9 +49,6 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 
 .ticket .missing{font-size:11px;}
 .toggle-row{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:11.5px;}
-.switch-btn{width:36px; height:21px; border-radius:999px; border:none; padding:0; position:relative; cursor:pointer; flex:none;}
-.switch-btn .knob{position:absolute; top:3px; right:3px; width:15px; height:15px; border-radius:50%; transition:transform .2s;}
-.switch-btn.on .knob{transform:translateX(-15px);}
 .remove-btn{border:none; cursor:pointer; margin-inline-start:auto; opacity:.7;}
 .name-edit{width:100%; border:none; border-bottom:1px dashed; font-weight:600; font-size:14px; font-family:'Tajawal',sans-serif; padding:2px 0 4px;}
 .name-edit:focus{outline:none;}
@@ -69,9 +57,6 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 .place-note-row{display:flex; align-items:flex-start; gap:8px; width:100%; margin-top:6px; padding-top:6px; border-top:1px dashed;}
 .place-note-input{flex:1; border:none; font-size:11.5px; font-family:'Tajawal',sans-serif; padding:4px 2px; resize:vertical; min-height:34px; line-height:1.5;}
 .place-note-input:focus{outline:none;}
-.switch-btn.small{width:30px; height:18px; flex:none; margin-top:2px;}
-.switch-btn.small .knob{width:12px; height:12px; top:3px; right:3px;}
-.switch-btn.small.on .knob{transform:translateX(-12px);}
 .place-note{font-size:11.5px; font-style:italic; padding:2px 0 4px; line-height:1.5;}
 .note-link{font-style:normal; font-weight:700; text-decoration:underline;}
 .note-toggle{border:none; padding:0; margin:0 2px; cursor:pointer; font-size:11px; font-style:normal; font-weight:700; font-family:'Tajawal',sans-serif; text-decoration:underline;}
@@ -81,7 +66,6 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 .place-name-input:focus{outline:none;}
 .place-url-input{flex:1; min-width:100px; border:none; font-size:12px; font-family:'Tajawal',sans-serif; text-align:left; padding:4px 6px;}
 .place-url-input:focus{outline:none;}
-.add-place-btn{margin-top:8px; width:100%; border:1.5px dashed; border-radius:8px; padding:8px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; cursor:pointer;}
 .multi-edit .toggle-row{flex-wrap:wrap;}
 .reorder-col{display:flex; flex-direction:column; gap:2px; flex:none;}
 .reorder-btn{width:22px; height:20px; border:1px solid; border-radius:5px; font-size:10px; cursor:pointer; line-height:1;}
@@ -107,11 +91,8 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 .place-link{font-size:12.5px; font-weight:600; text-decoration:none; border-bottom:1px dashed; padding:3px 0;}
 .place-link:last-child{border-bottom:none;}
 .status-card{max-width:760px; margin:0 auto 24px; padding:0 20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center;}
-.status-toggle{display:flex; align-items:center; gap:8px; border:1px solid; border-radius:999px; padding:9px 16px; font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; cursor:pointer;}
-.status-dot{width:8px; height:8px; border-radius:50%; flex:none;}
 .status-divider{width:1px; height:16px;}
 .status-stat{font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px;}
-.add-ticket{border:1.5px dashed; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer;}
 .footer-note{max-width:760px; margin:40px auto 0; padding:16px 20px; text-align:center; font-size:11.5px; line-height:1.8; border-top:1px solid;}
 .modal-backdrop{position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:20px 20px 64px; z-index:2000;}
 .modal-backdrop.show{display:flex;}
@@ -466,9 +447,9 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .pl-src.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
 
   /* ── الشرائح والمحددات فوق الورق: لكل تفاعلي سطحُه ── */
-  .pl-actbtn,.addr-chip,.pl-catpick,.city-tab,.area-chip{
+  .pl-actbtn,.addr-chip,.pl-catpick,.area-chip{
     background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
-  .addr-chip.on,.pl-catpick.on,.city-tab.active,.area-chip.active{
+  .addr-chip.on,.pl-catpick.on,.area-chip.active{
     background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
   .pl-actbtn.brass{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
 
@@ -482,7 +463,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .ticket:hover{border-color:transparent;}
   .pl-name,.prow-name,.stats-name,.hcard .hn,.acc-name,.row .pn{color:var(--ink);}
   .row .ps{color:var(--ink-strong);}
-  .pl-sub,.prow-sub,.place-note,.ticket .missing,.area-divider,.hcard .hd,.toggle-row,.action-label,.sub,.tab-label,.status-stat,.footer-note{color:var(--ink-strong);}
+  .pl-sub,.prow-sub,.place-note,.ticket .missing,.area-divider,.hcard .hd,.toggle-row,.sub,.status-stat,.footer-note{color:var(--ink-strong);}
   .pl-acts button,.pl-acts a,.addr-row .acts button,.addr-row .acts a{background:none; color:var(--ink);}
   .pl-acts a.act-chip,.addr-row .acts a.act-chip{background:none; border-color:var(--ink);}
   .place-link,.note-link,.note-toggle{color:var(--on-night); border-bottom-color:var(--line-night);}
@@ -495,10 +476,6 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 
   /* ── الكتل فوق الورق (السطح ٢) ── */
   .pl-ownerpanel{background:var(--surf); border-color:var(--saffron); color:var(--night-2);}
-  .action-bar,.status-toggle{background:var(--surf); border-color:var(--line-strong); color:var(--night-2); box-shadow:none;}
-  .status-toggle.published{background:var(--surf); border-color:var(--saffron); color:var(--saffron);}
-  .status-dot{background:var(--night-4);}
-  .status-toggle.published .status-dot{background:var(--saffron);}
   .status-divider{background:var(--line-strong);}
   #editModeBanner{background:var(--surf); border-color:var(--saffron); color:var(--night-2);}
   #debugBanner{background:var(--surf); border-color:var(--line-strong); color:var(--danger-night);}
@@ -532,22 +509,10 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .modal .btn-brass{background:var(--saffron); color:var(--ink);} /* ر٧٠د (N-071): الفعل الرئيس بالنافذة زعفراني */
   .btn-ghost{background:transparent; color:var(--night-2); border-color:var(--line-strong);}
   .modal .btn-ghost{color:var(--ink); border-color:var(--line-ivory);}
-  .action-btn{background:none;}
-  .action-btn:active{background:rgba(226,154,46,.12);}
-  .quick-nav-btn{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
-  .quick-nav-btn:active{background:rgba(226,154,46,.18);}
-  .action-icon.ink{background:var(--ink); color:var(--ivory-bright);}
-  .action-icon.brass{background:var(--saffron); color:var(--ink);}
-  .add-place-btn,.add-ticket{background:transparent; border-color:var(--line-strong); color:var(--saffron);}
-  .modal .add-place-btn{border-color:var(--line-ivory); color:var(--ink);}
   .show-more-btn{background:transparent; color:var(--saffron);}
   .remove-btn{background:none; color:var(--night-2);}
   .modal .remove-btn,.row .remove-btn{color:var(--ink);}
   .name-edit:focus{border-color:var(--saffron);}
-  .switch-btn{background:var(--line-strong);}
-  .modal .switch-btn{background:var(--line-ivory);}
-  .switch-btn .knob{background:var(--ivory-bright);}
-  .switch-btn.on{background:var(--saffron);}
 
   /* ── الدلالي (القرار ٢-ب): نص وزر فقط · لا سطح ولا حد ملوّنان ── */
   .warnline{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--danger);}
@@ -762,41 +727,6 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       
     </div>
   </div></div>
-  <div id="placesLegacy" style="display:none;">
-
-  <div class="tab-label">Country</div>
-  <div class="city-tabs" id="countryTabs"></div>
-  <div class="tab-label">City</div>
-  <div class="city-tabs" id="cityTabs"></div>
-
-  <div class="action-bar">
-    <!-- خ١: الأدوات (الدليل · تواصل · نسخ الرابط · الرمز) انتقلت إلى الدرج؛ المجتمع والرحلات إلى الشريط الخمسي؛ الشارة إلى الشريط العلوي -->
-    <button class="action-btn" id="userActionBtn" onclick="handleUserButton()">
-      <span class="action-icon ink"><i class="fa-solid fa-user" id="userIcon"></i></span>
-      <span class="action-label" id="userLabel">My Account</span>
-    </button>
-
-<span class="action-label" id="editBtnLabel">Edit</span>
-      </button>
-      <button class="action-btn" onclick="openMostSavedStats()">
-        <span class="action-icon brass"><i class="fa-solid fa-chart-simple"></i></span>
-        <span class="action-label">Most saved</span>
-      </button>
-
-    </span>
-    <!-- يظهر فقط لحساب المالك عندما تكون أدواته مخفية مؤقتًا — تفضيل عرض محلي، لا صلاحية -->
-
-  </div>
-
-  <div id="guestPromoBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:14px 18px; background:var(--card); border:1.5px dashed var(--brass); border-radius:14px; text-align:center;">
-    <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); margin-bottom:4px;">✨ Create a free account</div>
-    <div class="flabel">Build your own lists 📝 and bookmark the places that matter 🔖 — takes less than a minute.</div>
-    <button class="btn btn-brass" onclick="openAuthModal()">Sign Up</button>
-  </div>
-
-
-
-  </div><!-- /placesLegacy -->
   </div><!-- /screenPlaces -->
 
   <!-- خ١: الوجهة ٢ — الرحلات: جسم نافذة "رحلاتي" يُنقل إلى هنا عند أول فتح (الاستضافة بنقل العنصر) -->
@@ -1184,24 +1114,6 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     </div>
   </div>
 
-  <div class="modal-backdrop" id="myListBackdrop">
-    <div class="modal" style="max-width:460px;">
-      <div class="modal-topbar"><button class="btn btn-brass" style="flex:1" onclick="closeMyListModal()">Save &amp; Close</button></div>
-      <h3 style="text-align:center;">📝 My List — <span id="myListCityName"></span></h3>
-      <p style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 10px;">Add your own places under any category below. Only Google Maps links are accepted.</p>
-      <div id="myListSharedRow" style="margin:0 0 10px;"></div>
-      <div id="myListCountryChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px;"></div>
-      <div id="myListCityChips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px;"></div>
-      <div style="display:flex; align-items:center; gap:8px; margin:0 0 6px; padding:8px 10px; background:var(--ivory-bright); border-radius:10px;">
-        <button type="button" class="switch-btn" id="myListPublicToggle" onclick="toggleMyListPublic()"><span class="knob"></span></button>
-        <span class="flabel">Allow other users to view this list</span>
-      </div>
-      <div id="myListNicknameRow" style="font-size:11px; color:var(--ink-soft); text-align:center; margin:0 0 8px;"></div>
-      <div id="myListShareRow" style="margin:0 0 14px;"></div>
-      <div id="myListSections"></div>
-      <button class="btn btn-brass" style="margin-top:10px;"  onclick="closeMyListModal()">Save & Close</button>
-    </div>
-  </div>
 
   <div class="modal-backdrop" id="statsBackdrop">
     <div class="modal" style="max-width:400px;">
@@ -1470,10 +1382,14 @@ const DATA = [ // ر٧٠ل (الشجرة v3 المعتمدة ١٥ سبتمبر �
   { id:"stay", title:"Stay", icon:"🏨", items:[ {id:"hotels", icon:"🏨", name:"Hotels"}, {id:"apartments", icon:"🏢", name:"Apartments"}, {id:"resorts", icon:"🏝️", name:"Resorts"} ]}, 
   { id:"transportation", title:"Transportation", icon:"✈️", items:[ {id:"airports", icon:"✈️", name:"Airports"}, {id:"train_stations", icon:"🚆", name:"Train Stations"}, {id:"ferry", icon:"⛴️", name:"Ferry Terminals"} ]}, 
   { id:"others", title:"Others", icon:"📌", items:[ {id:"others", icon:"📌", name:"Others"} ]},
-  { title:"Hospitals & Clinics", icon:"🏥", ownerOnly:true, items:[
+];
+/* r74b (ر٧٣-أب المرحلة ٢ · قرار ٠٩-٢٩-٠٢): العناوين الشخصية كيان مستقل — تصنيفاتها خارج شجرة الأماكن (DATA = ١٨ قسمًا عامًّا صِرفة).
+   المعرّفات والأسماء كما كانت (القواعد v3.13 تعرفها وترفضها كتصنيف عام — السطر catId in [...]) · تقرؤها شاشة Addresses وحدها عبر privateCategoryList() وisPrivateCategoryId() */
+const ADDR_SECTIONS = [
+  { title:"Hospitals & Clinics", icon:"🏥", items:[
     {id:"hospitals_clinics", icon:"🏥", name:"Hospitals & Clinics"},
   ]},
-  { title:"Personal", icon:"🔒", ownerOnly:true, items:[
+  { title:"Personal", icon:"🔒", items:[
     {id:"personal_home", icon:"🏠", name:"Home"},
     {id:"personal_work", icon:"💼", name:"Work"},
     {id:"personal_family", icon:"👨‍👩‍👧", name:"Family"},
@@ -1503,9 +1419,9 @@ let customItems = [];      // [{id, section, icon, name}] — تصنيفات ف�
 // القواعد تحرس المفاتيح السبعة المعرَّفة؛ المخصصة يحرسها هذا السطر (قيد كود موثَّق بالمصفوفة M4.11).
 function isPrivateCategoryId(id){
   if (!id) return false;
-  if (DATA.some(s => s.ownerOnly && s.items.some(i => i.id === id))) return true;
+  if (ADDR_SECTIONS.some(s => s.items.some(i => i.id === id))) return true;
   const c = customItems.find(x => x.id === id);
-  return !!(c && DATA.some(s => s.ownerOnly && s.title === c.section));
+  return !!(c && ADDR_SECTIONS.some(s => s.title === c.section));
 }
 function splitCategories(cats){
   const pub = {}, priv = {};
@@ -2079,36 +1995,6 @@ let visitCount = null;
 function escapeHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-// يحوّل روابط Google Maps المذكورة داخل نص الملاحظة لروابط قابلة للضغط تلقائيًا، ويحافظ على الأسطر (للنقاط)
-const GMAPS_LINK_REGEX = /(https?:\/\/(?:www\.)?(?:google\.com\/maps[^\s]*|maps\.app\.goo\.gl\/[^\s]*|goo\.gl\/[^\s]*))/gi;
-function formatNoteText(text){
-  const escaped = escapeHtml(text);
-  const linked = escaped.replace(GMAPS_LINK_REGEX, url => `<a href="${url}" target="_blank" rel="noopener" class="note-link">${url}</a>`);
-  return linked.replace(/\n/g, '<br>');
-}
-let noteToggleCounter = 0;
-const NOTE_TRUNCATE_LIMIT = 120;
-function renderNoteHtml(note){
-  if (!note || !note.trim()) return '';
-  const text = note.trim();
-  if (text.length <= NOTE_TRUNCATE_LIMIT) {
-    return `<div class="place-note">${formatNoteText(text)}</div>`;
-  }
-  const id = 'noteTxt' + (noteToggleCounter++);
-  const shortText = text.slice(0, NOTE_TRUNCATE_LIMIT).trim();
-  return `<div class="place-note">
-    <span id="${id}_short">${formatNoteText(shortText)}… <button type="button" class="note-toggle" onclick="toggleNoteText('${id}')">More</button></span>
-    <span id="${id}_full" style="display:none;">${formatNoteText(text)} <button type="button" class="note-toggle" onclick="toggleNoteText('${id}')">Less</button></span>
-  </div>`;
-}
-function toggleNoteText(id){
-  const shortEl = document.getElementById(id + '_short');
-  const fullEl = document.getElementById(id + '_full');
-  if (!shortEl || !fullEl) return;
-  const showingShort = shortEl.style.display !== 'none';
-  shortEl.style.display = showingShort ? 'none' : '';
-  fullEl.style.display = showingShort ? '' : 'none';
-}
 async function loadVisitCount(){
   try{
     const __v = await mpData.analytics.getDoc('visits');
@@ -2184,7 +2070,6 @@ async function linkOwnerUid(){
 function catLegacyHint(id){ const c = customItems.find(function(x){ return x.id === id; }); return (c && c.legacySection && isOwner) ? ' <span class="dim">· from ' + escapeHtml(c.legacySection) + '</span>' : ''; } // ز-١-ج-٣: أصل التصنيف المخصَّص اليتيم لصاحبه
 function catLabelOf(idOrName){ const all = (typeof plCatsAll === 'function') ? plCatsAll() : []; const hit = all.find(function(x){ return x.id === idOrName; }) || all.find(function(x){ return x.name === idOrName; }); return hit ? hit.name : String(idOrName || ''); } // r72r-1: بلا أيقونة (قرار المالك: أيقونات الفرعي تُحذف من التطبيق كله)
 function displayName(item){ const o = itemOverrides[item.id]; return (o && o.name) ? o.name : item.name; }
-function displayIcon(item){ const o = itemOverrides[item.id]; return (o && o.icon) ? o.icon : item.icon; }
 
 // --- تخصيص اسم/أيقونة القسم الرئيسي (مشترك لكل المدن) ---
 // ر٧٠ط: المعرّفات القديمة — قراءة متسامحة للثلاثة غير المتعارضة، والرابع (shawarma→sandwich) بإعادة الكتابة لمرة واحدة فقط (لأن shawarma صار معرّفًا حيًّا للشاورما)
@@ -2212,17 +2097,6 @@ function sectionDisplay(section){
 
 // لصق رابط من حافظة الجهاز مباشرة بخانة رابط موقع معيّن
 
-async function pasteToUserPlaceUrl(itemId, index){
-  try{
-    const text = await navigator.clipboard.readText();
-    if (!text || !text.trim()){ showToast('Clipboard is empty'); return; }
-    updateUserPlaceField(itemId, index, 'url', text.trim());
-    renderMyListModal();
-    showToast('Pasted ✓');
-  }catch(e){
-    showToast('Could not access clipboard — paste manually in the field');
-  }
-}
 
 // يفتح خرائط Google بحث مباشر على اسم المدينة الحالية بتبويب جديد
 
@@ -2399,7 +2273,7 @@ function catPairRow(spec){
     + '<button type="button" class="csel grow' + (st.open === 'sub' ? ' on' : '') + '" onclick="catPairToggle(\'' + attrStr(id) + '\', \'sub\')"' + (main ? '' : ' disabled') + '><b>' + escapeHtml(sub ? sub.name : (spec.subLabel || 'Sub-category')) + '</b> ' + (st.open === 'sub' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button></div>'
     + '<div id="cp_' + attrStr(id) + '_host">' + catPairPanel(id) + '</div>';
 }
-function catSections(){ const out = []; DATA.forEach(function(sec){ if (sec.ownerOnly || sec.privateOnly) return; const d = sectionDisplay(sec); out.push({ id: sec.id || sec.title, name: d.name }); }); return out; }
+function catSections(){ const out = []; DATA.forEach(function(sec){ const d = sectionDisplay(sec); out.push({ id: sec.id || sec.title, name: d.name }); }); return out; }
 function catPairPanel(id){
   const st = __cp[id]; if (!st || !st.spec || !st.open) return ''; const sp = st.spec; const cnt = sp.countOf || function(){ return undefined; };
   if (st.open === 'main'){ const items = (sp.allowAll ? [{ id: '', name: sp.allLabel || 'All categories', selected: !sp.main }] : []).concat(catSections().map(function(sc){ const n = plCatsAll().filter(function(c){ return c.sectionId === sc.id; }).reduce(function(a, c){ return a + (cnt(c.id) || 0); }, 0); return { id: sc.id, name: sc.name, count: sp.countOf ? n : undefined, selected: sc.id === sp.main }; }).filter(function(it){ return !sp.allowAll || !sp.countOf || it.count > 0 || it.id === sp.main; })); // ر٧٠ل: بالتصفية تُخفى الأقسام ذات الصفر (كما تخفيها الشاشة)؛ بالإدخال تُعرض كلها
@@ -2804,7 +2678,6 @@ async function stopAddingToTrip(discard){
   updateActiveTripBanner();
   
   if (viewingUserUid) renderCommunityModal();
-  if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
   if (origin){
     if (discard || !doneId || !userTrips.find(function(t){ return t.id === doneId; })){ tripAddOrigin = null; if (origin.tab) switchTab(origin.tab); return; }
     switchTab('Trips'); await openMyTripsModal(); await openTripDetail(doneId); return;
@@ -2814,7 +2687,6 @@ async function stopAddingToTrip(discard){
 function refreshActiveViews(){             // كل ما يعرض زر الرحلة يُعاد رسمه عند تغيّر الوضع
   if (currentTab === 'Places') renderPlacesBody();
   if (viewingUserUid) renderCommunityModal();
-  if (document.getElementById('myListBackdrop')?.classList.contains('show')) renderMyListModal();
 }
 function updateActiveTripBanner(){
   const bar = document.getElementById('activeTripBar');
@@ -3898,7 +3770,7 @@ let addrLoaded = false;     // تخزين القراءات بالذاكرة — 
 let addrModalCity = null, addrModalCat = null, addrEditRef = null; // {cityId, catId, index} عند التعديل
 function privateCategoryList(){
   const out = [];
-  DATA.forEach(sec => { if (!sec.ownerOnly) return;
+  ADDR_SECTIONS.forEach(sec => {
     sec.items.forEach(i => out.push({ id: i.id, icon: '', name: i.name, section: sec.title, sicon: sec.icon })); // r72r-1: لا أيقونة للفرعي (قرار المالك)
     customItems.filter(c => c.section === sec.title).forEach(c => out.push({ id: c.id, icon: c.icon, name: c.name, section: sec.title, sicon: sec.icon }));
   });
@@ -4434,10 +4306,6 @@ function doSignOut(){
 }
 
 
-function handleUserButton(){
-  if (currentUser){ switchTab('Places'); selectPlacesSource('bookmarked'); }
-  else openAuthModal();
-}
 
 // ٢/أ: لون حتمي مشتق من الاسم المستعار — الشارة نفسها بكل مكان (الشريط، نافذة الحساب، ولاحقًا ترويسة "حسابي")
 const AV_COLORS = ['#3D5A80','#6B4E71','#4A6D7C','#5B6B3A','#7A4F3A','#3F6B5E','#5C5A8A','#7A5C2E']; // v1.37: لوحة الشارة الثمانية — لا زعفران ولا لون خطر
@@ -4457,17 +4325,10 @@ function avatarInitials(name){
   const n = String(name || '').trim();
   return n ? n.slice(0, 2) : '··';
 }
-function updateUserUI(){
-  const icon = document.getElementById('userIcon');
-  const label = document.getElementById('userLabel');
-  const promoBanner = document.getElementById('guestPromoBanner');
+function updateUserUI(){ /* r74b-٣: الكتلة الخفية الموروثة (شاشة الدليل) حُذفت — كانت تحمل أيقونة الزر القديم ولافتته ولافتة الزائر التي اعتمد عليها شرط الخروج المبكر هنا؛ الشارة بالشريط العلوي هي الواجهة الوحيدة للحساب */
   const chipBtn = document.getElementById('accountChipBtn');
-  if (!icon || !label) return;
   if (currentUser){
     closeGate();
-    icon.className = 'fa-solid fa-bookmark';
-    label.textContent = 'Bookmarks';
-    if (promoBanner) promoBanner.style.display = 'none';
     const gchip = document.getElementById('guestChipBtn'); if (gchip) gchip.style.display = 'none';
     if (chipBtn){
       chipBtn.style.display = '';
@@ -4479,9 +4340,6 @@ function updateUserUI(){
       refreshSuspendedBadge();
     }
   } else {
-    icon.className = 'fa-solid fa-user';
-    label.textContent = 'My Account';
-    if (promoBanner) promoBanner.style.display = 'none'; // خ٢-r4: لافتة التسجيل القديمة أُلغيت — البوابة إلزامية
     if (chipBtn) chipBtn.style.display = 'none';
     const gchip2 = document.getElementById('guestChipBtn'); if (gchip2) gchip2.style.display = '';
     addrLoaded = false; addrData = {}; addrCities = []; closeChipMenu();
@@ -4652,7 +4510,6 @@ function renderBookmarkedPlaces(body){
 function plCatsAll(){ // كل التصنيفات العامة المتاحة بقسمها — للنافذة الموحدة
   const out = [];
   DATA.forEach(section => {
-    if (section.ownerOnly) return;
     const items = section.items.concat(customItems.filter(c => c.section === section.title));
     items.forEach(item => { if (!isPrivateCategoryId(item.id)) out.push({ id: item.id, icon: '', name: displayName(item), section: sectionDisplay(section).name, sectionId: section.id || section.title }); });
   });
@@ -5091,10 +4948,10 @@ function plUnsortedPanelHtml(){
   const unk = plUnknownCats(); const orphans = isOwner ? customItems.map(function(c, i){ return { c: c, i: i }; }).filter(function(x){ return x.c && x.c.legacySection; }) : [];
   if (!unk.length && !orphans.length) return '';
   const total = unk.reduce(function(a, x){ return a + x.n; }, 0);
-  const opts = '<option value="">Choose a category…</option>' + DATA.filter(function(sec){ return !sec.ownerOnly; }).map(function(sec){ return '<optgroup label="' + attrStr(sectionDisplay(sec).name) + '">' + (sec.items || []).filter(function(it){ return !isPrivateCategoryId(it.id); }).map(function(it){ return '<option value="' + attrStr(it.id) + '">' + escapeHtml(catLabelOf(it.id)) + '</option>'; }).join('') + '</optgroup>'; }).join('');
+  const opts = '<option value="">Choose a category…</option>' + DATA.map(function(sec){ return '<optgroup label="' + attrStr(sectionDisplay(sec).name) + '">' + (sec.items || []).filter(function(it){ return !isPrivateCategoryId(it.id); }).map(function(it){ return '<option value="' + attrStr(it.id) + '">' + escapeHtml(catLabelOf(it.id)) + '</option>'; }).join('') + '</optgroup>'; }).join('');
   let h = '<div class="pl-ownerpanel" id="plUnsorted"><b>📥 Import places still not categorized</b>';
   if (unk.length) h += '<div class="pl-sub">' + total + ' place' + (total === 1 ? '' : 's') + ' in ' + escapeHtml(plCityName()) + ' came with a category the app does not know — open a group to see its places, then choose a category for all of them (or ✏️ to move one place on its own)</div>' + unk.map(function(x){ const open = !!plUnsortedOpen[x.id]; const places = (myCityListData.categories[x.id].places || []); return '<div class="row rowblock"><div class="pn" onclick="plUnsortedOpen[\'' + attrStr(x.id) + '\'] = !plUnsortedOpen[\'' + attrStr(x.id) + '\']; renderPlacesMine()" style="cursor:pointer;">' + (open ? '▾' : '▸') + ' ' + escapeHtml(x.id) + ' <span class="dim">· ' + x.n + ' place' + (x.n === 1 ? '' : 's') + '</span></div>' + (open ? '<div class="pl-unsorted-list">' + places.map(function(p, i){ if (!p || !(p.name || p.url)) return ''; return '<div class="pl-unsorted-item"><span dir="auto">' + escapeHtml(p.name || p.url) + '</span>' + (p.url ? ' <a href="' + attrStr(p.url) + '" target="_blank" rel="noopener">Maps ↗</a>' : '') + ' <button type="button" class="act" onclick="openPlPlaceModal(\'' + attrStr(x.id) + '\', ' + i + ')" title="Move this place on its own">✏️</button></div>'; }).join('') + '</div>' : '') + '<select class="modal-input" onchange="plResortUnknown(\'' + attrStr(x.id) + '\', this.value)">' + opts + '</select></div>'; }).join('');
-  if (orphans.length) h += '<div class="pl-sub">Custom categories whose section no longer exists — choose a section</div>' + orphans.map(function(x){ const c = x.c; return '<div class="row rowblock"><div class="pn">' + escapeHtml(c.icon || '🏷️') + ' ' + escapeHtml(c.name) + ' <span class="dim">· from ' + escapeHtml(c.legacySection) + '</span></div><select class="modal-input" onchange="customCatSetSection(' + x.i + ', this.value)">' + DATA.filter(function(sec){ return !sec.ownerOnly; }).map(function(sec){ return '<option value="' + attrStr(sec.id || sec.title) + '"' + ((sec.id || sec.title) === c.sectionId ? ' selected' : '') + '>' + escapeHtml(sectionDisplay(sec).name) + '</option>'; }).join('') + '</select></div>'; }).join('');
+  if (orphans.length) h += '<div class="pl-sub">Custom categories whose section no longer exists — choose a section</div>' + orphans.map(function(x){ const c = x.c; return '<div class="row rowblock"><div class="pn">' + escapeHtml(c.icon || '🏷️') + ' ' + escapeHtml(c.name) + ' <span class="dim">· from ' + escapeHtml(c.legacySection) + '</span></div><select class="modal-input" onchange="customCatSetSection(' + x.i + ', this.value)">' + DATA.map(function(sec){ return '<option value="' + attrStr(sec.id || sec.title) + '"' + ((sec.id || sec.title) === c.sectionId ? ' selected' : '') + '>' + escapeHtml(sectionDisplay(sec).name) + '</option>'; }).join('') + '</select></div>'; }).join('');
   return h + '</div>';
 }
 async function plResortUnknown(oldId, newId){ // النقل بالعدّ: قبل = بعد، وإلا لا حفظ
@@ -5356,7 +5213,6 @@ function togglePasswordVisibility(inputId, btn){
 let userListData = { customCities: [], customCountries: [] };
 let myListCityId = null;   // المدينة اللي المستخدم شغال عليها جوه "My List"
 let sharedCityLists = [];  // قوائم مدن مستخدمين آخرين شُوركت معي بالتحديد (Share with someone)
-let viewingSharedCityListId = null; // معرّف القائمة المشتركة المفتوحة حاليًا للعرض (قراءة فقط)
 let myCityListCatsDirty = false, myCityListOldKeys = []; // ر٧٠ط
 let myCityListData = null; // بيانات المدينة الحالية بـMy List (المرحلة ١ من إعادة الهيكلة): { public, sharedWith, sharedWithNames, favoriteCount, categories:{} }
 let myCityListLoadedFor = null;
@@ -5556,25 +5412,9 @@ async function selectMyListCountry(country){
     userListData.listCountry = country; if (myListCityId) userListData.listCity = myListCityId; // ر٧٢-أ-١ز: لا مسح للمحفوظة حين لا مدينة
     const __patch = { listCountry: country }; if (myListCityId) __patch.listCity = myListCityId; mpData.userLists.merge(currentUser.uid, __patch).catch(()=>{});
   }
-  document.getElementById('myListSections').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   await loadMyCityList(myListCityId);
-  renderMyListModal();
 }
 
-async function addMyListCountry(){
-  const options = WORLD_COUNTRIES.map(c => c.name);
-  const name = await openInputModal("New country (private to your list)", "", "", options);
-  if (!name || !name.trim()) return;
-  const clean = name.trim();
-  if (!Array.isArray(userListData.customCountries)) userListData.customCountries = [];
-  if (!myListAllCountries().includes(clean)) userListData.customCountries.push(clean);
-  const match = WORLD_COUNTRIES.find(c => c.name === clean);
-  if (match) customCountryFlags[clean] = isoFlagEmoji(match.code);
-  myListCountry = clean;
-  myListCityId = null;
-  await saveUserListGeneral();
-  renderMyListModal();
-}
 
 async function addMyListCity(){
   // خ٥/م٢-د (r7 — توحيد مع مسار العناوين): الدولة أولًا بقائمة الدول + فحص اللاتينية + منع التكرار
@@ -5601,7 +5441,6 @@ async function addMyListCity(){
   }
   myListCountry = country.trim();
   myListCityId = id;
-  renderMyListModal();
 }
 
 async function removeMyListCity(cityId, opts){
@@ -5627,34 +5466,8 @@ async function removeMyListCity(cityId, opts){
   await saveUserListGeneral();
   await syncCommunityProfile(); // تفادي "بيانات أشباح" لمدينة محذوفة كانت عامة بـcommunityProfiles
   showToast('City deleted');
-  renderMyListModal();
 }
 
-async function removeMyListCountry(country){
-  if (!(userListData.customCountries || []).includes(country)) return; // حماية: يسمح فقط بحذف الدول اللي أضافها المستخدم نفسه
-  const citiesToRemove = (userListData.customCities || []).filter(c => c.country === country);
-  const msg = citiesToRemove.length
-    ? `Delete "${country}" with its ${citiesToRemove.length} custom ${citiesToRemove.length === 1 ? 'city' : 'cities'} and any saved places? This cannot be undone.`
-    : `Delete "${country}" from your list?`;
-  if (!confirm(msg)) return;
-  userListData.customCountries = (userListData.customCountries || []).filter(c => c !== country);
-  const removeIds = citiesToRemove.map(c => c.id);
-  userListData.customCities = (userListData.customCities || []).filter(c => c.country !== country);
-  for (const id of removeIds){
-    try{ await mpData.cityLists.remove(currentUser.uid, id); }catch(e){} // r72t: الأم وفرعياتها
-    if (myCityListLoadedFor === id){ myCityListData = null; myCityListLoadedFor = null; }
-  }
-  if (myListCountry === country){
-    const remaining = myListAllCountries();
-    myListCountry = remaining.length ? remaining[0] : null;
-    const firstCity = myListCountry ? myListAllCities().find(c => c.country === myListCountry) : null;
-    myListCityId = firstCity ? firstCity.id : null;
-  }
-  await saveUserListGeneral();
-  await syncCommunityProfile(); // تفادي "بيانات أشباح" لمدن محذوفة كانت عامة بـcommunityProfiles
-  showToast('Country deleted');
-  renderMyListModal();
-}
 
 function userCityLinks(){
   if (!myListCityId || !myCityListData) return {};
@@ -5694,63 +5507,16 @@ async function saveUserListGeneral(){
   }catch(e){ showToast('Could not save your list'); }
 }
 
-function toggleUserActive(id, checked){
-  const links = userCityLinks();
-  const e = links[id] || { active:false, places: [] };
-  e.active = checked;
-  links[id] = e;
-  renderMyListModal();
-  saveMyCityList();
-}
 let myListEditingKeys = new Set(); // مفاتيح "itemId#index" للأماكن اللي حاليًا في وضع تعديل
 let myListEditBackup = {}; // نسخة أصلية لكل مكان لحظة دخول وضع التعديل — تتيح التراجع قبل الحفظ
 
-function addUserPlace(id){
-  const e = userEnsurePlaces(id);
-  e.places.push({ id: generatePlaceId(), name:'', url:'', area:'', note:'' });
-  myListEditingKeys.add(id + '#' + (e.places.length - 1));
-  renderMyListModal();
-  saveMyCityList();
-}
 function removeUserPlace(id, index){
   const e = userEnsurePlaces(id);
   e.places.splice(index, 1);
   [...myListEditingKeys].forEach(k => { if (k.startsWith(id + '#')) myListEditingKeys.delete(k); });
-  renderMyListModal();
-  saveMyCityList();
-}
-function toggleMyListPlaceEdit(id, index){
-  const key = id + '#' + index;
-  if (myListEditingKeys.has(key)){
-    myListEditingKeys.delete(key);
-    delete myListEditBackup[key];
-  } else {
-    myListEditingKeys.add(key);
-    const e = userGetEntry(id);
-    const p = e.places && e.places[index];
-    if (p) myListEditBackup[key] = JSON.parse(JSON.stringify(p));
-  }
-  renderMyListModal();
-}
-function revertMyListPlaceEdit(id, index){
-  const key = id + '#' + index;
-  const backup = myListEditBackup[key];
-  if (!backup) return;
-  const e = userEnsurePlaces(id);
-  if (e.places[index]) e.places[index] = JSON.parse(JSON.stringify(backup));
-  delete myListEditBackup[key];
-  myListEditingKeys.delete(key);
-  renderMyListModal();
   saveMyCityList();
 }
 let updateFieldSaveTimer = null;
-function updateUserPlaceField(id, index, field, val){
-  const e = userEnsurePlaces(id);
-  if (e.places[index]) e.places[index][field] = val;
-  // حفظ مؤجَّل (Debounced) — يمنع كتابة على Firestore بكل ضغطة حرف، لكن يضمن عدم فقدان أي تعديل لو غادر المستخدم النافذة بأي طريقة (لا الاعتماد على الإغلاق الصريح فقط)
-  clearTimeout(updateFieldSaveTimer);
-  updateFieldSaveTimer = setTimeout(() => { saveMyCityList(); }, 900);
-}
 async function chooseNickname(){
   const current = userListData.nickname || '';
   const name = await openInputModal("Choose a nickname", "Shown to other users instead of your email", current);
@@ -5846,14 +5612,12 @@ async function shareMyListWithSomeone(){
     myCityListData.sharedWithNames[targetUid] = data.nickname || name.trim();
     await saveMyCityList();
     showToast('Shared ✓');
-    renderMyListModal();
   }catch(e){ showToast('Could not verify username'); }
 }
 async function removeMyListShare(uid){
   if (!myCityListData || !myCityListData.sharedWith) return;
   myCityListData.sharedWith = myCityListData.sharedWith.filter(u => u !== uid);
   await saveMyCityList();
-  renderMyListModal();
 }
 
 async function toggleMyListPublic(){
@@ -5866,15 +5630,10 @@ async function toggleMyListPublic(){
   }
   myCityListData.public = !myCityListData.public;
   if (myCityListData.public) mpTrack.hit('reserved_2'); // ر٦٣: نشر عام
-  document.getElementById('myListPublicToggle').classList.toggle('on', myCityListData.public);
   await saveMyCityList();
   await syncCommunityProfile();
 }
 
-async function closeMyListModal(){
-  document.getElementById('myListBackdrop').classList.remove('show');
-  await saveMyCityList();
-}
 async function selectMyListCity(cityId){
   if (cityId === myListCityId) return;
   await saveMyCityList(); // نحفظ أي تعديل معلّق بالمدينة الحالية قبل ما ننتقل
@@ -5885,204 +5644,7 @@ async function selectMyListCity(cityId){
     userListData.listCity = cityId; userListData.listCountry = myListCountry || '';
     mpData.userLists.merge(currentUser.uid, { listCity: cityId, listCountry: myListCountry || '' }).catch(()=>{});
   }
-  document.getElementById('myListSections').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
   await loadMyCityList(cityId);
-  renderMyListModal();
-}
-
-async function openSharedCityList(docId){
-  mpTrack.statsList(docId, 'open_app');
-  viewingSharedCityListId = docId;
-  document.getElementById('myListSections').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
-  renderMyListModal();
-}
-function closeSharedCityList(){
-  viewingSharedCityListId = null;
-  renderMyListModal();
-}
-function renderSharedCityListDetail(){
-  const s = sharedCityLists.find(x => x.docId === viewingSharedCityListId);
-  const wrap = document.getElementById('myListSections');
-  if (!s){ viewingSharedCityListId = null; renderMyListModal(); return; }
-  document.getElementById('myListSharedRow').innerHTML = '';
-  document.getElementById('myListCountryChips').innerHTML = '';
-  document.getElementById('myListCityChips').innerHTML = '';
-  const cityMeta = allCities().find(c => c.id === s.cityId);
-  document.getElementById('myListCityName').textContent = ((cityMeta && cityMeta.name) || s.cityName || s.cityId) + ' — ' + (s.nickname || 'User');
-  document.getElementById('myListPublicToggle').closest('div').style.display = 'none';
-  document.getElementById('myListNicknameRow').innerHTML = '';
-
-  let html = `<button type="button" class="remove-btn" onclick="closeSharedCityList()" style="margin-bottom:10px;"><i class="fa-solid fa-arrow-right"></i> Back to your list</button>`;
-  let hasAny = false;
-  DATA.forEach(section => {
-    if (section.ownerOnly) return;
-    const items = section.items.filter(item => {
-      const entry = (s.categories && s.categories[item.id]) || { active:false, places:[] };
-      return entry.active && (entry.places||[]).length > 0;
-    });
-    if (!items.length) return;
-    hasAny = true;
-    html += `<div style="margin-bottom:14px;">
-      <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; margin-bottom:6px; color:var(--ink);">${sectionDisplay(section).icon} ${sectionDisplay(section).name}</div>`;
-    items.forEach(item => {
-      const entry = s.categories[item.id];
-      html += `<div style="border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:6px; background:var(--card);">
-        <div style="font-size:12.5px; font-weight:600; margin-bottom:4px;">${displayIcon(item)} ${displayName(item)}</div>`;
-      entry.places.forEach(p => {
-        html += `<div style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--line);">
-          ${p.area ? `<div style="font-size:10.5px; color:var(--ink-soft);">📍 ${escapeHtml(p.area)}</div>` : ''}
-          <a class="place-link" data-mpsrc="ulist" style="font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${escapeHtml(p.name||'Place')} ←</a>
-          ${p.note ? renderNoteHtml(p.note) : ''}
-        </div>`;
-      });
-      html += `</div>`;
-    });
-    html += `</div>`;
-  });
-  if (!hasAny) html += `<p style="text-align:center; color:var(--ink-soft); font-size:12px;">No places in this list yet</p>`;
-  wrap.innerHTML = html;
-}
-
-function renderMyListModal(){
-  if (!document.getElementById('myListSections')) return; // النافذة لسه بحالة "Loading..." — العناصر مش موجودة بالـDOM بعد، تجنّب أي كراش
-  if (viewingSharedCityListId){ renderSharedCityListDetail(); return; }
-  const sharedRow = document.getElementById('myListSharedRow');
-  if (sharedRow){
-    sharedRow.innerHTML = `<div style="font-weight:700; font-size:12.5px; margin-bottom:6px;">🔗 Shared with you</div>`;
-    if (sharedCityLists.length){
-      sharedRow.innerHTML += sharedCityLists.map(s => {
-        const cityMeta = allCities().find(c => c.id === s.cityId);
-        return `<button type="button" class="add-place-btn" style="width:100%; margin-bottom:6px;" onclick="openSharedCityList('${s.docId}')">
-          ${escapeHtml(s.nickname || 'User')} — ${escapeHtml((cityMeta && cityMeta.name) || s.cityName || s.cityId)}
-        </button>`;
-      }).join('');
-    } else {
-      sharedRow.innerHTML += `<p style="color:var(--ink-soft); font-size:11.5px; text-align:center; padding:4px 0;">No lists have been shared with you yet</p>`;
-    }
-    sharedRow.innerHTML += `<div style="border-top:1px dashed var(--line); margin:10px 0;"></div>`;
-  }
-  const city = myListAllCities().find(c => c.id === myListCityId);
-  document.getElementById('myListCityName').textContent = city ? city.name : '';
-
-  if (currentUserSuspended){
-    // نهج موحَّد مع My Trips: إخفاء كل ما لا يُسمح به بدل السماح بضغطه ثم رفضه بالحفظ (ملاحظة الدفعة ٣)
-    document.getElementById('myListPublicToggle').closest('div').style.display = 'none'; // زر المشاركة العامة
-    document.getElementById('myListNicknameRow').innerHTML = '';
-    document.getElementById('myListShareRow').innerHTML = '';   // "Shared with someone"
-    document.getElementById('myListSections').innerHTML =
-      `<div style="background:var(--ivory-bright); border:1.5px dashed var(--danger); border-radius:12px; padding:14px; text-align:center;">
-        <div style="font-weight:700; color:var(--danger); margin-bottom:4px;">🚫 Account Suspended</div>
-        <div style="font-size:12px; color:var(--danger);">Your account has been suspended and can no longer add or edit places, or share your list publicly.</div>
-      </div>`;
-    return;
-  }
-  const __pt = document.getElementById('myListPublicToggle'); if (__pt && __pt.closest('div')) __pt.closest('div').style.display = ''; // r72r-1: حراسة (المرآة القديمة قد لا تكون بالشجرة)
-  document.getElementById('myListPublicToggle').classList.toggle('on', !!(myCityListData && myCityListData.public));
-
-  const nickRow = document.getElementById('myListNicknameRow');
-  if (myCityListData && myCityListData.public){
-    nickRow.innerHTML = `Public as <b>${escapeHtml(userListData.nickname || '—')}</b> · 👁️ ${userListData.viewCount || 0} views · 🔖 ${myCityListData.bookmarkCount || 0} bookmarks for this city
-      <button type="button" class="remove-btn" style="font-size:10.5px; margin-inline-start:6px;" onclick="chooseNickname().then(renderMyListModal)"><i class="fa-solid fa-pen"></i> Edit name</button>`;
-  } else {
-    nickRow.innerHTML = '';
-  }
-
-  const shareRow = document.getElementById('myListShareRow');
-  const shared = (myCityListData && myCityListData.sharedWith) || [];
-  shareRow.innerHTML = `<div style="background:var(--ivory-bright); border-radius:10px; padding:8px 10px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-      <span style="font-size:11.5px; color:var(--ink-soft);">🔗 Share my list with…</span>
-      <button type="button" class="remove-btn" style="margin:0; padding:4px 10px; font-size:10.5px;" onclick="shareMyListWithSomeone()">➕ Add</button>
-    </div>
-    ${shared.length ? shared.map(uid => `
-      <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; margin-top:6px;">
-        <span>👤 ${escapeHtml((myCityListData.sharedWithNames && myCityListData.sharedWithNames[uid]) || 'User')}</span>
-        <button type="button" class="remove-btn" style="font-size:10px;" onclick="removeMyListShare('${uid}')"><i class="fa-solid fa-xmark"></i></button>
-      </div>`).join('') : ''}
-  </div>`;
-
-  // صف الدول
-  const countries = myListAllCountries();
-  const countryOptions = countries.map(country => `
-    <option value="${country.replace(/"/g,'&quot;')}" ${country === myListCountry ? 'selected' : ''}>
-      ${countryFlag(country) ? countryFlag(country) + ' ' : ''}${country}
-    </option>`).join('');
-  document.getElementById('myListCountryChips').innerHTML = `
-    <select class="city-tab" style="flex:1; min-width:140px; font-size:11.5px; padding:7px 12px;" onchange="selectMyListCountry(this.value)">
-      ${countryOptions}
-    </select>
-    <button type="button" class="city-tab" style="font-size:11.5px; padding:7px 12px; border-style:dashed; color:var(--brass);" onclick="addMyListCountry()">➕ Add Country</button>
-    ${(userListData.customCountries || []).includes(myListCountry) ? `<button type="button" class="remove-btn" style="font-size:14px;" onclick="removeMyListCountry('${(myListCountry||'').replace(/'/g,"\\'")}')" title="Delete country">🗑️</button>` : ''}
-  `;
-
-  // صف المدن — بس مدن الدولة المختارة + زرار إضافة مدينة جديدة (تحت نفس الدولة)
-  const citiesInCountry = myListAllCities().filter(c => c.country === myListCountry);
-  const cityChips = citiesInCountry.map(c => `
-    <span style="display:inline-flex; align-items:center; gap:4px;">
-      <button type="button" class="city-tab ${c.id === myListCityId ? 'active' : ''}" style="font-size:11.5px; padding:7px 12px;" onclick="selectMyListCity('${c.id}')">
-        ${escapeHtml(c.name)}${c.id.startsWith('mylist_') ? ' 👤' : ''}
-      </button>
-      ${c.id.startsWith('mylist_') ? `<button type="button" class="remove-btn" style="font-size:14px;" onclick="removeMyListCity('${c.id}')" title="Delete city">🗑️</button>` : ''}
-    </span>`).join('')
-    + `<button type="button" class="city-tab" style="font-size:11.5px; padding:7px 12px; border-style:dashed; color:var(--brass);" onclick="addMyListCity()">➕ Add City</button>`;
-  document.getElementById('myListCityChips').innerHTML = cityChips;
-
-  let html = '';
-  DATA.forEach(section => {
-    if (section.ownerOnly) return; // خ٢: الأقسام الخاصة لها وجهتها المستقلة (Addresses) — لم تعد جزءًا من قائمتي
-    const sectionCustom = customItems.filter(c => c.section === section.title);
-    const allItems = section.items.concat(sectionCustom); // المستخدم يقدر يشوف/يفعّل تصنيفات المالك المخصّصة، بس ما يقدر ينشئ تصنيفًا جديدًا بنفسه
-    html += `<div style="margin-bottom:14px;">
-      <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px; margin-bottom:6px; color:var(--ink);">${sectionDisplay(section).icon} ${sectionDisplay(section).name}${section.ownerOnly ? ` <span style="color:var(--danger); font-weight:700; font-size:10.5px;"><i class="fa-solid fa-lock"></i> Always private — never shared</span>` : ''}</div>`;
-    allItems.forEach(item => {
-      const entry = userGetEntry(item.id);
-      const active = entry.active === true;
-      const places = entry.places || [];
-      html += `<div style="border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:6px; background:var(--card);">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <button type="button" class="switch-btn small ${active?'on':''}" onclick="toggleUserActive('${item.id}', ${active?'false':'true'})"><span class="knob"></span></button>
-          <span style="font-size:12.5px; font-weight:600;">${displayIcon(item)} ${displayName(item)}</span>
-        </div>`;
-      if (active){
-        places.forEach((p,i) => {
-          const key = item.id + '#' + i;
-          const isComplete = p.name && p.name.trim() && p.url && p.url.trim();
-          const isEditing = myListEditingKeys.has(key) || !isComplete;
-          if (isEditing){
-            html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">
-              <input type="text" class="modal-input" placeholder="Area (optional)" value="${(p.area||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'area', this.value)" style="font-size:12px; padding:6px 8px;">
-              <input type="text" class="modal-input" placeholder="Place name" value="${(p.name||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'name', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px;">
-              <div style="display:flex; gap:6px; margin-top:4px; align-items:center;">
-                <input type="text" class="modal-input" placeholder="Google Maps link" value="${(p.url||'').replace(/"/g,'&quot;')}" oninput="updateUserPlaceField('${item.id}', ${i}, 'url', this.value)" style="flex:1; font-size:12px; padding:6px 8px; text-align:left;">
-                <button type="button" class="remove-btn" onclick="pasteToUserPlaceUrl('${item.id}', ${i}); return false;" title="Paste link from clipboard"><i class="fa-solid fa-paste"></i></button>
-              </div>
-              <textarea class="modal-input" rows="2" placeholder="Note (optional) — e.g. - Great burger&#10;- Paste a Google Maps link for a nearby café" oninput="updateUserPlaceField('${item.id}', ${i}, 'note', this.value)" style="font-size:12px; padding:6px 8px; margin-top:4px; resize:vertical; line-height:1.5;">${escapeHtml(p.note||'')}</textarea>
-              <div style="display:flex; gap:6px; margin-top:4px;">
-                ${myListEditBackup[key] ? `<button type="button" class="remove-btn" style="font-size:11px;" onclick="revertMyListPlaceEdit('${item.id}', ${i})" title="Revert to before editing"><i class="fa-solid fa-rotate-left"></i> Undo</button>` : ''}
-                ${isComplete ? `<button type="button" class="add-place-btn" style="flex:1; font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})"><i class="fa-solid fa-check"></i> Done</button>` : ''}
-                <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})"><i class="fa-solid fa-trash"></i> Remove</button>
-              </div>
-            </div>`;
-          } else {
-            html += `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--line);">`;
-            if (p.area && p.area.trim()) html += `<div style="font-size:10.5px; color:var(--ink-soft); margin-bottom:2px;">📍 ${p.area}</div>`;
-            html += `<div style="display:flex; align-items:center; gap:8px;">
-              <a class="place-link" data-mpsrc="app" data-mpcat="${item.id||''}" data-mppersonal="${(section.ownerOnly || (item.id&&item.id.indexOf('personal_')===0))?1:0}" style="flex:1; font-size:12.5px;" href="${p.url}" target="_blank" rel="noopener">${p.name} ←</a>
-              ${(activeTripId && p.id && !isPrivateCategoryId(item.id)) ? `<button type="button" class="remove-btn" style="font-size:11px; color:var(--brass);" onclick="addPlaceToTrip('mylist', '${myListCityId}', '${item.id}', '${p.id}', null, '${(p.name||'').replace(/'/g,"\\'")}')" title="Add to active trip">🧳</button>` : ''}
-              <button type="button" class="remove-btn" style="font-size:11px;" onclick="toggleMyListPlaceEdit('${item.id}', ${i})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-              <button type="button" class="remove-btn" style="font-size:11px;" onclick="removeUserPlace('${item.id}', ${i})" title="Remove"><i class="fa-solid fa-trash"></i></button>
-            </div>`;
-            if (p.note && p.note.trim()) html += renderNoteHtml(p.note);
-            html += `</div>`;
-          }
-        });
-        html += `<button type="button" class="add-place-btn" style="width:100%; margin-top:6px; font-size:11.5px;" onclick="addUserPlace('${item.id}')"><i class="fa-solid fa-plus"></i> Add place</button>`;
-      }
-      html += `</div>`;
-    });
-    html += `</div>`;
-  });
-  document.getElementById('myListSections').innerHTML = html;
 }
 
 /* =========================================================
@@ -6238,8 +5800,11 @@ async function renderSharedListsInto(host){ // r72r-1: القوائم المشا
   host.innerHTML = sharedCityLists.length ? sharedCityLists.map(function(r){
     const owner = r.ownerId || String(r.docId || '').split('_')[0]; const cityId = r.cityId || String(r.docId || '').split('_').slice(1).join('_');
     const cityName = (allCities().find(function(x){ return x.id === cityId; }) || {}).name || cityId; const listId = owner + '_' + cityId;
-    return othersCard({ title: escapeHtml(cityName) + ' — ' + ownerLink(owner, r.ownerName), sub: 'Shared with you by name', bmOn: !!(listBookmarksMap && listBookmarksMap[listId]), cnt: r.bookmarkCount || 0, bmHandler: "toggleListBookmark('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", reportKind: 'list', reportKey: owner + '_' + cityId, saveMsg: 'Copy this list into yours — stage 3', exportHandler: "exportOtherList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", openHandler: "cmOpenList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')" });
+    return othersCard({ title: escapeHtml(cityName) + ' — ' + ownerLink(owner, r.ownerName), sub: 'Shared with you by name', bmOn: !!(listBookmarksMap && listBookmarksMap[listId]), cnt: r.bookmarkCount || 0, bmHandler: "toggleListBookmark('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", reportKind: 'list', reportKey: owner + '_' + cityId, saveMsg: 'Copy this list into yours — stage 3', exportHandler: "exportOtherList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", openHandler: "plOpenSharedList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')" });
   }).join('') : '<div class="mp-empty">No lists shared with you yet.</div>';
+}
+function plOpenSharedList(owner, cityId){ /* r74b-٢: فتح قائمة مشارَكة معي من وجهة الأماكن — عدّاد open_app (§١٧-ج) انتقل هنا من نافذة My List المحذوفة (كان openSharedCityList يسجّله على الفتح نفسه) */
+  const docId = owner + '_' + cityId; mpTrack.statsList(docId, 'open_app'); cmOpenList(owner, cityId);
 }
 function cmGroupByOwner(rows, ownerOf, nameOf, cardOf){ // r72r-3: مجموعة عاجية لكل مستخدم — رأسها كبسولته (الحرفان + الاسم) وتحته بطاقاته
   const groups = []; const byO = {};
@@ -6727,7 +6292,6 @@ function renderCommunityUserList(wrap){
 
   const secBlocks = []; // ر٧٠ج (N-081): عنوان القسم الرئيسي ثم فرعياته؛ والمطابق للمرشِّح أولًا
   DATA.forEach(section => {
-    if (section.ownerOnly) return; // استثناء ثابت — أبدًا ما يظهر في قوائم الآخرين
     let sectionHtml = ''; let secPlaces = 0, secHit = false;
     section.items.forEach(item => {
       const entry = cityLinks[item.id] || cityLinks[Object.keys(CAT_ID_MAP_ONCE).find(function(k){ return CAT_ID_MAP_ONCE[k] === item.id && cityLinks[k]; })]; // معرّف قديم لم يُعد بعد
@@ -6916,7 +6480,7 @@ async function openAdminPanel(){ // ر٧٢-أ-١ب: الباب الواحد لل
 }
 function openAdminCustomCats(){ /* ر٧٣-أب (١) — قرار المالك: إنشاء التصنيفات المخصَّصة من أدوات الإدارة بالدرج (كان بوضع تحرير الدليل الموروث) · القالب المشترك لكل المدن */
   const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return; bd.classList.add('show');
-  const secs = DATA.filter(function(x){ return !x.ownerOnly; }); const opts = secs.map(function(x){ return '<option value="' + attrStr(x.id || x.title) + '">' + escapeHtml(sectionDisplay(x).name) + '</option>'; }).join('');
+  const secs = DATA; const opts = secs.map(function(x){ return '<option value="' + attrStr(x.id || x.title) + '">' + escapeHtml(sectionDisplay(x).name) + '</option>'; }).join('');
   const rows = customItems.map(function(c, i){ return '<div class="row rowblock"><div class="pn" dir="auto">' + escapeHtml(c.name || c.id) + ' <span class="dim">· ' + escapeHtml(c.section || '') + ' · <code>' + escapeHtml(c.id) + '</code></span></div><button type="button" class="act" onclick="adminCustomCatRemove(' + i + ')" title="Remove this category from the template (places keep their category id)">🗑</button></div>'; }).join('');
   const secRows = secs.map(function(x){ const d = sectionDisplay(x); return '<div class="row rowblock"><div class="pn" dir="auto">' + escapeHtml(d.icon ? d.icon + ' ' : '') + escapeHtml(d.name) + (sectionOverrides[x.title] && sectionOverrides[x.title].name ? ' <span class="dim">· was ' + escapeHtml(x.title) + '</span>' : '') + '</div><button type="button" class="act" onclick="adminRenameSection(\'' + attrStr(x.title) + '\')" title="Rename this main section for everyone">✏️</button></div>'; }).join(''); /* خ-٥: إعادة التسمية بالقالب (المعرّفات ثابتة) */
   const subOpts = plCatsAll().map(function(c){ return '<option value="' + attrStr(c.id) + '">' + escapeHtml(c.section + ' · ' + c.name) + '</option>'; }).join('');
@@ -7383,7 +6947,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-logTiming('BUILD: M2-ID-r74a (r74a - map pins: seven dense sections in their own colours (two shades each for restaurants and shopping), copper for every other section, no icons, colour key above the map filters it, rename main sections and sub-categories from the admin tool; r73z - community person layer primed from the loaded curator data (no re-read of every list), Latest update places: every saved place carries updatedAt and the chip lists the last 10 added or edited places (owner decision), city trips header and list use the city filter, top chip stays on Cities when a city is chosen, no reload of an already loaded person when switching chips; r73x - curator screen restored to its pre-batch form; (City) All places opens that city layer in Community and (City) All trips shows only the trips of that city; r73w - Latest update lists cities by last update, city trips open through the community path, list-open timeout 15s, community search chip with an arrow; r73v - curator city screen: Top / All places / All trips render in place, no jump to Community; r73u - community list opened under a category filter shows only the matching categories with a Show all button, drawer reorganised (My account with Change nickname, Me, Coming next grouped, App, Owner, Policies), stage labels aligned with the plan; r73t - field notes: community category picker registered, curator city chips filter the source screen by city, Change nickname in the drawer, sort chip without highlight, search as a chip with an arrow; r73s - zero direct Firestore calls outside mpData/mpTrack (42 to 0, audit cap 0), new layer methods for account, community, stats, analytics and settings; r73r - suggestion run shared for the same city, identity lookups in parallel with timeout and single-read fallback, cancelled state shown; r73q - custom categories managed from the admin drawer (add with section, remove), legacy guide layer removed (loaders, edit mode, tabs, 40+ functions), EXPECTED_RULES v3.13, suggestions cancel on city change, identity reads in tens, two batches in parallel; r73o - legacy guide reads of the removed cities collection neutralised (no Firestore call, no red banner at startup), map line shows what was sent to the matcher (country, centre, radius); r73n - analytics city from my cities by gazetteer id (legacy CITIES no longer used), owner guide place stats removed; r73m - batches of 40 again, Skip keeps the map on the pin, probable and not-found lists show the pin popup per row; r73l - area, nearest place and street shown while dragging or choosing (the drag part was missing from r73k), the city map returns to the pin just confirmed; r73k - area read live while dragging or choosing a candidate, pasted link fills Area from the matched position and shows the resolved address under the link, popup details in copper; r73j - one pin popup for every pin: name in ink, Maps, Open card, Edit, plus Confirm on map for suggested and probable pins; r73i - area filled from the pin position (Overture divisions from our storage), Edit pin on pinned places with Remove pin in the map step, saved pin opens first when editing, probable and not-found chips readable; r73h - search by name in the first row beside My places, large saffron arrows on every drop-down chip, probable and not-found counts open a list with a confirm button per place; r73g - three pin states (confirmed saffron, suggested grey with saffron outline, probable lighter grey with a count badge), default zooms 14/16 for clearer streets; r73f - probable wording by count (1 possible match / n possible matches); r73e - probable tier: first candidate drawn with a question mark when no certainty, map line splits suggested, probable and not found; r73d - map line reports batches and slowest batch time, 45 second batch timeout; r73c - suggestions run once per city with visible progress and cumulative diagnostics, batches of 20 with a 30 second timeout; r73b - token-first place index per country used by the worker with cell fallback, country code sent with every match, map line shows the answering index and any batch failure kinds; r73a - our maps: one map module mpMap with a provider whitelist, MapLibre loaded on first map, Protomaps tiles from our own storage, Leaflet and CARTO removed, attribution; r72z - Import places still not categorized panel for every user (unknown categories re-homed with matching counts, old category kept on the card), root fix: custom categories bound to a section id and orphans shown under Others with their old section kept, custom categories tool in the admin panel to re-home them, rules v3.12 expected (others is public), data and maps attribution in help; r72y - one source of cities from the gazetteer by id (no directory, no user-made cities, no season cities, no hiding), matching by city centre and radius, place identity registry read before matching and written on confirm, I am here pin, 6 second timeout, no data line, CARTO tiles, rules v3.11, direct paste, readable map window; r72x - geo step: after the link is read a full-screen map asks to confirm the pin (best match preselected, up to three numbered candidates, draggable pin, skip), open identity and coordinates are written inside the place, context map for my city list and for other users lists with Show on map, Save on other users places and whole lists copies them into my list with credit, Saved from Curators and Community sources are live, no coordinates from Google anywhere; r72w - list details opened from curators and community use the ivory group with no sub-category icons, other users trips use the unified place card, the sort label on the community chip is readable, counts next to every option in the community places and trips dropdowns, the copy counter is shown on trip cards and a failed decrement is reported; r72v - the first row on Places and Trips is one full-width chip that names the source with its count and opens the source list, and my trips use the unified card shell grouped by city with an Actions grid (content completes with the new trip model); r72u - split reads of other users lists now query only public or shared category documents as Firestore rules require, copy credit uses the account name only and the old display name is cleared on profile save, standard cities get a hide action in edit mode, opening a places list from the community always opens places; r72t - rules M4.26 code tail: split lists (parent index + one document per category composed back by the data layer), live copy counter on removal, account deletion clears my copies requests and reports, public trip views, typed contact (email phone whatsapp), season cities hidden outside their window, report kinds notes and app, rules version check in the admin panel, hide a standard city instead of deleting it; r72s2 - More/Less in copper, the main-section count sits next to its name on the left, the report flag on the curator header has a cream background; r72s - community is one screen without an entry page (source switch on top, filters, All users lists beside Search by username, My bookmarked beside Sort by with an All recent option), My bookmarked from users grouped by user with their lists and their bookmarked places under the list name, person layer cities from the query union the profile so a new city shows, and no Places flash before the gate; r72r2+r72r3 - community entry without the globe, the Places/Trips switch only highlights and Browse navigates, the browse screen has a back button like curators, All users lists beside a Sort by dropdown (most viewed, most bookmarked default, most saved) and My bookmarked from users, Shared with me removed from community, results grouped by user with a pill header and list and trip cards in the place-card style; r72r1 - one ivory group per sub-category holding cream place cards on every screen (places, bookmarks, trips, addresses, curators), main-section counts with #, bookmarks on the v3 tree with city names, sub-category icons removed app-wide, Show dropdown with title and count on Places and Trips including Shared with me, Export places list, city picker across countries with the country following the city, and curator fixes (bookmark refresh, back keeps state, fresh profile); one place card for all screens: ivory frame, cream inner card split into data on the left (name, then Area, Picks, Note in copper labels) and an Actions grid on the right that wraps to what exists, More/Less with Maps and bookmark visible when collapsed, red flag on others content, no category icons in section heads, counts written with #, city chips on two lines; curator page header from the account name with a tagline and no cities, Top places count, red report flag, chips derived from the curator name and the chosen city with a bigger Cities chip, city notes as lines with a visible Edit, My profile and city notes windows in the app shell (tagline, about, typed contact, empty fields not sent), curators grid as capsules; curator world on rules M4.25: city notes written by the curator and read by every visitor, picks counted, become-a-curator request with status, report flag on others rows and cards and profiles, admin doors for requests (accept sets the badge) and reports, curator stats written with the six keys, trip_built, resend verification, error codes on copy record; session state is reset on sign-out and account switch so no previous account data shows, a curator page reloads fresh on every open, Saved becomes tappable to remove my copy after an in-app confirm, and no Save appears on my own content; code tail of rules M4.25: derived list fields hasTop, geoSources and flagsUsed written on every save, legSources on trips, stats keys per the value-cost review, follow as one atomic batch again, copy record plus copyCount on the source when saving a trip, Most saved from users alive by copyCount, stats_cities on city open and place added; the Opening toast is gone - navigation itself is the feedback, the slow-path diagnostics stay; opening a curator person layer no longer waits silently - a six second race shows what loaded and names the stuck step, and any error names its step in the toast; a copied trip credits the owner by name from the community profile, not a member; My trips lists only trips I created - copies with credit live in their Saved from chips; following now writes the record and my light copy in one batch and then the curator counter as the rules require, the person layer shows only places or only trips when reached from the curator chips, and Save on any trip of others copies it into my trips with credit - Saved from Curators and Saved from Community list those copies by source; a failed follow shows its error code in the toast itself; the follow disclosure is an in-app confirm instead of the browser dialog and a failed follow logs its error code to TIMING; the trip card in the person layer is the market trip card with the full action row; following - one atomic tap creates the follow record, bumps the curator counter where rules allow and keeps a light copy on my document, with a one-time disclosure and no self-follow; the curator sees followers by name and edits My profile (name, bio, contact, follower count); Saved from Curators and Saved from Community filter my saved trips by their source; the cities dropdown renders below the first chip row at full width instead of inside the chip grid; my own list card in the person layer shows the passive bookmark counter instead of a rules chip, and the All places and All trips chips give instant feedback with a double-tap guard and a timing line; the my-city tag is removed everywhere (button, header icon, private field, public copy, opening rule, curator chip, grid sort) with one-time cleanup of stored traces; the curators grid sorts by recently updated by default; the curator page has five chips and shows the chosen city in place; the my-city tag writes its public copy for curators in the same atomic batch and re-derives it on every profile sync, general saves no longer erase the selected city, and opening falls back to the tagged city then the city with most content only when the saved one is missing; curator content unites the query with the profile-listed documents (the proven community path) and logs both counts, my curator cache clears after saving my list so a starred place appears at once, the row star is a text glyph that turns night on saffron; the curators grid gains a sort row - your city first, most viewed, recently updated, following - never by follower count; a star in my place row adds to Top places in one tap, Notes header styled like Picks, the grid and the page read the same source (the curator public lists by query, so counts always match), the Cities dropdown folds on re-tap, All places lists counts lists and the person layer list card is the market card with the full action row, my city is read from my own tag on my own page; ten owner notes - profile sync counts only lists with places and runs on all three delete paths, Contact always shown, no automatic curator city, place search uses the shared others row, city notes skeleton, Top place star in the place window stored inside the place and shown as Top places and Latest 10 with Edit for the curator, Notes header everywhere, Cities chip with a dropdown, System status only inside Admin panel, You first in the grid; curators rebuilt from the visual draft v2 - a grid of ringed initials with basic data, the curator page with the template header, five chips plus place search, city screen with its three-way switcher, the me state with My dashboard, the community person layer under a saffron browsing bar, the drawer per the reference, a night admin panel with tiles and doors, a My Dashboard panel with staged doors, updatedAt on publish; the owner marks or unmarks a curator from the Users window (the existing verified field, profile created if missing); the Users window is redrawn in the app style with badges and two action chips; a preparation Admin panel holds the stats in their current form with the Users, Most saved and System status doors; the drawer shows Admin panel and System status only; curators batch 1 - the live directory of verified profiles (city chip and name search on the shared row, All and Following chips, my city first then most recently active, rows with the Curator badge, Show more), the curator page with a compact header and two archive buttons that open the existing community person layer under a read-only banner with a back button; the tab no longer jumps to Community behind the gate before sign-in, so Places stays from the first moment; home is always Places unless chosen manually, Places reopens on the last selected city (the home tag no longer affects opening), the content rule, its announcement, the Auto card and the diagnostics are removed; the preferences row explains the home decision (Auto → Places (N places)), and the city place counter self-heals when a city list loads; the home chooser gains an Auto option that clears the manual choice so the content rule decides, and the preferences label shows Auto; the app accepts share text from the iOS Shortcut via ?share= and opens the place window in paste mode after sign-in, and logs the home tab decision with its reason; my-city tag and the home announcement flag are read back on load so the tag survives sign-out and sign-in; new-user batch 4 smart paste - one tap Paste from Maps reads and parses, manual paste parses itself, a three-grade parser puts the address into area and suggests switching to a matching city, the name is checked against what came with the link and a link pasted alone is marked unverified; the bar button is Back; the add-to-trip bar has both buttons - Sources returns to the trip with the six-sources card open, View trip opens the trip as before; the my-city home button is always visible on every city row, Edit is only for delete; the add-to-trip bar keeps its three buttons on their own line so nothing is cut on iPhone, and its back button returns to the trip with the sources card open; the first-visit intro opens immediately at init instead of after auth; the six-sources card is the add-to-trip entry in every case - the Add places button opens and folds it above the days, and an empty day still shows it open; an empty-state guide on Trips with four doors (create, community trips, curators, shared with you) shown on every visit until the first trip; new-user batch 3 - the six-sources card on an empty trip day (my places, my bookmarks, shared with me, curators, community lists, community trips) with counts for the trip city, each button goes to its screen filtered with add mode on, gone after the first place; an empty-state guide on Places with four doors (first place, import, community, curators) shown on every visit until the first place; a how-to section for copying a link and exporting lists back in the intro; the saved city is used only when it has content or was picked this session, so an account without places opens on Select city rather than the directory city; new-user batch 2 - the intro rewritten on the final product (owner text v2): level one in a single screen, level two as nine collapsed sections plus Home Screen; opens on the first visit before the gate (local flag), after sign-up, from the drawer, and from a ? button in the top bar that opens the current screen section; English first with the Arabic toggle kept - r70m: no city is forced on Places - saved city, then my city, then the city with most content, otherwise Select city with a short hint; the home icon shows on the header city chip when the current city is tagged; new-user batch 1 - default landing by rule (manual choice, else Places on my city when I have places, else Community; visitors open on Community), the my-city tag from the cities panel up to two cities with last-used first, a one-time announcement on the first place, note example - r70l3: dynamic viewport height and iPhone safe area at the bottom; Add place is a saffron primary action; the section header count is larger and saffron - r70l2: inputs are 16px on touch devices so Safari no longer zooms the page on focus; the filter category panel says plainly when no category has places yet - r70l: category tree v3 by the owner - 18 sections in usage order and 80 sub-categories, dictionary version 3, unknown category ids land in Others as the import inlet, the filter main panel hides empty sections while the add panel shows them all - r70k2: card - the fine dining flag is a saffron chip beside the sub-category on the place card and beside the name on list and trip cards, not part of the name; wider spacing before picks and before notes - r70k: the Add place panel picks the main section then its sub-categories with counts on the shared two-chip row, choosing a sub-category opens the place window; the old category template overrides are ignored on tree v2 and reset once by the owner; my place card now carries the fine dining flag, picks and note; an inherited empty list is deleted when its owner opens it and never listed in the market - r70j: N-081 places screen and others lists grouped by main section - a collapsible section header with its place count, then the sub-categories with their places, empty ones hidden, matching sections first when a filter is set; an empty list is deleted on save like an empty trip - r70i: category tree v2 - nine sections with stable ids and 67 sub-categories, old ids mapped and rewritten once; fine dining flag and normalized search key on the place; the place modal picks main then sub on the shared picker with Move to another category; filter row main then sub under the city row on Places and on community lists with match counts, place names searchable inside the sub panel - r70h2: place card - the header shows city and area only, the place name appears once in the box with picks and note, the category path stays above the box - r70h: picks field on the place - a list of items, one per line, shown under the area on place rows; card v2 by the owner design - type header, name, city and area, main and sub category as text, QR for the map link with a built-in generator, picks and notes, numbered places on list cards, days and slots on trip cards, language chosen at export English or Arabic, the preview is the card image itself, long cards split at section bounds - r70g: N-065 adding from a place row enters the existing add mode - the bar stays for more places, Done shows the trip and Back returns to the origin, Cancel returns to the origin; N-076 unified card model B - type header, sections in boxes, night footer with MyPickz and the person glyph and the owner name, long content split into up to ten cards shared together; N-080 action row for every place in a community trip; trip chooser rows read like trip cards - r70f: N-065 add a place to a trip from places and community in three cases - no trip: create with the city preset then continue, one trip: continue, several: choose on the shared picker; day and slot on the shared picker with no preselection; then the trip view and Done returns to the origin screen; N-076 my place export preview with the card; N-077 All trips; N-078 Select city; N-079 username search scoped to the chosen city with two messages - r70e2: owner decisions - community root cities come from public content with counts, not the legacy list; chips inside sub-windows are ivory with a wide night border and turn saffron with ink text when active or selected, type fields stay light; the picker chip lights up while its list is open - r70e: N-011 community root and source city on the shared picker with counts; N-074 one row - city chip left and type field right, Go as a wide primary action; N-075 create-trip and address modal city on the same row pattern, results under the field, add city visible without scrolling - r70d2: audit fixes - addrSetMethod and addrParseShare restored, dead country filters removed, plus colour inherits - r70d: N-011 Addresses screen on the shared picker; owner decision - a new city is saved at once with count 0, no pending city; N-075 create-trip city on the shared picker with add city; N-069 plus visible on the primary button; N-070 city modal title with the country; N-071 modal primary buttons saffron; N-072/N-073 header primary action one third of the row in places, trips and addresses, add address grows - r70c3: hotfix - adding a city was blocked since r70b2 because the input modal Confirm crashed on gazetteer object options; Confirm now matches by normalized name and accepts a free city name when the list is a suggestion - r70c2: gazetteer split per country under cities/, loaded on demand when a country is chosen; source cities500 - r70c: N-011 Trips screen city filter on the shared picker with trip counts, create-trip city list from my cities with normalized filter; N-066 share-with-someone glyph is a person-plus svg on the three share buttons; N-067 flag before the country code on the Places header chip and the panel country control; N-068 Add city as a wide primary action in the Places header row - r70b2: N-011 reference gazetteer cities.json loaded on demand per country in the add-city step of places and addresses, filter by normalized name and alternates, pick stores the canonical name, free add stays for missing cities; GeoNames attribution on the policy screen - r70b: N-011 Places screen on the shared picker - countries with flag N-067, cities with fixed count, saffron dot, delete only in edit mode on my own cities, add city below results, categories with add on every row; normalized duplicate check and did-you-mean before creating a city, in both places and addresses flows - r70a: N-011 shared picker panel template - live normalized filter, count column, country line, edit mode with delete on own items, add below results, last-pick memory; not wired to any screen yet - r69ad: N-063 rule moved from the identity block to the structure block, audit s10 - r69ac: N-064 one action order for others cards of both kinds, open, bookmark, export, save - the trips no longer pass exportFirst - r69ab: N-063 community cards action row right-aligned - the row was display:block so justify-content had no effect; now flex like rowacts - r69aa: trip cards ordered view, export, bookmark, save; opening a trip from the market shows the trip and goes back to the market - r69z: my-bookmarked lists on the unified card in the agreed order; my-bookmarked places with the full row and the back chip - r69y: single-place export card with the owner tag; place rows right-aligned; chip labels my bookmarked from users / most saved from users - r69x: community rows in the agreed order; export from any other-user list or trip opens the card preview; owner name as text; open a list from the market and go back to the market; trip Open from the market opens the trip; add-to-trip with no trip jumps to create; chip labels in user context; own bookmarks strictly your own; fixed redraw and export handler - r69w: other-user place identity by owner+city+id with the real owner passed · the open layer redraws at once · add-to-trip from any other-user place · community action rows in the agreed order · owner chip on a distinct surface - r69v: export offers card image or message · lit public and share buttons everywhere · owner chip with surface and Lists label · other-user place rows in the place-row design with actions - r69u: bookmark a single place inside another user list, gathered under Community / My bookmarked / Places with an owner-list back chip; trip view export via the preview; one globe icon lit or unlit; shared text off the card line; owner name as a chip; explicit section titles on user pages - r69t: shared-with-you cards drop the private tag (the chip and the owner name say it) — r69s: places header as three rows of three · export preview card for lists and trips · bookmarked chips show your own items with your own row minus edit · trip card status glyph removed (buttons carry the state) · bookmark stores the owner for the community back-link — r69r: share button lights saffron when the list or trip is shared with someone — r69q: logout asks only with an open form or an open trip in edit mode — r69p: bookmarked places resolve category names and carry the full others-row actions · places remember last city and source across sign-ins · per-city place counts in the city panel · bullet notes — r69o: bookmark/save mirrors are now loaded at sign-in (root of every "highlight gone after re-login") · logout asks only when a form is open — r69n: reconciled community build — atomic bookmark batch with rules M4.24.1 · one card builder · shared-with-me live · no stuck loaders · community memory · most bookmarked/viewed filter (owner-approved) · record pre-read withdrawn — r69m: most bookmarked / most viewed filter before sorting — r69l: bookmarked lists/trips treat shared-with-me as live · context line says "sorted by" — r69k: one card builder on every community branch (open · bookmark · export · save) · bookmark truth from the record not the mirror · My bookmarked trips no longer stuck · 🧳 without Soon — r69j: single atomic bookmark batch (rules M4.24.1 existsAfter) · one others-card builder · community remembers its last screen · add a place to a trip from the place row — r69i: bookmark highlight wins row rules · counter re-read after write · local mirror at once · trip save record-before-counter with rollback — r69h: community root explicit Browse CTA · bookmark record before counter (rules exists) · My bookmarked on the template · modal primary saffron — r69g: list public/share moved to the places action row with the shared-with modal · trip card actions styled like place rows · share modal colors — r69f: place rows two-tier like trip cards · trip public/share without opening the view · shared-with modal · one day at a time · view without edit · edit without share controls — r69e: trip card actions view·public·share·bookmark·export·edit · day switcher grid · trip place rows on lines · select caret · actions right — r69d: one lit chip per row · shared-list owner name from profile · shared lists chip · private-shared bookmark deferred · community excludes your own content · place note on its own line — two defects surfaced by the upgraded journey: cascading deletion now removes trips and city lists through the owner query united with the local list so a stale local list can no longer leave residue, and opening a shared trip that was withdrawn or deleted shows a message instead of crashing) \u2014 r66 (foundation of founding decision 11, the unified destination model, coded ahead of its reference by owner decision with v1.42 to follow: header chips become equal-column grids with no horizontal scroll, the places context line moves under the action row, trips gain a city picker filled from your own trips with Create trip in the action row and the add-places pill reduced to its icon, and Community becomes a root switch with username search over two independent source screens each with a back chip, a city picker filled from live public content, a three-plus-two browse grid and per-screen preserved state) \u2014 r65 (owner model check on the market: a third sort chip Most saved tagged stage 3 restored per the field note; journey upgraded from a data walk to an experience walk: a screen-assertion layer checks what appears and what must not after every action, a reopen station reads default state, and the coverage matrix is derived from the reference scenes themselves so no scene can go untested silently; its first run caught a real crash when opening the page of a card owner missing from the loaded community list, now read singly through the nucleus with a safe fallback) \u2014 r64 (field-triage batch on the verified test: url-less places get their own bookmark identity, the curator page rebuilt with one header and settlement actions and no inner dimming, trip screens open in view mode with Edit visible, the Bookmarked trips chip now lists your own bookmarked trips per the settled model, One-day chips tagged as moving to Day plan, the community header split into a pure Places-Trips switch with browse chips and a views-or-bookmarks sort beneath, Save placeholders with their stage on list and trip cards, swallowed errors counted through mpSwallow, and four dead CSS classes removed) \u2014 r63 (security and silence batch from the full code review: every other-user field escaped in templates and the nickname charset locked at sign-up, three undefined colour tokens replaced from the real palette so the back chip and delete buttons and curator avatar render, the duplicated delete-button id removed, the public toggle event moved to reserved_2 since reserved_1 left the M4.24 whitelist and was being rejected silently, stale source labels and guide titles moved to the settlement lexicon) \u2014 r62 (visual polish batch on the field notes: every chip row now scrolls horizontally with no wrap or clipping per the scene-0 rule with one 6px rhythm, back controls become clear chips on all five surfaces, the trip-screen toggle reads Edit and Done instead of the eye glyph, the curator shell dimming is removed in favour of an explicit preview badge with the contrast needle recalibrated) \u2014 r61 (settlement batch on reference v1.41: the trip action rewords to Bookmark with its icon and counter everywhere while its records, bound counter and mirror stay untouched, a self bookmark with no counter lands on your own trips through a map on your document, both source rows carry the literal four chips with the two origin chips disabled until Save ships, the community modal is rebuilt as the browsing market with Places and Trips main chips over provable public queries sorted client-side by views and bookmarks, exact username search through the nickname doc with partial search tagged for step 7, a city filter, the marked chip reusing both bookmark browsers as shared templates, card owners opening their person layers, signed exports with source attribution on the lists and trips of others, the curators screen split into a grid page and a curator page behind a tap, trash gone from place and address rows into their edit modals, and the bilingual guide rewritten on the settlement lexicon) \u2014 r60 (first field-triage batch: decision 28-01 finally executed so the guide branch left the resolver with its stale add button, a diagnostics lens prints the exact broken link for any degraded trip row, bookmark and save actions hidden on your own content with an honest guard message, optimistic state now rolls back on any batch failure, the city line removed from the bookmarked-places browser, Done and Cancel return you to Trips, and the duplicated nucleus key cleaned) \u2014 r59 (cascade account deletion brought forward by owner decision for field-test item 13: full self-cascade through the nucleus in safe order \u2014 bound-batch record removals that walk back the counters of others with the degraded fallback, follows, own trips and city lists and private addresses, then identity docs with the parent document last, then the auth account behind the existing reauth gate \u2014 the final button is now armed by the typed word and the audit round proved the three self-delete rule lines already live so the button needs no publication \u2014 the two-change cleanup publication ships alongside for the dead favorites block and the bookmark_add event) \u2014 r58 (record-mirror batch: bookmark and trip-save ids mirrored in the own userLists document inside the same atomic three-write batch since docId-split read rules are provably unqueryable by design, loaders now build from the boot-loaded mirror with zero queries, the dead documentId-range queries removed, degraded removals clear the mirror key in one batch, plus the approved source-chip reorder yours-then-marked-then-outside across Places, Trips and Community) \u2014 r57 (guide rewrite batch with two merged dues per the accountability rule: the Bookmarked lists community chip \u2014 approved in the r51 statement but dropped during that large batch, now built in full with its live-origin rows, degraded row and undo \u2014 the leftover Arabic retired-favorites guide entry removed, and the bilingual guide rewritten on the four-actions and metrics lexicons with new entries for Bookmark, Save, the community pyramid, trip types and the signed 📤 send, marketing rules kept) \u2014 r56 (guard batch side-effect: the new migration needle caught its first catch before being pinned \u2014 renderSavedTrips from r51 held one direct platform call, now routed through mpData.trips.getDoc, so the pinned legacy ledger starts clean at 34 functions and 71 calls) \u2014 r55 (trip-type statement per decision 30-05 and scene 6/B: a type field on the trip document written at creation through the single create modal where One-day and Single-city are selectable and Multi-city stays disabled until its step-6 fields exist, the type line replaces Type-Soon on all five row surfaces with untyped legacy trips shown without a segment, and the type chips now actually filter My trips with All as a filter not a type and a live context line) \u2014 r54 (curator-surface verification batch per owner note: the greedy curhead identity selector no longer reaches place rows so their names return to card ink at 5.5 contrast instead of 1.06, cur-shell dimming recalibrated from .55 to .74 keeping every composited pair at 4.5 or better with saffron-on-paper as the governing pair, full inline background-and-colour pair scan came back clean, and a new guard needle computes the dimmed-shell contrast pairs and forbids the greedy selector \u2014 mutation-tested) \u2014 r53 (sort statement per metric-lexicon decision 02-06 and scene 6/D: people layer Sort control with Most viewed live as default and Most saved disabled until its attributed-saves feed lands in stage 3 \u2014 approved temporary deviation to be mirrored in the reference, person card shows views only with the frozen totalFavoriteCount figure and its loader field removed per the merged owner item, retired Most loved button and its heart glyph deleted, sorting applied on both people tabs) \u2014 r52 (conformance-fix batch over r51 per M4.23 read verbatim: bookmark and trip-save records carry the single at field with identity in the doc id, own records queried by documentId range, frozen saves figure removed from the person list row, generic degraded saved-trip row, plus owner-approved text-export buttons generalising the live sendAddr path: place row, city list header, trip screen, one signed composer) — r51 (four-actions batch — founding decision 09 in code: hearts retired on every surface, place bookmark on your own rows with no counter, Bookmarked places chip with its in-destination browser, list bookmark with bound counter and record, trip Save with bound counter plus the Bookmarked trips chip with degraded rows, placeFavoriteCounts re-semanticised as the save counter, frozen favoriteCount writers removed, list viewCount opened, one transient Undo toast for all three unmark points, absent-read classification tightened to rules 3.8) — r50 (owner field notes on r49: trips header per dB, single create-trip modal 6/B2, cancel discards the fresh empty trip via the nucleus, city-delete side options for both surfaces, community people as compact rows, trip detail header per dC with day chips, curator page night colours and add action) — r49 (conformance pass over all 23 reference scenes: full curator page structure 6/E2, trip row edit indicator with no heart on own trips, home chooser vector icons, address modal method chips with local share parsing, Become a curator in the drawer) — r48 (structures batch · second pass — scene 6/D2 as drawn: compact rows for the person layers, back at the first row, context line, a row per public trip) — r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
+logTiming('BUILD: M2-ID-r74b (r74b - legacy sweep, stage 2 of r73: address categories moved out of the places tree into their own constant (tree = 18 public sections, no owner-only flag), the old My List modal and its 12 helpers removed (open_app stat now fires on the live Shared-with-me open), the hidden legacy block removed and updateUserUI freed from it, dead CSS of the removed screens dropped, guard rule 22: no // line comments inside template literals; r74a - map pins: seven dense sections in their own colours (two shades each for restaurants and shopping), copper for every other section, no icons, colour key above the map filters it, rename main sections and sub-categories from the admin tool; r73z - community person layer primed from the loaded curator data (no re-read of every list), Latest update places: every saved place carries updatedAt and the chip lists the last 10 added or edited places (owner decision), city trips header and list use the city filter, top chip stays on Cities when a city is chosen, no reload of an already loaded person when switching chips; r73x - curator screen restored to its pre-batch form; (City) All places opens that city layer in Community and (City) All trips shows only the trips of that city; r73w - Latest update lists cities by last update, city trips open through the community path, list-open timeout 15s, community search chip with an arrow; r73v - curator city screen: Top / All places / All trips render in place, no jump to Community; r73u - community list opened under a category filter shows only the matching categories with a Show all button, drawer reorganised (My account with Change nickname, Me, Coming next grouped, App, Owner, Policies), stage labels aligned with the plan; r73t - field notes: community category picker registered, curator city chips filter the source screen by city, Change nickname in the drawer, sort chip without highlight, search as a chip with an arrow; r73s - zero direct Firestore calls outside mpData/mpTrack (42 to 0, audit cap 0), new layer methods for account, community, stats, analytics and settings; r73r - suggestion run shared for the same city, identity lookups in parallel with timeout and single-read fallback, cancelled state shown; r73q - custom categories managed from the admin drawer (add with section, remove), legacy guide layer removed (loaders, edit mode, tabs, 40+ functions), EXPECTED_RULES v3.13, suggestions cancel on city change, identity reads in tens, two batches in parallel; r73o - legacy guide reads of the removed cities collection neutralised (no Firestore call, no red banner at startup), map line shows what was sent to the matcher (country, centre, radius); r73n - analytics city from my cities by gazetteer id (legacy CITIES no longer used), owner guide place stats removed; r73m - batches of 40 again, Skip keeps the map on the pin, probable and not-found lists show the pin popup per row; r73l - area, nearest place and street shown while dragging or choosing (the drag part was missing from r73k), the city map returns to the pin just confirmed; r73k - area read live while dragging or choosing a candidate, pasted link fills Area from the matched position and shows the resolved address under the link, popup details in copper; r73j - one pin popup for every pin: name in ink, Maps, Open card, Edit, plus Confirm on map for suggested and probable pins; r73i - area filled from the pin position (Overture divisions from our storage), Edit pin on pinned places with Remove pin in the map step, saved pin opens first when editing, probable and not-found chips readable; r73h - search by name in the first row beside My places, large saffron arrows on every drop-down chip, probable and not-found counts open a list with a confirm button per place; r73g - three pin states (confirmed saffron, suggested grey with saffron outline, probable lighter grey with a count badge), default zooms 14/16 for clearer streets; r73f - probable wording by count (1 possible match / n possible matches); r73e - probable tier: first candidate drawn with a question mark when no certainty, map line splits suggested, probable and not found; r73d - map line reports batches and slowest batch time, 45 second batch timeout; r73c - suggestions run once per city with visible progress and cumulative diagnostics, batches of 20 with a 30 second timeout; r73b - token-first place index per country used by the worker with cell fallback, country code sent with every match, map line shows the answering index and any batch failure kinds; r73a - our maps: one map module mpMap with a provider whitelist, MapLibre loaded on first map, Protomaps tiles from our own storage, Leaflet and CARTO removed, attribution; r72z - Import places still not categorized panel for every user (unknown categories re-homed with matching counts, old category kept on the card), root fix: custom categories bound to a section id and orphans shown under Others with their old section kept, custom categories tool in the admin panel to re-home them, rules v3.12 expected (others is public), data and maps attribution in help; r72y - one source of cities from the gazetteer by id (no directory, no user-made cities, no season cities, no hiding), matching by city centre and radius, place identity registry read before matching and written on confirm, I am here pin, 6 second timeout, no data line, CARTO tiles, rules v3.11, direct paste, readable map window; r72x - geo step: after the link is read a full-screen map asks to confirm the pin (best match preselected, up to three numbered candidates, draggable pin, skip), open identity and coordinates are written inside the place, context map for my city list and for other users lists with Show on map, Save on other users places and whole lists copies them into my list with credit, Saved from Curators and Community sources are live, no coordinates from Google anywhere; r72w - list details opened from curators and community use the ivory group with no sub-category icons, other users trips use the unified place card, the sort label on the community chip is readable, counts next to every option in the community places and trips dropdowns, the copy counter is shown on trip cards and a failed decrement is reported; r72v - the first row on Places and Trips is one full-width chip that names the source with its count and opens the source list, and my trips use the unified card shell grouped by city with an Actions grid (content completes with the new trip model); r72u - split reads of other users lists now query only public or shared category documents as Firestore rules require, copy credit uses the account name only and the old display name is cleared on profile save, standard cities get a hide action in edit mode, opening a places list from the community always opens places; r72t - rules M4.26 code tail: split lists (parent index + one document per category composed back by the data layer), live copy counter on removal, account deletion clears my copies requests and reports, public trip views, typed contact (email phone whatsapp), season cities hidden outside their window, report kinds notes and app, rules version check in the admin panel, hide a standard city instead of deleting it; r72s2 - More/Less in copper, the main-section count sits next to its name on the left, the report flag on the curator header has a cream background; r72s - community is one screen without an entry page (source switch on top, filters, All users lists beside Search by username, My bookmarked beside Sort by with an All recent option), My bookmarked from users grouped by user with their lists and their bookmarked places under the list name, person layer cities from the query union the profile so a new city shows, and no Places flash before the gate; r72r2+r72r3 - community entry without the globe, the Places/Trips switch only highlights and Browse navigates, the browse screen has a back button like curators, All users lists beside a Sort by dropdown (most viewed, most bookmarked default, most saved) and My bookmarked from users, Shared with me removed from community, results grouped by user with a pill header and list and trip cards in the place-card style; r72r1 - one ivory group per sub-category holding cream place cards on every screen (places, bookmarks, trips, addresses, curators), main-section counts with #, bookmarks on the v3 tree with city names, sub-category icons removed app-wide, Show dropdown with title and count on Places and Trips including Shared with me, Export places list, city picker across countries with the country following the city, and curator fixes (bookmark refresh, back keeps state, fresh profile); one place card for all screens: ivory frame, cream inner card split into data on the left (name, then Area, Picks, Note in copper labels) and an Actions grid on the right that wraps to what exists, More/Less with Maps and bookmark visible when collapsed, red flag on others content, no category icons in section heads, counts written with #, city chips on two lines; curator page header from the account name with a tagline and no cities, Top places count, red report flag, chips derived from the curator name and the chosen city with a bigger Cities chip, city notes as lines with a visible Edit, My profile and city notes windows in the app shell (tagline, about, typed contact, empty fields not sent), curators grid as capsules; curator world on rules M4.25: city notes written by the curator and read by every visitor, picks counted, become-a-curator request with status, report flag on others rows and cards and profiles, admin doors for requests (accept sets the badge) and reports, curator stats written with the six keys, trip_built, resend verification, error codes on copy record; session state is reset on sign-out and account switch so no previous account data shows, a curator page reloads fresh on every open, Saved becomes tappable to remove my copy after an in-app confirm, and no Save appears on my own content; code tail of rules M4.25: derived list fields hasTop, geoSources and flagsUsed written on every save, legSources on trips, stats keys per the value-cost review, follow as one atomic batch again, copy record plus copyCount on the source when saving a trip, Most saved from users alive by copyCount, stats_cities on city open and place added; the Opening toast is gone - navigation itself is the feedback, the slow-path diagnostics stay; opening a curator person layer no longer waits silently - a six second race shows what loaded and names the stuck step, and any error names its step in the toast; a copied trip credits the owner by name from the community profile, not a member; My trips lists only trips I created - copies with credit live in their Saved from chips; following now writes the record and my light copy in one batch and then the curator counter as the rules require, the person layer shows only places or only trips when reached from the curator chips, and Save on any trip of others copies it into my trips with credit - Saved from Curators and Saved from Community list those copies by source; a failed follow shows its error code in the toast itself; the follow disclosure is an in-app confirm instead of the browser dialog and a failed follow logs its error code to TIMING; the trip card in the person layer is the market trip card with the full action row; following - one atomic tap creates the follow record, bumps the curator counter where rules allow and keeps a light copy on my document, with a one-time disclosure and no self-follow; the curator sees followers by name and edits My profile (name, bio, contact, follower count); Saved from Curators and Saved from Community filter my saved trips by their source; the cities dropdown renders below the first chip row at full width instead of inside the chip grid; my own list card in the person layer shows the passive bookmark counter instead of a rules chip, and the All places and All trips chips give instant feedback with a double-tap guard and a timing line; the my-city tag is removed everywhere (button, header icon, private field, public copy, opening rule, curator chip, grid sort) with one-time cleanup of stored traces; the curators grid sorts by recently updated by default; the curator page has five chips and shows the chosen city in place; the my-city tag writes its public copy for curators in the same atomic batch and re-derives it on every profile sync, general saves no longer erase the selected city, and opening falls back to the tagged city then the city with most content only when the saved one is missing; curator content unites the query with the profile-listed documents (the proven community path) and logs both counts, my curator cache clears after saving my list so a starred place appears at once, the row star is a text glyph that turns night on saffron; the curators grid gains a sort row - your city first, most viewed, recently updated, following - never by follower count; a star in my place row adds to Top places in one tap, Notes header styled like Picks, the grid and the page read the same source (the curator public lists by query, so counts always match), the Cities dropdown folds on re-tap, All places lists counts lists and the person layer list card is the market card with the full action row, my city is read from my own tag on my own page; ten owner notes - profile sync counts only lists with places and runs on all three delete paths, Contact always shown, no automatic curator city, place search uses the shared others row, city notes skeleton, Top place star in the place window stored inside the place and shown as Top places and Latest 10 with Edit for the curator, Notes header everywhere, Cities chip with a dropdown, System status only inside Admin panel, You first in the grid; curators rebuilt from the visual draft v2 - a grid of ringed initials with basic data, the curator page with the template header, five chips plus place search, city screen with its three-way switcher, the me state with My dashboard, the community person layer under a saffron browsing bar, the drawer per the reference, a night admin panel with tiles and doors, a My Dashboard panel with staged doors, updatedAt on publish; the owner marks or unmarks a curator from the Users window (the existing verified field, profile created if missing); the Users window is redrawn in the app style with badges and two action chips; a preparation Admin panel holds the stats in their current form with the Users, Most saved and System status doors; the drawer shows Admin panel and System status only; curators batch 1 - the live directory of verified profiles (city chip and name search on the shared row, All and Following chips, my city first then most recently active, rows with the Curator badge, Show more), the curator page with a compact header and two archive buttons that open the existing community person layer under a read-only banner with a back button; the tab no longer jumps to Community behind the gate before sign-in, so Places stays from the first moment; home is always Places unless chosen manually, Places reopens on the last selected city (the home tag no longer affects opening), the content rule, its announcement, the Auto card and the diagnostics are removed; the preferences row explains the home decision (Auto → Places (N places)), and the city place counter self-heals when a city list loads; the home chooser gains an Auto option that clears the manual choice so the content rule decides, and the preferences label shows Auto; the app accepts share text from the iOS Shortcut via ?share= and opens the place window in paste mode after sign-in, and logs the home tab decision with its reason; my-city tag and the home announcement flag are read back on load so the tag survives sign-out and sign-in; new-user batch 4 smart paste - one tap Paste from Maps reads and parses, manual paste parses itself, a three-grade parser puts the address into area and suggests switching to a matching city, the name is checked against what came with the link and a link pasted alone is marked unverified; the bar button is Back; the add-to-trip bar has both buttons - Sources returns to the trip with the six-sources card open, View trip opens the trip as before; the my-city home button is always visible on every city row, Edit is only for delete; the add-to-trip bar keeps its three buttons on their own line so nothing is cut on iPhone, and its back button returns to the trip with the sources card open; the first-visit intro opens immediately at init instead of after auth; the six-sources card is the add-to-trip entry in every case - the Add places button opens and folds it above the days, and an empty day still shows it open; an empty-state guide on Trips with four doors (create, community trips, curators, shared with you) shown on every visit until the first trip; new-user batch 3 - the six-sources card on an empty trip day (my places, my bookmarks, shared with me, curators, community lists, community trips) with counts for the trip city, each button goes to its screen filtered with add mode on, gone after the first place; an empty-state guide on Places with four doors (first place, import, community, curators) shown on every visit until the first place; a how-to section for copying a link and exporting lists back in the intro; the saved city is used only when it has content or was picked this session, so an account without places opens on Select city rather than the directory city; new-user batch 2 - the intro rewritten on the final product (owner text v2): level one in a single screen, level two as nine collapsed sections plus Home Screen; opens on the first visit before the gate (local flag), after sign-up, from the drawer, and from a ? button in the top bar that opens the current screen section; English first with the Arabic toggle kept - r70m: no city is forced on Places - saved city, then my city, then the city with most content, otherwise Select city with a short hint; the home icon shows on the header city chip when the current city is tagged; new-user batch 1 - default landing by rule (manual choice, else Places on my city when I have places, else Community; visitors open on Community), the my-city tag from the cities panel up to two cities with last-used first, a one-time announcement on the first place, note example - r70l3: dynamic viewport height and iPhone safe area at the bottom; Add place is a saffron primary action; the section header count is larger and saffron - r70l2: inputs are 16px on touch devices so Safari no longer zooms the page on focus; the filter category panel says plainly when no category has places yet - r70l: category tree v3 by the owner - 18 sections in usage order and 80 sub-categories, dictionary version 3, unknown category ids land in Others as the import inlet, the filter main panel hides empty sections while the add panel shows them all - r70k2: card - the fine dining flag is a saffron chip beside the sub-category on the place card and beside the name on list and trip cards, not part of the name; wider spacing before picks and before notes - r70k: the Add place panel picks the main section then its sub-categories with counts on the shared two-chip row, choosing a sub-category opens the place window; the old category template overrides are ignored on tree v2 and reset once by the owner; my place card now carries the fine dining flag, picks and note; an inherited empty list is deleted when its owner opens it and never listed in the market - r70j: N-081 places screen and others lists grouped by main section - a collapsible section header with its place count, then the sub-categories with their places, empty ones hidden, matching sections first when a filter is set; an empty list is deleted on save like an empty trip - r70i: category tree v2 - nine sections with stable ids and 67 sub-categories, old ids mapped and rewritten once; fine dining flag and normalized search key on the place; the place modal picks main then sub on the shared picker with Move to another category; filter row main then sub under the city row on Places and on community lists with match counts, place names searchable inside the sub panel - r70h2: place card - the header shows city and area only, the place name appears once in the box with picks and note, the category path stays above the box - r70h: picks field on the place - a list of items, one per line, shown under the area on place rows; card v2 by the owner design - type header, name, city and area, main and sub category as text, QR for the map link with a built-in generator, picks and notes, numbered places on list cards, days and slots on trip cards, language chosen at export English or Arabic, the preview is the card image itself, long cards split at section bounds - r70g: N-065 adding from a place row enters the existing add mode - the bar stays for more places, Done shows the trip and Back returns to the origin, Cancel returns to the origin; N-076 unified card model B - type header, sections in boxes, night footer with MyPickz and the person glyph and the owner name, long content split into up to ten cards shared together; N-080 action row for every place in a community trip; trip chooser rows read like trip cards - r70f: N-065 add a place to a trip from places and community in three cases - no trip: create with the city preset then continue, one trip: continue, several: choose on the shared picker; day and slot on the shared picker with no preselection; then the trip view and Done returns to the origin screen; N-076 my place export preview with the card; N-077 All trips; N-078 Select city; N-079 username search scoped to the chosen city with two messages - r70e2: owner decisions - community root cities come from public content with counts, not the legacy list; chips inside sub-windows are ivory with a wide night border and turn saffron with ink text when active or selected, type fields stay light; the picker chip lights up while its list is open - r70e: N-011 community root and source city on the shared picker with counts; N-074 one row - city chip left and type field right, Go as a wide primary action; N-075 create-trip and address modal city on the same row pattern, results under the field, add city visible without scrolling - r70d2: audit fixes - addrSetMethod and addrParseShare restored, dead country filters removed, plus colour inherits - r70d: N-011 Addresses screen on the shared picker; owner decision - a new city is saved at once with count 0, no pending city; N-075 create-trip city on the shared picker with add city; N-069 plus visible on the primary button; N-070 city modal title with the country; N-071 modal primary buttons saffron; N-072/N-073 header primary action one third of the row in places, trips and addresses, add address grows - r70c3: hotfix - adding a city was blocked since r70b2 because the input modal Confirm crashed on gazetteer object options; Confirm now matches by normalized name and accepts a free city name when the list is a suggestion - r70c2: gazetteer split per country under cities/, loaded on demand when a country is chosen; source cities500 - r70c: N-011 Trips screen city filter on the shared picker with trip counts, create-trip city list from my cities with normalized filter; N-066 share-with-someone glyph is a person-plus svg on the three share buttons; N-067 flag before the country code on the Places header chip and the panel country control; N-068 Add city as a wide primary action in the Places header row - r70b2: N-011 reference gazetteer cities.json loaded on demand per country in the add-city step of places and addresses, filter by normalized name and alternates, pick stores the canonical name, free add stays for missing cities; GeoNames attribution on the policy screen - r70b: N-011 Places screen on the shared picker - countries with flag N-067, cities with fixed count, saffron dot, delete only in edit mode on my own cities, add city below results, categories with add on every row; normalized duplicate check and did-you-mean before creating a city, in both places and addresses flows - r70a: N-011 shared picker panel template - live normalized filter, count column, country line, edit mode with delete on own items, add below results, last-pick memory; not wired to any screen yet - r69ad: N-063 rule moved from the identity block to the structure block, audit s10 - r69ac: N-064 one action order for others cards of both kinds, open, bookmark, export, save - the trips no longer pass exportFirst - r69ab: N-063 community cards action row right-aligned - the row was display:block so justify-content had no effect; now flex like rowacts - r69aa: trip cards ordered view, export, bookmark, save; opening a trip from the market shows the trip and goes back to the market - r69z: my-bookmarked lists on the unified card in the agreed order; my-bookmarked places with the full row and the back chip - r69y: single-place export card with the owner tag; place rows right-aligned; chip labels my bookmarked from users / most saved from users - r69x: community rows in the agreed order; export from any other-user list or trip opens the card preview; owner name as text; open a list from the market and go back to the market; trip Open from the market opens the trip; add-to-trip with no trip jumps to create; chip labels in user context; own bookmarks strictly your own; fixed redraw and export handler - r69w: other-user place identity by owner+city+id with the real owner passed · the open layer redraws at once · add-to-trip from any other-user place · community action rows in the agreed order · owner chip on a distinct surface - r69v: export offers card image or message · lit public and share buttons everywhere · owner chip with surface and Lists label · other-user place rows in the place-row design with actions - r69u: bookmark a single place inside another user list, gathered under Community / My bookmarked / Places with an owner-list back chip; trip view export via the preview; one globe icon lit or unlit; shared text off the card line; owner name as a chip; explicit section titles on user pages - r69t: shared-with-you cards drop the private tag (the chip and the owner name say it) — r69s: places header as three rows of three · export preview card for lists and trips · bookmarked chips show your own items with your own row minus edit · trip card status glyph removed (buttons carry the state) · bookmark stores the owner for the community back-link — r69r: share button lights saffron when the list or trip is shared with someone — r69q: logout asks only with an open form or an open trip in edit mode — r69p: bookmarked places resolve category names and carry the full others-row actions · places remember last city and source across sign-ins · per-city place counts in the city panel · bullet notes — r69o: bookmark/save mirrors are now loaded at sign-in (root of every "highlight gone after re-login") · logout asks only when a form is open — r69n: reconciled community build — atomic bookmark batch with rules M4.24.1 · one card builder · shared-with-me live · no stuck loaders · community memory · most bookmarked/viewed filter (owner-approved) · record pre-read withdrawn — r69m: most bookmarked / most viewed filter before sorting — r69l: bookmarked lists/trips treat shared-with-me as live · context line says "sorted by" — r69k: one card builder on every community branch (open · bookmark · export · save) · bookmark truth from the record not the mirror · My bookmarked trips no longer stuck · 🧳 without Soon — r69j: single atomic bookmark batch (rules M4.24.1 existsAfter) · one others-card builder · community remembers its last screen · add a place to a trip from the place row — r69i: bookmark highlight wins row rules · counter re-read after write · local mirror at once · trip save record-before-counter with rollback — r69h: community root explicit Browse CTA · bookmark record before counter (rules exists) · My bookmarked on the template · modal primary saffron — r69g: list public/share moved to the places action row with the shared-with modal · trip card actions styled like place rows · share modal colors — r69f: place rows two-tier like trip cards · trip public/share without opening the view · shared-with modal · one day at a time · view without edit · edit without share controls — r69e: trip card actions view·public·share·bookmark·export·edit · day switcher grid · trip place rows on lines · select caret · actions right — r69d: one lit chip per row · shared-list owner name from profile · shared lists chip · private-shared bookmark deferred · community excludes your own content · place note on its own line — two defects surfaced by the upgraded journey: cascading deletion now removes trips and city lists through the owner query united with the local list so a stale local list can no longer leave residue, and opening a shared trip that was withdrawn or deleted shows a message instead of crashing) \u2014 r66 (foundation of founding decision 11, the unified destination model, coded ahead of its reference by owner decision with v1.42 to follow: header chips become equal-column grids with no horizontal scroll, the places context line moves under the action row, trips gain a city picker filled from your own trips with Create trip in the action row and the add-places pill reduced to its icon, and Community becomes a root switch with username search over two independent source screens each with a back chip, a city picker filled from live public content, a three-plus-two browse grid and per-screen preserved state) \u2014 r65 (owner model check on the market: a third sort chip Most saved tagged stage 3 restored per the field note; journey upgraded from a data walk to an experience walk: a screen-assertion layer checks what appears and what must not after every action, a reopen station reads default state, and the coverage matrix is derived from the reference scenes themselves so no scene can go untested silently; its first run caught a real crash when opening the page of a card owner missing from the loaded community list, now read singly through the nucleus with a safe fallback) \u2014 r64 (field-triage batch on the verified test: url-less places get their own bookmark identity, the curator page rebuilt with one header and settlement actions and no inner dimming, trip screens open in view mode with Edit visible, the Bookmarked trips chip now lists your own bookmarked trips per the settled model, One-day chips tagged as moving to Day plan, the community header split into a pure Places-Trips switch with browse chips and a views-or-bookmarks sort beneath, Save placeholders with their stage on list and trip cards, swallowed errors counted through mpSwallow, and four dead CSS classes removed) \u2014 r63 (security and silence batch from the full code review: every other-user field escaped in templates and the nickname charset locked at sign-up, three undefined colour tokens replaced from the real palette so the back chip and delete buttons and curator avatar render, the duplicated delete-button id removed, the public toggle event moved to reserved_2 since reserved_1 left the M4.24 whitelist and was being rejected silently, stale source labels and guide titles moved to the settlement lexicon) \u2014 r62 (visual polish batch on the field notes: every chip row now scrolls horizontally with no wrap or clipping per the scene-0 rule with one 6px rhythm, back controls become clear chips on all five surfaces, the trip-screen toggle reads Edit and Done instead of the eye glyph, the curator shell dimming is removed in favour of an explicit preview badge with the contrast needle recalibrated) \u2014 r61 (settlement batch on reference v1.41: the trip action rewords to Bookmark with its icon and counter everywhere while its records, bound counter and mirror stay untouched, a self bookmark with no counter lands on your own trips through a map on your document, both source rows carry the literal four chips with the two origin chips disabled until Save ships, the community modal is rebuilt as the browsing market with Places and Trips main chips over provable public queries sorted client-side by views and bookmarks, exact username search through the nickname doc with partial search tagged for step 7, a city filter, the marked chip reusing both bookmark browsers as shared templates, card owners opening their person layers, signed exports with source attribution on the lists and trips of others, the curators screen split into a grid page and a curator page behind a tap, trash gone from place and address rows into their edit modals, and the bilingual guide rewritten on the settlement lexicon) \u2014 r60 (first field-triage batch: decision 28-01 finally executed so the guide branch left the resolver with its stale add button, a diagnostics lens prints the exact broken link for any degraded trip row, bookmark and save actions hidden on your own content with an honest guard message, optimistic state now rolls back on any batch failure, the city line removed from the bookmarked-places browser, Done and Cancel return you to Trips, and the duplicated nucleus key cleaned) \u2014 r59 (cascade account deletion brought forward by owner decision for field-test item 13: full self-cascade through the nucleus in safe order \u2014 bound-batch record removals that walk back the counters of others with the degraded fallback, follows, own trips and city lists and private addresses, then identity docs with the parent document last, then the auth account behind the existing reauth gate \u2014 the final button is now armed by the typed word and the audit round proved the three self-delete rule lines already live so the button needs no publication \u2014 the two-change cleanup publication ships alongside for the dead favorites block and the bookmark_add event) \u2014 r58 (record-mirror batch: bookmark and trip-save ids mirrored in the own userLists document inside the same atomic three-write batch since docId-split read rules are provably unqueryable by design, loaders now build from the boot-loaded mirror with zero queries, the dead documentId-range queries removed, degraded removals clear the mirror key in one batch, plus the approved source-chip reorder yours-then-marked-then-outside across Places, Trips and Community) \u2014 r57 (guide rewrite batch with two merged dues per the accountability rule: the Bookmarked lists community chip \u2014 approved in the r51 statement but dropped during that large batch, now built in full with its live-origin rows, degraded row and undo \u2014 the leftover Arabic retired-favorites guide entry removed, and the bilingual guide rewritten on the four-actions and metrics lexicons with new entries for Bookmark, Save, the community pyramid, trip types and the signed 📤 send, marketing rules kept) \u2014 r56 (guard batch side-effect: the new migration needle caught its first catch before being pinned \u2014 renderSavedTrips from r51 held one direct platform call, now routed through mpData.trips.getDoc, so the pinned legacy ledger starts clean at 34 functions and 71 calls) \u2014 r55 (trip-type statement per decision 30-05 and scene 6/B: a type field on the trip document written at creation through the single create modal where One-day and Single-city are selectable and Multi-city stays disabled until its step-6 fields exist, the type line replaces Type-Soon on all five row surfaces with untyped legacy trips shown without a segment, and the type chips now actually filter My trips with All as a filter not a type and a live context line) \u2014 r54 (curator-surface verification batch per owner note: the greedy curhead identity selector no longer reaches place rows so their names return to card ink at 5.5 contrast instead of 1.06, cur-shell dimming recalibrated from .55 to .74 keeping every composited pair at 4.5 or better with saffron-on-paper as the governing pair, full inline background-and-colour pair scan came back clean, and a new guard needle computes the dimmed-shell contrast pairs and forbids the greedy selector \u2014 mutation-tested) \u2014 r53 (sort statement per metric-lexicon decision 02-06 and scene 6/D: people layer Sort control with Most viewed live as default and Most saved disabled until its attributed-saves feed lands in stage 3 \u2014 approved temporary deviation to be mirrored in the reference, person card shows views only with the frozen totalFavoriteCount figure and its loader field removed per the merged owner item, retired Most loved button and its heart glyph deleted, sorting applied on both people tabs) \u2014 r52 (conformance-fix batch over r51 per M4.23 read verbatim: bookmark and trip-save records carry the single at field with identity in the doc id, own records queried by documentId range, frozen saves figure removed from the person list row, generic degraded saved-trip row, plus owner-approved text-export buttons generalising the live sendAddr path: place row, city list header, trip screen, one signed composer) — r51 (four-actions batch — founding decision 09 in code: hearts retired on every surface, place bookmark on your own rows with no counter, Bookmarked places chip with its in-destination browser, list bookmark with bound counter and record, trip Save with bound counter plus the Bookmarked trips chip with degraded rows, placeFavoriteCounts re-semanticised as the save counter, frozen favoriteCount writers removed, list viewCount opened, one transient Undo toast for all three unmark points, absent-read classification tightened to rules 3.8) — r50 (owner field notes on r49: trips header per dB, single create-trip modal 6/B2, cancel discards the fresh empty trip via the nucleus, city-delete side options for both surfaces, community people as compact rows, trip detail header per dC with day chips, curator page night colours and add action) — r49 (conformance pass over all 23 reference scenes: full curator page structure 6/E2, trip row edit indicator with no heart on own trips, home chooser vector icons, address modal method chips with local share parsing, Become a curator in the drawer) — r48 (structures batch · second pass — scene 6/D2 as drawn: compact rows for the person layers, back at the first row, context line, a row per public trip) — r47 (structures batch — reference v1.38: drawer My Dashboard and App sections, community three-layer pyramid with saves as the shared metric, trips source row, public trips card in layer 2) — r46 (country pickers: the prefilled value no longer filters — full list until the user types, current row highlighted, panel header clears the filter) — r45 (third pass: close at the top of every panel, no auto-focus) — r44 (second pass: searchable country pickers everywhere, context line on every destination, My Tools under Tools) — r43 — reference v1.37: badge palette and suspension mark, line icons, text source switcher with live context line, community people/places, stats as text, address paste control, favorites city names, trip resolver reads each reference city, measurement city from the dictionary, countries type-ahead, drawer returns) — previous r42 (two faults on the suspended path: the read classification excluded suspended accounts, so they were told the city failed to load when the document simply did not exist yet — suspension has nothing to do with reading, and saving was already guarded separately; and a suspended account learned it was suspended only by colliding with an action, so both Places and Addresses now say it up front)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
