@@ -1,1 +1,1 @@
-{ "name": "mypickz-places", "private": true, "type": "module", "scripts": { "test": "node test.js && node test-tiles.js" }, "dependencies": { "pmtiles": "^4.3.0" } }
+{ "name": "mypickz-places", "private": true, "type": "module", "scripts": { "test": "node test.js && node test-tiles.js && node test-index.js" }, "dependencies": { "pmtiles": "^4.3.0" } }
