@@ -1,9 +1,15 @@
 // MyPickz — workers/places/test-index.js (ر٧٣-ب-٢): الفهرس v2 والحي من الموضع بمخزن محاكى — بلا شبكة
 // يحاكي env.PLACES (R2) فوق fixtures/XX ويمرّ عبر fetch(request, env) نفسها: /match · /match-batch · /area · noData · تسجيل الطلب · القراءة بالمدى هي المسلوكة
-import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
+import fs from 'fs'; import path from 'path'; import os from 'os'; import { fileURLToPath } from 'url';
 import worker from './src/index.js';
-const here = path.dirname(fileURLToPath(import.meta.url)); const FIX = path.join(here, 'fixtures');
+import { buildFixture } from './fixtures/make-fixture.mjs';
+const here = path.dirname(fileURLToPath(import.meta.url));
+// المثبّتات تُبنى الآن من مصدرَيها النصيَّين بالسكربت الحقيقي (لا ملفات مولَّدة بالمستودع) — داخل مجلد مؤقت يُحذف بالنهاية
+const FIXTMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mpz-fixture-xx-')); const built = buildFixture(path.join(FIXTMP, 'XX'), { quiet: true }); const FIX = FIXTMP;
+process.on('exit', () => { try{ fs.rmSync(FIXTMP, { recursive: true, force: true }); }catch(_){} });
 let fails = 0; const ok = (n, c, why) => { console.log((c ? 'PASS  ' : 'FAIL  ') + n + (c ? '' : '  →  ' + (why || ''))); if (!c) fails++; };
+ok('fixture built by the real indexer: tok/ has manifest · stop · vocab · ≥ 2 buckets (.bin + .dir) · div/ has 2 files', built.tok >= 7 && built.div === 2 && fs.existsSync(path.join(FIX, 'XX/tok/manifest.json')), JSON.stringify(built));
+const mf = JSON.parse(fs.readFileSync(path.join(FIX, 'XX/tok/manifest.json'), 'utf8')); ok('fixture manifest: format 2 · 31 places · 4096 buckets', mf.format === 2 && mf.places === 31 && mf.buckets === 4096, JSON.stringify(mf));
 
 // ═══ محاكي R2: المفتاح tok/XX/… ↔ fixtures/XX/tok/… · div/XX/… ↔ fixtures/XX/div/… · يسجّل كل قراءة (كاملة أو بالمدى) وكل كتابة
 const log = { gets: [], ranges: [], puts: [] }; const store = new Map();
