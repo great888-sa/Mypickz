@@ -140,8 +140,8 @@ const MP_EXPECTED = [
   ["window.addEventListener('unhandledrejection'", 1],
   // خ٢ (٢٧ أغسطس): وجهة العناوين الشخصية تعرض روابطها بسماتها (data-mpsrc="app" · data-mppersonal="1") — إبرة إضافية بنسخة الاختبار
   //   حتى ترقية الإطار للإنتاج (حينها يصير العدد ٨/٣ بالملفين وتُوحَّد القيمة). القيمة إما رقم واحد للملفين أو {prod, test}.
-  ['data-mpsrc=', { prod: 7, test: 6 }], // ر٧٣-أب (١): زالت سمة الدليل الموروث // r72w: رحلة الآخرين تمرّ بالبطاقة الموحَّدة (community) // ر٥٢: رابط نافذة My Favorites المتقاعدة كان يحمل السمة — زال معها
-  ['data-mppersonal=', { prod: 2, test: 2 }] // ر٧٣-أب (١): data-mpowner زالت مع الدليل
+  ['data-mpsrc=', { prod: 7, test: 4 }], // r74b-٢: نافذة My List القديمة زالت برابطيها // ر٧٣-أب (١): زالت سمة الدليل الموروث // r72w: رحلة الآخرين تمرّ بالبطاقة الموحَّدة (community) // ر٥٢: رابط نافذة My Favorites المتقاعدة كان يحمل السمة — زال معها
+  ['data-mppersonal=', { prod: 2, test: 1 }] // r74b-٢: نافذة My List القديمة زالت (بقي رابط وجهة العناوين) // ر٧٣-أب (١): data-mpowner زالت مع الدليل
 ];
 function countOcc(haystack, needle){ return haystack.split(needle).length - 1; }
 function mpGuard(label, content){
@@ -645,6 +645,7 @@ finish();
 
 function finish(){
   referenceConformanceGuard(TEST, test);
+  slashCommentGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
   process.exit(fails === 0 ? 0 : 1);
 }
@@ -682,4 +683,18 @@ function referenceConformanceGuard(label, s){
   const n = C.filter(x => x[1]).length;
   console.log('INFO  ' + T + 'reference conformance ' + n + '/' + C.length + ' — open: ' + C.filter(x => !x[1]).map(x => x[0]).join(' | '));
   check(n >= 13, T + 'conformance never drops below the r69 baseline (13)', n + '/' + C.length);
+}
+
+
+// ---------- §22 (r74b · ر٧٣ البند ٧ — درس ٣٠ سبتمبر/١ أكتوبر): لا تعليق سطري // داخل القوالب الحرفية ----------
+// التعليقات السطرية داخل الاستبدالات ابتلعت أسطرًا ثلاث مرات (r73m · r73l)؛ والقالب الحرفي (backtick) هو الموضع الذي يُعبَّأ ويُحقن بالاستبدال.
+// القاعدة: داخل أي قالب حرفي متعدد الأسطر بنسخة الاختبار لا يظهر «//» إلا ضمن رابط (://) — التعليق الكتلي /* */ وحده مسموح.
+function slashCommentGuard(label, s){
+  const T = '§22 ' + label + ': ';
+  const bad = []; let n = 0;
+  const re = /`((?:[^`\\]|\\.)*)`/g; let m;
+  while ((m = re.exec(s))){ const body = m[1]; if (body.indexOf('\n') < 0) continue; n++;
+    body.split('\n').forEach((ln, i) => { if (/(^|[^:])\/\//.test(ln)) bad.push((s.slice(0, m.index).split('\n').length + i) + ': ' + ln.trim().slice(0, 60)); }); }
+  console.log('INFO  ' + T + 'multi-line template literals scanned = ' + n);
+  check(bad.length === 0, T + 'no // line comments inside multi-line template literals (block comments only)', bad.slice(0, 5).join(' | '));
 }
