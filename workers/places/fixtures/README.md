@@ -1,0 +1,6 @@
+# fixtures/XX — دولة اصطناعية لاختبار العامل بلا شبكة (ر٧٣-ب-٢)
+
+- `XX/places.jsonl` — ٣١ مكانًا مصنوعًا (الصيغة نفسها التي يخرجها `scripts/overture-extract.py`: `id · name · addr · locality · lat · lng · common?`) حول المركز (0.5, 0.5) بأربعة أحياء وفرعَين لاسم واحد ومكان بعيد خارج نصف القطر واسم عربي باسم شائع إنجليزي.
+- `XX/tok/` — الفهرس v2 (`<bucket>.bin` + `<bucket>.dir.json.gz` · `stop.json` · `vocab.json` · `manifest.json`) **مولَّد بالسكربت الحقيقي** `scripts/token-index.mjs` من `places.jsonl` — لا يُحرَّر يدويًّا؛ يُعاد بناؤه بـ`node workers/places/fixtures/make-fixture.mjs` (يبني `tok/` و`div/` معًا) بعد أي تغيير بالسكربت أو بالأماكن. (المفردات فارغة لأن عتبات الاشتقاق — ≥ ٢٠٠ عنوان · ≥ ٢٠ مكانًا للحي — أكبر من العيّنة؛ المطابقة تسلك الاحتياط العام لكلمات الشارع.)
+- `XX/divisions.json` → `XX/div/d1_1.json.gz` — خلية حدود واحدة بالشكل الذي يكتبه `scripts/divisions-extract.py` (`[{n, t, ring:[[lng,lat],…]}]`) بخمسة مضلعات متداخلة (microhood ⊂ neighborhood ⊂ locality ⊂ localadmin + حي منفصل) — مصدرها نصي مكتوب يدويًّا (المصدر الحقيقي Overture Divisions عبر DuckDB لا يُشغَّل بالاختبار) ويضغطها `make-fixture.mjs`.
+- `test-index.js` يحاكي `env.PLACES` (قراءة بالمدى · `head` · `put` · `list`) فوق هذا المجلد ويختبر `/match` · `/match-batch` · `/area` · `noData` · تسجيل الطلب · أن القراءة بالمدى هي المسلوكة.
