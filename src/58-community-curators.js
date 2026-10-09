@@ -321,11 +321,12 @@ async function curToggleFollow(uid){ // ر٧٢-أ-٢: متابعة/إلغاء ذ
 }
 async function curOpenFollowers(){ // للمنتقي عن نفسه: أسماء متابعيه (٥٠ ثم more)
   if (!currentUser) return; const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
-  body.innerHTML = '<div class="ctx" style="text-align:center;"><b>Followers</b></div><div class="mp-empty mini">Loading…</div>'; bd.classList.add('show');
+  dashSet('👥 Followers', bd.classList.contains('show') ? openDashboard : null); /* ب-٢-٢-أ: القشرة — Back إلى اللوحة */
+  body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; bd.classList.add('show');
   let ids = []; try{ ids = await mpData.follows.followersOf(currentUser.uid, 51); }catch(e){ mpSwallow(e, 'followers'); }
   const rows = await Promise.all(ids.slice(0, 50).map(function(id){ return mpData.profiles.get(id).catch(function(){ return null; }); }));
   const names = rows.map(function(pr, i){ return pr ? (pr.displayName || pr.nickname || ids[i]) : ids[i]; });
-  body.innerHTML = '<div class="ctx" style="text-align:center;"><b>Followers</b> · ' + ids.length + (ids.length > 50 ? '+' : '') + '</div>' + (names.length ? names.map(function(n){ return '<div class="dash-door"><span>' + escapeHtml(n) + '</span><span></span></div>'; }).join('') : '<div class="mp-empty mini">No followers yet</div>') + (ids.length > 50 ? '<div class="ctx" style="text-align:center;">… more</div>' : '');
+  body.innerHTML = '<div class="ctx" style="text-align:center;"><b>' + ids.length + (ids.length > 50 ? '+' : '') + '</b> ' + (ids.length === 1 ? 'person follows you' : 'people follow you') + '</div>' + (names.length ? names.map(function(n){ return '<div class="dash-door"><span><span class="curring" style="display:inline-flex; width:22px; height:22px; font-size:9px; margin-right:6px;">' + escapeHtml(curInitials({ nickname: n })) + '</span>' + escapeHtml(n) + '</span><span></span></div>'; }).join('') : '<div class="mp-empty mini">No followers yet — share your curator page</div>') + (ids.length > 50 ? '<div class="ctx" style="text-align:center;">… more</div>' : '');
 }
 // My profile — r72q-1 (قرار المالك): بقشرة نوافذ التطبيق · الشعار (tagline ≤ ٤٠) · About you (bio ≤ ٢٠٠) · Contact اختياري: رابط أو اسم حساب بنوعه (Instagram · X · Snapchat · Website؛ Email · Phone مع M4.26) · إظهار العدّاد · الحقل الفارغ لا يُرسل
 let formOnSave = null; let profContactType = 'instagram';
@@ -470,31 +471,75 @@ async function resendVerification(){ // r72p (١٠): نداء واحد لخدم�
 }
 function drToggleComing(){ const el = document.getElementById('drComing'), ar = document.getElementById('drComingArrow'); if (!el) return; const open = el.style.display === 'none'; el.style.display = open ? '' : 'none'; if (ar) ar.textContent = open ? '⌃' : '⌄'; } /* ر٧٣-أب (٢): المؤجَّل مجمَّع لا مبعثر */
 function drToggleAccount(){ const el = document.getElementById('drAccount'); const on = el.style.display === 'none'; el.style.display = on ? '' : 'none'; const ar = document.getElementById('drAccArrow'); if (ar) ar.textContent = on ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>'; }
-function drSyncCurator(){ // بند الحساب: «✧ Curator — your badge» للمنتقي، و«Become a curator» لغيره؛ والشارة بترويسة الدرج
+function drSyncCurator(){ // ب-٢-٢-أ: الشارة بترويسة الدرج للمنتقي (البند يختفي)؛ لغيره «⭐ Become a curator» بحالته (Request · Pending · Accepted · Declined)
   const item = document.getElementById('drCuratorItem'); const av = document.getElementById('accountName'); if (!item) return;
-  const me = !!(currentUser && (curators || []).some(function(c){ return c.uid === currentUser.uid; }));
-  item.innerHTML = me ? '<span>✧ Curator — your badge</span><span class="dim mini">set by MyPickz</span>' : '<span>⭐ Become a curator</span><span class="soon">Request · M4.25</span>';
+  const me = !!(currentUser && ((curators || []).some(function(c){ return c.uid === currentUser.uid; }) || (userListData && userListData.curatorSelf)));
+  item.style.display = me ? 'none' : '';
   if (av){ const nm = av.textContent.replace(/ ✧ Curator$/, ''); av.textContent = me ? nm + ' ✧ Curator' : nm; }
+  if (!me && currentUser){ const st = document.getElementById('drCuratorStatus'); if (st) mpData.requests.mine(currentUser.uid).then(function(r){ st.textContent = r ? (({ pending: 'Pending', accepted: 'Accepted', declined: 'Declined' })[r.status] || r.status) : 'request'; }).catch(function(){}); }
 }
-function openDashboard(){
+function openDashboard(){ /* ب-٢-٢-أ (المسودة v2-أ · ٢): ثلاث مجموعات Profile · Insights · Tools — Back يعود للدرج (عبر openFromDrawer) و✕ يغلق الكل */
   if (!currentUser){ openAuthModal(); return; }
   const me = (curators || []).some(function(c){ return c.uid === currentUser.uid; }) || !!(userListData && userListData.curatorSelf);
   const name = (userListData && userListData.nickname) || 'You';
   const door = function(icon, label, right, on, stage){ return '<button type="button" class="dash-door' + (on ? '' : ' dim') + '" ' + (on ? 'onclick="' + on + '"' : 'disabled') + '><span>' + icon + ' ' + label + '</span><span>' + (right || '') + (stage ? ' <span class="stage">' + stage + '</span>' : '') + '</span></button>'; };
-  let h = '<div class="ctx" style="text-align:center;"><b>' + escapeHtml(name) + '</b>' + (me ? ' · ✧ curator' : ' · user') + '</div>';
-  if (me) h += door('👥', 'Followers', 'names', 'curOpenFollowers()') + door('✎', 'My profile', 'name · bio · contact · follower count', 'openMyProfile()');
-  else h += '<button type="button" class="dash-door" id="dashReqDoor" onclick="openCuratorRequest()"><span>⭐ Become a curator</span><span id="dashReqStatus">…</span></button><button type="button" class="dash-door" onclick="chooseNickname()"><span>👤 Change nickname</span><span>›</span></button>'; // r72p (٣)
-  h += door('📊', 'My stats', me ? 'opens · saves · export' : 'opens · saves', null, 'ر٧٢-ب') + door('🪪', 'Share cards', 'image card + QR', null, 'stage 3') + door('📤', 'Export', 'lists & trips as a report', null, 'stage 3') + door('📥', 'Import from Google Maps', 'Takeout → my lists', null, 'أ-١٣');
-  if (me) h += door('🧰', 'Curator tools', 'presence, not features', null, 'after launch');
-  document.getElementById('dashBody').innerHTML = h; document.getElementById('dashBackdrop').classList.add('show');
-  if (!me) mpData.requests.mine(currentUser.uid).then(function(r){ const el = document.getElementById('dashReqStatus'); if (el) el.innerHTML = r ? ('<span class="stage">' + (({ pending: 'Pending', accepted: 'Accepted', declined: 'Declined' })[r.status] || r.status) + '</span>') : 'Request'; }).catch(function(){}); // r72p: الحالة
+  const prof = (curators || []).find(function(c){ return c.uid === currentUser.uid; }) || null; const fc = prof && typeof prof.followerCount === 'number' ? prof.followerCount : null;
+  let h = '<div class="ctx" style="text-align:center;"><b>' + escapeHtml(name) + '</b>' + (me ? ' · ✧ curator' + (fc !== null ? ' · ' + fc + (fc === 1 ? ' follower' : ' followers') : '') : ' · user') + '</div>';
+  if (me){ h += '<div class="gsec">Profile</div>' + door('✎', 'My profile', 'tagline · about · contact ›', 'openMyProfile()') + door('👥', 'Followers', (fc !== null ? fc + ' ›' : 'names ›'), 'curOpenFollowers()'); }
+  else { h += '<div class="gsec">Profile</div>' + door('👤', 'Change nickname', escapeHtml(name) + ' ›', 'chooseNickname()'); }
+  h += '<div class="gsec">Insights</div>' + door('📊', 'My stats', (me ? 'reach · lists · trips ›' : 'lists · trips ›'), 'openMyStats()');
+  h += '<div class="gsec">Tools</div>' + door('🪪', 'Share cards', 'image + QR', null, 'المرحلة ب') + door('📤', 'Export', 'lists & trips', null, 'المرحلة ب') + door('📥', 'Import from Google Maps', 'Takeout', null, 'أ-١٣');
+  dashSet('🎛 My Dashboard', null); document.getElementById('dashBody').innerHTML = h; document.getElementById('dashBackdrop').classList.add('show');
+}
+/* ═══ ب-٢-٢-أ · My stats (المسودة v2-أ · ٣ و٣-ب) — القراءة مفردة عبر mpData.stats · الأرقام من اليوم الأول · Δ٪ من اليوم الثامن (قرار ١٠-٠٩-٠٧) · للمالك عرض أي منتقٍ (uid) ═══ */
+function msSum(rows, key){ return (rows || []).reduce(function(a, r){ return a + (Number(r && r[key]) || 0); }, 0); }
+function msHasAny(rows){ return (rows || []).some(function(r){ return Object.keys(r || {}).some(function(k){ return k !== 'day' && (Number(r[k]) || 0) > 0; }); }); }
+function msDelta(cur, prev, hasPrev){ if (!hasPrev) return '<span class="d">not enough data yet</span>'; if (!prev) return cur > 0 ? '<span class="d">▲ new</span>' : '<span class="d">—</span>'; const p = Math.round((cur - prev) / prev * 100); return '<span class="d">' + (p > 0 ? '▲ ' + p + '%' : p < 0 ? '▼ ' + Math.abs(p) + '%' : '— 0%') + '</span>'; }
+function msTile(v, label, delta){ return '<div class="admtile"><b>' + v + '</b><span>' + label + '</span>' + (delta || '') + '</div>'; }
+function msNum(n){ return '<span class="num">' + (Number(n) || 0) + '</span>'; }
+function msDaysHtml(days){ const last = (days || []).slice(0, 14).reverse(); const max = Math.max(1, Math.max.apply(null, last.map(function(r){ return Number(r.page_view) || 0; }))); return '<div class="sdays" title="daily page views · last 14 days">' + last.map(function(r){ const v = Number(r.page_view) || 0; return '<i style="height:' + Math.max(4, Math.round(v / max * 100)) + '%" title="' + r.day + ' · ' + v + '"></i>'; }).join('') + '</div>'; }
+async function openMyStats(uid){
+  if (!currentUser){ openAuthModal(); return; }
+  const target = (typeof uid === 'string' && uid) ? uid : currentUser.uid; const asOwner = target !== currentUser.uid; if (asOwner && !isOwner) return;
+  const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
+  dashSet('📊 My stats', asOwner ? function(){ openAdminPanel(); closeModalById('dashBackdrop'); } : (bd.classList.contains('show') ? openDashboard : null));
+  body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; bd.classList.add('show');
+  let prof = null, lists = [], trips = [];
+  try{ const r = await Promise.all([mpData.profiles.get(target).catch(function(){ return null; }), mpData.cityLists.byOwner(target), mpData.trips.byOwner(target)]);
+    prof = r[0]; r[1].forEach(function(d){ const x = d.data() || {}; lists.push({ id: d.id, cityId: x.cityId, name: x.cityName || x.cityId || d.id, pub: x.public === true, views: x.viewCount || 0, bm: x.bookmarkCount || 0, copies: x.copyCount || 0 }); });
+    r[2].forEach(function(d){ const x = d.data() || {}; if (x.source) return; trips.push({ id: d.id, name: (x.cityName || '') + (x.customLabel ? ' — ' + x.customLabel : ''), pub: x.public === true, views: x.viewCount || 0, saves: x.saveCount || 0, copies: x.copyCount || 0 }); });
+  }catch(e){ mpSwallow(e, 'my stats'); body.innerHTML = '<div class="mp-empty mini">Could not load your stats · ' + escapeHtml((e && e.code) || 'error') + '</div><button type="button" class="dash-door" onclick="openMyStats(' + (asOwner ? "'" + attrStr(target) + "'" : '') + ')"><span>↻ Retry</span><span></span></button>'; return; }
+  const isCur = !!(prof && prof.verified === true); const nick = (prof && prof.nickname) || (asOwner ? target.slice(0, 8) : ((userListData && userListData.nickname) || 'You'));
+  const pubL = lists.filter(function(l){ return l.pub; }), pubT = trips.filter(function(t){ return t.pub; });
+  const st = await Promise.all([Promise.all(pubL.map(function(l){ return mpData.stats.listDoc(l.id); })), Promise.all(pubT.map(function(t){ return mpData.stats.tripDoc(t.id); })), isCur ? mpData.stats.curatorDays(target, 30) : Promise.resolve([])]);
+  const days = st[2]; let h = '<div class="ctx" style="text-align:center;"><b>' + escapeHtml(nick) + '</b> · ' + (isCur ? 'last 30 days' : 'my public lists and trips') + (asOwner ? ' · viewing as owner' : '') + '</div>';
+  if (isCur){
+    const v = function(a, b){ return msSum(days.slice(a, b), 'page_view'); }; const hasPrev = msHasAny(days.slice(7)); const cur7 = v(0, 7), prev7 = v(7, 14);
+    h += '<div class="gsec">Reach</div><div class="admtiles">' + msTile(v(0, 1), 'views today') + msTile(cur7, 'views 7d', msDelta(cur7, prev7, hasPrev)) + msTile(v(0, 30), 'views 30d') + '</div>' + msDaysHtml(days);
+    const s7 = msSum(days.slice(0, 7), 'save'), sp7 = msSum(days.slice(7, 14), 'save');
+    h += '<div class="admtiles">' + msTile('+' + msSum(days.slice(0, 7), 'follow'), 'new follows 7d') + msTile(msSum(days.slice(0, 7), 'contact_click'), 'contact clicks 7d') + msTile(s7, 'saves 7d', msDelta(s7, sp7, hasPrev)) + '</div>';
+    const pv = msSum(days, 'page_view'), so = msSum(days, 'ref_social'), ca = msSum(days, 'ref_card'); const di = Math.max(0, pv - so - ca); const pct = function(n){ return pv ? Math.round(n / pv * 100) + '%' : '—'; };
+    h += '<div class="gsec">Where visitors came from · 30d</div><div class="chipgrid c3"><span class="actn label' + (so >= ca && so >= di && pv ? ' on' : '') + '">Social ' + pct(so) + '</span><span class="actn label' + (ca > so && ca >= di ? ' on' : '') + '">Card / QR ' + pct(ca) + '</span><span class="actn label' + (di > so && di > ca ? ' on' : '') + '">Direct ' + pct(di) + '</span></div>';
+    const ex = msSum(days, 'export'); h += '<div class="ctx" style="text-align:center;">exports 30d · <b>' + ex + '</b> · followers · <b>' + ((prof && typeof prof.followerCount === 'number') ? prof.followerCount : '—') + '</b></div>';
+  } else {
+    h += '<div class="admtiles">' + msTile(pubL.length, 'public lists') + msTile(pubL.reduce(function(a, l){ return a + l.views; }, 0), 'list views') + msTile(pubL.reduce(function(a, l){ return a + l.copies; }, 0) + pubT.reduce(function(a, t){ return a + t.copies; }, 0), 'copies') + '</div>';
+  }
+  h += '<div class="gsec">My lists' + (isCur ? ' · by copies' : '') + '</div>';
+  if (!lists.length) h += '<div class="mp-empty mini">No lists yet — add your first place</div><button type="button" class="dash-door" onclick="mpCloseAll(\'dashBackdrop\'); switchTab(\'Places\')"><span>Go to Places →</span><span></span></button>';
+  else lists.sort(function(a, b){ return (b.pub - a.pub) || (b.copies - a.copies) || (b.views - a.views); }).forEach(function(l, i){ const sl = l.pub ? (st[0][pubL.indexOf(l)] || {}) : null;
+    h += '<div class="row rowblock"><div class="pn">' + escapeHtml(l.name) + '</div><div class="ps">' + (l.pub ? 'views ' + msNum(l.views) + ' · bookmarks ' + msNum(l.bm) + ' · copies ' + msNum(l.copies) + ' · opens app ' + msNum(sl.open_app) + ' · community ' + msNum(sl.open_community) + ' · curator ' + msNum(sl.open_curator) : 'private — not counted') + '</div></div>'; });
+  h += '<div class="gsec">My trips</div>';
+  if (!pubT.length) h += '<div class="mp-empty mini">' + (trips.length ? 'No public trips yet — make a trip public to see its views and saves here' : 'No trips yet') + '</div>' + (asOwner ? '' : '<button type="button" class="dash-door" onclick="mpCloseAll(\'dashBackdrop\'); switchTab(\'Trips\')"><span>Go to Trips →</span><span></span></button>');
+  else pubT.forEach(function(t, i){ const stt = st[1][i] || {}; h += '<div class="row rowblock"><div class="pn">' + escapeHtml(t.name || 'Trip') + '</div><div class="ps">views ' + msNum(Math.max(t.views, stt.view_total || 0)) + ' · saves ' + msNum(t.saves) + ' · copies ' + msNum(t.copies) + '</div></div>'; });
+  if (isCur && !msHasAny(days)) h += '<div class="mp-empty mini">Reach is counted from this release on — numbers appear from the first day, growth from the eighth</div>';
+  body.innerHTML = h;
 }
 async function openCuratorRequest(){ // r72p (٣): طلب واحد لكل حساب — بنص قصير
   if (!currentUser) return; let r = null; try{ r = await mpData.requests.mine(currentUser.uid); }catch(e){}
   if (r){ showToast('Your request is ' + (r.status || 'pending')); return; }
   const text = await openInputModal('Become a curator', 'Tell us briefly why (≤ 300)', '', null, { allowFree: true }); if (text === null) return;
   try{ await mpData.requests.create(currentUser.uid, String(text || '').slice(0, 300)); }catch(e){ mpSwallow(e, 'request'); showToast('Could not send · ' + ((e && e.code) || 'error')); return; }
-  showToast('Request sent — pending'); const el = document.getElementById('dashReqStatus'); if (el) el.innerHTML = '<span class="stage">Pending</span>';
+  showToast('Request sent — pending'); const el = document.getElementById('drCuratorStatus'); if (el) el.textContent = 'Pending'; /* ب-٢-٢-أ: الحالة ببند الدرج */
 }
 let vcuStep = ''; // ر٧٢-أ-٢ز: آخر مرحلة بلغها فتح طبقة الشخص (للتشخيص على الجهاز)
 async function viewCommunityUser(uid){
