@@ -83,7 +83,7 @@ const mpTrack = (function(){
       }
     }catch(_){}
   }
-  function statsCurator(uid, field){ // r72p (M4.25 ٩): إحصاء المنتقي — page_view · follow · contact_click · ref_social · ref_card · export
+  function statsCurator(uid, field){ // r72p (M4.25 ٩): إحصاء المنتقي — page_view · follow · contact_click · ref_social · ref_card · export · save (v3.14 · ب-٢-١: الحفظ بإسناد لمنتقٍ، يوميًّا)
     try{ if (!uid || !/^[A-Za-z0-9]{20,40}$/.test(uid)) return; const day = new Date().toISOString().slice(0, 10);
       if (field === 'page_view'){ const k = 'mp_cv_' + uid + '_' + day; try{ if (localStorage.getItem(k)) return; localStorage.setItem(k, '1'); }catch(_){} } // مرة لكل زائر يوميًّا
       add('stats_curators/' + uid + '__' + day, field, 1);
@@ -93,10 +93,11 @@ const mpTrack = (function(){
   function statsCity(cityId, field){ // r72m (M4.25 ١١): مدينة × يوم — open · place_added · trip_built (مدن الدليل فقط: معرّف صغير بلا mylist_)
     try{ if (!cityId || /^mylist_/.test(cityId) || !/^[a-z0-9_-]{1,40}$/.test(cityId)) return; const day = new Date().toISOString().slice(0, 10); add('stats_cities/' + cityId + '__' + day, field, 1); }catch(_){}
   }
-  function statsList(listId, field){
+  function statsList(listId, field, opts){
     try{
       if (!/^[A-Za-z0-9_-]{1,60}$/.test(String(listId))) return;
       add('stats_lists/' + listId, field, 1); // r72m (M4.25 ٩): مفاتيح §١٧-ج — open_app · open_community · open_curator · copy_from (لا open_total)
+      if (opts && opts.daily) add('stats_lists/' + listId + '__' + new Date().toISOString().slice(0, 10), field, 1); // ب-٢-١: نسخة يومية للمفتاح (المعرّف اليومي مسموح بالقواعد منذ v3.3) — نمو الحفظ بالقائمة لـMy stats
     }catch(_){}
   }
   function statsTrip(tripId, field){
