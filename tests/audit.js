@@ -718,6 +718,8 @@ function buildGuard(){
   console.log('INFO  ' + T + 'parts ' + t.names.length + ' · src ' + t.srcHash);
   const tabbed = t.names.filter(n => fs.readFileSync(path.join(ROOT, 'src', n), 'utf8').indexOf('\t') >= 0); // ب-٢-١ (درس ٩ أكتوبر): علامة جدولة واحدة بتعليق ضاعت بطريق التسليم فاختلف المخرج عن بناء الأجزاء — لا جدولة بالمصدر
   check(tabbed.length === 0, T + 'no tab characters in any src/ part (lost in transit → false build mismatch)', tabbed.join(', '));
+  const nonNfc = t.names.filter(n => { const x = fs.readFileSync(path.join(ROOT, 'src', n), 'utf8'); return x !== x.normalize('NFC'); }); // ب-٢-١ (درس ٩ أكتوبر ٢): طريق التسليم يطبّع يونيكود (NFC) فيُعاد ترتيب علامتي تشكيل متجاورتين — المصدر يُحفظ NFC أصلًا فيصير التطبيع بلا أثر
+  check(nonNfc.length === 0, T + 'every src/ part is Unicode NFC-normalized (transit normalization must be a no-op)', nonNfc.join(', '));
   if (t.out === test) pass(T + TEST + ' is byte-identical to build(test) — no hand edits, all parts committed');
   else { const a = t.out.split('\n'), c = test.split('\n'); let i = 0; while (i < a.length && i < c.length && a[i] === c[i]) i++;
     fail(T + TEST + ' is byte-identical to build(test)', 'first divergence at line ' + (i + 1) + ' | built: ' + (a[i] || '<eof>').slice(0, 70) + ' | file: ' + (c[i] || '<eof>').slice(0, 70)); }
