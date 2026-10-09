@@ -5,11 +5,13 @@
   "scripts": {
     "audit": "node tests/audit.js",
     "runtime": "node tests/runtime.js",
-    "rules": "firebase emulators:exec --only firestore --project demo-mypickz \"node tests/rules-sim.js\""
+    "rules": "firebase emulators:exec --only firestore --project demo-mypickz \"node tests/rules-sim.js\"",
+    "journey": "node tests/journey.js"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.0",
     "firebase-tools": "^14.0.0",
+    "jsdom": "25.0.1",
     "puppeteer-core": "^24.0.0"
   }
 }
