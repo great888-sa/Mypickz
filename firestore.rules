@@ -1,3 +1,6 @@
+// firestore rules v3.14 (ب-٢ · My stats · ٩ أكتوبر ٢٠٢٦ — توسعة لا تضييق: تُنشر قبل كود ب-٢-١ الذي يكتب المفتاح): stats_curators يكسب المفتاح اليومي `save`
+//   (حفظ قائمة/مكان/رحلة لمنتقٍ بنسخة بإسناد — القرار ١٠-٠٩-٠٦: نمو الحفظ بالزمن يلزمه مفتاح يومي؛ copyCount يبقى إجماليًّا بلا زمن) · لا تغيير بغير هذا السطر
+//   الامتحان: القسم ٢٧ (٧ حالات) · التراجع: firestore_rules_v3-13.txt
 // firestore rules v3.13 (ر٧٣-أ · الإحكام · ١ أكتوبر ٢٠٢٦): إغلاق انتقالية M4.26 (الأم بلا categories نهائيًّا) · analytics: المدينة بالنمط لا بوجودها (لا exists) · حذف match /cities (الدليل مهاجَر ومحذوف)
 //   الامتحان: القسم ٢٦ · التراجع: firestore_rules_v3-12.txt
 // firestore rules v3.12 (ز-١-ج-٣ · تصحيح الجذر · ٢٩ سبتمبر ٢٠٢٦): `others` تصنيف عام (كما بالتطبيق) — حُذف من قوائم المعرّفات الخاصة الثلاث (noPrivateKeys ×٢ · إنشاء الفرعية)
@@ -775,9 +778,9 @@ service cloud.firestore {
     }
 
     match /stats_curators/{docId} {
-      function keysOk() { return request.resource.data.keys().hasOnly(['page_view', 'follow', 'contact_click', 'ref_social', 'ref_card', 'export']) && request.resource.data.keys().size() >= 1; }
-      function createOk() { return keysOk() && bumpC('page_view') && bumpC('follow') && bumpC('contact_click') && bumpC('ref_social') && bumpC('ref_card') && bumpC('export'); }
-      function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('page_view') && bumpU('follow') && bumpU('contact_click') && bumpU('ref_social') && bumpU('ref_card') && bumpU('export'); } // M4.25 (٩) §١٧-ج
+      function keysOk() { return request.resource.data.keys().hasOnly(['page_view', 'follow', 'contact_click', 'ref_social', 'ref_card', 'export', 'save']) && request.resource.data.keys().size() >= 1; } // v3.14: + save (ب-٢)
+      function createOk() { return keysOk() && bumpC('page_view') && bumpC('follow') && bumpC('contact_click') && bumpC('ref_social') && bumpC('ref_card') && bumpC('export') && bumpC('save'); }
+      function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('page_view') && bumpU('follow') && bumpU('contact_click') && bumpU('ref_social') && bumpU('ref_card') && bumpU('export') && bumpU('save'); } // M4.25 (٩) §١٧-ج · v3.14 save
       allow read: if isOwner() || (isSignedIn() && docId.split('__')[0] == request.auth.uid);
       allow create: if docId.matches('[A-Za-z0-9]{20,40}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && createOk();
       allow update: if docId.matches('[A-Za-z0-9]{20,40}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && updateOk();
