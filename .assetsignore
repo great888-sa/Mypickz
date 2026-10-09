@@ -14,3 +14,5 @@ wrangler*.toml
 tests/
 firestore.rules
 firebase.json
+src/
+scripts/
