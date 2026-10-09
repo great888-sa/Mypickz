@@ -293,21 +293,21 @@
         <button type="button" class="acc-item" onclick="confirmLogout()"><span>🚪 Log out</span><span></span></button>
         <button type="button" class="acc-item danger" onclick="openFromDrawer(openDeletePreview)"><span>🗑 Delete account</span><span></span></button>
       </div>
-      <div class="dr-head">Me</div>
-      <button type="button" class="dr-item" onclick="openFromDrawer(openDashboard)"><span>🎛 Open dashboard</span><span></span></button>
+      <div class="dr-head">Me</div><!-- ب-٢-٢-أ (المسودة v2-أ · ١): بند واحد لكل وجهة · My stats حيًّا · Become a curator بحالته للمستخدم (المنتقي شارته بالترويسة) · Coming next آخر القائمة -->
+      <button type="button" class="dr-item" onclick="openFromDrawer(openDashboard)"><span>🎛 My dashboard</span><span class="dim mini">profile · followers</span></button>
+      <button type="button" class="dr-item" onclick="openFromDrawer(openMyStats)"><span>📊 My stats</span><span class="dim mini">reach · lists · trips</span></button>
       <button type="button" class="dr-item" onclick="closeAccountModal(); switchTab('Places'); selectPlacesSource('bookmarked');"><span>🔖 My bookmarks</span><span class="dim mini">Places · Trips</span></button>
-      <button type="button" class="dr-item" id="drCuratorItem" onclick="openFromDrawer(openDashboard)"><span>✧ Become a curator</span><span class="dim mini">request</span></button>
-      <button type="button" class="dr-head toggle" onclick="drToggleComing()"><span>🕒 Coming next</span><span id="drComingArrow">⌄</span></button>
-      <div id="drComing" style="display:none;">
-        <button type="button" class="dr-item" disabled><span>📊 My stats</span><span class="soon">ب-٢</span></button>
-        <button type="button" class="dr-item" disabled><span>📥 Import from Google Maps</span><span class="soon">أ-١٣</span></button>
-        <button type="button" class="dr-item" disabled><span>🪪 Share cards · 📤 Export</span><span class="soon">المرحلة ب</span></button>
-        <button type="button" class="dr-item" disabled><span>🅖 Continue with Google</span><span class="soon">هـ</span></button>
-      </div>
+      <button type="button" class="dr-item" id="drCuratorItem" onclick="openFromDrawer(openCuratorRequest)"><span>⭐ Become a curator</span><span class="dim mini" id="drCuratorStatus">request</span></button>
       <div class="dr-head">App</div>
       <button type="button" class="dr-item" onclick="openFromDrawer(function(){ openHomeChooser(true); })"><span>⚙️ Preferences</span><span id="prefHomeLabel" style="font-size:11px; color:var(--ink-soft);"></span></button>
       <button type="button" class="dr-item" onclick="openFromDrawer(openHelpModal)"><span>❓ <span id="helpBtnLabel">Help</span></span><span class="dim mini">guide · share · contact</span></button>
       <button type="button" class="dr-item" onclick="openFromDrawer(reportAppProblem)"><span>⚑ Report a problem</span><span></span></button>
+      <button type="button" class="dr-head toggle" onclick="drToggleComing()"><span>🕒 Coming next</span><span id="drComingArrow">⌄</span></button>
+      <div id="drComing" style="display:none;">
+        <button type="button" class="dr-item" disabled><span>📥 Import from Google Maps</span><span class="soon">أ-١٣</span></button>
+        <button type="button" class="dr-item" disabled><span>🪪 Share cards · 📤 Export</span><span class="soon">المرحلة ب</span></button>
+        <button type="button" class="dr-item" disabled><span>🅖 Continue with Google</span><span class="soon">هـ</span></button>
+      </div>
       <div id="drawerOwner" style="display:none;">
         <div class="dr-head">Owner</div>
         <button type="button" class="dr-item" onclick="openFromDrawer(openAdminPanel)"><span>🛠 Admin panel</span><span class="dim mini">users · status · report</span></button>
@@ -413,8 +413,7 @@
   <!-- ر٧٢-أ-١: لوحة My Dashboard (المرجع ٦/ز) بطبقتيها -->
   <div class="modal-backdrop" id="dashBackdrop">
     <div class="modal night" style="max-width:460px;">
-      <div class="modal-topbar"><button class="btn btn-ghost" style="flex:1" onclick="closeModalById('dashBackdrop')">✕ Close</button></div>
-      <h3 style="text-align:center;">🎛 My Dashboard</h3>
+      <div class="hdr" id="dashHdr"><button type="button" class="bk" id="dashBackBtn" onclick="dashBack()">← Back</button><span class="ttl" id="dashTitle">🎛 My Dashboard</span><button type="button" class="x" onclick="mpCloseAll('dashBackdrop')" aria-label="Close">✕</button></div><!-- ب-٢-٢-أ: القشرة الموحَّدة — Back يعود طبقة واحدة · ✕ يغلق كل الطبقات (المسودة v2-أ) -->
       <div id="dashBody"></div>
     </div>
   </div>
