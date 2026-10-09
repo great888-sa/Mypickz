@@ -274,7 +274,7 @@ let pendingPlaceRef = null;
 // ر٦٩ش (N-059): من مكان مميَّز بمدينة أخرى إلى رحلة بتلك المدينة
 function plAddToTripFor(cityId, catId, placeId, placeName){ const keep = myListCityId; if (cityId) myListCityId = cityId; try{ plAddToTrip(catId, placeId, placeName); } finally { if (!document.getElementById('tripPickerBackdrop').classList.contains('show')) myListCityId = keep; } }
 // ر٦٩خ (N-062): مكان من قائمة شخص إلى إحدى رحلاتي — المُختار نفسه (أي رحلة ← أي يوم ← أي تصنيف)
-function cmSendCachedPlace(id){ const p = cmCache.places[id] || {}; if (p.myCat != null) return plSendPlaceText(p.myCat, p.myIndex); mpSendText('📍 ' + (p.name || 'Place') + '\n' + (p.url || '') + '\nfrom ' + (p.owner || 'a user') + "'s list · MyPickz"); } // ر٧٠و: مكاني يُرسل بنصه المعتاد
+function cmSendCachedPlace(id){ const p = cmCache.places[id] || {}; if (p.myCat != null) return plSendPlaceText(p.myCat, p.myIndex); mpSendText('📍 ' + (p.name || 'Place') + '\n' + (p.url || '') + '\nfrom ' + (p.owner || 'a user') + "'s list · MyPickz"); statsExportFor('oplace', id); /* ب-٢-١ */ } // ر٧٠و: مكاني يُرسل بنصه المعتاد
 function cmExportOthersPlace(id, name, url, owner, area, city, category){ cmCache.places[id] = { name: name, url: url, owner: owner, area: area, city: city, category: category }; openExportPreview('oplace', id); } // ر٦٩ض (N-057): بطاقة مكان واحد بوسم صاحبه
 function cmAddOthersPlaceToTrip(cityId, subcatId, placeId, sourceUid, placeName){ // ر٧٠و: النواة الموحَّدة
   if (!currentUser){ openAuthModal(); return; }
