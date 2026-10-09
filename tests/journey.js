@@ -1,4 +1,4 @@
-// MyPickz — tests/journey.js (ر٦٧ — محرك ضغط يقرأ onclick من الهيكل المرسوم فيضغط الزر كالمستخدم · ستة تسلسلات كاملة
+// MyPickz — tests/journey.js (ر٧٣-ج البند ٦ · ٩ أكتوبر ٢٠٢٦: DOM حقيقي بـjsdom بدل الهيكل الصناعي — المحطات كما هي؛ محطتان صُحِّح افتراضهما بعد الاحمرار: حقل بحث المجتمع يُفتح بشريحته · سطر الخريطة الحي) (ر٦٧ — محرك ضغط يقرأ onclick من الهيكل المرسوم فيضغط الزر كالمستخدم · ستة تسلسلات كاملة
 //   (تصفح-تمييز-عودة-تحميل · مشاركة وفتح بالحساب الآخر · خروج بمسار المصادقة الحقيقي · خصوصية العناوين · حذف مع رحلة مشتركة)
 //   · أربع حدّيات — فوق طبقة الشاشة ومصفوفة المشاهد — ٥٨ محطة · ٧٦ قدرة)
 // محاكاة رحلة المستخدم الكاملة على كود التطبيق الحقيقي حرفيًّا — بلا متصفح ولا شبكة:
@@ -51,40 +51,19 @@ const CAPS = [
 const covered = new Set();
 function cap(id){ if (!CAPS.includes(id)) throw new Error('قدرة غير معلنة: ' + id); covered.add(id); }
 
-/* ═══════════ ٢ · هيكل الصفحة الصناعي المتسامح ═══════════ */
-const els = {};
-function makeEl(id){
-  const el = {
-    id, style: {}, dataset: {}, children: [], _cls: new Set(), _h: '',
-    value: '', textContent: '', disabled: false, checked: false, type: '',
-    focus(){}, blur(){}, click(){}, remove(){}, scrollIntoView(){},
-    appendChild(c){ el.children.push(c); return c; },
-    insertBefore(c){ el.children.push(c); return c; },
-    removeChild(){}, cloneNode(){ return makeEl(id + '_c'); },
-    setAttribute(k, v){ el['_attr_' + k] = String(v); },
-    getAttribute(k){ return (('_attr_' + k) in el) ? el['_attr_' + k] : null; },
-    querySelector(){ return null; }, querySelectorAll(){ return []; },
-    closest(){ return null; }, contains(){ return false; },
-    addEventListener(){}, removeEventListener(){},
-    getBoundingClientRect(){ return { top: 0, left: 0, width: 380, height: 40 }; },
-    parentNode: { removeChild(){}, querySelectorAll(){ return []; }, appendChild(){}, insertBefore(){} },
-  };
-  Object.defineProperty(el, 'innerHTML', { get(){ return el._h; }, set(v){ el._h = String(v); } });
-  Object.defineProperty(el, 'classList', { value: {
-    add(...a){ a.forEach(c => el._cls.add(c)); }, remove(...a){ a.forEach(c => el._cls.delete(c)); },
-    toggle(c, f){ const on = (f === undefined) ? !el._cls.has(c) : !!f; on ? el._cls.add(c) : el._cls.delete(c); return on; },
-    contains(c){ return el._cls.has(c); },
-  }});
-  return el;
-}
-const documentStub = {
-  getElementById: id => els[id] || (els[id] = makeEl(id)),
-  createElement: t => makeEl('mk_' + t + '_' + (Math.random() * 1e6 | 0)),
-  createTextNode: t => ({ text: t }),
-  querySelector(){ return null; }, querySelectorAll(){ return []; },
-  addEventListener(){}, removeEventListener(){},
-  body: makeEl('body'), head: makeEl('head'), documentElement: makeEl('root'), title: '',
-};
+/* ═══════════ ٢ · DOM حقيقي (ر٧٣-ج البند ٦ · ٩ أكتوبر ٢٠٢٦): jsdom بدل الهيكل الصناعي ═══════════
+   الصفحة تُبنى من index-debug-test.html نفسه (بلا سكربتاته — الكود يُنفَّذ أدناه بالنطاق نفسه)، فيُقاس ما يُرسم لا ما يُفترض:
+   getElementById يعود null للغائب فعلًا · innerHTML يُحلَّل ويُعاد تسلسله · classList وdataset وMutationObserver حقيقية.
+   jsdom: بالناشر npm i --no-save jsdom · محليًّا NODE_PATH يشير إلى نسخة موفَّرة (Vendor jsdom). */
+let JSDOM;
+try { ({ JSDOM } = require('jsdom')); }
+catch (e) { console.log('FAIL  jsdom not installed  →  npm i --no-save jsdom'); process.exit(1); }
+const __ROOT = path.resolve(__dirname, '..');
+const __appFile = path.join(__ROOT, 'index-debug-test.html');
+if (!fs.existsSync(__appFile)){ console.log('FAIL  app file not found'); process.exit(1); }
+const __html = fs.readFileSync(__appFile, 'utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
+const dom = new JSDOM(__html, { url: 'https://journey/', pretendToBeVisual: true });
+const documentStub = dom.window.document; // الاسم أُبقي كما هو بالمحطات: هو مستند jsdom الحقيقي
 
 /* ═══════════ ٣ · المنصة الذاكرية بخطّاف قواعد M4.24 ═══════════ */
 const MARK = { TS: '__ts', INC: '__inc', DEL: '__del', AU: '__au', AR: '__ar' };
@@ -240,6 +219,9 @@ code += '\n;globalThis.__bridge = { x: function(e){ return eval(e); }, set: func
 
 const sandboxGlobals = {
   document: documentStub, firebase: firebaseStub,
+  // ر٧٣-ج (٦): أصناف DOM من نافذة jsdom نفسها — instanceof والأحداث والمراقب على المستند الحقيقي
+  MutationObserver: dom.window.MutationObserver, Node: dom.window.Node, Element: dom.window.Element, HTMLElement: dom.window.HTMLElement,
+  Event: dom.window.Event, CustomEvent: dom.window.CustomEvent, KeyboardEvent: dom.window.KeyboardEvent, DOMParser: dom.window.DOMParser, NodeList: dom.window.NodeList,
   navigator: { userAgent: 'journey-node', clipboard: { writeText: async t => { captured.clipboard.push(t); } }, share: undefined },
   localStorage: (function(){ const st = {}; return { getItem: (k) => (k in st ? st[k] : null), setItem: (k, v) => { st[k] = String(v); }, removeItem: (k) => { delete st[k]; } }; })(),
   sessionStorage: { getItem: () => null, setItem(){}, removeItem(){} },
@@ -249,7 +231,6 @@ const sandboxGlobals = {
   confirm: () => true, alert(){}, prompt: () => null,
   requestAnimationFrame: f => setTimeout(f, 0),
   IntersectionObserver: class { observe(){} unobserve(){} disconnect(){} },
-  MutationObserver: class { observe(){} disconnect(){} },
   screen: { width: 380, height: 800 },
 };
 const captured = { toasts: [], clipboard: [], warns: [] };
@@ -264,7 +245,7 @@ Object.defineProperty(globalThis, 'window', { value: globalThis, configurable: t
 globalThis.addEventListener = function(){};
 globalThis.removeEventListener = function(){};
 globalThis.dispatchEvent = function(){ return true; };
-globalThis.getComputedStyle = function(){ return { getPropertyValue: () => '' }; };
+globalThis.getComputedStyle = function(el){ return dom.window.getComputedStyle(el); }; // ر٧٣-ج (٦)
 globalThis.scrollTo = function(){};
 globalThis.open = function(){ return null; };
 globalThis.Notification = undefined;
@@ -378,7 +359,7 @@ function citiesSeed(){
     const mirrored = !!(store.get('userLists/' + U1) || {}).placeBookmarks;
     await B.x("togglePlaceBookmark('https://maps.app.goo.gl/BBB2', 'Cafe B', 'breakfast', 'paris', 'Louvre')");
     const off = !B.x("isBookmarked('https://maps.app.goo.gl/BBB2')");
-    const undoOffered = captured.toasts.some(t => /Removed from your bookmarks/.test(t)) || (els.toast && /Removed/.test(els.toast.textContent || '')) || true;
+    const undoOffered = captured.toasts.some(t => /Removed from your bookmarks/.test(t)) || (documentStub.getElementById('toast') && /Removed/.test(documentStub.getElementById('toast').textContent || '')) || true;
     ok('٤ · تشغيل وإطفاء بلا أي عدّاد وبمرآة المستند', on && mirrored && off && undoOffered, '');
   }, ['bookmark.place.on', 'bookmark.place.off.undo']);
 
@@ -609,6 +590,8 @@ function citiesSeed(){
     // N-079: بحث الاسم مرشَّحًا بالمدينة
     await store.set('nicknames/zed', { uid: 'uZED', nickname: 'zed' });
     B.x("communityTab = 'places'; __cmSummary.places = [{ id: 'uZED_rome', ownerId: 'uZED', cityId: 'rome', cityName: 'Rome' }]");
+    B.x("currentTab = 'Community'; cmSearchOpen = false; cmToggleSearch()"); // ر٧٣-ج (٦) DOM حقيقي: حقل البحث لا يوجد إلا بعد ضغط شريحة «Search by username» — كالمستخدم (الهيكل القديم كان يخترعه)
+    ok('ش١٩ · DOM حقيقي: شريحة «Search by username» تُظهر حقل البحث بالصفحة فعلًا', !!documentStub.getElementById('cmSearch'), 'cmSearch absent after cmToggleSearch');
     B.x("document.getElementById('cmSearch').value = 'zed'; communityScreenState.places.city = 'paris'");
     globalThis.__cap.toasts.length = 0; await B.x('cmSearchGo()');
     const t1m = globalThis.__cap.toasts.slice(-1)[0] || '';
@@ -1214,7 +1197,7 @@ function citiesSeed(){
     ok('١٦هـ · ز-١-ب: مصدر «Saved from Curators» حي: مجموعة المدينة وبطاقة المكان بسطر From · Amal', sf.includes('>Ten Belles<') && sf.includes('>From</div>') && sf.includes('Amal'), sf.slice(0, 200));
     B.x("placesSource = 'mine'"); cap('geo.savePlace');
     B.x("plView = 'map'"); await B.x("renderPlacesMine()"); await new Promise(r => setTimeout(r, 60)); const mv = screen('plBody'); B.x("plView = 'list'"); await B.x("renderPlacesMine()");
-    ok('١٦هـ · ز-١-ب: زر العرض القائم «View: List · Map» حيّ — بوضع الخريطة يظهر عدّاد الدبابيس وحاوية الخريطة بدل القائمة', mv.includes('View: <b>Map</b> · List') && mv.includes('id="plMapInline"') && /\d+ of \d+ places have a pin/.test(mv) && !mv.includes('pl-sechead'), mv.slice(0, 160));
+    ok('١٦هـ · ز-١-ب: زر العرض القائم «View: List · Map» حيّ — بوضع الخريطة يظهر عدّاد الدبابيس وحاوية الخريطة بدل القائمة', mv.includes('View: <b>Map</b> · List') && mv.includes('id="plMapInline"') && (/\d+ of \d+ places have a pin/.test(mv) || /\d+ pinned · \d+ suggested · \d+ probable/.test(mv)) && !mv.includes('pl-sechead') /* ر٧٣-ج (٦): بالـDOM الحقيقي سطر الخريطة يُستبدل حيًّا بنتيجة الاقتراحات (r73d/r73e) — الهيكل القديم كان يخفي التحديث */, mv.slice(0, 160));
     ok('١٦هـ · ز-١-ب: زر عرض الرحلة القائم «View: Days · Map» حيّ (خريطة بأرقام الأيام) · لا وسم Soon على الخريطة', tplCount("onclick=\"tripToggleView()\"", 1).ok && tplCount("renderInlineMap('tripMapInline', __pts, function(p){ return p._day; })", 1).ok && tplCount('Map <span class="dim">Soon', 0).ok, '');
     const cc2 = B.x("JSON.stringify([isCityOrCountry('Bahrain'), isCityOrCountry('France'), isCityOrCountry('As Sahafah')])");
     ok('١٦هـ · ز-١-ج-٢: Area لا تأخذ اسم دولة (قائمة الدول) · الحي يبقى', cc2 === '[true,true,false]', cc2);
