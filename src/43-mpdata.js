@@ -17,7 +17,7 @@ const mpData = (function(){
   // القرار ١٢: رفض النقص عند الصفر (الأرضية بالقواعد ٣٫٦) يُبتلع — السحب تم والعدّاد صفر؛ غيره يُرمى
   const swallowFloor = function(e, delta){ if (delta < 0 && e && e.code === 'permission-denied') return; throw e; };
   return {
-    // v1.40 · القرار 	٦٩: مفكرة المكان توثيقيًّا داخل مستند المستخدم الخاص (لا عدّاد) — حقل placeBookmarks بـuserLists
+    // v1.40 · القرار 	٦٩: مفكرة المكان توثيقيًّا داخل مستند المستخدم الخاص (لا عدّاد) — حقل placeBookmarks بـuserLists
     bookmarks: {
       setPlace: function(uid, pid, data){
         const patch = { placeBookmarks: {} };
@@ -296,7 +296,17 @@ const mpData = (function(){
       byPrefix: function(prefix, limit){ return col('analytics').orderBy(firebase.firestore.FieldPath.documentId()).startAt(prefix).endAt(prefix + '\uf8ff').limit(limit || 50).get(); }
     },
     dailyStats: { bump: function(day, fields){ return col('dailyStats').doc(day).set(fields, { merge: true }); } },
-    stats: { bumpUsers: function(){ return col('stats').doc('users').set({ count: inc(1) }, { merge: true }); } },
+    stats: { /* ب-٢-١ (My stats): قراءات مفردة متوازية — القواعد تثبت القراءة المفردة لصاحبها/المالك ولا تثبت الاستعلام بالمدى (القسمان ٤-هـ · ٤-ح) · الغائب = {} */
+      _day: function(d){ return new Date(d).toISOString().slice(0, 10); },
+      _days: function(n){ const out = []; const t = Date.now(); for (let i = 0; i < (n || 30); i++) out.push(mpData.stats._day(t - i * 86400000)); return out; }, // اليوم أولًا
+      _get: async function(coll, id){ try{ const d = await col(coll).doc(id).get(); return d.exists ? (d.data() || {}) : {}; }catch(e){ mpSwallow(e, 'stats ' + coll); return {}; } },
+      listDoc: function(listId){ return mpData.stats._get('stats_lists', listId); },
+      tripDoc: function(tripId){ return mpData.stats._get('stats_trips', tripId); },
+      listDays: async function(listId, n){ const days = mpData.stats._days(n); const rows = await Promise.all(days.map(function(d){ return mpData.stats._get('stats_lists', listId + '__' + d); })); return days.map(function(d, i){ return Object.assign({ day: d }, rows[i]); }); },
+      curatorDays: async function(uid, n){ const days = mpData.stats._days(n); const rows = await Promise.all(days.map(function(d){ return mpData.stats._get('stats_curators', uid + '__' + d); })); return days.map(function(d, i){ return Object.assign({ day: d }, rows[i]); }); },
+      placesOf: async function(listId, hexes){ const out = {}; await Promise.all((hexes || []).map(async function(h){ out[h] = await mpData.stats._get('stats_places', listId + '__' + h); })); return out; }
+    },
+    statsUsers: { bumpUsers: function(){ return col('stats').doc('users').set({ count: inc(1) }, { merge: true }); } }, /* ب-٢-١: كان المفتاح stats — انتقل ليحمل stats قرّاء الإحصاء (مفتاح مكرر بالكائن يطغى آخره) */
     communityProfiles: { set: function(uid, payload){ return col('communityProfiles').doc(uid).set(payload, { merge: true }); }, bumpView: function(uid){ return col('communityProfiles').doc(uid).set({ viewCount: inc(1) }, { merge: true }); }, withPublic: function(){ return col('communityProfiles').where('hasAnyPublicContent', '==', true).get(); } },
     settings: { // ر٧٠ط-٢: قالب التصنيفات (المالك)
       app: async function(){ const d = await col('settings').doc('app').get(); return d.exists ? d.data() : null; }, /* ر٧٣-أب (٢) */
