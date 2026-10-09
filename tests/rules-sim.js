@@ -1,5 +1,6 @@
 // MyPickz — tests/rules-sim.js
 // يختبر firestore.rules على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// v3.14 (٩ أكتوبر ٢٠٢٦ — ب-٢ My stats): + القسم ٢٧ (٧ حالات): المفتاح اليومي save بـstats_curators؛ المفاتيح القديمة وقيود ±١..٥٠ والقراءة كما هي.
 // v3.13 (١ أكتوبر ٢٠٢٦ — الإحكام): + القسم ٢٦ (٩ حالات) · حالات الأم بـcategories صارت مرفوضة · حالات cities حُذفت · المدن بالتحليلات بمعرّف المعجم.
 // v3.12 (٢٩ سبتمبر ٢٠٢٦ — others عام): + القسم ٢٥ (٦ حالات) · تُحدَّث حالات others القديمة.
 // v3.11 (٢٤ سبتمبر ٢٠٢٦ — سجل هوية الأماكن): + القسم ٢٤ (١٤ حالة).
@@ -970,6 +971,16 @@ const no = (label, f) => expect(false, label, f);
   await ok('v3.13 analytics update touching 4 keys allow (within cap)', () => guest.doc('analytics/events_2026-10-01__all__all').update({ place_open: 2, bookmark_add: 1, mylist_open: 1, mylist_save: 1 }));
   await no('v3.13 analytics update touching more than 6 keys denied (cap)', () => guest.doc('analytics/events_2026-10-01__all__all').update({ place_open: 1, bookmark_add: 1, mylist_open: 1, mylist_save: 1, trip_open: 1, trip_save: 1, community_open: 1 }));
   await no('v3.13 stats_places: id without an existing user list denied (owner_ guide form gone)', () => a.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_total: 1 }));
+
+  // ================= ٢٧) v3.14 — المفتاح اليومي save بـstats_curators (٩ أكتوبر ٢٠٢٦ · ب-٢) =================
+  const SV = 'stats_curators/' + CUR + '__2026-10-09';
+  await ok('v3.14 stats_curators daily create {save:1} by a signed user (A)', () => a.doc(SV).set({ save: 1 }));
+  await ok('v3.14 stats_curators daily update save +1 by another user (B)', () => b.doc(SV).update({ save: 2 }));
+  await ok('v3.14 stats_curators daily update save together with page_view', () => guest.doc(SV).update({ save: 3, page_view: 1 }));
+  await no('v3.14 stats_curators update save +51 denied (cap)', () => a.doc(SV).update({ save: 54 }));
+  await no('v3.14 stats_curators update save decrease denied', () => a.doc(SV).update({ save: 2 }));
+  await no('v3.14 stats_curators unknown key still denied (saves)', () => a.doc(SV).set({ saves: 1 }));
+  await ok('v3.14 stats_curators daily read by its curator', () => cur.doc(SV).get());
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
