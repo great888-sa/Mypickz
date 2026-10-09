@@ -352,6 +352,16 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .xc-type{display:inline-block; font-weight:800; font-size:11px; letter-spacing:1px; padding:2px 10px; border-radius:8px; margin-bottom:6px;} .xc-foot{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:10px; padding:8px 10px; border-radius:10px;} .xc-owner{display:inline-flex; align-items:center; gap:4px; font-size:12px;} /* ر٧٠ز */
   .xc-title{font-weight:800; font-size:16px; margin-bottom:2px;} .xc-sub{font-size:12px; margin-bottom:8px;} .xc-day{font-weight:700; font-size:12px; margin:8px 0 3px;} .xc-row{font-size:13px; padding:2px 0 2px 10px;} .xc-foot{margin-top:10px; font-size:10px; letter-spacing:.08em; text-align:right; font-weight:800;}
 
+  /* ب-٢-٢-أ (المسودة v2-أ): القشرة الموحَّدة للنوافذ الفرعية — رأس (Back · العنوان · ✕) · عناوين المجموعات · أعمدة الأيام · الأرقام بالصفوف */
+  .hdr{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:6px; padding:0 0 8px; margin:0 0 8px; border-bottom-width:1px; border-bottom-style:solid;}
+  .hdr .bk{justify-self:start; border-radius:999px; padding:4px 10px; font-family:'Cairo',sans-serif; font-weight:800; font-size:11.5px; border-width:1.5px; border-style:solid; cursor:pointer; white-space:nowrap;}
+  .hdr .bk.hidden{visibility:hidden;}
+  .hdr .ttl{font-family:'Cairo',sans-serif; font-size:14.5px; font-weight:800; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .hdr .x{justify-self:end; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border-width:1.5px; border-style:solid; font-weight:800; cursor:pointer; padding:0;}
+  .gsec{font-family:'Cairo',sans-serif; font-size:10.5px; letter-spacing:.5px; text-transform:uppercase; margin:10px 2px 3px;}
+  .sdays{display:flex; gap:2px; align-items:flex-end; height:34px; margin:6px 2px 2px;} .sdays i{flex:1; border-radius:2px 2px 0 0; min-height:2px;}
+  .admtile .d{display:block; font-size:9.5px; font-weight:800;}
+  .ps .num{font-weight:800;}
   .ownerchip{display:inline-flex; align-items:center; border-width:1.5px; border-style:solid; border-radius:999px; padding:3px 10px; font-size:11.5px; font-weight:700; text-decoration:none; cursor:pointer;} .pn .ownerchip{float:right; margin-left:6px;}
 </style>
 
