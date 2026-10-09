@@ -554,7 +554,7 @@ async function plSuggestRunOnce(places, gen){ // يقين المطابق (أو �
 let plPinLists = { probable: [], notFound: [] };
 let plMapFocus = null; // خ-٤ (قرار المالك): بعد تأكيد دبوس من عرض الخريطة تعود الخريطة إلى موضعه (لا ضمّ كل الدبابيس)
 function plOpenPinList(kind){ // نافذة فرعية بأسماء المحتملة/غير الموجودة، لكل اسم زر التأكيد على الخريطة (قرار المالك: لا ازدحام بالسطر)
-  const list = plPinLists[kind] || []; const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return; bd.classList.add('show');
+  const list = plPinLists[kind] || []; const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return; bd.classList.add('show'); dashSet(kind === 'notFound' ? '🔍 Not found' : '❓ Probable', null); /* ب-٢-٢-أ: القشرة */
   body.innerHTML = '<div class="ctx" style="text-align:center;"><b>' + (kind === 'notFound' ? 'Not found in our data' : 'Probable — needs your confirmation') + '</b> · ' + list.length + '</div>' + (list.length ? list.map(function(p){ const sg = plSuggestCache[plPlaceKey(p)]; return '<div class="row rowblock pin-row">' + mpMap.popupHtml(p, { mine: true, confirm: true, inList: true, note: kind === 'notFound' ? 'Not found in our data — place the pin yourself' : (sg && sg.probable ? (sg.n === 1 ? '1 possible match — name differs slightly' : sg.n + ' possible matches') : 'Probable') }) + '</div>'; }).join('') : '<div class="mp-empty mini">Nothing here.</div>'); // قرار المالك: الصف = نافذة الدبوس نفسها
 }
 function plOpenCardAt(catId, index){ // خ-٤: من نافذة الدبوس إلى بطاقة المكان بموضعها (القسم يُفتح والبطاقة تُوسَّع وتُمرَّر إليها)
