@@ -25,7 +25,7 @@ async function registerUserRecord(){
 
 let allUsersCache = [];
 
-const EXPECTED_RULES = 'v3.13'; // r72t (M4.26 ٧): يُرفع مع كل نشرة — يُقارن بـ settings/app.rulesVersion الذي يكتبه المالك بعد النشر باللوحة
+const EXPECTED_RULES = 'v3.14'; // ب-٢-١: + save بـstats_curators // r72t (M4.26 ٧): يُرفع مع كل نشرة — يُقارن بـ settings/app.rulesVersion الذي يكتبه المالك بعد النشر باللوحة
 async function checkRulesVersion(){ try{ const live = (await mpData.settings.rulesVersion()) || '—'; const ok = live === EXPECTED_RULES; logTiming('[RULES] live=' + live + ' expected=' + EXPECTED_RULES + (ok ? ' ✓' : ' ✗ DRIFT')); return { live: live, ok: ok }; }catch(e){ return { live: '?', ok: false }; } }
 async function openAdminPanel(){ // ر٧٢-أ-١ب: الباب الواحد للمالك — الإحصائيات بشكلها الحالي والأبواب
   document.getElementById('usersStatsLine').innerHTML = '<p style="text-align:center; color:var(--ink-soft);">Loading…</p>';
