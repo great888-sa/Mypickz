@@ -126,11 +126,15 @@ function openFromDrawer(openFn){
   const opened = Array.from(document.querySelectorAll('.modal-backdrop.show')).find(b => !before.has(b));
   if (!opened || !window.MutationObserver) return;
   const obs = new MutationObserver(function(){
-    if (!opened.classList.contains('show')){ obs.disconnect(); if (currentUser) openAccountModal(); }
+    if (!opened.classList.contains('show')){ obs.disconnect(); if (window.__mpNoReopen){ window.__mpNoReopen = false; return; } if (currentUser) openAccountModal(); } /* ب-٢-٢-أ: ✕ يغلق كل الطبقات بلا عودة للدرج؛ Back وحده يعود إليه */
   });
   obs.observe(opened, { attributes: true, attributeFilter: ['class'] });
 }
 function closeModalById(id){ document.getElementById(id).classList.remove('show'); }
+function mpCloseAll(id){ window.__mpNoReopen = true; closeModalById(id); } /* ب-٢-٢-أ: ✕ بالقشرة الموحَّدة — إغلاق النافذة بلا إعادة فتح الدرج */
+let __dashBack = null; /* ب-٢-٢-أ: معالج Back الحالي لنافذة dashBackdrop (null = لا طبقة سابقة فيُخفى الزر) */
+function dashSet(title, backFn){ const t = document.getElementById('dashTitle'); if (t) t.textContent = title || ''; __dashBack = (typeof backFn === 'function') ? backFn : null; const b = document.getElementById('dashBackBtn'); if (b) b.classList.toggle('hidden', !__dashBack); }
+function dashBack(){ const f = __dashBack; if (f) f(); else closeModalById('dashBackdrop'); }
 
 // خ١-ب: الوجهة الافتراضية (المشهد ٥) — تُحفظ بمستند المستخدم، والتطبيق يفتح عليها
 const HOME_TABS = ['Places','Trips','Community','Curators','Addresses'];
