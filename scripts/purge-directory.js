@@ -1,6 +1,7 @@
 // MyPickz — scripts/purge-directory.js (ر٧٣-د · ٩ أكتوبر ٢٠٢٦): حذف مجموعة الدليل الموروثة cities بعد تحقق آلي أن الهجرة (ز-١-ج-١) كاملة
 // التشغيل بالناشر فقط (سير Migrate directory · الوضع purge) بالمفتاح المؤقت FIREBASE_SA_KEY الذي يُحذف في اليوم نفسه · النسخة الاحتياطية cities-backup.json تُؤخذ بالسير قبل هذا السكربت
-// المراحل: (١) التحقق — لكل مستند cities فيه أماكن عامة توجد قائمة للمالك بـmigratedFrom مطابق وعدد فهرسها = عدد أماكنه العامة؛ أي خلل = توقف بلا حذف
+// المراحل: (١) التحقق على مستوى المكان (لا العدد — قوائم المالك حية منذ الهجرة ويُنقل فيها بين المدن): كل مكان عام بالدليل موجود بأي قائمة للمالك بالرابط (أو بالاسم إن لم يكن له رابط)؛
+//              ومع ذلك تُطبع القائمة المهاجَرة لكل مدينة (migratedFrom) · مكان مفقود من كل القوائم = توقف بلا حذف ويُسمّى (--allow-missing يتجاوزه بقرار المالك)
 //          (٢) الحذف على دفعات ≤ ٥٠٠: مستندات cities كلها (ومنها العناوين التجريبية الثلاثة بالرياض — قرار المالك ٩ أكتوبر: تجريبية، تبقى بالنسخة الاحتياطية فقط)
 //              + مستندات الإعدادات التي زالت قراءتها من التطبيق بـr73p: settings/cities-list · settings/countries-list · settings/publish-status
 //          (٣) التقرير · --dry = التحقق والتقرير بلا حذف
@@ -14,20 +15,29 @@ const SETTINGS_DOCS = ['cities-list', 'countries-list', 'publish-status'];
   const snap = await db.collection('cities').get();
   console.log('cities docs:', snap.size, DRY ? '(dry — verify only)' : '');
   const lists = await db.collection('userCityLists').where('ownerId', '==', OWNER).get();
-  const byFrom = {}; lists.forEach(d => { const x = d.data() || {}; if (x.migratedFrom) byFrom[x.migratedFrom] = { id: d.id, index: Array.isArray(x.index) ? x.index.length : -1, city: x.cityName }; });
+  const byFrom = {}; lists.forEach(d => { const x = d.data() || {}; if (x.migratedFrom) byFrom[x.migratedFrom] = { id: d.id, city: x.cityName }; });
   console.log('owner lists with migratedFrom:', Object.keys(byFrom).length);
-  let ok = true; let publicPlaces = 0, privatePlaces = 0, verified = 0, empty = 0;
+  const cats = await db.collection('userCityListCats').where('ownerId', '==', OWNER).get(); // كل أماكن المالك بكل مدنه — المكان يُعدّ محفوظًا أينما كان
+  const haveUrl = new Map(), haveName = new Map(); let ownerPlaces = 0;
+  const normU = u => String(u || '').trim().replace(/\/+$/, '').toLowerCase(); const normN = n => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  cats.forEach(d => { const x = d.data() || {}; (x.places || []).forEach(p => { if (!p) return; ownerPlaces++; if (p.url) haveUrl.set(normU(p.url), x.cityId); if (p.name) haveName.set(normN(p.name), x.cityId); }); });
+  console.log('owner category docs:', cats.size, '· places:', ownerPlaces);
+  const ALLOW_MISSING = process.argv.includes('--allow-missing');
+  let ok = true; let publicPlaces = 0, privatePlaces = 0, found = 0, moved = 0, empty = 0; const missing = [];
   for (const doc of snap.docs){
-    const links = (doc.data() || {}).links || {}; let pub = 0, priv = 0;
-    Object.keys(links).forEach(k => { const ps = ((links[k] && links[k].places) || []).filter(p => p && (p.name || p.url)); if (PRIVATE.includes(k)) priv += ps.length; else pub += ps.length; });
-    publicPlaces += pub; privatePlaces += priv;
-    if (!pub){ empty++; console.log('  ' + doc.id + ': no public places' + (priv ? ' · private (test addresses) ' + priv + ' — dropped with the collection, kept in backup' : '')); continue; }
-    const m = byFrom['cities/' + doc.id];
-    if (!m){ ok = false; console.log('  ✗ ' + doc.id + ': ' + pub + ' public places but NO migrated list for owner — ABORT'); continue; }
-    if (m.index !== pub){ ok = false; console.log('  ✗ ' + doc.id + ' → ' + m.id + ' (' + m.city + '): index ' + m.index + ' ≠ public places ' + pub + ' — ABORT'); continue; }
-    verified++; console.log('  ✓ ' + doc.id + ' → ' + m.id + ' (' + m.city + ') · ' + pub + ' places');
+    const links = (doc.data() || {}).links || {}; let pub = [], priv = 0;
+    Object.keys(links).forEach(k => { const ps = ((links[k] && links[k].places) || []).filter(p => p && (p.name || p.url)); if (PRIVATE.includes(k)) priv += ps.length; else pub = pub.concat(ps); });
+    publicPlaces += pub.length; privatePlaces += priv;
+    if (!pub.length){ empty++; console.log('  ' + doc.id + ': no public places' + (priv ? ' · private (test addresses) ' + priv + ' — dropped with the collection, kept in backup' : '')); continue; }
+    const m = byFrom['cities/' + doc.id]; const target = m ? m.id.slice(OWNER.length + 1) : null;
+    let f = 0, mv = 0; const miss = [];
+    pub.forEach(p => { const where = (p.url && haveUrl.get(normU(p.url))) || (!p.url && p.name && haveName.get(normN(p.name))) || null; if (!where){ miss.push(p.name || p.url); return; } f++; if (target && where !== target) mv++; });
+    found += f; moved += mv; missing.push(...miss.map(n => doc.id + ': ' + n));
+    const line = '  ' + (miss.length ? '✗ ' : '✓ ') + doc.id + ' → ' + (m ? m.id + ' (' + m.city + ')' : 'NO migrated list') + ' · places ' + pub.length + ' · found ' + f + (mv ? ' (moved to another city ' + mv + ')' : '') + (miss.length ? ' · MISSING ' + miss.length + ': ' + miss.join(' | ') : '');
+    console.log(line); if (miss.length) ok = ALLOW_MISSING; if (!m) console.log('    note: no list carries migratedFrom=cities/' + doc.id + ' (places matched elsewhere)');
   }
-  console.log('verify: cities ' + snap.size + ' · with public places ' + (snap.size - empty) + ' · verified ' + verified + ' · public places ' + publicPlaces + ' · private (dropped) ' + privatePlaces);
+  console.log('verify: cities ' + snap.size + ' · with public places ' + (snap.size - empty) + ' · public places ' + publicPlaces + ' · found in owner lists ' + found + (moved ? ' (moved between cities ' + moved + ')' : '') + ' · missing ' + missing.length + ' · private (dropped) ' + privatePlaces);
+  if (missing.length && ALLOW_MISSING) console.log('MISSING places accepted by --allow-missing (owner decision): ' + missing.join(' | '));
   if (!ok){ console.log('VERIFY FAILED — nothing deleted'); process.exit(1); }
   const settingsRefs = []; for (const id of SETTINGS_DOCS){ const d = await db.collection('settings').doc(id).get(); if (d.exists) settingsRefs.push(d.ref); }
   console.log('settings docs to delete:', settingsRefs.map(r => r.id).join(', ') || '(none)');
