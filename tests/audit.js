@@ -137,7 +137,7 @@ const MP_EXPECTED = [
   ["mpTrack.hit('reserved_1')", { prod: 2, test: 0 }], // ر٦٣: الاختبار انتقل لـreserved_2 (reserved_1 خارج قائمة M4.24)
   ["mpTrack.hit('reserved_2')", { prod: 0, test: 2 }],
   ["mpTrack.statsList(docId, 'open_ulist')", { prod: 1, test: 0 }], // r72m (M4.25 §١٧-ج): الاختبار انتقل إلى open_app — الإنتاج يلحق بترقيته
-  ["mpTrack.statsList(docId, 'open_app')", { prod: 0, test: 1 }],
+  ["mpTrack.statsList(k, listOpenKey(origin))", { prod: 0, test: 1 }], // ب-٢-١: نقطة العدّ الواحدة بالمنشأ (كانت open_app مباشرة بـplOpenSharedList)
   ["mpTrack.statsTrip(tripId, 'view_shared')", { prod: 1, test: 0 }],
   ["mpTrack.statsTrip(tripId, 'view_community')", { prod: 1, test: 0 }],
   ["mpTrack.statsTrip(tripId, 'view_total')", { prod: 0, test: 2 }],
@@ -653,6 +653,7 @@ function finish(){
   referenceConformanceGuard(TEST, test);
   slashCommentGuard(TEST, test);
   buildGuard();
+  statsKeysGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
   process.exit(fails === 0 ? 0 : 1);
 }
@@ -724,4 +725,34 @@ function buildGuard(){
   for (const k of ['function initFirebase', 'function renderPlacesBody', 'function openAuthModal', 'const mpData = (function(){', 'const mpTrack = (function(){']) check(p.out.indexOf(k) > 0, T + 'prod profile keeps ' + k);
   const dTest = fs.readFileSync(path.join(ROOT, 'src', '91-timing.js'), 'utf8').length, dProd = fs.readFileSync(path.join(ROOT, 'src', '91-timing-prod.js'), 'utf8').length;
   check(t.out.length - p.out.length === dTest - dProd, T + 'prod differs from test exactly by the diagnostics part (' + (t.out.length - p.out.length) + ' chars)');
+}
+
+// ---------- §24 (ب-٢-١ · ٩ أكتوبر ٢٠٢٦): مفاتيح الإحصاء التي يكتبها التطبيق موجودة بالقائمة البيضاء المطابقة في القواعد ----------
+// الدرس: نسخ القائمة كتب 'copy' (خارج القائمة) فرُفض صامتًا شهرًا، ونسخ المكان استدعى mpTrack.statsPlace غير الموجودة داخل try/catch فلم يكتب شيئًا — لا المحاكاة ولا الحارس التقطا ذلك.
+// (أ) كل نداء mpTrack.<x>( بالتطبيق يشير إلى عضو معرَّف بكائن mpTrack المُصدَّر.
+// (ب) كل مفتاح نصي يُمرَّر إلى statsList/statsTrip/statsCurator/statsCity/statsPlaceList موجود بـhasOnly([...]) للمجموعة المطابقة في firestore.rules.
+function statsKeysGuard(label, s){
+  const T = '§24 ' + label + ': ';
+  const code = stripComments(s);
+  const ret = (code.match(/const mpTrack = \(function\(\)\{[\s\S]*?\n  return \{([\s\S]*?)\};\n\}\)\(\);/) || [])[1] || '';
+  const members = new Set([...ret.matchAll(/(?:^|[\s,{])(?:get |set )?([A-Za-z_]\w*)\s*[:(]/g)].map(m => m[1]));
+  const used = new Set([...code.matchAll(/mpTrack\.([A-Za-z_]\w*)\s*\(/g)].map(m => m[1]));
+  const undef = [...used].filter(u => !members.has(u));
+  console.log('INFO  ' + T + 'mpTrack members ' + members.size + ' · call sites use ' + used.size);
+  check(members.size >= 8 && undef.length === 0, T + 'every mpTrack.<x>( call names a defined member', 'undefined: ' + undef.join(', '));
+  const rulesPath = path.join(ROOT, 'firestore.rules'); if (!fs.existsSync(rulesPath)){ warn(T + 'firestore.rules absent — key whitelist check skipped'); return; }
+  const rules = fs.readFileSync(rulesPath, 'utf8');
+  const white = coll => { const m = new RegExp('match /' + coll + '/\\{docId\\} \\{[\\s\\S]*?hasOnly\\(\\[([^\\]]*)\\]').exec(rules); return m ? new Set([...m[1].matchAll(/'([^']+)'/g)].map(x => x[1])) : null; };
+  const map = { statsList: 'stats_lists', statsTrip: 'stats_trips', statsCurator: 'stats_curators', statsCity: 'stats_cities', statsPlaceList: 'stats_places' };
+  const bad = []; let n = 0;
+  for (const fn of Object.keys(map)){
+    const wl = white(map[fn]); if (!wl){ bad.push(map[fn] + ': whitelist not found in rules'); continue; }
+    for (const m of code.matchAll(new RegExp('mpTrack\\.' + fn + '\\(([^)]*)\\)', 'g'))){
+      const args = m[1]; const keys = [...args.matchAll(/'([a-z][a-z_]{2,})'/g)].map(x => x[1]).filter(k => !/^(daily|all)$/.test(k)); /* المفاتيح النصية فقط — لا فواصل المعرّفات مثل '_' */
+      for (const k of keys){ n++; if (!wl.has(k)) bad.push(fn + "('" + k + "') not in " + map[fn] + ' whitelist'); }
+    }
+  }
+  const inner = (code.match(/function statsPlaceList\([\s\S]*?\n  \}/) || [''])[0]; for (const k of ['trip_add', 'open_total']){ n++; if (!(white('stats_places') || new Set()).has(k)) bad.push('statsPlaceList writes ' + k + ' not in stats_places whitelist'); }
+  console.log('INFO  ' + T + 'stats keys checked at call sites = ' + n);
+  check(bad.length === 0, T + 'every stats key written by the app is in its rules whitelist', bad.slice(0, 6).join(' | '));
 }
