@@ -24,12 +24,15 @@ function stripComments(s){
   return s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:"'])\/\/[^\n]*/g, '$1');
 }
 
-const prod = read(PROD);
+// ر٧٣-ج (قرار المالك ٨ أكتوبر — الخيار أ): ملف الإنتاج القديم أُلغي حتى المرحلة د؛ حين يغيب تُطبَّق الفحوص على نسخة الاختبار وحدها،
+// والإنتاج عند ترقيته = بناء الملمح prod من المصدر نفسه (§٢٣-ب يفحصه الآن في الذاكرة بلا نشر)
+const prod = fs.existsSync(path.join(ROOT, PROD)) ? read(PROD) : (console.log('INFO  ' + PROD + ' absent — production is built from src/ at stage D; checks apply to ' + TEST + ' only'), null);
 const test = read(TEST);
-if (!prod || !test) { finish(); }
+if (!test) { finish(); }
+const FILES = prod ? [[PROD, prod], [TEST, test]] : [[TEST, test]];
 
 // ---------- ١) هيكل HTML سليم ----------
-for (const [n, s] of [[PROD, prod], [TEST, test]]) {
+for (const [n, s] of FILES) {
   check(/<html[\s>]/i.test(s) && /<\/html>\s*$/i.test(s.trimEnd()), 'html structure ' + n);
   check(s.length > 100000, 'size sanity ' + n, 'file unexpectedly small (' + s.length + ' bytes)');
 }
@@ -43,14 +46,14 @@ const SECRET_PATTERNS = [
   /"private_key"\s*:/,
   /CLOUDFLARE_API_TOKEN\s*[:=]\s*["'][A-Za-z0-9_-]{20,}/
 ];
-for (const [n, s] of [[PROD, prod], [TEST, test]]) {
+for (const [n, s] of FILES) {
   const hit = SECRET_PATTERNS.find(r => r.test(s));
   check(!hit, 'no secrets ' + n, hit && String(hit));
 }
 
 // ---------- ٣) لا بقايا مسارات محذوفة (الدفعة ١ / GitHub Pages) ----------
 const FORBIDDEN_IDS = ['editPassword', 'loadPassword', 'savePassword', 'logoTap', 'checkOwnerAccess', 'managePassword'];
-for (const [n, s] of [[PROD, prod], [TEST, test]]) {
+for (const [n, s] of FILES) {
   const code = stripComments(s);
   const found = FORBIDDEN_IDS.filter(id => new RegExp('\\b' + id + '\\b').test(code));
   check(found.length === 0, 'no removed owner-mode code ' + n, found.join(', '));
@@ -60,7 +63,7 @@ for (const [n, s] of [[PROD, prod], [TEST, test]]) {
 
 // ---------- ٣-ب) كل onclick (بالHTML وبالقوالب داخل JS) يشير لدالة معرَّفة ----------
 // فحص ثابت مكمِّل لـruntime.js: يلتقط أيضًا المعالجات المولَّدة داخل قوالب JS التي لا تظهر بالDOM عند التحميل
-for (const [n, s] of [[PROD, prod], [TEST, test]]) {
+for (const [n, s] of FILES) {
   const handlers = new Set();
   for (const m of s.matchAll(/onclick=\\?["']\s*([A-Za-z_$][\w$]*)\s*\(/g)) handlers.add(m[1]);
   const defined = new Set();
@@ -71,7 +74,7 @@ for (const [n, s] of [[PROD, prod], [TEST, test]]) {
 }
 
 // ---------- ٤) Firebase مثبَّت الإصدار ومشروع صحيح ----------
-for (const [n, s] of [[PROD, prod], [TEST, test]]) {
+for (const [n, s] of FILES) {
   check(/cdnjs\.cloudflare\.com\/ajax\/libs\/firebase\/\d+\.\d+\.\d+\//.test(s), 'firebase SDK pinned ' + n);
   check(/projectId:\s*"mypickz-6f809"/.test(s), 'firebase projectId ' + n);
   for (const lib of ['firebase-app-compat', 'firebase-auth-compat', 'firebase-firestore-compat'])
@@ -79,8 +82,8 @@ for (const [n, s] of [[PROD, prod], [TEST, test]]) {
 }
 
 // ---------- ٥) الفصل بين الإنتاج والاختبار ----------
-check(!/logTiming/.test(prod), 'prod has no diagnostics (logTiming)');
-check(!/BUILD:/.test(prod), 'prod has no BUILD marker');
+if (prod){ check(!/logTiming/.test(prod), 'prod has no diagnostics (logTiming)');
+check(!/BUILD:/.test(prod), 'prod has no BUILD marker'); }
 const build = (test.match(/BUILD:\s*([^'"\n)]+)/) || [])[1];
 check(!!build, 'test has BUILD marker', 'BUILD: not found');
 if (build) console.log('INFO  test build = ' + build.trim());
@@ -94,8 +97,9 @@ function normalize(s){
     .filter(l => l.trim() !== '' && !/^\s*(\/\*\s*=+|=+\s*\*\/)\s*$/.test(l))
     .join('\n');
 }
-const np = normalize(prod), nt = normalize(test);
-if (np === nt) pass('prod == test after removing diagnostics');
+const np = prod ? normalize(prod) : null, nt = normalize(test);
+if (!prod) { /* لا إنتاج — §٢٣-ب يقارن ملمح prod بالمصدر */ }
+else if (np === nt) pass('prod == test after removing diagnostics');
 else {
   const a = np.split('\n'), b = nt.split('\n');
   let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++;
@@ -111,6 +115,8 @@ check(fs.existsSync(path.join(ROOT, 'wrangler.prod.toml')), 'wrangler.prod.toml 
 const ai = fs.existsSync(path.join(ROOT, '.assetsignore')) ? fs.readFileSync(path.join(ROOT, '.assetsignore'), 'utf8') : '';
 check(/node_modules/.test(ai), '.assetsignore excludes node_modules');
 check(/tests\/?/.test(ai), '.assetsignore excludes tests/', 'add a line: tests/');
+check(/^src\/?$/m.test(ai), '.assetsignore excludes src/ (source parts are not published)', 'add a line: src/'); // ر٧٣-ج
+check(/^scripts\/?$/m.test(ai), '.assetsignore excludes scripts/ (build and data scripts are not published)', 'add a line: scripts/'); // ر٧٣-ج
 check(!fs.existsSync(path.join(ROOT, 'CNAME')), 'no CNAME (GitHub Pages leftover)');
 
 // ---------- ٧) A3-L3-r1: حارس نقاط حقن mpTrack ----------
@@ -195,7 +201,7 @@ mpGuard(TEST, test);
   }
 })();
 
-if (countOcc(prod, 'const mpTrack') > 0) {
+if (prod && countOcc(prod, 'const mpTrack') > 0) {
   mpGuard(PROD, prod);
   check(!/mpTrack\._diag/.test(prod), 'prod has no mpTrack diagnostics hook (_diag)');
 } else {
@@ -219,10 +225,10 @@ function acGuard(label, content){
     check(c === expected, 'appCheck ' + label + ': ' + needle.slice(0, 44) + ' = ' + expected, 'found ' + c);
   }
 }
-for (const [n, s] of [[PROD, prod], [TEST, test]])
+for (const [n, s] of FILES)
   check(!/FIREBASE_APPCHECK_DEBUG_TOKEN/.test(s), 'no App Check debug token ' + n);
 acGuard(TEST, test);
-if (countOcc(prod, 'firebase.appCheck().activate(') > 0) {
+if (prod && countOcc(prod, 'firebase.appCheck().activate(') > 0) {
   acGuard(PROD, prod);
 } else {
   console.log('INFO  prod not yet promoted to A3-L4 (no App Check) — ac guard applied to test only');
@@ -244,7 +250,7 @@ function countDirect(content){
   const inIso = countOcc(iso, 'db.collection(') + countOcc(iso, 'db.batch(');
   return total - inIso;
 }
-for (const [n, s] of [[PROD, prod], [TEST, test]]) {
+for (const [n, s] of FILES) {
   const hasDal = countOcc(s, 'const mpData = (function(){') === 1;
   const max = hasDal ? DAL_MAX[n] : DAL_MAX_LEGACY;
   const direct = countDirect(s);
@@ -261,7 +267,7 @@ function countAuthDirect(content){
   const inIso = (iso.match(AUTH_RE) || []).length;
   return total - inIso;
 }
-for (const [n, s] of [[PROD, prod], [TEST, test]]) {
+for (const [n, s] of FILES) {
   const hasDal = countOcc(s, 'const mpData = (function(){') === 1;
   const max = hasDal ? AUTH_MAX[n] : 5;
   const direct = countAuthDirect(s);
@@ -634,7 +640,7 @@ deferredContractGuard(TEST, test);
 surfaceContrastGuard(TEST, test);
 migrationGuard(TEST, test);
 referenceGuard();
-if (styleBlock(prod, 'identity')) {
+if (prod && styleBlock(prod, 'identity')) {
   idGuard(PROD, prod);
   curatorContrastGuard(PROD, prod);
 } else {
@@ -646,6 +652,7 @@ finish();
 function finish(){
   referenceConformanceGuard(TEST, test);
   slashCommentGuard(TEST, test);
+  buildGuard();
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
   process.exit(fails === 0 ? 0 : 1);
 }
@@ -697,4 +704,24 @@ function slashCommentGuard(label, s){
     body.split('\n').forEach((ln, i) => { if (/(^|[^:])\/\//.test(ln)) bad.push((s.slice(0, m.index).split('\n').length + i) + ': ' + ln.trim().slice(0, 60)); }); }
   console.log('INFO  ' + T + 'multi-line template literals scanned = ' + n);
   check(bad.length === 0, T + 'no // line comments inside multi-line template literals (block comments only)', bad.slice(0, 5).join(' | '));
+}
+
+// ---------- §23 (ر٧٣-ج البند ٥): المخرج مبنيّ من src/ لا معدَّل يدويًّا ----------
+// الملف المنشور index-debug-test.html يُبنى بـ scripts/build.js من أجزاء src/ بالترتيب المكتوب في src/build.json.
+// (أ) بناء الملمح test في الذاكرة يطابق الملف المرفوع بايتًا بايتًا — وإلا: تعديل يدوي على المخرج أو جزء لم يُرفع.
+// (ب) ملمح prod (الإنتاج عند المرحلة د) يُبنى في الذاكرة ويُفحص: بلا لوحة توقيت ولا سطر BUILD ولا خطّاف _diag، وبالدوال المفتاحية نفسها.
+function buildGuard(){
+  const T = '§23 build: ';
+  let b; try{ b = require(path.join(ROOT, 'scripts', 'build.js')); }catch(e){ fail(T + 'scripts/build.js loads', String(e && e.message || e)); return; }
+  let t; try{ t = b.build('test'); }catch(e){ fail(T + 'test profile builds from src/', String(e && e.message || e)); return; }
+  console.log('INFO  ' + T + 'parts ' + t.names.length + ' · src ' + t.srcHash);
+  if (t.out === test) pass(T + TEST + ' is byte-identical to build(test) — no hand edits, all parts committed');
+  else { const a = t.out.split('\n'), c = test.split('\n'); let i = 0; while (i < a.length && i < c.length && a[i] === c[i]) i++;
+    fail(T + TEST + ' is byte-identical to build(test)', 'first divergence at line ' + (i + 1) + ' | built: ' + (a[i] || '<eof>').slice(0, 70) + ' | file: ' + (c[i] || '<eof>').slice(0, 70)); }
+  let p; try{ p = b.build('prod'); }catch(e){ fail(T + 'prod profile builds from src/', String(e && e.message || e)); return; }
+  check(!/__timingBox|TIMING — tap|BUILD:|mpTrack\._diag/.test(p.out), T + 'prod profile has no timing panel, no BUILD line, no _diag hook');
+  check(countOcc(p.out, 'function logTiming(') === 1 && countOcc(p.out, 'logTiming(') > 20, T + 'prod profile keeps a no-op logTiming for the call sites');
+  for (const k of ['function initFirebase', 'function renderPlacesBody', 'function openAuthModal', 'const mpData = (function(){', 'const mpTrack = (function(){']) check(p.out.indexOf(k) > 0, T + 'prod profile keeps ' + k);
+  const dTest = fs.readFileSync(path.join(ROOT, 'src', '91-timing.js'), 'utf8').length, dProd = fs.readFileSync(path.join(ROOT, 'src', '91-timing-prod.js'), 'utf8').length;
+  check(t.out.length - p.out.length === dTest - dProd, T + 'prod differs from test exactly by the diagnostics part (' + (t.out.length - p.out.length) + ' chars)');
 }
