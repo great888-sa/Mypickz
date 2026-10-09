@@ -15,7 +15,7 @@ on:
         required: true
         default: 'UJHk3DqwmDeLptTnTYXwLQjBvHx1'
       confirm:
-        description: 'purge only: type DELETE to actually delete (anything else = verify-only report)'
+        description: 'purge only: DELETE = verify then delete · DELETE-ALLOW-MISSING = delete even if some old-directory places are missing from the owner lists (owner decision, names printed) · anything else = verify-only report'
         required: false
         default: ''
 jobs:
@@ -60,5 +60,9 @@ jobs:
         run: |
           umask 077; printf '%s' "$FIREBASE_SA_KEY" > /tmp/sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json
-          if [ "${{ github.event.inputs.confirm }}" = "DELETE" ]; then echo "confirm=DELETE — verify then delete"; node scripts/purge-directory.js --owner=${{ github.event.inputs.owner }}; else echo "no confirm — verify-only report (nothing deleted)"; node scripts/purge-directory.js --owner=${{ github.event.inputs.owner }} --dry; fi
+          case "${{ github.event.inputs.confirm }}" in
+            DELETE) echo "confirm=DELETE — verify then delete"; node scripts/purge-directory.js --owner=${{ github.event.inputs.owner }} ;;
+            DELETE-ALLOW-MISSING) echo "confirm=DELETE-ALLOW-MISSING — delete; missing old-directory places accepted by owner decision (9 Oct 2026)"; node scripts/purge-directory.js --owner=${{ github.event.inputs.owner }} --allow-missing ;;
+            *) echo "no confirm — verify-only report (nothing deleted)"; node scripts/purge-directory.js --owner=${{ github.event.inputs.owner }} --dry ;;
+          esac
           rm -f /tmp/sa.json
