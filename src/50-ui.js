@@ -55,7 +55,7 @@ let ownerNoteBackup = {}; // نسخة أصلية لكل ملاحظة (id#index) 
 let currentUser = null;
 let resolveAuthReady;
 const authReadyPromise = new Promise(res => { resolveAuthReady = res; }); // يكتمل أول ما Firebase يتأكد من حالة تسجيل الدخول (بغض النظر لو فاضية أو حساب حقيقي)
-/* v1.40 · دفعة الأفعال الأربعة (القرار المؤسِّس ٠٩): القلب تقاعد —
+/* v1.40 · دفعة الأفعال الأربعة (القرار المؤسِّس ٠٩): القلب تقاعد —
    مفكرة المكان (بلا عدّاد — حقل placeBookmarks بمستندك) · مفكرة القائمة (سجل + عدّاد) · حفظ الرحلة (سجل + عدّاد) */
 let listBookmarksMap = null;   // {listId: record} — تُحمّل عند أول حاجة
 let tripSavesMap = null;       // {tripId: record}
@@ -340,7 +340,7 @@ async function exportOtherList(ownerUid, cityId){
         if (q.url) out += '  ' + q.url + '\n';
       });
     });
-    mpSendText(out + '\nSent via MyPickz · mypickz.app');
+    mpSendText(out + '\nSent via MyPickz · mypickz.app'); statsExportFor('olist', ownerUid + '_' + cityId); /* ب-٢-١ */
   }catch(e){ showToast('Could not build the message'); }
 }
 async function exportOtherTrip(tripId){
@@ -359,7 +359,7 @@ async function exportOtherTrip(tripId){
         });
       });
     });
-    mpSendText(out + '\nSent via MyPickz · mypickz.app');
+    mpSendText(out + '\nSent via MyPickz · mypickz.app'); try{ if (t.ownerId && currentUser && t.ownerId !== currentUser.uid && mpIsVerified(t.ownerId)) mpTrack.statsCurator(t.ownerId, 'export'); }catch(_){} /* ب-٢-١ */
   }catch(e){ showToast('Could not build the message'); }
 }
 async function toggleTripSave(tripId){
