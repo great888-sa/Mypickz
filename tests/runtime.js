@@ -15,7 +15,7 @@ try { puppeteer = require('puppeteer-core'); }
 catch (e) { console.log('FAIL  puppeteer-core not installed  →  npm i --no-save puppeteer-core'); process.exit(1); }
 
 const ROOT = path.resolve(__dirname, '..');
-const FILES = ['index.html', 'index-debug-test.html'];
+const FILES = ['index.html', 'index-debug-test.html'].filter(f => fs.existsSync(path.join(ROOT, f))); // ر٧٣-ج (قرار المالك ٨ أكتوبر): الإنتاج القديم أُلغي حتى المرحلة د — يُفحص ما هو موجود
 // ر٥٨ (٣ سبتمبر ٢٠٢٦): القائمة انفصلت مشتركًا وخاصًّا بكل ملف — الإنتاج قبل نموذج الأفعال (القرار ٠٩)
 // ونسخة الاختبار بعده: loadFavorites تقاعدت بها وحلّت مداخل المفكرة والحفظ والمركّب الموقَّع.
 // ر٧٣-أب (١): render وloadCity (شاشة الدليل الموروثة) تقاعدتا بنسخة الاختبار — بقيتا للإنتاج حتى ترقيته.
