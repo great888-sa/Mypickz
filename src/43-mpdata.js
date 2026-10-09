@@ -17,7 +17,7 @@ const mpData = (function(){
   // القرار ١٢: رفض النقص عند الصفر (الأرضية بالقواعد ٣٫٦) يُبتلع — السحب تم والعدّاد صفر؛ غيره يُرمى
   const swallowFloor = function(e, delta){ if (delta < 0 && e && e.code === 'permission-denied') return; throw e; };
   return {
-    // v1.40 · القرار 	٦٩: مفكرة المكان توثيقيًّا داخل مستند المستخدم الخاص (لا عدّاد) — حقل placeBookmarks بـuserLists
+    // v1.40 · القرار  ٦٩: مفكرة المكان توثيقيًّا داخل مستند المستخدم الخاص (لا عدّاد) — حقل placeBookmarks بـuserLists
     bookmarks: {
       setPlace: function(uid, pid, data){
         const patch = { placeBookmarks: {} };
