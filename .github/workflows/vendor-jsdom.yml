@@ -1,0 +1,37 @@
+# MyPickz — Vendor jsdom (أداة بيئة المنفِّذ فقط · ٩ أكتوبر ٢٠٢٦)
+# الغاية: بيئة المنفِّذ لا تصل إلى مخزن الحزم (DNS)، فيثبّت هذا السير jsdom بتبعياته هنا ويرفعه Artifact
+#   ليُنزَّل ويُرفق بالمحادثة. لا يمسّ المستودع ولا الأصول المنشورة ولا الأسرار. يُشغَّل يدويًّا فقط.
+# بيد المالك: Actions → Vendor jsdom → Run workflow → بعد الاخضرار: Artifacts → jsdom-vendor (جزء أو جزءان) → إرفاق.
+name: Vendor jsdom
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install jsdom into a scratch folder (pinned)
+        run: |
+          mkdir -p /tmp/vendor && cd /tmp/vendor
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund --save-exact jsdom@25.0.1
+          node -e "const {JSDOM}=require('jsdom'); const d=new JSDOM('<div id=a>x</div>'); console.log('jsdom ok:', d.window.document.getElementById('a').textContent, require('jsdom/package.json').version)"
+      - name: Pack (split in two parts to stay under chat attachment limits)
+        run: |
+          cd /tmp/vendor
+          tar -czf jsdom-vendor.tgz node_modules package.json package-lock.json
+          sha256sum jsdom-vendor.tgz | tee jsdom-vendor.sha256
+          split -b 7m -d -a 1 jsdom-vendor.tgz jsdom-vendor.part
+          ls -la
+      - name: Upload artifact (parts + checksum)
+        uses: actions/upload-artifact@v4
+        with:
+          name: jsdom-vendor
+          path: |
+            /tmp/vendor/jsdom-vendor.part*
+            /tmp/vendor/jsdom-vendor.sha256
+          retention-days: 7
