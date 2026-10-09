@@ -71,7 +71,7 @@ function cmPickTab(src){ communityTab = src; communityScreen = 'source'; renderC
 // ر٦٩ب (ميداني): Open يفتح أماكن القائمة مباشرة — طبقة الشخص بابٌ من الاسم لا ممرًّا إجباريًّا (N-008)
 let cmDirect = false; // ر٦٩ذ: فُتحت القائمة من السوق مباشرة فالرجوع إليه
 function cmLayerBack(){ communityUserTripsCity = ''; if (cmDirect){ cmDirect = false; viewingUserUid = null; communityUserLayer = null; } else { communityUserLayer = null; } renderCommunityModal(); }
-async function cmOpenList(owner, cityId){ cmDirect = true; communityTab = 'places'; personLayerOnly = null; await viewCommunityUser(owner); openCommunityCityList(cityId); } // r72u: مصدر الأماكن دائمًا
+async function cmOpenList(owner, cityId, origin){ cmDirect = true; communityTab = 'places'; personLayerOnly = null; await viewCommunityUser(owner); openCommunityCityList(cityId, origin); } // r72u: مصدر الأماكن دائمًا · ب-٢-١: المنشأ يُمرَّر إلى نقطة العدّ الواحدة
 let cmSortOpen = false; // r72r-2
 let cmSearchOpen = false; // r72s
 let cmLastRows = []; // r72w: الصفوف المحمَّلة (بعد مرشِّح المدينة) — للأعداد بقائمة الترتيب
@@ -155,7 +155,7 @@ async function renderSharedListsInto(host){ // r72r-1: القوائم المشا
   }).join('') : '<div class="mp-empty">No lists shared with you yet.</div>';
 }
 function plOpenSharedList(owner, cityId){ /* r74b-٢: فتح قائمة مشارَكة معي من وجهة الأماكن — عدّاد open_app (§١٧-ج) انتقل هنا من نافذة My List المحذوفة (كان openSharedCityList يسجّله على الفتح نفسه) */
-  const docId = owner + '_' + cityId; mpTrack.statsList(docId, 'open_app'); cmOpenList(owner, cityId);
+  cmOpenList(owner, cityId, 'app'); /* ب-٢-١: العدّ بنقطة واحدة (openCommunityCityList) بمنشأ app — كان يُعدّ هنا ثم يمرّ بالمجتمع فيُحتمل عدّه مرتين */
 }
 function cmGroupByOwner(rows, ownerOf, nameOf, cardOf){ // r72r-3: مجموعة عاجية لكل مستخدم — رأسها كبسولته (الحرفان + الاسم) وتحته بطاقاته
   const groups = []; const byO = {};
@@ -455,7 +455,7 @@ async function curBrowse(uid, what, cityId){ // All places / All trips / Open li
   curArchiveOf = uid; if (!cityId) curChip = what; /* ر٧٣-أب (٢): مع مدينة محددة تبقى الشريحة العليا على Cities (لا تظليل مزدوج) */ communityTab = (what === 'trips') ? 'trips' : 'places'; communityScreen = 'source'; personLayerOnly = (what === 'trips') ? 'trips' : 'places';
   logTiming('[CUR] browse ' + what + ' uid=' + String(uid).slice(0, 6) + (cityId ? ' city=' + cityId : ''));
   let timedOut = false;
-  if (cityId && what === 'places'){ try{ await curEnsureCity(uid, cityId); }catch(_){ } } /* خ-٦: المدينة المفتوحة تُركَّب كاملة قبل تسليمها لطبقة المجتمع */
+  if (cityId && what === 'places'){ try{ await curEnsureCity(uid, cityId); }catch(_){ } if (currentUser && uid !== currentUser.uid) mpTrack.statsList(uid + '_' + cityId, 'open_curator'); } /* خ-٦: المدينة المفتوحة تُركَّب كاملة قبل تسليمها لطبقة المجتمع · ب-٢-١: فتح من صفحة المنتقي يُعدّ open_curator (لا يمرّ بـopenCommunityCityList) */
   const __loaded = (viewingUserUid === uid && viewingUserData && Array.isArray(viewingUserCities) && viewingUserCities.length) || curPrimeLayerFromCurator(uid); /* ر٧٣-أب (٢) — السبب الجذري للبطء: طبقة المجتمع كانت تعيد قراءة كل قوائم الشخص (قائمة + ٢٧ مستندًا لكل مدينة) رغم أن صفحة المنتقي حمّلتها؛ الآن تُبنى من بيانات المنتقي المحمَّلة بلا قراءة */
   try{ if (__loaded){ viewingCommunityTripId = null; try{ await ensureListBookmarks(); await ensureTripSaves(); }catch(_){} } else await Promise.race([viewCommunityUser(uid), new Promise(function(r){ setTimeout(function(){ timedOut = true; r(); }, 15000); })]); if (cityId){ communityViewingCityId = cityId; communityUserLayer = (what === 'places') ? cityId : null; communityUserTripsCity = (what === 'trips') ? cityId : ''; } else { communityUserLayer = null; communityUserTripsCity = ''; } }catch(e){ mpSwallow(e, 'curator browse'); showToast('Could not open · ' + (((e && e.code) || (e && e.message) || 'error') + ' · step ' + vcuStep).slice(0, 70)); logTiming('[CUR] browse failed: ' + ((e && (e.code || e.message)) || e) + ' step=' + vcuStep); }
   if (timedOut){ showToast('Slow connection · stuck at step ' + vcuStep + ' — showing what loaded'); logTiming('[CUR] browse timeout step=' + vcuStep); } // ر٧٢-أ-٢ز: لا انتظار صامتًا
@@ -545,13 +545,24 @@ async function viewCommunityUser(uid){
 let communityUserLayer = null;
 let communityUserTripsCity = ''; /* ر٧٣-أب (٢): «(City) All trips» من المنتقي → رحلات المستخدم مصفّاة بهذه المدينة */
 // v1.40: فتح قائمة الشخص = دخول الطبقة ٣ + رفع عدّاد مشاهدات القائمة مرة واحدة بالجلسة (زائرًا لا صاحبًا)
-function openCommunityCityList(cityId){
+function openCommunityCityList(cityId, origin){ /* ب-٢-١ (قرار ١٠-٠٩-٠٤): نقطة العدّ الواحدة لفتح قائمة شخص آخر — كل فتح يُعدّ بمنشئه: app (المشارَك معي) · community (الافتراضي) · curator (من صفحة المنتقي) */
   communityUserLayer = cityId; communityViewingCityId = cityId;
   if (currentUser && viewingUserUid && viewingUserUid !== currentUser.uid){
     const k = viewingUserUid + '_' + cityId;
     if (!viewBumped[k]){ viewBumped[k] = true; mpData.lists.bumpView(viewingUserUid, cityId); }
+    mpTrack.statsList(k, listOpenKey(origin));
   }
   renderCommunityModal();
+}
+function listOpenKey(origin){ return origin === 'app' ? 'open_app' : origin === 'curator' ? 'open_curator' : 'open_community'; } // ب-٢-١: المفاتيح البيضاء لـstats_lists (§١٧-ج)
+function mpIsVerified(uid){ /* ب-٢-١: أهو منتقٍ موثَّق بحسب ما حُمِّل بالجلسة (لا قراءة جديدة) — يحدد كتابة save/export بـstats_curators */
+  if (!uid) return false; if ((curators || []).some(function(c){ return c.uid === uid; })) return true;
+  const cu = (communityUsers || []).find(function(c){ return c.uid === uid; }); if (cu && cu.verified === true) return true;
+  return !!(viewingUserData && viewingUserData.uid === uid && viewingUserData.verified === true);
+}
+function statsExportFor(kind, id){ /* ب-٢-١ (قرار ١٠-٠٩-٠٥): تصدير محتوى منتقٍ (بطاقة أو رسالة) يُعدّ له export — olist: صاحب القائمة · otrip: صاحب الرحلة من السوق/الطبقة · oplace: صاحب الطبقة المفتوحة */
+  try{ let uid = null; if (kind === 'olist') uid = String(id).split('_')[0]; else if (kind === 'otrip'){ const t = (cmCache.trips && cmCache.trips[id]) || (communityUserTrips || []).find(function(x){ return x.id === id; }) || (sharedTrips || []).find(function(x){ return x.id === id; }); uid = t && t.ownerId; } else if (kind === 'oplace') uid = viewingUserUid;
+    if (uid && currentUser && uid !== currentUser.uid && mpIsVerified(uid)) mpTrack.statsCurator(uid, 'export'); }catch(_){}
 }
 let cmSecCollapsed = {}; /* خ-٦: حالة طيّ أقسام أماكن الآخرين بالجلسة — المفتاح uid|city|section · الافتراضي مغلق (قرار ٠٩-٢٩-٠٥) */
 function cmSecIsClosed(k){ return cmSecCollapsed[k] === undefined ? true : !!cmSecCollapsed[k]; }
@@ -613,7 +624,7 @@ async function renderBookmarkedLists(wrap, cityName){ // r72s (قرار الما
       inner += othersCard({ title: escapeHtml(cityNm), sub: 'Places # ' + n, stat: (d.viewCount || 0) + ' views', bmOn: true, cnt: d.bookmarkCount || 0, bmHandler: "toggleListBookmark('" + attrStr(uid) + "', '" + attrStr(r.cityId) + "')", reportKind: 'list', reportKey: uid + '_' + r.cityId, saveHandler: "saveOthersList('" + attrStr(uid) + "', '" + attrStr(r.cityId) + "')", savedOn: !!myCopiedLists[uid + '_' + r.cityId], unsaveHandler: "showToast('Remove copied places from your list in Places')", exportHandler: "openExportPreview('olist', '" + attrStr(uid + '_' + r.cityId) + "')", openHandler: "cmOpenList('" + attrStr(uid) + "', '" + attrStr(r.cityId) + "')" }); });
     Object.keys(g.places).forEach(function(key){ const arr = g.places[key]; const cityId = key.split('|')[0], cat = key.split('|')[1]; const cityNm = (allCities().find(function(z){ return z.id === cityId; }) || {}).name || (arr[0] && arr[0].cityName) || cityId;
       const cards = arr.map(function(b){ const pl = { id: String(b.key || b.pid || '').split(':').pop(), name: b.name || 'Place', url: (b.url && !/^(id|oid):/.test(b.url)) ? b.url : '', area: b.area || '' }; return othersPlaceRowHtml(pl, { uid: uid, nickname: nm }, { id: cityId, name: cityNm }, cat, cityId); }).join('');
-      inner += placeGroupHtml(cityNm + ' · ' + (cat ? catLabelOf(cat) : 'Places'), arr.length, '<button type="button" class="go" onclick="cmOpenList(\'' + attrStr(uid) + '\', \'' + attrStr(cityId) + '\')">Open list →</button>', cards); });
+      inner += placeGroupHtml(cityNm + ' · ' + (cat ? catLabelOf(cat) : 'Places'), arr.length, '<button type="button" class="go" onclick="cmOpenList(\'' + attrStr(uid) + '\', \'' + attrStr(cityId) + '\', \'curator\')">Open list →</button>', cards); });
     html += '<div class="pgroup"><div class="pg-head">' + head + '<span class="pg-n"># ' + (g.lists.length + Object.keys(g.places).length) + '</span></div>' + inner + '</div>'; });
   wrap.innerHTML = html || '<div class="mp-empty">No bookmarks in this city.</div>';
 }
