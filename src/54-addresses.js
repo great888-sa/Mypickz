@@ -465,7 +465,7 @@ async function doSignUp(){
     }
   mpTrack.hit('signup_done');
     openHelpAfterSignUp();
-    mpData.stats.bumpUsers().catch(()=>{});
+    mpData.statsUsers.bumpUsers().catch(()=>{});
   }catch(e){
     signUpInProgress = false;
     errEl.textContent = authErrorMessage(e);
