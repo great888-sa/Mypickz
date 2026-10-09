@@ -26,7 +26,7 @@ const KEY_COMMON = [
 ];
 const KEY_PER_FILE = {
   'index.html': ['loadFavorites', 'render', 'loadCity'],
-  'index-debug-test.html': ['togglePlaceBookmark', 'toggleListBookmark', 'toggleTripSave', 'mpSendText', 'renderPlacesBody', 'openGeoStep', 'openAdminCustomCats']
+  'index-debug-test.html': ['togglePlaceBookmark', 'toggleListBookmark', 'toggleTripSave', 'mpSendText', 'renderPlacesBody', 'openGeoStep', 'openAdminCustomCats', 'openMyStats', 'dashSet', 'dashBack', 'mpCloseAll'] // ب-٢-٢-أ: نافذة الإحصاءات والقشرة الموحَّدة
 };
 
 function findChrome(){
