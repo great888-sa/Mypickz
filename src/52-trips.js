@@ -120,7 +120,7 @@ async function copyOthersTrip(tripId){ // ر٧٢-أ-٢د (ق٠٩-١٥-٠٥): Sav
     days: JSON.parse(JSON.stringify(src.days || [])), source: { tripId: src.id, ownerId: src.ownerId, ownerName: ownerName, at: Date.now() } };
   if (copy.cities === undefined) delete copy.cities;
   userTrips.push(copy); try{ await saveTrip(copy); }catch(e){ userTrips = userTrips.filter(function(t){ return t.id !== copy.id; }); mpSwallow(e, 'trip copy'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
-  try{ await mpData.copies.record(currentUser.uid, 'trip', src.id, 'trips'); }catch(e){ mpSwallow(e, 'copy record'); showToast('Could not record · ' + ((e && e.code) || 'error')); } // r72m (M4.25 ٤) · r72p (١١): الرمز على الشاشة: سجل النسخ + copyCount على المصدر بدفعة واحدة (existsAfter)
+  try{ await mpData.copies.record(currentUser.uid, 'trip', src.id, 'trips'); }catch(e){ mpSwallow(e, 'copy record'); showToast('Could not record · ' + ((e && e.code) || 'error')); } try{ if (src.ownerId && mpIsVerified(src.ownerId)) mpTrack.statsCurator(src.ownerId, 'save'); }catch(_){} /* ب-٢-١: save اليومي للمنتقي (v3.14) */ // r72m (M4.25 ٤) · r72p (١١): الرمز على الشاشة: سجل النسخ + copyCount على المصدر بدفعة واحدة (existsAfter)
   showToast('Saved to my trips ✓ — from ' + ownerName); if (HOSTED.Community && currentTab === 'Community') renderCommunityModal();
 }
 async function renderSavedOthersTrips(fromCurators){ // ر٧٢-أ-٢د: رحلاتي المنسوخة بإسناد، مصفّاة بمصدرها (منتقٍ / مجتمع)
@@ -488,9 +488,9 @@ async function sendExportCard(kind, id){
   const blobs = []; for (const cv of r.canvases){ const b = await new Promise(function(res){ cv.toBlob(res, 'image/png'); }); if (b) blobs.push(b); }
   if (!blobs.length){ showToast('Could not draw the card'); return; }
   const files = blobs.map(function(b, i){ return new File([b], 'mypickz-card' + (blobs.length > 1 ? '-' + (i + 1) : '') + '.png', { type: 'image/png' }); });
-  try{ if (navigator.canShare && navigator.canShare({ files: files })){ await navigator.share({ files: files, title: r.model.title }); closeExportPreview(); return; } }catch(e){ if (e && e.name === 'AbortError') return; }
+  try{ if (navigator.canShare && navigator.canShare({ files: files })){ await navigator.share({ files: files, title: r.model.title }); closeExportPreview(); statsExportFor(kind, id); return; } }catch(e){ if (e && e.name === 'AbortError') return; }
   files.forEach(function(f){ const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); });
-  showToast(files.length > 1 ? files.length + ' cards saved as images' : 'Card saved as an image'); closeExportPreview();
+  showToast(files.length > 1 ? files.length + ' cards saved as images' : 'Card saved as an image'); closeExportPreview(); statsExportFor(kind, id); /* ب-٢-١ */
 }
 function openExportPreview(kind, id){
   const bd = document.getElementById('tripShareBackdrop'); shareModalKind = 'export'; __xcLast = { kind: kind, id: id }; // ر٧٠ح
