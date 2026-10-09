@@ -18,9 +18,9 @@ const SETTINGS_DOCS = ['cities-list', 'countries-list', 'publish-status'];
   const byFrom = {}; lists.forEach(d => { const x = d.data() || {}; if (x.migratedFrom) byFrom[x.migratedFrom] = { id: d.id, city: x.cityName }; });
   console.log('owner lists with migratedFrom:', Object.keys(byFrom).length);
   const cats = await db.collection('userCityListCats').where('ownerId', '==', OWNER).get(); // كل أماكن المالك بكل مدنه — المكان يُعدّ محفوظًا أينما كان
-  const haveUrl = new Map(), haveName = new Map(); let ownerPlaces = 0;
+  const haveUrl = new Map(), haveName = new Map(), haveId = new Map(); let ownerPlaces = 0; const ownerByCity = {}; // مكان المالك: {name,url,id,cat,matched}
   const normU = u => String(u || '').trim().replace(/\/+$/, '').toLowerCase(); const normN = n => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  cats.forEach(d => { const x = d.data() || {}; (x.places || []).forEach(p => { if (!p) return; ownerPlaces++; if (p.url) haveUrl.set(normU(p.url), x.cityId); if (p.name) haveName.set(normN(p.name), x.cityId); }); });
+  cats.forEach(d => { const x = d.data() || {}; (x.places || []).forEach(p => { if (!p) return; ownerPlaces++; const rec = { name: p.name || '', url: p.url || '', id: p.id || '', cat: x.catId, matched: false }; (ownerByCity[x.cityId] = ownerByCity[x.cityId] || []).push(rec); if (p.url) haveUrl.set(normU(p.url), { city: x.cityId, rec }); if (p.name) haveName.set(normN(p.name), { city: x.cityId, rec }); if (p.id) haveId.set(String(p.id), { city: x.cityId, rec }); }); });
   console.log('owner category docs:', cats.size, '· places:', ownerPlaces);
   const ALLOW_MISSING = process.argv.includes('--allow-missing');
   let ok = true; let publicPlaces = 0, privatePlaces = 0, found = 0, moved = 0, empty = 0; const missing = [];
@@ -31,10 +31,11 @@ const SETTINGS_DOCS = ['cities-list', 'countries-list', 'publish-status'];
     if (!pub.length){ empty++; console.log('  ' + doc.id + ': no public places' + (priv ? ' · private (test addresses) ' + priv + ' — dropped with the collection, kept in backup' : '')); continue; }
     const m = byFrom['cities/' + doc.id]; const target = m ? m.id.slice(OWNER.length + 1) : null;
     let f = 0, mv = 0; const miss = [];
-    pub.forEach(p => { const where = (p.url && haveUrl.get(normU(p.url))) || (!p.url && p.name && haveName.get(normN(p.name))) || null; if (!where){ miss.push(p.name || p.url); return; } f++; if (target && where !== target) mv++; });
+    pub.forEach(p => { const hit = (p.url && haveUrl.get(normU(p.url))) || (p.name && haveName.get(normN(p.name))) || (p.id && haveId.get(String(p.id))) || null; if (!hit){ miss.push(p.name || p.url); return; } f++; hit.rec.matched = true; if (target && hit.city !== target) mv++; }); /* المطابقة بالرابط ثم الاسم ثم المعرّف — أيها وُجد */
     found += f; moved += mv; missing.push(...miss.map(n => doc.id + ': ' + n));
     const line = '  ' + (miss.length ? '✗ ' : '✓ ') + doc.id + ' → ' + (m ? m.id + ' (' + m.city + ')' : 'NO migrated list') + ' · places ' + pub.length + ' · found ' + f + (mv ? ' (moved to another city ' + mv + ')' : '') + (miss.length ? ' · MISSING ' + miss.length + ': ' + miss.join(' | ') : '');
     console.log(line); if (miss.length) ok = ALLOW_MISSING; if (!m) console.log('    note: no list carries migratedFrom=cities/' + doc.id + ' (places matched elsewhere)');
+    if (miss.length && target){ const extra = (ownerByCity[target] || []).filter(r => !r.matched); console.log('    your places in this city that match nothing in the old directory (' + extra.length + '): ' + (extra.map(r => r.name + (r.url ? ' <' + r.url + '>' : '') + ' [' + r.cat + ']').join(' | ') || '(none)')); } /* الوجه الآخر للمقارنة — للحكم بالعين: إعادة تسمية/رابط جديد أم فقدان حقيقي */
   }
   console.log('verify: cities ' + snap.size + ' · with public places ' + (snap.size - empty) + ' · public places ' + publicPlaces + ' · found in owner lists ' + found + (moved ? ' (moved between cities ' + moved + ')' : '') + ' · missing ' + missing.length + ' · private (dropped) ' + privatePlaces);
   if (missing.length && ALLOW_MISSING) console.log('MISSING places accepted by --allow-missing (owner decision): ' + missing.join(' | '));
