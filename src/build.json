@@ -1,0 +1,14 @@
+{
+  "comment": "MyPickz — ترتيب أجزاء المصدر (ر٧٣-ج البند ٥). المخرج يُبنى بـ scripts/build.js ولا يُعدَّل يدويًّا؛ الحارس §٢٣ يقارن المخرج المرفوع ببناء هذه الأجزاء. ملمح prod = test مع 91-timing-prod.js بدل 91-timing.js (يُنشر بالمرحلة د لا قبلها).",
+  "parts": [
+    "00-head.html", "10-structure.css", "20-identity.css", "30-body.html",
+    "40-boot.js", "41-data.js", "42-mptrack.js", "43-mpdata.js",
+    "50-ui.js", "51-trip-add.js", "52-trips.js", "53-community-trips.js", "54-addresses.js", "55-account.js", "56-frame-places.js", "57-mylist.js", "58-community-curators.js",
+    "60-help.js", "61-admin-users.js", "62-status-cards.js", "63-input-qr.js", "70-start.js",
+    "91-timing.js", "92-init.js", "99-tail.html"
+  ],
+  "profiles": {
+    "test": { "output": "index-debug-test.html", "replace": {} },
+    "prod": { "output": "index.html", "replace": { "91-timing.js": "91-timing-prod.js" } }
+  }
+}

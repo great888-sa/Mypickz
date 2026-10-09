@@ -1,0 +1,276 @@
+<style id="identity">
+.backchip{border-color:var(--saffron); background:transparent; color:var(--on-night);} /* ر٦٨: حبر الليل على السطح الليلي — كان --ink (تباين ١٫٠٩) */ /* ر٦٣: جرعة معرَّفة — إطار زعفراني يميّز العودة بكل الواجهات */
+  /* ═══ الجزء الثاني — الهوية «الليل والورقة» · لون فقط ═══
+     احذف هذه الكتلة كاملة: تبقى كل شاشة مبنيّة بالبنية أعلاه.
+     المصدر: المرجع الحاكم v1.37 (a080a90e) — دفعة تصحيحات الهوية ١ سبتمبر ٢٠٢٦؛ كتلة الهوية لون فقط.
+     القاعدة: المختار زعفران دائمًا · والفعل الأساسي يتبع سطحه
+              (زعفران على الليلي · حبر على العاجي) — القرار ٢٠٢٦-٠٨-٢٩-٠٧. */
+  :root{
+    /* الأسطح الخمسة — القرار ٢٠٢٦-٠٨-٢٩-٠٢ */
+    --paper:#0F1B2A; --bar:#162435; --surf:#22334A;
+    --ivory:#EFEBE2; --ivory-bright:#FAF9F5;
+    /* الحبر بشفافيتيه — القرار ٢٠٢٦-٠٨-٢٩-٠٣ · لا رمادي محايد بالنظام */
+    --ink:#132335; --ink-strong:rgba(19,35,53,.72); --ink-faint:rgba(19,35,53,.45); --ink-soft:#243B54;
+    --saffron:#E29A2E;
+    --on-night:#EDF1F6; --night-2:#CBD6E3; --night-3:#B9C3CE; --night-4:#8FA0B4;
+    --line-night:#2B3F5A; --line-bar:#24344A; --line-strong:#35485F; --line-ivory:#DCD7CB;
+    --scrim:rgba(5,10,18,.6);
+    /* القرار ٢-ب: لونان دلاليان · النجاح زعفران (صفر أخضر بالنظام) */
+    --danger:#8B1E1E; --danger-night:#E8A79E;
+    /* موروثة تُبقى معرَّفة حتى دفعة التنظيف — لا تُستعمل بأي قاعدة أدناه */
+    --line:var(--line-ivory); --card:var(--ivory-bright); --paper-dark:var(--surf);
+    --brass:var(--saffron); --copper:#8A5E1B; /* r72q-2: زعفراني غامق للعناوين الصغيرة على العاجي */ --brass-light:var(--saffron); --sand:var(--surf);
+  }
+
+  /* ── الورق (السطح ٠) ── */
+  html,body{background:var(--paper); color:var(--on-night);}
+
+  /* ── الشريطان والشارة والقائمة الصغيرة (السطح ١) ── */
+  .mp-topbar{background:var(--bar); border-bottom-color:var(--line-bar);}
+  .mp-burger{background:none; border-color:var(--line-strong); color:var(--night-2);}
+  .mp-wordmark{color:var(--ivory-bright);}
+  .mp-idchip{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);}
+  .mini-av{color:var(--ivory-bright);}
+  .flabel{color:var(--ink-strong);}
+  .ctx{color:var(--night-3);}
+  .ctx b{color:var(--on-night);}
+  .stattext{color:var(--ink-strong);}
+  .mp-idchip.suspended{border-color:var(--danger-night);}
+  .mp-idchip.suspended .mini-av{box-shadow:0 0 0 2px var(--danger-night);}
+  .mp-idchip .sus{color:var(--danger-night);}
+  .fav{color:var(--ink-faint);}
+  .errline{color:var(--danger);}
+  .fav.on{color:var(--danger);}
+  .psearch{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
+  .curhead > .pn, .curhead > div:not(.row) .pn{color:var(--on-night);} /* ر٥٤: استثناء صفوف الأماكن — المحدد الجامح كان يمحو أسماءها (تباين ١٫٠٦) */
+  .curhead > div:not(.row) .ps{color:var(--night-3);}
+  .curhead > .stattext{color:var(--night-2);}
+  .mp-chipmenu{background:var(--ivory); border-color:var(--line-ivory); box-shadow:0 10px 26px rgba(0,0,0,.5);}
+  .mp-chipmenu button{background:none; color:var(--ink); border-bottom-color:var(--line-ivory);}
+  .mp-tabbar{background:var(--bar); border-top-color:var(--line-bar);}
+  .mp-tab{background:none; color:var(--night-4);}
+  .mp-tab.on{color:var(--saffron);}
+  .mp-tab .ti{background:var(--surf); color:var(--night-2);}
+  .mp-tab.on .ti{background:var(--saffron); color:var(--ink);}
+  #authBackdrop.gate-mode{background:var(--paper);}
+
+  /* ── الرؤوس اللاصقة وما يقع فوق الورق مباشرة ── */
+  .pl-srcrow{background:var(--surf); box-shadow:none;}
+  
+  .quick-nav{background:var(--paper); border-bottom-color:var(--line-night);}
+  .pl-cathead,.addr-cathead{color:var(--night-3);}
+  
+  .addr-empty,.mp-empty,#loadingState{color:var(--night-4);}
+  .gate-eyebrow{color:var(--saffron);}
+
+  /* ── مبدّل المصدر: حاوية واحدة والنشط زعفراني ── */
+  .pl-src{background:var(--paper); border-color:var(--line-strong); color:var(--night-2);} /* ر٦٨: الخاملة بسطح وإطار كالمرجع (كانت شفافة) */
+  .pl-src.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+
+  /* ── الشرائح والمحددات فوق الورق: لكل تفاعلي سطحُه ── */
+  .pl-actbtn,.addr-chip,.pl-catpick,.area-chip{
+    background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
+  .addr-chip.on,.pl-catpick.on,.area-chip.active{
+    background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+  .pl-actbtn.brass{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+
+  .pl-cathead .addmini,.addr-cathead button{background:none; border-color:var(--line-strong); color:var(--saffron);}
+  .soon-tag{color:var(--night-4); border-color:var(--line-strong);}
+
+  /* ── البطاقات: العاجي الأنصع حكرٌ عليها ── */
+  .row,.pl-row,.addr-row,.ticket{
+    background:var(--ivory-bright); border-color:transparent; color:var(--ink);
+    box-shadow:0 2px 10px rgba(0,0,0,.28);}
+  .ticket:hover{border-color:transparent;}
+  .pl-name,.prow-name,.stats-name,.hcard .hn,.acc-name,.row .pn{color:var(--ink);}
+  .row .ps{color:var(--ink-strong);}
+  .pl-sub,.prow-sub,.place-note,.ticket .missing,.area-divider,.hcard .hd,.toggle-row,.sub,.status-stat,.footer-note{color:var(--ink-strong);}
+  .pl-acts button,.pl-acts a,.addr-row .acts button,.addr-row .acts a{background:none; color:var(--ink);}
+  .pl-acts a.act-chip,.addr-row .acts a.act-chip{background:none; border-color:var(--ink);}
+  .place-link,.note-link,.note-toggle{color:var(--on-night); border-bottom-color:var(--line-night);}
+  .row .place-link,.modal .place-link,.pl-row .place-link,.addr-row .place-link,.ticket .place-link{color:var(--ink); border-bottom-color:var(--line-ivory);}
+  .note-toggle{background:none;}
+  .icon-badge,.section-icon,.stats-rank{background:var(--saffron); color:var(--ink); box-shadow:none;}
+  .ticket.disabled .icon-badge{background:var(--saffron);}
+.section-head .count{color:var(--saffron);}
+  .area-divider,.stats-row,.footer-note,.place-note-row{border-color:var(--line-ivory);}
+
+  /* ── الكتل فوق الورق (السطح ٢) ── */
+  .pl-ownerpanel{background:var(--surf); border-color:var(--saffron); color:var(--night-2);}
+  .status-divider{background:var(--line-strong);}
+  #editModeBanner{background:var(--surf); border-color:var(--saffron); color:var(--night-2);}
+  #debugBanner{background:var(--surf); border-color:var(--line-strong); color:var(--danger-night);}
+
+  /* ── النوافذ والدرج (عاجي مخفوت) ── */
+  .modal-backdrop{background:var(--scrim);}
+  .modal{background:var(--ivory); color:var(--ink); box-shadow:0 14px 34px rgba(0,0,0,.55);}
+  .modal-topbar{background:var(--ivory); border-bottom-color:var(--line-ivory);}
+  .modal-input,select.modal-input,.place-row{
+    background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
+  .modal-input::placeholder,.place-note-input::placeholder{color:var(--ink-faint);}
+  .place-note-input,.place-name-input,.place-url-input,.place-area-input,.name-edit{
+    background:transparent; color:var(--ink); border-color:var(--line-ivory);}
+  .acc-head,.receipt{background:var(--ivory-bright); color:var(--ink);}
+  .acc-mail,.dr-head{color:var(--ink-strong);}
+  .acc-item,.dr-item{background:none; border-color:var(--line-ivory); color:var(--ink-soft);}
+  .acc-item .soon,.dr-item .soon{color:var(--ink-faint);}
+  .acc-item.on,.dr-item.on{background:var(--ivory-bright); border-inline-start-color:var(--saffron); color:var(--ink);}
+  .hcard{background:var(--ivory-bright); border-color:var(--line-ivory);}
+  .hcard.on{background:var(--ivory-bright); border-color:var(--saffron);}
+  .receipt li{border-bottom-color:var(--line-ivory);}
+  .stepdot{background:var(--line-ivory);}
+  .stepdot.on{background:var(--saffron);}
+  .pw-eye{background:none; color:var(--ink-strong);}
+  .reorder-btn{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink-strong);}
+  .icon-edit{background:var(--saffron); color:var(--ink);}
+  .toast{background:var(--ivory); color:var(--ink);}
+
+  /* ── الأفعال: زعفران على الليلي · حبر على العاجي ── */
+  .btn-brass{background:var(--saffron); color:var(--ink);}
+  .modal .btn-brass{background:var(--saffron); color:var(--ink);} /* ر٧٠د (N-071): الفعل الرئيس بالنافذة زعفراني */
+  .btn-ghost{background:transparent; color:var(--night-2); border-color:var(--line-strong);}
+  .modal .btn-ghost{color:var(--ink); border-color:var(--line-ivory);}
+  .show-more-btn{background:transparent; color:var(--saffron);}
+  .remove-btn{background:none; color:var(--night-2);}
+  .modal .remove-btn,.row .remove-btn{color:var(--ink);}
+  .name-edit:focus{border-color:var(--saffron);}
+
+  /* ── الدلالي (القرار ٢-ب): نص وزر فقط · لا سطح ولا حد ملوّنان ── */
+  .warnline{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--danger);}
+  .btn-danger{background:var(--danger); color:var(--ivory-bright);}
+  .acc-item.danger{border-color:var(--line-ivory); color:var(--danger);}
+  /* v1.40 — أيقونة المفكرة: مفرّغة بالحبر · مصمتة زعفرانية (زعفران = مختار) — لا لون جديد؛ بنيتها بورقة البنية */
+
+
+  .toast-undo{color:var(--saffron);}
+  .stats-count{color:var(--ink-strong);}
+
+  /* ═ النموذج القياسي — الهوية ═ */
+  .csel{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);}
+  .cta{background:var(--saffron); color:var(--ink);}
+  .modal .cta{background:var(--saffron); color:var(--ink);} /* ر٧٠د (N-071) */
+  .actn{background:transparent; border-color:var(--line-strong); color:var(--night-2);}
+  .modal .actn{background:transparent; border-color:var(--line-ivory); color:var(--ink);}
+
+  .cta b{color:var(--ink);}
+  .actn .dim,.dim{color:var(--night-4);}
+  .block{background:var(--surf); color:var(--night-2);}
+  .shname button{background:none; color:var(--night-2);}
+  .panel{background:var(--ivory); color:var(--ink);}
+  .panel .pinned{background:var(--ivory-bright); color:var(--ink);}
+  .panel .pclose-top{color:var(--ink-faint);}
+  .panel .prow.on{background:var(--ivory-bright);}
+  .panel .prow.dim{color:var(--ink-faint);}
+  .panel .prow .dim{color:var(--ink-faint);}
+  .trip-on{color:var(--saffron);}
+  .pl-ownerpanel b{color:var(--saffron);}
+  .pl-ownerpanel .pl-sub{color:var(--night-2);}
+
+  .act{background:none; border-color:var(--ink); color:var(--ink);}
+  .curhead .act,.place-row-view .act,.stickyhead .act{border-color:var(--on-night); color:var(--on-night);} /* ر٦٨ب: .act على الليل بحبر الليل */
+  .curhead .act .dim,.place-row-view .act .dim,.stickyhead .act .dim{color:var(--night-3);}
+  span.backchip,button.backchip{color:var(--on-night) !important;} /* ر٦٨ب: زر العودة بلا استثناء بأي نطاق */
+  .soon .dim::before{content:"· ";} /* فاصل مقروء بين النص ووسم الموعد */
+  .chip{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
+  .chip.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+  .modal .chip{background:var(--ivory-bright); border-color:var(--ink); color:var(--ink);} /* ر٧٠هـ-٢: شرائح النوافذ الفرعية — كريمية بإطار ليلي؛ المختارة زعفرانية بالحبر */
+  .modal .chip.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+  .modal .csel{background:var(--ivory-bright); border-color:var(--ink); color:var(--ink);}
+  .modal .csel.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+  .modal .addr-chip,.modal .pl-catpick{background:var(--ivory-bright); border-color:var(--ink); color:var(--ink);}
+  .modal .addr-chip.on,.modal .pl-catpick.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+  .modal .psearch{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
+.chip.label{background:transparent; border-color:var(--line-night); color:var(--night-4);}
+  .csel.label,.actn.label{background:transparent; border-color:var(--line-night); color:var(--night-3);}
+  .actn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+  .actn.danger{background:var(--surf); border-color:var(--line-strong); color:var(--danger-night);}
+  .avatar{background:var(--surf); border-color:var(--line-strong); color:var(--night-4);}
+  .curname{color:var(--night-4);}
+  .curcell{background:transparent;}
+  .stickyhead{background:var(--paper); box-shadow:0 8px 10px -9px rgba(0,0,0,.75);}
+  .triprow{background:var(--ivory-bright); color:var(--ink); border-inline-start-color:var(--saffron); box-shadow:0 2px 10px rgba(0,0,0,.28);}
+  .triprow.dim{color:var(--ink-faint);}
+  .trip-dot{background:var(--saffron);}
+  .trip-cat{color:var(--night-3);}
+  .tripnote{color:var(--ink-strong);}
+  #activeTripAddedRow .chip,#activeTripAddedRow .chip.label{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
+  #activeTripAddedRow .chip b{color:var(--saffron);}
+  #activeTripBar{background:var(--bar); border-top-color:var(--line-strong); box-shadow:0 -8px 20px rgba(0,0,0,.45);}
+  #activeTripLabel{color:var(--on-night);}
+  #activeTripLabel b{color:var(--saffron);}
+  .pclose{color:var(--ink-strong); border-top-color:var(--line-ivory);}
+  .cur-shell{opacity:1;} /* ر٦٢ (حكم الميداني): التعتيم أُلغي — الحالة تُعلن بشارة معاينة صريحة لا بالبهتان */
+  .act[disabled]{opacity:.5;}
+  .daynum{background:var(--surf); color:var(--on-night);}
+  .daytitle{color:var(--on-night);}
+  .dayline{background:linear-gradient(to right, var(--line-strong), transparent);}
+
+
+  /* ر٦٨ — هوية: أزواج بحل السطح (إبرة §٢٠) · المؤجل · النوافذ · لوحة الاختيار */
+  .soon .dim{color:var(--night-3);}
+  .pl-row .soon,.modal .soon,.acc-item.soon,.dr-item.soon{color:var(--ink); border-color:var(--ink);}
+  .pl-row .soon .dim,.modal .soon .dim{color:var(--ink-strong);}
+  .chipgrid{background:var(--surf);}
+  .bmk-btn{color:var(--ink-strong);}
+  .bmk-btn.on{color:var(--ink); background:var(--saffron);}
+  .actn b,.block .actn b,.btn-ghost b{color:var(--saffron);}
+  .modal .actn b,.modal .btn-ghost b,.pl-row .actn b,.row .actn b{color:var(--ink);} /* ر٦٨ب: الحبر على الكريمي فقط — كان يعمّ الليل */
+  .actn.primary b{color:inherit;} /* ر٧٠د (N-069): الزائد يرث لون الزر الرئيس (حبر على الزعفران) */ /* ر٦٨ب: الحبر على الكريمي فقط — كان يعمّ الليل */
+  .modal{border-color:var(--line-ivory);}
+  .modal-topbar{border-bottom-color:var(--line-ivory);}
+  .modal label,.modal .flabel{color:var(--ink-strong);}
+  .panel .phead{border-bottom-color:var(--line-ivory);}
+  .panel .phead .x,.panel .phead .edit{border-color:var(--line-ivory); color:var(--ink);}
+  .panel .search{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink-faint);}
+  .panel .prow{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
+  .panel .prow.sel{border-color:var(--saffron);}
+  .panel .prow .dot{background:var(--saffron);}
+  .panel .prow .cnt-num{color:var(--ink-strong);}
+  .panel .prow .del{border-color:var(--line-ivory); color:var(--ink-strong);}
+  .actn.primary{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+
+  /* ر٦٩ب (ميداني ر٦٩): أسطح زر العودة والمؤجل على الليل · حلقة المنتقي · توحيد صف الأفعال */
+  .backchip,.curhead .act.soon,.stickyhead .act.soon{background:var(--surf);}
+  .curcell .avatar{border-color:var(--saffron);}
+  .curhead .pl-row .act,.curhead .row .act{border-color:var(--ink); color:var(--ink);}
+  .curhead .pl-row .act .dim{color:var(--ink-strong);}
+  .pl-row .bmk-btn,.row .bmk-btn,.rowblock .bmk-btn{border-color:var(--ink);}
+
+  .pl-note{color:var(--ink);} .pl-note b{color:var(--saffron);} /* ر٧٢-أ-١هـ: رأس Notes بنمط Picks */
+
+  select.csel{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EDF1F6' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");}
+  .act.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+
+  .pl-acts button,.pl-acts a{background:none; border-color:var(--ink); color:var(--ink);}
+
+  .rowacts .act,.rowacts .bmk-btn{border-color:var(--ink); color:var(--ink); background:none;}
+  .sharerow{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
+  #plPublicBtn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+
+  .modal .cta,.modal .cta.wide{background:var(--saffron); color:var(--ink); border-color:var(--saffron);} /* ر٦٩ح (N-037) */
+
+  .acts .bmk-btn.on,.rowacts .bmk-btn.on,.pl-acts .bmk-btn.on,.rowblock .bmk-btn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} /* ر٦٩ط: التمييز يغلب قواعد الصف */
+
+  #plShareBtn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} /* ر٦٩ص (N-055) */
+
+  .pl-picks{color:var(--ink);} .pl-picks b{color:var(--saffron);} /* ر٧٠ح: سطر الاختيارات بصف المكان */
+  .pl-flag{background:var(--saffron); color:var(--ink);} /* ر٧٠ط: شارة Fine dining */
+  .pl-sechead{background:var(--surf); color:var(--ivory-bright);} .pl-sechead .seccnt{color:var(--saffron);} /* ر٧٠ج: عنوان القسم الرئيسي · ر٧٠ل-٣: العدّاد زعفراني */
+  .ubadge.danger{background:var(--danger); color:var(--ivory-bright);} /* ر٧٢-أ-١ب */
+  .curcell2{background:var(--bar); border-color:var(--line-night); color:var(--ivory-bright);} .curpill{background:var(--surf); border-color:var(--line-night);} .curring{border-color:var(--saffron); background:var(--ivory); color:var(--ink);} .curmeta{color:var(--on-night);} .curyou{background:var(--saffron); color:var(--ink);}
+  .curidn{background:linear-gradient(160deg, var(--surf), var(--bar)); color:var(--ivory-bright);} .curava{background:var(--ivory); color:var(--ink); border-color:var(--saffron);} .curtag2{color:var(--on-night);} .curic.flag{border-color:var(--danger); color:var(--danger); background:var(--ivory-bright);} .curvb{border-color:var(--saffron); color:var(--saffron);} .curmt3{color:var(--on-night);} .curfollow{background:var(--saffron); color:var(--ink);} .curfollow.on{border-color:var(--saffron); color:var(--saffron);} .curfollow.me{background:var(--surf); color:var(--ivory-bright); border-color:var(--line-night);} .curvoice{color:var(--ivory-bright);} .curstats{color:var(--on-night);} .curstats b{color:var(--ivory-bright);} .curic{border-color:var(--line-night); background:var(--surf); color:var(--ivory-bright);} .curtag{background:var(--bar); color:var(--on-night);}
+  .curchip{border-color:var(--line-night); color:var(--on-night);} .curchip.on{background:var(--saffron); color:var(--ink); border-color:var(--saffron);} .cursearch{background:var(--surf); color:var(--ivory-bright); border-color:var(--line-night);}
+  .curcitycard{background:var(--bar); border-color:var(--line-night); color:var(--ivory-bright);} .curcitycard .curedit{border-color:var(--saffron); color:var(--saffron);} .curlines{color:var(--ivory-bright);} .curlines b{color:var(--on-night);} .curcitycard .ci{color:var(--on-night);} .cursw3 .c{border-color:var(--line-night); color:var(--on-night);} .cursw3 .c.on{background:var(--saffron); color:var(--ink); border-color:var(--saffron);}
+  .stage{border-color:var(--on-night); color:var(--on-night);} .pcard .stage,.ubadges .stage{border-color:var(--ink-soft); color:var(--ink-soft);}
+  .pl-acts .topbtn{color:var(--saffron);} .pl-acts .topbtn.on{background:var(--saffron); color:var(--ink); border-color:var(--saffron);} /* ر٧٢-أ-١هـ · ر٧٢-أ-١و: النجمة زعفرانية، وليلية حين مضاءة */
+  .geo-num{background:var(--saffron); color:var(--ink); border-color:var(--ink);} .geo-note, .geo-note b, .help-attr, .help-attr b{color:var(--ink);} .geo-pin-fam path{stroke:var(--ivory); stroke-width:1.5;} .geo-pin-fam circle{fill:var(--ivory);} .geo-pin-cafe path, .pinkey-cafe .pinkey-dot{fill:#7a4a12; background:#7a4a12;} .geo-pin-dish path, .pinkey-dish .pinkey-dot{fill:#9b1b30; background:#9b1b30;} .geo-pin-cuisine path, .pinkey-cuisine .pinkey-dot{fill:#d9480f; background:#d9480f;} .geo-pin-store path, .pinkey-store .pinkey-dot{fill:#5b2a86; background:#5b2a86;} .geo-pin-product path, .pinkey-product .pinkey-dot{fill:#9b59b6; background:#9b59b6;} .geo-pin-parks path, .pinkey-parks .pinkey-dot{fill:#2e7d32; background:#2e7d32;} .geo-pin-squares path, .pinkey-squares .pinkey-dot{fill:#1f5fa8; background:#1f5fa8;} .geo-pin-rest path, .pinkey-rest .pinkey-dot{fill:var(--copper); background:var(--copper);} /* خ-٥ (قرار مشترك): ٧ أقسام مميّزة (المطاعم لونان من عائلة · التسوق لونان من عائلة) + النحاسي للبقية */ .geo-pin-sugg path{fill:#9aa3ad; stroke:var(--saffron);} .geo-pin-sugg circle{fill:var(--ivory);} .geo-pin-prob path{fill:#c2c8ce; stroke:#c2c8ce;} .geo-pin-prob circle{fill:var(--ivory);} .geo-pin-n{background:var(--saffron); color:var(--ink);} .pl-search-x{color:var(--ink);} .maplibregl-popup-content, .geo-pop, .geo-pop b{color:var(--ink);} .geo-pop .dim{color:var(--copper);} /* نافذة الدبوس: حبر على الكريمي (ملاحظة المالك) */ /* الدبابيس: مؤكَّد زعفراني ممتلئ · مقترح رمادي بإطار زعفراني · محتمل رمادي أفتح + شارة رقم */ .csel.srcttl{border-color:var(--saffron);} .csel.srcttl .cnt{color:var(--saffron);} .csel .arr, .chip .arr, .pl-src .arr{color:var(--saffron);} /* الأسهم الكبيرة بكل الشرائح المنسدلة (قرار المالك) */ /* ز-١-ج-٣: شريحة المصدر فعلٌ لا إنشاء — حدّ وعدّاد زعفراني بلا تعبئة */ .help-attr a{color:var(--copper);} .geo-cand .dim{color:inherit;} /* ز-١-ج-٢: نص نافذة الخريطة بلون الحبر على سطحها العاجي */ .geo-map{background:var(--ivory);} .pgroup{background:var(--ivory); color:var(--ink);} .cmpill{border-color:var(--line-ivory); background:var(--ivory-bright); color:var(--ink);} .cmpill .curring{border-color:var(--saffron); background:var(--ivory); color:var(--ink);} .pg-title{color:var(--ink);} .pg-n{color:var(--copper);} .pg-head .go{border-color:var(--ink); color:var(--ink);} .pcard{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);} .pc-name{color:var(--ink);} .pc-lab{color:var(--copper);} .pc-val{color:var(--ink);} .pc-val.dim{color:var(--ink-soft);} .pc-a{border-color:var(--ink); color:var(--ink); background:var(--ivory-bright);} .pc-a.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} .pc-a.star{color:var(--saffron);} .pc-a.star.on{color:var(--ink);} .pc-a.flag{border-color:var(--danger); color:var(--danger);} .pc-a.soon{color:var(--ink-soft);} .pc-toggle{color:var(--copper);} /* r72q-2 */
+  .curbrowse{background:var(--saffron); color:var(--ink);} .curbrowse .bk{border-color:var(--ink); color:var(--ink);}
+  .dash-door{background:var(--surf); border-color:var(--line-night); color:var(--ivory-bright);} .dash-door.ghost{background:none;} .admtile{background:var(--ivory); color:var(--ink);} .admtile span{color:var(--ink-soft);} .modal.night{background:var(--bar); color:var(--ivory-bright);} .modal.night h3{color:var(--ivory-bright);} /* ر٧٢-أ-١ (إعادة البناء) */
+  .pl-guide-h{color:var(--ivory-bright);} .pl-guide-row{background:var(--surf); border-color:var(--line-night); color:var(--ivory-bright);} .pl-guide-row span{color:var(--on-night);} .pl-guide-row.dashed{opacity:.75;} /* أ-١٢-٢ */
+  .xcard{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);} .xc-sub,.xc-row .dim{color:var(--ink-strong);} .xc-foot{background:var(--paper); color:var(--saffron);} .xc-type{background:var(--saffron); color:var(--ink);} .xc-owner{color:var(--ivory-bright);} /* ر٧٠ز: معاينة بطاقة النموذج ب */
+
+  .ownerchip{border-color:var(--ink); color:var(--ink); background:var(--line-ivory);} /* ر٦٩خ (N-060) */
+
+  .rowacts .act.on,.acts .act.on,.pl-acts .act.on,.headgrid .actn.on,#plPublicBtn.on,#plShareBtn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} /* ر٦٩ث (N-058): الزرّان المضاءان يغلبان قواعد الصف */
+
+</style>
