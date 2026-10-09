@@ -625,7 +625,7 @@ async function saveOthersList(ownerUid, cityId){ // ز-١-ب: نسخة القا�
   let n = 0; Object.keys(d.categories).forEach(function(catId){ const e = d.categories[catId]; if (!e || e.active === false) return; const dst = userEnsurePlaces(catId); (e.places || []).forEach(function(src){ if (!src || !(src.name || src.url)) return; if (src.url && (dst.places || []).some(function(q){ return q.url === src.url; })) return; dst.active = true; const copy = { id: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: src.name || 'Place', url: src.url || '', area: src.area || '', picks: Array.isArray(src.picks) ? src.picks.slice(0, 6) : [], note: src.note || '', source: { ownerId: ownerUid, ownerName: ownerName, cityId: cityId, catId: catId, placeId: src.id || hashUrl(src.url || ''), at: Date.now() } }; if (src.geo && typeof src.geo.lat === 'number') copy.geo = { lat: src.geo.lat, lng: src.geo.lng, source: src.geo.source || 'overture' }; if (src.openId) copy.openId = src.openId; dst.places.push(copy); n++; }); });
   try{ await saveMyCityList(); }catch(e){ mpSwallow(e, 'save list copy'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
   try{ await mpData.copies.record(currentUser.uid, 'list', ownerUid + '_' + cityId, 'userCityLists'); }catch(e){ mpSwallow(e, 'copy record'); }
-  myCopiedLists[ownerUid + '_' + cityId] = true; try{ mpTrack.statsList(ownerUid + '_' + cityId, 'copy'); }catch(_){}
+  myCopiedLists[ownerUid + '_' + cityId] = true; try{ mpTrack.statsList(ownerUid + '_' + cityId, 'copy_from', { daily: true }); if (mpIsVerified(ownerUid)) mpTrack.statsCurator(ownerUid, 'save'); }catch(_){} /* ب-٢-١: كان المفتاح 'copy' (خارج القائمة البيضاء → رُفض صامتًا) · save اليومي للمنتقي (v3.14) */
   showToast('Copied ' + n + ' place' + (n === 1 ? '' : 's') + ' · ' + cityName + ' — with credit to ' + ownerName + ' ✓');
   if (prevCity !== cityId){ myListCityId = prevCity; if (prevCity) await loadMyCityList(prevCity); }
   if (typeof renderCommunityModal === 'function' && currentTab === 'Community') renderCommunityModal(); if (currentTab === 'Curators') renderCuratorsBody(); if (currentTab === 'Places') renderPlacesMine();
@@ -653,7 +653,7 @@ async function saveOthersPlace(ownerUid, cityId, catId, placeId){ // ز-١-ب: �
   try{ await saveMyCityList(); }catch(e){ mpSwallow(e, 'save copy'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
   try{ await mpData.copies.recordOnly(currentUser.uid, 'place', ownerUid + '_' + cityId + ':' + catId + ':' + placeId); }catch(e){ mpSwallow(e, 'copy record'); }
   myCopiedPlaces[ownerUid + ':' + cityId + ':' + catId + ':' + placeId] = true;
-  try{ mpTrack.statsPlace(ownerUid + '_' + cityId, hashUrl(src.url || placeId), 'copy'); }catch(_){}
+  try{ mpTrack.statsList(ownerUid + '_' + cityId, 'copy_from', { daily: true }); if (mpIsVerified(ownerUid)) mpTrack.statsCurator(ownerUid, 'save'); }catch(_){} /* ب-٢-١ (قرار ١٠-٠٩-١١ أ): نسخ مكان يُعدّ على قائمته الأم copy_from — كان يستدعي mpTrack.statsPlace غير الموجودة فلا يكتب شيئًا */
   showToast('Saved to My List · ' + cityName + ' — with credit to ' + ownerName + ' ✓');
   if (prevCity !== cityId){ myListCityId = prevCity; if (prevCity) await loadMyCityList(prevCity); }
   if (typeof renderCommunityModal === 'function' && currentTab === 'Community') renderCommunityModal(); if (currentTab === 'Curators') renderCuratorsBody(); if (currentTab === 'Places') renderPlacesMine();
