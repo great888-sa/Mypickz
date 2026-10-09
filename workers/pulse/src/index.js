@@ -4,11 +4,7 @@
 'use strict';
 
 const TARGETS = [
-  {
-    name: 'prod',
-    url: 'https://mypickz.app/',
-    must: ['function initFirebase', 'function loadCity', 'function openAuthModal', 'projectId: "mypickz-6f809"']
-  },
+  /* ر٧٣-ج (قرار المالك ٨ أكتوبر — الخيار أ): هدف prod (mypickz.app) أُسقط حتى المرحلة د — ملف الإنتاج القديم أُلغي، والإنتاج يُبنى من المصدر نفسه عند الترقية ويعود الهدف معه */
   {
     name: 'test',
     url: 'https://test.mypickz.app/index-debug-test.html',
