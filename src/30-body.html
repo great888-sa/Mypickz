@@ -224,47 +224,47 @@
 
   <!-- خ١-ب: تغيير كلمة المرور (المشهد ٩) — مبنية معطَّلة حتى ٢/ب -->
   <div class="modal-backdrop" id="pwBackdrop">
-    <div class="modal">
-      <h3 style="text-align:center;">Change Password 🔑 <span class="soon-tag">Soon</span></h3>
-      <label class="flabel">New password</label>
+    <div class="modal night"><!-- ب-٢-٢-أ٢ (المسودة v3 · ٩): بالقشرة الليلية — Back يعود إلى Settings عبر mpOpenThen · ✕ يغلق الكل · تبقى موسومة حتى المرحلة هـ -->
+      <div class="hdr"><button type="button" class="bk" onclick="closeModalById('pwBackdrop')">← Back</button><span class="ttl">🔑 Change password</span><button type="button" class="x" onclick="mpCloseAll('pwBackdrop')" aria-label="Close">✕</button></div>
+      <div class="ctx" style="text-align:center;">Arrives with stage هـ <span class="soon-tag">هـ</span></div>
+      <label class="flabel">Current password</label>
+      <div class="pw-wrap"><input type="password" id="pwCurrent" class="modal-input" placeholder="Current password" autocomplete="current-password" disabled><button type="button" class="pw-eye" onclick="togglePasswordVisibility('pwCurrent', this)">👁</button></div>
+      <label class="flabel">New password <span class="dim">· 8+ characters</span></label>
       <div class="pw-wrap"><input type="password" id="pwNew" class="modal-input" placeholder="At least 8 characters" autocomplete="new-password" disabled><button type="button" class="pw-eye" onclick="togglePasswordVisibility('pwNew', this)">👁</button></div>
       <label class="flabel">Confirm new password</label>
       <div class="pw-wrap"><input type="password" id="pwConfirm" class="modal-input" placeholder="Repeat it" autocomplete="new-password" disabled><button type="button" class="pw-eye" onclick="togglePasswordVisibility('pwConfirm', this)">👁</button></div>
-      <button class="btn btn-brass" style="margin-top:12px;"  disabled>Save New Password</button>
-      <button class="btn btn-ghost" style="margin-top:8px;"  onclick="closeModalById('pwBackdrop')">Close</button>
+      <button class="btn btn-brass wide" style="margin-top:12px;"  disabled>Save new password</button>
     </div>
   </div>
 
   <!-- خ١-ب: حذف الحساب — المشاهد الثلاثة (١٠) مبنية معطَّلة حتى ٢/د -->
   <div class="modal-backdrop" id="delBackdrop">
-    <div class="modal" style="text-align:center;">
+    <div class="modal night" style="text-align:center;"><!-- ب-٢-٢-أ٢ (المسودة v3 · ١٢): بالقشرة الليلية — Back: الخطوة ١ تغلق (وتعود إلى Settings) · الخطوة ٢ تعود إلى ١ · ✕ يغلق الكل · التوثيق ورقة سفلية -->
+      <div class="hdr"><button type="button" class="bk" id="delBackBtn" onclick="delBack()">← Back</button><span class="ttl">🗑 Delete account</span><button type="button" class="x" onclick="mpCloseAll('delBackdrop')" aria-label="Close">✕</button></div>
       <div class="steps"><span class="stepdot on" id="delDot1"></span><span class="stepdot" id="delDot2"></span><span class="stepdot" id="delDot3"></span></div>
       <div id="delStep1">
-        <h3>Delete Account 🗑</h3>
-        <p style="font-size:13px; color:var(--ink-soft); margin:0 0 10px;">This will permanently delete your account and <b>all</b> your data. This cannot be undone.</p>
+        <p class="ctx" style="text-align:center; margin:0 0 10px;">This permanently deletes your account and <b>all</b> your data. It cannot be undone.</p>
         <div class="receipt"><ul>
-          <li><span>📝 My List places</span><b id="delCntPlaces">—</b></li>
+          <li><span>📝 Places in my lists</span><b id="delCntPlaces">—</b></li>
           <li><span>🧳 Trips</span><b id="delCntTrips">—</b></li>
           <li><span>🔖 Bookmarks (places · lists · trips)</span><b id="delCntFav">—</b></li>
-          <li><span>🌍 Community profile</span><b>1</b></li>
+          <li><span>🌍 Curator page &amp; followers</span><b id="delCntProfile">1</b></li>
           <li><span>🏷 Nickname</span><b>freed</b></li>
         </ul></div>
         <div class="warnline">⚠️ <span>Trips <b>shared with other people</b> will be deleted for everyone.</span></div>
-        <button class="btn btn-danger"  onclick="delStep(2)">I understand — continue</button>
-        <button class="btn btn-ghost" style="margin-top:8px;"  onclick="closeModalById('delBackdrop')">Cancel</button>
+        <button class="btn btn-danger wide"  onclick="delStep(2)">I understand — continue</button>
+        <button class="btn btn-ghost wide" style="margin-top:8px;"  onclick="closeModalById('delBackdrop')">Cancel</button>
       </div>
       <div id="delStep2" style="display:none;">
-        <h3>Final confirmation</h3>
-        <p style="font-size:13px; color:var(--ink-soft); margin:0 0 10px;">Type <b>DELETE</b> to confirm permanent deletion.</p>
+        <p class="ctx" style="text-align:center; margin:0 0 10px;">Type <b>DELETE</b> to confirm permanent deletion.</p>
         <input id="delWord" class="modal-input" oninput="checkDelWord()" placeholder="Type DELETE" style="text-align:center; letter-spacing:2px;">
-        <button class="btn btn-danger" id="delGo" style="margin-top:10px;" onclick="doAccountDelete()" disabled>Delete my account forever</button>
-        <button class="btn btn-ghost" style="margin-top:8px;"  onclick="delStep(1)">Back</button>
+        <button class="btn btn-danger wide" id="delGo" style="margin-top:10px;" onclick="doAccountDelete()" disabled>Delete my account forever</button>
       </div>
       <div id="delStep3" style="display:none;">
         <div style="font-size:40px;">🕊</div>
         <h3>Account deleted</h3>
-        <p style="font-size:13px; color:var(--ink-soft); line-height:1.7; margin:0 0 12px;">Your account and all your data were permanently deleted.<br>Your nickname is now free for anyone to use.<br>Thank you for trying MyPickz.</p>
-        <button class="btn btn-ghost"  onclick="delStep(1)">Back to preview</button>
+        <p class="ctx" style="text-align:center; line-height:1.7; margin:0 0 12px;">Your account and all your data were permanently deleted.<br>Your nickname is now free for anyone to use.<br>Thank you for trying MyPickz.</p>
+        <button class="btn btn-ghost wide"  onclick="delStep(1)">Back to preview</button>
       </div>
     </div>
   </div>
@@ -313,19 +313,18 @@
   </div>
 
   <!-- ٢/أ: تأكيد الهوية — المشهد ٨ بالنموذج الحاكم، بمسارين من اليوم الأول (المسار الثاني خامل حتى ٢/و). لا يستدعيه أحد قبل ٢/ب و٢/د -->
-  <div class="modal-backdrop" id="reauthBackdrop">
-    <div class="modal" style="max-width:380px;">
-      <h3>🔒 Confirm it's you</h3>
-      <p class="flabel">For your security, confirm your identity before this action.</p>
+  <div class="modal-backdrop sheetbd" id="reauthBackdrop" onclick="reauthBackdropTap(event)"><!-- ب-٢-٢-أ٢ (المسودة v3 · ١٢-ب): تأكيد الهوية ورقة سفلية — فوق الأشرطة (sheetLift) · النقر خارجها = إلغاء -->
+    <div class="sheet" id="reauthCard" role="dialog" aria-modal="true">
+      <div class="grip"></div>
+      <h4>🔒 Confirm it's you</h4>
+      <p class="sheet-txt">For your security, enter your current password before this action.</p>
       <div class="pw-wrap">
-        <input type="password" id="reauthPassword" class="modal-input" placeholder="Current password" autocomplete="current-password">
+        <input type="password" id="reauthPassword" class="modal-input" placeholder="Current password" autocomplete="current-password" onkeydown="if (event.key === 'Enter') doReauthContinue()">
         <button type="button" class="pw-eye" onclick="togglePasswordVisibility('reauthPassword', this)" aria-label="Show password">👁</button>
       </div>
-      <div id="reauthError" style="color:var(--danger); font-size:12px; min-height:16px; margin-top:6px;"></div>
-      <button class="btn btn-brass" style="margin-top:10px;"  onclick="doReauthContinue()">Continue</button>
-      <p style="font-size:11px; color:var(--ink-soft); margin:12px 0 4px;">Google account?</p>
-      <button type="button" class="btn btn-ghost soon" onclick="showSoon('Available when Google sign-in arrives')">Confirm with Google <span class="dim">later</span></button>
-      <button class="btn btn-ghost" style="margin-top:8px;"  onclick="closeReauthModal(false)">Cancel</button>
+      <div id="reauthError" class="errline"></div>
+      <div class="sheet-row"><button type="button" class="btn btn-ghost sheet-cancel" onclick="closeReauthModal(false)">Cancel</button><button type="button" class="btn btn-brass" onclick="doReauthContinue()">Continue</button></div>
+      <button type="button" class="btn btn-ghost wide soon" style="margin-top:8px;" onclick="showSoon('Available when Google sign-in arrives')">Google account? <span class="dim">confirm with Google · later</span></button>
     </div>
   </div>
 
