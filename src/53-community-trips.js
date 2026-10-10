@@ -168,8 +168,8 @@ function sheetDone(v){
   document.getElementById('sheetBackdrop').classList.remove('show');
   if (r) r(out);
 }
-function sheetLift(){ /* ملاحظة المالك ١٠-١٠ (Safari): الأشرطة السفلية الثابتة (الشريط الخمسي · شريط التوقيت بنسخة الاختبار · شريط الرحلة النشطة) تُرسم فوق الورقة على Safari فتحجب أسفلها — الورقة تقيسها وتستقر فوق أعلاها أيًّا كان ترتيب الرسم */
-  const card = document.getElementById('sheetCard'); if (!card) return; const H = window.innerHeight || 0; let lift = 0;
+function sheetLift(cardId){ /* ملاحظة المالك ١٠-١٠ (Safari): الأشرطة السفلية الثابتة (الشريط الخمسي · شريط التوقيت بنسخة الاختبار · شريط الرحلة النشطة) تُرسم فوق الورقة على Safari فتحجب أسفلها — الورقة تقيسها وتستقر فوق أعلاها أيًّا كان ترتيب الرسم */
+  const card = document.getElementById(cardId || 'sheetCard'); if (!card) return; const H = window.innerHeight || 0; let lift = 0;
   ['mpTabbar', 'mpTimingBox', 'activeTripBar'].forEach(function(id){ const b = document.getElementById(id); if (!b || !b.getBoundingClientRect) return; const cs = window.getComputedStyle ? window.getComputedStyle(b) : null; if (cs && (cs.display === 'none' || cs.visibility === 'hidden')) return; const r = b.getBoundingClientRect(); if (!r.height) return; lift = Math.max(lift, H - r.top); });
   const on = lift > 0 && lift < H * 0.6; card.style.marginBottom = on ? Math.round(lift) + 'px' : ''; card.classList.toggle('lifted', on);
 }
