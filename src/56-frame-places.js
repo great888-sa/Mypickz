@@ -754,20 +754,24 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 // شاشة السياسة (باب مغلق): النص من مسودة v2 والضوابط v1 — يُدرج بـ٢/هـ نصًّا كاملًا؛ الآن هيكل الشاشة بعناوين البنود
-function openPolicyModal(kind){
-  const body = document.getElementById('policyBody');
+let __policyBack = false;
+function openPolicyModal(kind){ /* ب-٢-٢-أ٢ (المسودة v3 · ١٦): سطح ليلي بالقشرة — رأس (Back · العنوان · ✕) ومبدّل داخلي بين السياسة والضوابط */
+  const body = document.getElementById('policyBody'); const isRules = kind === 'rules';
+  const ttl = document.getElementById('policyTitle'); if (ttl) ttl.textContent = isRules ? '📏 Content rules' : '📄 Privacy & Terms';
+  const sp = document.getElementById('policySegPolicy'), sr = document.getElementById('policySegRules'); if (sp) sp.classList.toggle('on', !isRules); if (sr) sr.classList.toggle('on', isRules);
+  if (!document.getElementById('policyBackdrop').classList.contains('show')) __policyBack = !!window.__mpFromDrawer; /* Back يظهر فقط حين تُفتح من الدرج (من البوابة لا طبقة خلفها) */
+  const bk = document.getElementById('policyBackBtn'); if (bk) bk.classList.toggle('hidden', !__policyBack);
   if (kind === 'rules'){
-    body.innerHTML = `<h3 style="text-align:center;">📏 Content Rules</h3><p style="font-size:11px;color:var(--ink-soft);text-align:center;">Last updated: August 2026 · draft, not published</p>
-      <h4>1. Prohibited places</h4><p style="font-size:12px;">Nightclubs and beach clubs · venues serving alcohol · shisha lounges · gambling · adult content.</p>
-      <h4>2. Prohibited practices</h4><p style="font-size:12px;">Link not matching the place · fake or closed places · other people's private addresses · offensive or misleading text · disguised advertising · counter inflation.</p>
-      <h4>3. On violations</h4><p style="font-size:12px;">Our usual actions in the Terms apply, at our discretion.</p>`;
+    body.innerHTML = `<p class="pmeta">Last updated: August 2026 · draft, not published</p>
+      <h4>1. Prohibited places</h4><p>Nightclubs and beach clubs · venues serving alcohol · shisha lounges · gambling · adult content.</p>
+      <h4>2. Prohibited practices</h4><p>Link not matching the place · fake or closed places · other people's private addresses · offensive or misleading text · disguised advertising · counter inflation.</p>
+      <h4>3. On violations</h4><p>Our usual actions in the Terms apply, at our discretion.</p>`;
   } else {
-    body.innerHTML = `<h3 style="text-align:center;">📄 Privacy Policy &amp; Terms</h3>
-      <div class="help-attr" id="dataAttribution"><b>Data &amp; maps attribution</b><br>Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL) · Map tiles by <a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps</a><br>Place suggestions from <a href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noopener">Overture Maps Foundation</a> — CDLA Permissive 2.0; records sourced from Foursquare are Apache 2.0 (© Foursquare Labs, Inc.; transformed to the Overture schema)<br>City index from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0)<br>Pins you place are yours. Google Maps links open in Google Maps; no Google Maps data is stored.</div><p style="font-size:11px;color:var(--ink-soft);text-align:center;">Last updated: August 2026 · draft, not published</p>
-      <h4>Privacy</h4><ol style="font-size:12px;padding-left:18px;"><li>Who we are</li><li>Data we collect</li><li>Why we collect it</li><li>What others can see</li><li>Your rights</li><li>Security</li></ol>
-      <h4>Terms</h4><ol style="font-size:12px;padding-left:18px;"><li>Your account</li><li>Content you add (Content Rules apply)</li><li>Our usual actions on violations</li><li>Limitation of liability</li><li>Changes</li></ol>
-      <p style="font-size:11px;color:var(--ink-soft);">Full text is pasted here in batch ٢/هـ from the approved draft.</p>
-      <p style="font-size:11px;color:var(--ink-soft);">City names: © <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a>, CC BY 4.0.</p>`;
+    body.innerHTML = `      <div class="help-attr" id="dataAttribution"><b>Data &amp; maps attribution</b><br>Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL) · Map tiles by <a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps</a><br>Place suggestions from <a href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noopener">Overture Maps Foundation</a> — CDLA Permissive 2.0; records sourced from Foursquare are Apache 2.0 (© Foursquare Labs, Inc.; transformed to the Overture schema)<br>City index from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0)<br>Pins you place are yours. Google Maps links open in Google Maps; no Google Maps data is stored.</div><p style="font-size:11px;color:var(--ink-soft);text-align:center;">Last updated: August 2026 · draft, not published</p>
+      <h4>Privacy</h4><ol style="padding-left:18px;"><li>Who we are</li><li>Data we collect</li><li>Why we collect it</li><li>What others can see</li><li>Your rights</li><li>Security</li></ol>
+      <h4>Terms</h4><ol style="padding-left:18px;"><li>Your account</li><li>Content you add (Content Rules apply)</li><li>Our usual actions on violations</li><li>Limitation of liability</li><li>Changes</li></ol>
+      <p class="pmeta">Full text is pasted here in batch ٢/هـ from the approved draft.</p>
+      <p class="pmeta">City names: © <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a>, CC BY 4.0.</p>`;
   }
   document.getElementById('policyBackdrop').classList.add('show');
 }
@@ -788,12 +792,12 @@ function resetSessionState(){ // r72n: كل ما يحمل بيانات حساب 
   }catch(e){ mpSwallow(e, 'reset session'); }
 }
 async function confirmLogout(){ /* ب-٢-٢-أ٢ (المسودة v2-أ · ١١): ورقة سفلية بالشرط القائم نفسه */
-  const formOpen = !!document.querySelector('.modal-backdrop.show, #placeModalBackdrop.show') || (typeof currentTripId !== 'undefined' && !!currentTripId && typeof tripViewMode !== 'undefined' && tripViewMode === false); // ر٦٩ف (N-049): التأكيد فقط حين توجد نافذة مفتوحة أو رحلة مفتوحة في وضع التعديل
+  const formOpen = !!document.querySelector('.modal-backdrop.show:not(#dashBackdrop):not(#accountBackdrop):not(#sheetBackdrop), #placeModalBackdrop.show') || /* ب-٢-٢-أ٢: Settings والدرج والورقة ليست نماذج */ (typeof currentTripId !== 'undefined' && !!currentTripId && typeof tripViewMode !== 'undefined' && tripViewMode === false); // ر٦٩ف (N-049): التأكيد فقط حين توجد نافذة مفتوحة أو رحلة مفتوحة في وضع التعديل
   if (!formOpen || await mpConfirm('You have an open form — unsaved changes will be lost.', { title: '🚪 Log out?', ok: 'Log out', cancel: 'Stay' })){ closeAccountModal(); doSignOut(); }
 }
 
 // ٢/أ: نافذة الحساب — صارت الجزء الأعلى من الدرج (خ١)؛ تُملأ من الذاكرة (لا قراءة إضافية)
-function openAccountModal(){ try{ const n = document.getElementById('drNickNow'); if (n) n.textContent = (userListData && userListData.nickname) || ''; }catch(_){}
+function openAccountModal(){ /* ب-٢-٢-أ٢ (المسودة v3-ج): الدرج الليلي — البطاقة باب My profile وفيها سطر الأرقام · Followers/Become a curator عبر drSyncCurator · التذييل يحمل رقم البناء */
   try{ if (curators === null && currentUser) mpData.profiles.curators(200).then(function(r){ curators = r; drSyncCurator(); }).catch(function(){}); else drSyncCurator(); }catch(e){} // ر٧٢-أ-١
   if (!currentUser){ openAuthModal(); return; }
   const nick = userListData.nickname || '';
@@ -803,7 +807,7 @@ function openAccountModal(){ try{ const n = document.getElementById('drNickNow')
   document.getElementById('accountName').textContent = nick || '—';
   document.getElementById('accountEmail').textContent = currentUser.email || '—';
   const dro = document.getElementById('drawerOwner'); if (dro) dro.style.display = isOwner ? '' : 'none';
-  const lbl = document.getElementById('prefHomeLabel'); if (lbl) lbl.textContent = homePrefLabel(); // r70q2
+  const bl = document.getElementById('drBuild'); if (bl){ const m = String(window.__mpBuild || '').match(/M2-ID-(r\d+[a-z]?)/); bl.textContent = m ? m[1] : ''; }
   document.getElementById('accountBackdrop').classList.add('show');
 }
 function closeAccountModal(){
