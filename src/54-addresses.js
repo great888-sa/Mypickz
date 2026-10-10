@@ -46,7 +46,7 @@ async function addAddrCity(){
   // ر٧٠ب: منع التكرار بالمفتاح المطبَّع (الطبقة ٢) ثم «هل تقصد؟» بالتقارب داخل الدولة نفسها (الطبقة ٣ — ق٠٩-١٠-٠٢)
   const inSameCountry = myListAllCities().filter(c => c.country.toLowerCase() === country.trim().toLowerCase());
   let existing = inSameCountry.find(c => pickerNormalize(c.name) === pickerNormalize(name));
-  if (!existing){ const near = pickerNearest(name, inSameCountry); if (near && confirm('Did you mean ' + near.name + '? OK to use it, Cancel to add "' + name.trim() + '" as a new city.')) existing = near; }
+  if (!existing){ const near = pickerNearest(name, inSameCountry); if (near){ const pick = await mpSheet({ title: 'Did you mean ' + near.name + '?', text: 'You already have ' + near.name + ' in ' + country.trim() + '.', ok: 'Use ' + near.name, alt: 'Add "' + name.trim() + '" as a new city' }); if (pick === null) return; if (pick === 'ok') existing = near; } } /* ب-٢-٢-أ٢: ورقة بزرّين بدل confirm */
   let id = existing ? existing.id : null;
   if (!id){
     const __row = await gazFindCity(country.trim(), name); // ز-١-ج-٢: المعجم وحده — لا مدينة يدوية
@@ -248,7 +248,7 @@ async function cityDelSide(other){
   let { cityId, from } = cityDelCtx || {}; if (!cityId) return;
   if (other) from = (from === 'addr') ? 'list' : 'addr';   // الزر الثاني = الوجه الآخر
   const n1 = from === 'addr' ? await cityCountAddr(cityId) : await cityCountList(cityId);
-  if (!confirm((from === 'addr' ? 'Remove your ' + n1 + ' address' + (n1 === 1 ? '' : 'es') + ' in ' : 'Clear your list of ' + n1 + ' place' + (n1 === 1 ? '' : 's') + ' in ') + cityNameOf(cityId) + '? This cannot be undone.')) return;
+  if (!(await mpConfirm('This cannot be undone.', { title: (from === 'addr' ? '🗑 Remove your ' + n1 + ' address' + (n1 === 1 ? '' : 'es') + ' in ' : '🗑 Clear your list of ' + n1 + ' place' + (n1 === 1 ? '' : 's') + ' in ') + cityNameOf(cityId) + '?', ok: from === 'addr' ? 'Remove addresses' : 'Clear list', danger: true }))) return; /* ب-٢-٢-أ٢ */
   closeModalById('cityDelBackdrop');
   if (from === 'addr'){
     try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); }catch(e){}
@@ -270,7 +270,7 @@ async function cityDelSide(other){
 async function cityDelFull(){
   const { cityId } = cityDelCtx || {}; if (!cityId) return;
   const nA = await cityCountAddr(cityId), nL = await cityCountList(cityId);
-  if (!confirm('Delete ' + cityNameOf(cityId) + ' everywhere — ' + (nA + nL) + ' item' + (nA + nL === 1 ? '' : 's') + ' will be lost. This cannot be undone.')) return;
+  if (!(await mpConfirm((nA + nL) + ' item' + (nA + nL === 1 ? '' : 's') + ' will be lost. This cannot be undone.', { title: '🗑 Delete ' + cityNameOf(cityId) + ' everywhere?', ok: 'Delete everywhere', danger: true }))) return; /* ب-٢-٢-أ٢ */
   closeModalById('cityDelBackdrop');
   try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); }catch(e){}
   delete addrData[cityId];
@@ -319,7 +319,7 @@ async function saveAddr(){
 }
 async function deleteAddr(cityId, catId, index){
   const entry = addrData[cityId] && addrData[cityId][catId]; if (!entry) return;
-  if (!confirm('Delete this address?')) return;
+  if (!(await mpConfirm('', { title: '🗑 Delete this address?', ok: 'Delete', danger: true }))) return; /* ب-٢-٢-أ٢ */
   entry.places.splice(index, 1);
   try{ await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry); showToast('Deleted'); }catch(e){ showToast('Could not delete'); }
   await loadAddresses(true);
