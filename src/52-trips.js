@@ -287,7 +287,7 @@ async function toggleTripPublicFor(id){ currentTripId = id; await toggleTripPubl
 // More/Less: المطوي = الاسم · Area · أول فعلين (Maps · 🔖)؛ الحالة تُذكر بالجلسة لكل بطاقة؛ تُفتح تلقائيًّا حيث مقترح منتقٍ (open:true)
 const plCardOpen = {}; // key → true (ذاكرة الجلسة)
 function placeGroupHtml(title, count, right, inner){ return '<div class="pgroup"><div class="pg-head"><span class="pg-title">' + escapeHtml(title) + (count !== null && count !== undefined ? ' <span class="pg-n"># ' + count + '</span>' : '') + '</span>' + (right || '') + '</div>' + inner + '</div>'; } // r72r-1: المجموعة العاجية برأس التصنيف الفرعي — البنية الواحدة بكل الواجهات
-function plCardToggle(btn, key){ const card = btn.closest('.pcard'); if (!card) return; const open = !card.classList.contains('open'); card.classList.toggle('open', open); plCardOpen[key] = open; btn.textContent = open ? 'Less <span class="arr">⌃</span>' : 'More <span class="arr">⌄</span>'; }
+function plCardToggle(btn, key){ const card = btn.closest('.pcard'); if (!card) return; const open = !card.classList.contains('open'); card.classList.toggle('open', open); plCardOpen[key] = open; btn.innerHTML = open ? 'Less <span class="arr">⌃</span>' : 'More <span class="arr">⌄</span>'; } /* ب-٢-٢-أ٢ (ملاحظة المالك ١٠-١٠): كان textContent فظهر الوسم نصًّا */
 function placeCardHtml(p, mode, ctx){
   ctx = ctx || {}; const key = mode + ':' + (p.id || hashUrl(p.url || '') || p.name); const open = ctx.open === true || plCardOpen[key] === true;
   const acts = (ctx.actions || []).filter(Boolean); // [{cls, html, on, title, href}] — بترتيب ثابت للوضع
@@ -743,7 +743,7 @@ async function removeTripDay(dayIdx){
   if (!trip || !trip.days[dayIdx]) return;
   const day = trip.days[dayIdx];
   const n = TRIP_CATEGORIES.reduce((a, c) => a + ((day.places && day.places[c.id]) || []).length, 0);
-  if (!confirm('Delete Day ' + day.dayNumber + (n ? ' and its ' + n + ' place' + (n === 1 ? '' : 's') : '') + '? This cannot be undone.')) return;
+  if (!(await mpConfirm((n ? 'Its ' + n + ' place' + (n === 1 ? '' : 's') + ' will be removed from the trip. ' : '') + 'This cannot be undone.', { title: '🗑 Delete Day ' + day.dayNumber + '?', ok: 'Delete day', danger: true }))) return; /* ب-٢-٢-أ٢: ورقة بدل confirm */
   trip.days.splice(dayIdx, 1);
   trip.days.forEach((d, i) => { d.dayNumber = i + 1; });      // إعادة الترقيم فلا تبقى فجوة
   await saveTrip(trip);
@@ -761,7 +761,7 @@ async function addTripDay(){
   renderMyTripsModal();
 }
 async function deleteTrip(){
-  if (!confirm('Delete this trip? This cannot be undone.')) return;
+  if (!(await mpConfirm('This cannot be undone.', { title: '🗑 Delete this trip?', ok: 'Delete trip', danger: true }))) return; /* ب-٢-٢-أ٢ */
   try{ await mpData.trips.remove(currentTripId); }catch(e){}
   userTrips = userTrips.filter(t => t.id !== currentTripId);
   delete resolvedTripCache[currentTripId];
