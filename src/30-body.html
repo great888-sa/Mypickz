@@ -475,6 +475,19 @@
     </div>
   </div>
 
+  <!-- ب-٢-٢-أ٢ (القرار ١ من ٦ · المسودة v2-أ): الورقة السفلية — بديل حوارات المتصفح confirm/prompt · مقبض · عنوان · سطر · فعل أساسي (أحمر للخطر) · بديل اختياري · إلغاء شبح · النقر خارجها أو السحب لأسفل = إلغاء -->
+  <div class="modal-backdrop sheetbd" id="sheetBackdrop" onclick="sheetBackdropTap(event)">
+    <div class="sheet" id="sheetCard" role="dialog" aria-modal="true" ontouchstart="sheetTouch(event, 'start')" ontouchmove="sheetTouch(event, 'move')" ontouchend="sheetTouch(event, 'end')">
+      <div class="grip"></div>
+      <h4 id="sheetTitle"></h4>
+      <p class="sheet-txt" id="sheetText"></p>
+      <input class="modal-input" id="sheetInput" type="text" maxlength="60" autocomplete="off" onkeydown="sheetKey(event)">
+      <button type="button" class="btn btn-brass wide" id="sheetOk" onclick="sheetDone('ok')">OK</button>
+      <button type="button" class="btn btn-ghost wide" id="sheetAlt" onclick="sheetDone('alt')">·</button>
+      <button type="button" class="btn btn-ghost wide sheet-cancel" id="sheetCancel" onclick="sheetDone(null)">Cancel</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
 <script>
