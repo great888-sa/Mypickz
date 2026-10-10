@@ -62,10 +62,10 @@ const HELP_CONTENT = { // أ-١٢-٢ (نص المالك v2 المعتمد ١٦ �
 };
 
 
-function setHelpLang(lang){
+function setHelpLang(lang){ /* ب-٢-٢-أ٢ (v3 · ١٤): مبدّل اللغة شريحتان مقطعيتان تحت رأس القشرة */
   helpLang = lang;
-  document.getElementById('helpLangArBtn').className = 'btn ' + (lang==='ar' ? 'btn-brass' : 'btn-ghost');
-  document.getElementById('helpLangEnBtn').className = 'btn ' + (lang==='en' ? 'btn-brass' : 'btn-ghost');
+  document.getElementById('helpLangArBtn').classList.toggle('on', lang === 'ar');
+  document.getElementById('helpLangEnBtn').classList.toggle('on', lang === 'en');
   renderHelpModal();
 }
 
@@ -81,7 +81,7 @@ function renderHelpModal(){
   const wrap = document.getElementById('helpSections');
   wrap.style.direction = dir; wrap.style.textAlign = al;
   const it = data.intro;
-  let h = '<div class="help-l1" style="font-size:13px; line-height:1.75; color:var(--ink);">'
+  let h = '<div class="help-l1" style="font-size:13px; line-height:1.75;">'
     + '<p style="margin:0 0 8px;">' + it.def + '</p>'
     + '<p class="help-feats" style="margin:0 0 10px; font-size:11.5px; font-weight:700; color:var(--saffron);">' + it.feats + '</p>'
     + '<ul style="margin:0 0 10px; padding-inline-start:18px;">' + it.dests.map(function(d){ return '<li style="margin:2px 0;"><b>' + d[0] + '</b> — ' + d[1] + '</li>'; }).join('') + '</ul>'
@@ -90,7 +90,7 @@ function renderHelpModal(){
     + '<button type="button" class="btn btn-ghost" style="margin:0 0 10px; padding:7px 14px; font-size:12px;" onclick="helpExpanded = !helpExpanded; renderHelpModal();">' + (helpExpanded ? data.readLess + ' <span class="arr">⌃</span>' : data.readMore + ' <span class="arr">⌄</span>') + '</button>';
   if (helpExpanded){
     h += data.sections.map((sec, i) => `
-    <div style="border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden;" id="help_sec_${sec.id}">
+    <div style="border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden; background:var(--ivory-bright);" id="help_sec_${sec.id}">
       <button type="button" onclick="toggleHelpSection(${i})" style="width:100%; text-align:${al}; background:var(--ivory-bright); border:none; padding:11px 14px; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
         <span>${sec.h}</span><span style="font-size:11px; color:var(--brass);">${helpOpenIndex===i ? '▲' : '▼'}</span>
       </button>
@@ -112,8 +112,9 @@ function markIntroSeen(){ try{ localStorage.setItem(INTRO_SEEN_KEY, '1'); }catch
 function openHelpModal(){
   if (helpOpenIndex === -1 && !helpExpanded) helpExpanded = false; // المستوى الأول أولًا
   renderHelpModal();
-  document.getElementById('helpLangArBtn').className = 'btn ' + (helpLang==='ar' ? 'btn-brass' : 'btn-ghost');
-  document.getElementById('helpLangEnBtn').className = 'btn ' + (helpLang==='en' ? 'btn-brass' : 'btn-ghost');
+  document.getElementById('helpLangArBtn').classList.toggle('on', helpLang === 'ar');
+  document.getElementById('helpLangEnBtn').classList.toggle('on', helpLang === 'en');
+  const bk = document.getElementById('helpBackBtn'); if (bk) bk.classList.toggle('hidden', !window.__mpFromDrawer); /* ب-٢-٢-أ٢: Back يظهر حين تُفتح من الدرج فقط (من «؟» أو أول فتح: ✕ وزر الإغلاق) */
   document.getElementById('helpBackdrop').classList.add('show');
 }
 function closeHelpModal(){
