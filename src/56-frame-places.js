@@ -341,9 +341,9 @@ async function plToggleBm(catId, i){
   await togglePlaceBookmark(bmKeyFor(pl), pl.name, catId, myListCityId, pl.area || ''); // ر٦٨: المفتاح هوية العنصر
   renderPlacesMine();
 }
-function plDeleteRow(catId, i){
+async function plDeleteRow(catId, i){
   const e = userGetEntry(catId); const pl = (e.places || [])[i]; if (!pl) return;
-  if (!confirm('Delete "' + (pl.name || 'this place') + '"?')) return;
+  if (!(await mpConfirm('', { title: '🗑 Delete "' + (pl.name || 'this place') + '"?', ok: 'Delete', danger: true }))) return; /* ب-٢-٢-أ٢: ورقة بدل confirm */
   removeUserPlace(catId, i);
   renderPlacesMine();
 }
@@ -619,7 +619,7 @@ async function saveOthersList(ownerUid, cityId){ // ز-١-ب: نسخة القا�
   if (!currentUser){ openAuthModal(); return; }
   let d = null; try{ d = await mpData.cityLists.get(ownerUid, cityId); }catch(e){ mpSwallow(e, 'copy list'); } if (!d || !d.categories){ showToast('Could not read this list'); return; }
   const cityName = d.cityName || cityId, ownerName = d.nickname || ((curators || []).find(function(c){ return c.uid === ownerUid; }) || {}).nickname || 'a user';
-  if (!confirm('Copy all places of ' + cityName + ' by ' + ownerName + ' into your list? Each place keeps its credit.')) return;
+  if (!(await mpConfirm('Each place keeps its credit to ' + ownerName + '.', { title: '📋 Copy all places of ' + cityName + ' into your list?', ok: 'Copy to my list' }))) return; /* ب-٢-٢-أ٢ */
   if (!allCities().find(function(c){ return c.id === cityId; })){ if (!Array.isArray(userListData.customCities)) userListData.customCities = []; if (!userListData.customCities.find(function(c){ return c.id === cityId; })){ userListData.customCities.push({ id: cityId, name: cityName, country: '' }); try{ await saveUserListGeneral(); }catch(e){} } }
   const prevCity = myListCityId; if (myListCityId !== cityId){ myListCityId = cityId; await loadMyCityList(cityId); }
   let n = 0; Object.keys(d.categories).forEach(function(catId){ const e = d.categories[catId]; if (!e || e.active === false) return; const dst = userEnsurePlaces(catId); (e.places || []).forEach(function(src){ if (!src || !(src.name || src.url)) return; if (src.url && (dst.places || []).some(function(q){ return q.url === src.url; })) return; dst.active = true; const copy = { id: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: src.name || 'Place', url: src.url || '', area: src.area || '', picks: Array.isArray(src.picks) ? src.picks.slice(0, 6) : [], note: src.note || '', source: { ownerId: ownerUid, ownerName: ownerName, cityId: cityId, catId: catId, placeId: src.id || hashUrl(src.url || ''), at: Date.now() } }; if (src.geo && typeof src.geo.lat === 'number') copy.geo = { lat: src.geo.lat, lng: src.geo.lng, source: src.geo.source || 'overture' }; if (src.openId) copy.openId = src.openId; dst.places.push(copy); n++; }); });
@@ -787,9 +787,9 @@ function resetSessionState(){ // r72n: كل ما يحمل بيانات حساب 
     ['plBody', 'myTripsBody', 'communityBody', 'curatorsBody'].forEach(function(id){ const el = document.getElementById(id); if (el) el.innerHTML = '<div class="mp-empty mini">Loading…</div>'; });
   }catch(e){ mpSwallow(e, 'reset session'); }
 }
-function confirmLogout(){
+async function confirmLogout(){ /* ب-٢-٢-أ٢ (المسودة v2-أ · ١١): ورقة سفلية بالشرط القائم نفسه */
   const formOpen = !!document.querySelector('.modal-backdrop.show, #placeModalBackdrop.show') || (typeof currentTripId !== 'undefined' && !!currentTripId && typeof tripViewMode !== 'undefined' && tripViewMode === false); // ر٦٩ف (N-049): التأكيد فقط حين توجد نافذة مفتوحة أو رحلة مفتوحة في وضع التعديل
-  if (!formOpen || confirm('Log out? Unsaved changes in open forms will be lost.')){ closeAccountModal(); doSignOut(); }
+  if (!formOpen || await mpConfirm('You have an open form — unsaved changes will be lost.', { title: '🚪 Log out?', ok: 'Log out', cancel: 'Stay' })){ closeAccountModal(); doSignOut(); }
 }
 
 // ٢/أ: نافذة الحساب — صارت الجزء الأعلى من الدرج (خ١)؛ تُملأ من الذاكرة (لا قراءة إضافية)
