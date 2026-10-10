@@ -118,21 +118,29 @@ function closeAuthModal(force){
   document.getElementById('authBackdrop').classList.remove('show');
 }
 function openModalById(id){ document.getElementById(id).classList.add('show'); }
-// v1.37 (قرار المالك ١ سبتمبر): ما فُتح من الدرج يعود إليه عند الإغلاق — ترصد النافذة التي ظهرت وتعيد الدرج حين تُغلق
-function openFromDrawer(openFn){
+// v1.37 (قرار المالك ١ سبتمبر): ما فُتح من الدرج يعود إليه عند الإغلاق — ب-٢-٢-أ٢ (المسودة v3): طبقتان — نوافذ القشرة (dashBackdrop) تستلم Back صريحًا «أغلق وافتح الدرج»؛ النوافذ الأخرى تُرصد فتعيد الدرج حين تُغلق (✕ يرفع علم __mpNoReopen فلا عودة)
+function mpOpenThen(openFn, after){ /* يفتح نافذة ويستدعي after حين تُغلق (ما لم تُغلق بـ✕) — أساس العودة للدرج وللإعدادات */
   const before = new Set(Array.from(document.querySelectorAll('.modal-backdrop.show')));
-  closeAccountModal();
-  try{ openFn(); }catch(e){ return; }
+  try{ openFn(); }catch(e){ return null; }
   const opened = Array.from(document.querySelectorAll('.modal-backdrop.show')).find(b => !before.has(b));
-  if (opened && opened.id === 'dashBackdrop' && !__dashBack){ const t = document.getElementById('dashTitle'); dashSet(t ? t.textContent : '', function(){ closeModalById('dashBackdrop'); }); } /* ب-٢-٢-أ (ملاحظة المالك): ما فُتح من الدرج مباشرة يحمل Back إليه — الإغلاق بلا علم ✕ يعيد فتح الدرج عبر المراقب أدناه */
-  if (!opened || !window.MutationObserver) return;
+  if (!opened || !window.MutationObserver) return opened || null;
+  const isDash = opened.id === 'dashBackdrop'; /* نوافذ القشرة: Back صريح (لا عودة بالإغلاق) — المراقب يستهلك علم ✕ فقط */
+  if (isDash && !__dashBack && typeof after === 'function'){ const t = document.getElementById('dashTitle'); dashSet(t ? t.textContent : '', function(){ closeModalById('dashBackdrop'); after(); }); }
+  __mpWatched.add(opened.id);
   const obs = new MutationObserver(function(){
-    if (!opened.classList.contains('show')){ obs.disconnect(); if (window.__mpNoReopen){ window.__mpNoReopen = false; return; } if (currentUser) openAccountModal(); } /* ب-٢-٢-أ: ✕ يغلق كل الطبقات بلا عودة للدرج؛ Back وحده يعود إليه */
+    if (!opened.classList.contains('show')){ obs.disconnect(); __mpWatched.delete(opened.id); if (window.__mpNoReopen){ window.__mpNoReopen = false; return; } if (!isDash && typeof after === 'function') after(); }
   });
   obs.observe(opened, { attributes: true, attributeFilter: ['class'] });
+  return opened;
+}
+function openFromDrawer(openFn){
+  closeAccountModal(); window.__mpFromDrawer = true;
+  try{ mpOpenThen(openFn, function(){ if (currentUser) openAccountModal(); }); } finally { window.__mpFromDrawer = false; }
 }
 function closeModalById(id){ document.getElementById(id).classList.remove('show'); }
-function mpCloseAll(id){ window.__mpNoReopen = true; closeModalById(id); } /* ب-٢-٢-أ: ✕ بالقشرة الموحَّدة — إغلاق النافذة بلا إعادة فتح الدرج */
+const __mpWatched = new Set(); /* ب-٢-٢-أ٢: النوافذ التي يرصدها mpOpenThen الآن — علم «لا عودة» يُرفع لها وحدها فلا يبقى معلَّقًا */
+function mpNoReopenFor(id){ if (__mpWatched.has(id)) window.__mpNoReopen = true; }
+function mpCloseAll(id){ mpNoReopenFor(id); closeModalById(id); } /* ب-٢-٢-أ: ✕ بالقشرة الموحَّدة — إغلاق النافذة بلا إعادة فتح الدرج */
 let __dashBack = null; /* ب-٢-٢-أ: معالج Back الحالي لنافذة dashBackdrop (null = لا طبقة سابقة فيُخفى الزر) */
 function dashSet(title, backFn){ const t = document.getElementById('dashTitle'); if (t) t.textContent = title || ''; __dashBack = (typeof backFn === 'function') ? backFn : null; const b = document.getElementById('dashBackBtn'); if (b) b.classList.toggle('hidden', !__dashBack); }
 function dashBack(){ const f = __dashBack; if (f) f(); else closeModalById('dashBackdrop'); }
@@ -180,22 +188,23 @@ function mpConfirm(text, o){ return mpSheet(Object.assign({ title: 'Are you sure
 // خ١-ب: الوجهة الافتراضية (المشهد ٥) — تُحفظ بمستند المستخدم، والتطبيق يفتح عليها
 const HOME_TABS = ['Places','Trips','Community','Curators','Addresses'];
 let pendingHome = 'Places';
-function openHomeChooser(fromPrefs){
+function openHomeScreen(){ /* ب-٢-٢-أ٢ (المسودة v3 · ٢-ب): الوجهة الافتراضية داخل القشرة — Back = Settings · البطاقات من القالب homeCardsTpl */
+  const body = document.getElementById('dashBody'); const tpl = document.getElementById('homeCardsTpl'); if (!body || !tpl) return;
   const cur = (userListData && HOME_TABS.includes(userListData.defaultTab)) ? userListData.defaultTab : 'Places';
-  pendingHome = cur;
+  pendingHome = cur; dashSet('🏠 Home screen', openSettings);
+  body.innerHTML = '<div class="ctx" style="text-align:center;">MyPickz opens here every time</div>' + tpl.innerHTML + '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="openSettings()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" onclick="saveHome()">Save</button></div>';
   document.querySelectorAll('#homeCards .hcard').forEach(b => b.classList.toggle('on', b.getAttribute('data-home') === cur));
-  document.getElementById('homeBackdrop').classList.add('show');
+  document.getElementById('dashBackdrop').classList.add('show');
 }
 function pickHome(btn){
   pendingHome = btn.getAttribute('data-home');
   document.querySelectorAll('#homeCards .hcard').forEach(b => b.classList.toggle('on', b === btn));
 }
 async function saveHome(){
-  closeModalById('homeBackdrop');
+  closeModalById('dashBackdrop'); /* ب-٢-٢-أ٢: الحفظ يغلق القشرة ويذهب للوجهة */
   if (!currentUser) return;
   userListData.defaultTab = pendingHome;
   try{ await mpData.userLists.merge(currentUser.uid, { defaultTab: pendingHome }); }catch(e){}
-  const lbl = document.getElementById('prefHomeLabel'); if (lbl) lbl.textContent = homePrefLabel();
   switchTab(pendingHome);
   showToast('Home saved ✓');
 }
