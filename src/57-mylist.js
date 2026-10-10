@@ -308,12 +308,44 @@ function removeUserPlace(id, index){
   saveMyCityList();
 }
 let updateFieldSaveTimer = null;
-async function chooseNickname(){
+/* ب-٢-٢-أ٢ (المسودة v3 · ٨): نافذة الاسم المستعار المسماة بالقشرة الليلية — القيد ظاهر (٣–٢٤) · فحص التوفر الحي عند التوقف عن الكتابة · تعيد وعدًا true/false كما كانت (مسار الإلزام عند أول دخول يبقى يكررها حتى الحفظ) */
+let __nickResolve = null, __nickTimer = null;
+function chooseNickname(){
+  return new Promise(function(resolve){
+    if (!currentUser){ resolve(false); return; }
+    const current = userListData.nickname || ''; const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd){ resolve(false); return; }
+    if (__nickResolve){ const r = __nickResolve; __nickResolve = null; r(false); }
+    __nickResolve = resolve;
+    dashSet(current ? '✏️ Change nickname' : '👤 Choose a nickname', null);
+    body.innerHTML = '<div class="ctx" style="text-align:center;">Shown to other users instead of your email</div>'
+      + '<label class="flabel">' + (current ? 'New nickname' : 'Nickname') + ' <span class="dim">· 3–24 characters</span></label><input type="text" id="nickInput" class="modal-input" maxlength="24" autocomplete="off" value="' + attrStr(current) + '" placeholder="e.g. TheCurator" oninput="nickCheck()" onkeydown="if (event.key === \'Enter\') nickSave()">'
+      + '<div class="errline" id="nickStatus"></div>'
+      + '<div class="ctx">' + (current ? 'Changes on all your public lists and your curator page' : 'You can change it later in Settings') + '</div>'
+      + '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="nickCancel()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" id="nickSaveBtn" onclick="nickSave()">Save nickname</button></div>';
+    bd.classList.add('show'); setTimeout(function(){ const i = document.getElementById('nickInput'); if (i){ try{ i.focus(); i.select(); }catch(_){} } }, 30);
+    if (window.MutationObserver){ const obs = new MutationObserver(function(){ if (!bd.classList.contains('show')){ obs.disconnect(); if (__nickResolve === resolve){ __nickResolve = null; resolve(false); } } }); obs.observe(bd, { attributes: true, attributeFilter: ['class'] }); } /* ✕ أو إغلاق خارجي = إلغاء */
+  });
+}
+function nickCancel(){ const r = __nickResolve; __nickResolve = null; dashBack(); if (r) r(false); }
+function nickCheck(){ /* التوفر الحي بعد توقف الكتابة ٤٠٠ م.ث */
+  const st = document.getElementById('nickStatus'); const v = String((document.getElementById('nickInput') || {}).value || '').trim(); if (__nickTimer) clearTimeout(__nickTimer);
+  if (!st) return; if (v.length < 3){ st.textContent = v ? 'At least 3 characters' : ''; st.className = 'errline'; return; }
+  if (v === (userListData.nickname || '')){ st.textContent = 'Your current nickname'; st.className = 'errline ok'; return; }
+  st.textContent = 'Checking…'; st.className = 'errline';
+  __nickTimer = setTimeout(async function(){ try{ const doc = await mpData.nicknames.get(v.toLowerCase()); const taken = doc.exists && doc.data().uid !== currentUser.uid; st.textContent = taken ? 'Taken — try another' : '✓ Available'; st.className = taken ? 'errline' : 'errline ok'; }catch(e){ st.textContent = ''; } }, 400);
+}
+async function nickSave(){
+  const btn = document.getElementById('nickSaveBtn'); const v = String((document.getElementById('nickInput') || {}).value || '');
+  if (btn) btn.disabled = true;
+  const ok = await saveNickname(v);
+  if (btn) btn.disabled = false;
+  if (ok){ const r = __nickResolve; __nickResolve = null; dashBack(); if (r) r(true); }
+}
+async function saveNickname(name){ /* منطق الحفظ القائم كما هو — حجز الاسم · تحرير القديم · المستند الأم · نسخ الاسم بقوائم المدن · الملف العام */
   const current = userListData.nickname || '';
-  const name = await openInputModal("Choose a nickname", "Shown to other users instead of your email", current);
-  if (name === null) return false;
-  const clean = name.trim();
+  const clean = String(name || '').trim();
   if (!clean || clean.length < 3){ showToast('Nickname must be at least 3 characters'); return false; }
+  if (clean.length > 24){ showToast('Nickname must be 24 characters or fewer'); return false; }
   if (clean === current) return true;
   const key = clean.toLowerCase();
   try{
