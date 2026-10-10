@@ -364,7 +364,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .ps .num{font-weight:800;}
   /* ب-٢-٢-أ٢ (القرار ١ من ٦): الورقة السفلية — تلتصق بأسفل الشاشة فوق كل النوافذ · مقبض · عنوان · سطر · أزرار عريضة متراصة */
   .modal-backdrop.sheetbd{align-items:flex-end; justify-content:center; padding:0; z-index:2100;}
-  .sheet{width:100%; max-width:480px; border-radius:20px 20px 0 0; padding:10px 16px calc(18px + env(safe-area-inset-bottom)); text-align:left; transform:translateY(0); transition:transform .18s ease-out;}
+  .sheet{width:100%; max-width:480px; border-radius:20px 20px 0 0; padding:10px 16px calc(18px + env(safe-area-inset-bottom)); text-align:left; transform:translateY(0); transition:transform .18s ease-out; max-height:70vh; overflow-y:auto;}
+  .sheet.lifted{border-radius:20px; margin-left:8px; margin-right:8px; width:calc(100% - 16px); padding-bottom:18px;}
   .sheet .grip{width:38px; height:4px; border-radius:2px; margin:0 auto 12px;}
   .sheet h4{font-family:'Cairo',sans-serif; font-size:15px; font-weight:800; margin:0 0 4px;}
   .sheet .sheet-txt{font-size:13px; line-height:1.5; margin:0 0 12px;}
