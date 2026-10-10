@@ -330,6 +330,7 @@ function openDeletePreview(){
   document.getElementById('delCntPlaces').textContent = Object.values((myCityListData && myCityListData.categories) || {}).reduce((a, c) => a + ((c.places || []).length), 0) || '—';
   document.getElementById('delCntTrips').textContent = (typeof userTrips !== 'undefined' && userTrips) ? userTrips.length : '—';
   document.getElementById('delCntFav').textContent = String(Object.keys(placeBmMap()).length + Object.keys(listBookmarksMap || {}).length + Object.keys(tripSavesMap || {}).length);
+  const prof = (typeof curators !== 'undefined' && curators && currentUser) ? curators.find(function(c){ return c.uid === currentUser.uid; }) : null; const pe = document.getElementById('delCntProfile'); if (pe) pe.textContent = prof ? ((typeof prof.followerCount === 'number' ? prof.followerCount : 0) + ' followers') : '1'; /* ب-٢-٢-أ٢: صفحة المنتقي بمتابعيها */
   delStep(1); openModalById('delBackdrop');
 }
 /* ر٥٩ · الحذف التسلسلي (القرار: تقديمه قبل الميداني — البند ١٣):
@@ -392,7 +393,10 @@ async function doAccountDelete(){
     showToast('Deletion stopped: ' + ((e && e.code) || 'error') + ' — nothing else was removed');
   }
 }
+let delCurStep = 1;
+function delBack(){ /* ب-٢-٢-أ٢ (v3 · ١٢): Back بالخطوة ٢ يعود إلى ١ · بالخطوة ١ يغلق (فيعود إلى Settings) */ if (delCurStep === 2) delStep(1); else closeModalById('delBackdrop'); }
 function delStep(n){
+  delCurStep = n; const bk = document.getElementById('delBackBtn'); if (bk) bk.classList.toggle('hidden', n === 3);
   [1,2,3].forEach(i => { document.getElementById('delStep' + i).style.display = (i === n) ? '' : 'none'; document.getElementById('delDot' + i).classList.toggle('on', i <= n); });
   if (n === 2){ const w = document.getElementById('delWord'); w.value = ''; setTimeout(() => w.focus(), 50); }
 }
