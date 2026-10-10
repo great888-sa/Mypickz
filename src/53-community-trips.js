@@ -150,7 +150,7 @@ function mpSheet(o){
   const alt = el('sheetAlt'); alt.style.display = o.alt ? '' : 'none'; alt.textContent = o.alt || '·';
   el('sheetCancel').textContent = o.cancel || 'Cancel';
   const inp = el('sheetInput'); __sheetHasInput = !!o.input; inp.style.display = o.input ? '' : 'none'; inp.value = (o.input && o.input.value) || ''; inp.placeholder = (o.input && o.input.placeholder) || '';
-  el('sheetCard').style.transform = ''; el('sheetBackdrop').classList.add('show');
+  el('sheetCard').style.transform = ''; el('sheetBackdrop').classList.add('show'); sheetLift();
   if (o.input) setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(_){} }, 30);
   return new Promise(function(res){ __sheetResolve = res; });
 }
@@ -159,6 +159,11 @@ function sheetDone(v){
   const out = (v === 'ok' && __sheetHasInput) ? document.getElementById('sheetInput').value : v;
   document.getElementById('sheetBackdrop').classList.remove('show');
   if (r) r(out);
+}
+function sheetLift(){ /* ملاحظة المالك ١٠-١٠ (Safari): الأشرطة السفلية الثابتة (الشريط الخمسي · شريط التوقيت بنسخة الاختبار · شريط الرحلة النشطة) تُرسم فوق الورقة على Safari فتحجب أسفلها — الورقة تقيسها وتستقر فوق أعلاها أيًّا كان ترتيب الرسم */
+  const card = document.getElementById('sheetCard'); if (!card) return; const H = window.innerHeight || 0; let lift = 0;
+  ['mpTabbar', 'mpTimingBox', 'activeTripBar'].forEach(function(id){ const b = document.getElementById(id); if (!b || !b.getBoundingClientRect) return; const cs = window.getComputedStyle ? window.getComputedStyle(b) : null; if (cs && (cs.display === 'none' || cs.visibility === 'hidden')) return; const r = b.getBoundingClientRect(); if (!r.height) return; lift = Math.max(lift, H - r.top); });
+  const on = lift > 0 && lift < H * 0.6; card.style.marginBottom = on ? Math.round(lift) + 'px' : ''; card.classList.toggle('lifted', on);
 }
 function sheetBackdropTap(ev){ if (ev && ev.target && ev.target.id === 'sheetBackdrop') sheetDone(null); }
 function sheetKey(ev){ if (!ev) return; if (ev.key === 'Enter'){ ev.preventDefault(); sheetDone('ok'); } else if (ev.key === 'Escape'){ sheetDone(null); } }
