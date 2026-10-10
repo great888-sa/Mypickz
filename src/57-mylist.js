@@ -218,7 +218,7 @@ async function addMyListCity(){
   // ر٧٠ب: منع التكرار بالمفتاح المطبَّع (الطبقة ٢) ثم «هل تقصد؟» بالتقارب داخل الدولة نفسها (الطبقة ٣ — ق٠٩-١٠-٠٢)
   const inSameCountry = myListAllCities().filter(c => c.country.toLowerCase() === country.trim().toLowerCase());
   let existing = inSameCountry.find(c => pickerNormalize(c.name) === pickerNormalize(name));
-  if (!existing){ const near = pickerNearest(name, inSameCountry); if (near && confirm('Did you mean ' + near.name + '? OK to use it, Cancel to add "' + name.trim() + '" as a new city.')) existing = near; }
+  if (!existing){ const near = pickerNearest(name, inSameCountry); if (near){ const pick = await mpSheet({ title: 'Did you mean ' + near.name + '?', text: 'You already have ' + near.name + ' in ' + country.trim() + '.', ok: 'Use ' + near.name, alt: 'Add "' + name.trim() + '" as a new city' }); if (pick === null) return; if (pick === 'ok') existing = near; } } /* ب-٢-٢-أ٢: ورقة بزرّين بدل confirm */
   let id = existing ? existing.id : null;
   if (!id){
     const __row = await gazFindCity(country.trim(), name); // ز-١-ج-٢: المعجم وحده — لا مدينة يدوية
@@ -238,7 +238,7 @@ async function removeMyListCity(cityId, opts){
   if (pendingCity && pendingCity.id === cityId){ pendingCity = null; showToast('City removed'); return; } // معلقة: تتبخر بلا أثر
   const city = (userListData.customCities || []).find(c => c.id === cityId);
   if (!city) return; // حماية: يسمح فقط بحذف المدن اللي أضافها المستخدم نفسه
-  if (!(opts && opts.confirmed) && !confirm(`Delete "${escapeHtml(city.name)}" and any places saved under it? This cannot be undone.`)) return;
+  if (!(opts && opts.confirmed) && !(await mpConfirm('Any places saved under it will be lost. This cannot be undone.', { title: '🗑 Delete "' + city.name + '"?', ok: 'Delete city', danger: true }))) return; /* ب-٢-٢-أ٢ */
   userListData.customCities = (userListData.customCities || []).filter(c => c.id !== cityId);
   try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){} // خ٥/م٢-ب: عبر النواة
   if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
