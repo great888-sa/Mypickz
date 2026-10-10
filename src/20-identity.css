@@ -275,7 +275,7 @@
   .modal.night .hdr .bk,.modal.night .hdr .x{background:var(--surf); border-color:var(--line-night); color:var(--ivory-bright);}
   .gsec{color:var(--ink-strong);} .modal.night .gsec{background:var(--bar); color:var(--night-3);}
   .sdays i{background:var(--saffron);} .admtile .d{color:var(--copper);} .ps .num{color:var(--copper);}
-  .sheet{background:var(--ivory); color:var(--ink); box-shadow:0 -10px 30px rgba(0,0,0,.5);} .sheet .grip{background:var(--line-ivory);} .sheet h4{color:var(--ink);} .sheet .sheet-txt{background:var(--ivory); color:var(--ink-strong);} .sheet .btn-ghost{color:var(--ink); border-color:var(--line-ivory);} .sheet .sheet-cancel{border-color:transparent; color:var(--ink-strong);} /* ب-٢-٢-أ٢: الورقة السفلية عاجية كالنوافذ */
+  .sheet{background:var(--ivory); color:var(--ink); box-shadow:0 -10px 30px rgba(0,0,0,.5);} .sheet .grip{background:var(--line-ivory);} .sheet h4{color:var(--ink);} .sheet .sheet-txt{background:var(--ivory); color:var(--ink-strong);} .sheet .btn-ghost{color:var(--ink); border-color:var(--line-ivory);} .sheet .sheet-cancel{border-color:var(--line-ivory); color:var(--ink);} /* ب-٢-٢-أ٢: الورقة السفلية عاجية كالنوافذ */
 
   .rowacts .act.on,.acts .act.on,.pl-acts .act.on,.headgrid .actn.on,#plPublicBtn.on,#plShareBtn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} /* ر٦٩ث (N-058): الزرّان المضاءان يغلبان قواعد الصف */
 
