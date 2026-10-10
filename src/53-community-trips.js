@@ -137,6 +137,41 @@ let __dashBack = null; /* ب-٢-٢-أ: معالج Back الحالي لنافذة
 function dashSet(title, backFn){ const t = document.getElementById('dashTitle'); if (t) t.textContent = title || ''; __dashBack = (typeof backFn === 'function') ? backFn : null; const b = document.getElementById('dashBackBtn'); if (b) b.classList.toggle('hidden', !__dashBack); }
 function dashBack(){ const f = __dashBack; if (f) f(); else closeModalById('dashBackdrop'); }
 
+/* ب-٢-٢-أ٢ (القرار ١ من ٦): الورقة السفلية — بديل confirm()/prompt() المتصفح. mpSheet(o) يعيد وعدًا: 'ok' للفعل الأساسي · 'alt' للبديل الاختياري · null للإلغاء (زر Cancel أو النقر خارجها أو السحب لأسفل).
+   o = { title, text, ok, alt, cancel, danger, input: { value, placeholder } } — مع input يعيد النص المكتوب بدل 'ok'. المحاكي يجيب عبر window.__mpSheetAuto(o) بلا رسم (كما __geoAuto). */
+let __sheetResolve = null, __sheetHasInput = false, __sheetTouchY = null;
+function mpSheet(o){
+  o = o || {};
+  if (typeof window.__mpSheetAuto === 'function') return Promise.resolve(window.__mpSheetAuto(o));
+  if (__sheetResolve) sheetDone(null);
+  const el = function(id){ return document.getElementById(id); };
+  el('sheetTitle').textContent = o.title || ''; el('sheetText').textContent = o.text || ''; el('sheetText').style.display = o.text ? '' : 'none';
+  const ok = el('sheetOk'); ok.textContent = o.ok || 'OK'; ok.classList.toggle('btn-danger', !!o.danger); ok.classList.toggle('btn-brass', !o.danger);
+  const alt = el('sheetAlt'); alt.style.display = o.alt ? '' : 'none'; alt.textContent = o.alt || '·';
+  el('sheetCancel').textContent = o.cancel || 'Cancel';
+  const inp = el('sheetInput'); __sheetHasInput = !!o.input; inp.style.display = o.input ? '' : 'none'; inp.value = (o.input && o.input.value) || ''; inp.placeholder = (o.input && o.input.placeholder) || '';
+  el('sheetCard').style.transform = ''; el('sheetBackdrop').classList.add('show');
+  if (o.input) setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(_){} }, 30);
+  return new Promise(function(res){ __sheetResolve = res; });
+}
+function sheetDone(v){
+  const r = __sheetResolve; __sheetResolve = null;
+  const out = (v === 'ok' && __sheetHasInput) ? document.getElementById('sheetInput').value : v;
+  document.getElementById('sheetBackdrop').classList.remove('show');
+  if (r) r(out);
+}
+function sheetBackdropTap(ev){ if (ev && ev.target && ev.target.id === 'sheetBackdrop') sheetDone(null); }
+function sheetKey(ev){ if (!ev) return; if (ev.key === 'Enter'){ ev.preventDefault(); sheetDone('ok'); } else if (ev.key === 'Escape'){ sheetDone(null); } }
+function sheetTouch(ev, phase){ /* السحب لأسفل أكثر من ٧٠ بكسل = إلغاء؛ الورقة تتبع الإصبع */
+  const card = document.getElementById('sheetCard'); const t = ev && ev.touches && ev.touches[0];
+  if (phase === 'start'){ __sheetTouchY = t ? t.clientY : null; return; }
+  if (__sheetTouchY === null) return;
+  if (phase === 'move'){ const dy = t ? t.clientY - __sheetTouchY : 0; if (dy > 0){ card.style.transform = 'translateY(' + dy + 'px)'; } return; }
+  const m = card.style.transform.match(/translateY\((\d+(?:\.\d+)?)px\)/); const dy = m ? parseFloat(m[1]) : 0; __sheetTouchY = null; card.style.transform = '';
+  if (dy > 70) sheetDone(null);
+}
+function mpConfirm(text, o){ return mpSheet(Object.assign({ title: 'Are you sure?', text: text }, o || {})).then(function(v){ return v === 'ok'; }); } /* بديل confirm() بسطر واحد: يعيد true/false */
+
 // خ١-ب: الوجهة الافتراضية (المشهد ٥) — تُحفظ بمستند المستخدم، والتطبيق يفتح عليها
 const HOME_TABS = ['Places','Trips','Community','Curators','Addresses'];
 let pendingHome = 'Places';
