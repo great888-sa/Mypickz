@@ -654,6 +654,7 @@ function finish(){
   slashCommentGuard(TEST, test);
   buildGuard();
   statsKeysGuard(TEST, test);
+  dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
   process.exit(fails === 0 ? 0 : 1);
 }
@@ -759,4 +760,18 @@ function statsKeysGuard(label, s){
   const inner = (code.match(/function statsPlaceList\([\s\S]*?\n  \}/) || [''])[0]; for (const k of ['trip_add', 'open_total']){ n++; if (!(white('stats_places') || new Set()).has(k)) bad.push('statsPlaceList writes ' + k + ' not in stats_places whitelist'); }
   console.log('INFO  ' + T + 'stats keys checked at call sites = ' + n);
   check(bad.length === 0, T + 'every stats key written by the app is in its rules whitelist', bad.slice(0, 6).join(' | '));
+}
+
+// ---------- §25 (ب-٢-٢-أ٢ · القرار ١ من ٦ وملاحظة المالك ١٠ أكتوبر): لا حوارات متصفح خام ولا وسم عبر textContent ----------
+// (أ) confirm()/prompt()/alert() المتصفح خرجت كلها إلى الورقة السفلية داخل التطبيق (mpSheet/mpConfirm) — أي عودة لها تُرفض.
+// (ب) textContent = '…<span…' يعرض الوسم نصًّا (ظهر «<SPAN CLASS="ARR">» في More/Less والدرج) — الوسم يُكتب بـ innerHTML أو يُكتب النص وحده.
+function dialogGuard(label, s){
+  const T = '§25 ' + label + ': ';
+  const code = s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1');
+  const dialogs = []; for (const m of code.matchAll(/(^|[^\w$])(confirm|prompt|alert)\(/g)) dialogs.push((code.slice(0, m.index).split('\n').length) + ': ' + m[2] + '(');
+  check(dialogs.length === 0, T + 'no raw browser dialogs (confirm/prompt/alert) — the in-app sheet mpSheet/mpConfirm only', dialogs.slice(0, 6).join(' | '));
+  const markup = []; for (const m of code.matchAll(/textContent\s*=\s*[^;\n]*<[a-z]/g)) markup.push((code.slice(0, m.index).split('\n').length) + ': ' + m[0].slice(0, 60));
+  check(markup.length === 0, T + 'no markup assigned through textContent (it renders as literal text)', markup.slice(0, 6).join(' | '));
+  const sheet = /function mpSheet\(o\)\{/.test(s) && /id="sheetBackdrop"/.test(s) && /function sheetDone\(v\)\{/.test(s);
+  check(sheet, T + 'the in-app sheet exists (mpSheet · sheetDone · #sheetBackdrop)');
 }
