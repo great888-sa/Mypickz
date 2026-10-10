@@ -124,6 +124,7 @@ function openFromDrawer(openFn){
   closeAccountModal();
   try{ openFn(); }catch(e){ return; }
   const opened = Array.from(document.querySelectorAll('.modal-backdrop.show')).find(b => !before.has(b));
+  if (opened && opened.id === 'dashBackdrop' && !__dashBack){ const t = document.getElementById('dashTitle'); dashSet(t ? t.textContent : '', function(){ closeModalById('dashBackdrop'); }); } /* ب-٢-٢-أ (ملاحظة المالك): ما فُتح من الدرج مباشرة يحمل Back إليه — الإغلاق بلا علم ✕ يعيد فتح الدرج عبر المراقب أدناه */
   if (!opened || !window.MutationObserver) return;
   const obs = new MutationObserver(function(){
     if (!opened.classList.contains('show')){ obs.disconnect(); if (window.__mpNoReopen){ window.__mpNoReopen = false; return; } if (currentUser) openAccountModal(); } /* ب-٢-٢-أ: ✕ يغلق كل الطبقات بلا عودة للدرج؛ Back وحده يعود إليه */
