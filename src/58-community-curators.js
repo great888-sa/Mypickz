@@ -545,12 +545,46 @@ async function openMyStats(uid){
   if (isCur && !msHasAny(days)) h += '<div class="mp-empty mini">Reach is counted from this release on — numbers appear from the first day, growth from the eighth</div>';
   body.innerHTML = h;
 }
-async function openCuratorRequest(){ // r72p (٣): طلب واحد لكل حساب — بنص قصير
-  if (!currentUser) return; let r = null; try{ r = await mpData.requests.mine(currentUser.uid); }catch(e){}
-  if (r){ showToast('Your request is ' + (r.status || 'pending')); return; }
-  const text = await openInputModal('Become a curator', 'Tell us briefly why (≤ 300)', '', null, { allowFree: true }); if (text === null) return;
-  try{ await mpData.requests.create(currentUser.uid, String(text || '').slice(0, 300)); }catch(e){ mpSwallow(e, 'request'); showToast('Could not send · ' + ((e && e.code) || 'error')); return; }
-  showToast('Request sent — pending'); const el = document.getElementById('drCuratorStatus'); if (el) el.textContent = 'Pending ›'; /* ب-٢-٢-أ: الحالة ببند الدرج */
+/* ب-٢-٢-أ٢ (المسودة v3 · ٧): Become a curator نافذة مسماة بالقشرة الليلية — شرح مختصر · بلاطتا المحتوى العام · حقل السبب ≤ ٣٠٠ بعدّاد · الحالة بعد الإرسال في المكان نفسه (Pending · Accepted · Declined) */
+async function openCuratorRequest(){
+  if (!currentUser){ openAuthModal(); return; }
+  const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
+  dashSet('⭐ Become a curator', null); body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; bd.classList.add('show');
+  let r = null, nL = 0, nT = 0; try{ const x = await Promise.all([mpData.requests.mine(currentUser.uid).catch(function(){ return null; }), mpData.cityLists.byOwner(currentUser.uid), mpData.trips.byOwner(currentUser.uid)]); r = x[0]; x[1].forEach(function(d){ const v = d.data() || {}; if (v.public === true) nL++; }); x[2].forEach(function(d){ const v = d.data() || {}; if (!v.source && v.public === true) nT++; }); }catch(e){ mpSwallow(e, 'curator request'); }
+  let h = '<div class="ctx">A curator\'s page is a showcase of their favorites on top of their ordinary lists. The badge means a space, not a rating. Curators are invited by MyPickz or apply here.</div>'
+    + '<div class="admtiles" style="grid-template-columns:1fr 1fr;"><div class="admtile"><b>' + nL + '</b><span>public lists</span></div><div class="admtile"><b>' + nT + '</b><span>public trips</span></div></div>';
+  if (r){ const st = String(r.status || 'pending'); const when = r.at ? new Date(r.at).toISOString().slice(0, 10) : ''; h += '<div class="dash-door plain"><span>' + (st === 'accepted' ? '✓ Accepted — your badge is on' : st === 'declined' ? 'Request declined' : 'Request sent · Pending') + '</span><span class="num">' + (when ? 'since ' + msDayLabel(when) : '') + '</span></div><div class="ctx">' + (st === 'pending' ? 'We\'ll notify you here.' : st === 'accepted' ? 'Your curator page is live.' : 'You can ask again later.') + '</div>'; }
+  else { h += '<label class="flabel">Tell us briefly why <span class="dim" id="curReqCount">· 0/300</span></label><textarea id="curReqText" class="modal-input" rows="3" maxlength="300" placeholder="e.g. I document the cafés of Jeddah with what to order…" oninput="document.getElementById(\'curReqCount\').textContent = \'· \' + this.value.length + \'/300\';"></textarea><button type="button" class="btn btn-brass wide" style="margin-top:12px;" id="curReqSend" onclick="sendCuratorRequest()">Send request</button>'; }
+  body.innerHTML = h;
+}
+async function sendCuratorRequest(){
+  const ta = document.getElementById('curReqText'); const text = String((ta && ta.value) || '').trim().slice(0, 300); if (!text){ showToast('Tell us briefly why'); return; }
+  const btn = document.getElementById('curReqSend'); if (btn) btn.disabled = true;
+  try{ await mpData.requests.create(currentUser.uid, text); }catch(e){ mpSwallow(e, 'request'); showToast('Could not send · ' + ((e && e.code) || 'error')); if (btn) btn.disabled = false; return; }
+  showToast('Request sent — pending'); const el = document.getElementById('drCuratorStatus'); if (el) el.textContent = 'Pending ›'; /* الحالة ببند الدرج */
+  openCuratorRequest();
+}
+/* ب-٢-٢-أ٢ (المسودة v3 · ١٥): Report a problem نافذة مسماة — نوع المشكلة شرائح (يُخزَّن داخل النص لا حقلًا جديدًا بالقواعد) · الوصف ≤ ٢٠٠ بعدّاد · الشاشة الحالية ورقم البناء يُرفقان داخل النص */
+let reportKind = 'broke';
+function reportPickKind(k){ reportKind = k; document.querySelectorAll('#repKinds .chip').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-k') === k); }); }
+function reportAppProblem(){
+  if (!currentUser){ openAuthModal(); return; }
+  const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
+  reportKind = 'broke'; const build = String(window.__mpBuild || '').replace('M2-ID-', '') || 'test';
+  dashSet('⚑ Report a problem', null);
+  body.innerHTML = '<label class="flabel">What kind?</label><div class="chiprow" id="repKinds" style="flex-wrap:wrap;">' + [['broke', 'Something broke'], ['data', 'Wrong data'], ['idea', 'Suggestion'], ['other', 'Other']].map(function(t){ return '<button type="button" class="chip' + (t[0] === 'broke' ? ' on' : '') + '" data-k="' + t[0] + '" onclick="reportPickKind(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>'
+    + '<label class="flabel">What went wrong? <span class="dim" id="repCount">· 0/200</span></label><textarea id="repText" class="modal-input" rows="3" maxlength="200" placeholder="e.g. The map did not open after pasting a link…" oninput="document.getElementById(\'repCount\').textContent = \'· \' + this.value.length + \'/200\';"></textarea>'
+    + '<div class="ctx">We attach: screen «' + escapeHtml(currentTab || 'Places') + '» · build ' + escapeHtml(build) + ' · no personal data.</div>'
+    + '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="dashBack()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" id="repSend" onclick="sendAppReport()">Send report</button></div>';
+  bd.classList.add('show');
+}
+async function sendAppReport(){
+  const ta = document.getElementById('repText'); const text = String((ta && ta.value) || '').trim().slice(0, 200); if (!text){ showToast('Please describe the problem'); return; }
+  const kinds = { broke: 'Something broke', data: 'Wrong data', idea: 'Suggestion', other: 'Other' }; const build = String(window.__mpBuild || '').replace('M2-ID-', '') || 'test';
+  const reason = '[' + (kinds[reportKind] || 'Other') + ' · ' + (currentTab || 'Places') + ' · ' + build + '] ' + text;
+  const btn = document.getElementById('repSend'); if (btn) btn.disabled = true;
+  try{ await mpData.reports.create(currentUser.uid, 'app', '', reason.slice(0, 260)); }catch(e){ mpSwallow(e, 'report'); showToast('Could not report · ' + ((e && e.code) || 'error')); if (btn) btn.disabled = false; return; }
+  showToast('Thanks — we will look into it'); dashBack();
 }
 let vcuStep = ''; // ر٧٢-أ-٢ز: آخر مرحلة بلغها فتح طبقة الشخص (للتشخيص على الجهاز)
 async function viewCommunityUser(uid){
