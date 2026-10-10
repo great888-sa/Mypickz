@@ -470,7 +470,7 @@ async function resendVerification(){ // r72p (١٠): نداء واحد لخدم�
   try{ await mpData.auth.sendVerification(); showToast('Verification email sent — check your inbox'); }catch(e){ mpSwallow(e, 'verify'); showToast('Could not send · ' + ((e && e.code) || 'error')); }
 }
 function drToggleComing(){ const el = document.getElementById('drComing'), ar = document.getElementById('drComingArrow'); if (!el) return; const open = el.style.display === 'none'; el.style.display = open ? '' : 'none'; if (ar) ar.textContent = open ? '⌃' : '⌄'; } /* ر٧٣-أب (٢): المؤجَّل مجمَّع لا مبعثر */
-function drToggleAccount(){ const el = document.getElementById('drAccount'); const on = el.style.display === 'none'; el.style.display = on ? '' : 'none'; const ar = document.getElementById('drAccArrow'); if (ar) ar.textContent = on ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>'; }
+function drToggleAccount(){ const el = document.getElementById('drAccount'); const on = el.style.display === 'none'; el.style.display = on ? '' : 'none'; const ar = document.getElementById('drAccArrow'); if (ar) ar.textContent = on ? '⌃' : '⌄'; } /* ب-٢-٢-أ٢ (ملاحظة المالك ١٠-١٠): السهم نصّ لا وسم */
 function drSyncCurator(){ // ب-٢-٢-أ: الشارة بترويسة الدرج للمنتقي (البند يختفي)؛ لغيره «⭐ Become a curator» بحالته (Request · Pending · Accepted · Declined)
   const item = document.getElementById('drCuratorItem'); const av = document.getElementById('accountName'); if (!item) return;
   const me = !!(currentUser && ((curators || []).some(function(c){ return c.uid === currentUser.uid; }) || (userListData && userListData.curatorSelf)));
