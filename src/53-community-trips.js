@@ -63,29 +63,25 @@ function renderCommunityTripDetail(wrap){
   wrap.innerHTML = html;
 }
 
+/* ب-٢-٢-ب (v2-ب · ٧): Most saved داخل القشرة — مبدّل Places (placeFavoriteCounts أعلى ٣٠) / Lists (copyCount من فهرس السوق القائم) · الرتبة بدائرة زعفرانية · Back إلى اللوحة */
+let mostSavedTab = 'places';
+function mostSavedPick(t){ mostSavedTab = t; openMostSavedStats(); }
 async function openMostSavedStats(){
-  const list = document.getElementById('statsList');
-  list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">Loading...</p>`;
-  document.getElementById('statsBackdrop').classList.add('show');
+  const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
+  dashSet('📊 Most saved', adminBack); bd.classList.add('show');
+  const seg = '<div class="pseg"><button type="button" class="chip' + (mostSavedTab === 'places' ? ' on' : '') + '" onclick="mostSavedPick(\'places\')">Places</button><button type="button" class="chip' + (mostSavedTab === 'lists' ? ' on' : '') + '" onclick="mostSavedPick(\'lists\')">Lists</button></div><div class="ctx" style="text-align:center;">all cities · top 30</div>';
+  body.innerHTML = seg + '<div class="mp-empty mini">Loading…</div>';
   try{
-    // v1.40: هجرة انتهازية — القراءة عبر النواة (placeFavoriteCounts = عدّاد الحفظ)
-    const rows = await mpData.placeCounts.top(30);
-    if (!rows.length){
-      list.innerHTML = `<p style="color:var(--ink-soft); font-size:12px; text-align:center;">No saves recorded yet</p>`;
+    let rowsHtml = '';
+    if (mostSavedTab === 'places'){
+      const rows = await mpData.placeCounts.top(30); // v1.40: placeFavoriteCounts = عدّاد الحفظ
+      rowsHtml = rows.length ? rows.map(function(d, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span><a href="' + attrStr(d.url || '#') + '" target="_blank" rel="noopener" class="stats-name">' + escapeHtml(d.name || '') + '</a></div><div class="pl-sub">' + (d.count || 0) + ' save' + (d.count === 1 ? '' : 's') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No saves recorded yet</div>';
     } else {
-      list.innerHTML = rows.map((d, i) => `
-        <div class="stats-row">
-          <span class="stats-rank">${i+1}</span>
-          <a href="${d.url}" target="_blank" rel="noopener" class="stats-name">${d.name}</a>
-          <span class="stats-count">${d.count} saves</span>
-        </div>`).join('');
+      const rows = (await mpData.cityLists.publicLists()).filter(function(l){ return (l.copyCount || 0) > 0; }).sort(function(a, b){ return (b.copyCount || 0) - (a.copyCount || 0); }).slice(0, 30);
+      rowsHtml = rows.length ? rows.map(function(l, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span>' + escapeHtml(l.cityName || l.cityId || '') + '</div><div class="pl-sub">' + (l.copyCount || 0) + ' cop' + (l.copyCount === 1 ? 'y' : 'ies') + (l.nickname ? ' · by ' + escapeHtml(l.nickname) : '') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No copies recorded yet</div>';
     }
-  }catch(e){
-    list.innerHTML = `<p style="color:var(--danger); font-size:12px; text-align:center;">Could not load statistics</p>`;
-  }
-}
-function closeStatsModal(){
-  document.getElementById('statsBackdrop').classList.remove('show');
+    body.innerHTML = seg + rowsHtml;
+  }catch(e){ mpSwallow(e, 'most saved'); body.innerHTML = seg + '<div class="mp-empty mini">Could not load statistics</div><button type="button" class="dash-door" onclick="openMostSavedStats()"><span>↻ Retry</span><span></span></button>'; }
 }
 
 // خ١-ب: البوابة (المشهد ١) تسبق نافذة الدخول/التسجيل (المشهد ٢) — النافذة موحَّدة (قرار المالك: الاسم داخلها)، والعنوان بحسب الزر
