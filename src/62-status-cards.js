@@ -6,18 +6,17 @@
 const PULSE_STATUS_URL = 'https://pulse.mypickz.app/status';
 const PULSE_STALE_MS = 2 * 60 * 60 * 1000;
 
+/* ب-٢-٢-ب (v2-ب · ٨): System status داخل القشرة — بطاقات بصنف واحد (admcard) · بطاقة Rules · زر تحديث · Back إلى اللوحة */
 async function openSystemStatusModal(){
   if (!isOwner) return;
-  const body = document.getElementById('systemStatusBody');
-  body.innerHTML = '<div style="text-align:center; color:var(--ink-soft);">Loading pulse…</div>';
-  document.getElementById('systemStatusBackdrop').classList.add('show');
-  body.innerHTML = await renderPulseCard();
-  body.innerHTML += await renderMpErrorsCard();
-  body.innerHTML += await renderMpEventsCard();
+  const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
+  dashSet('🩺 System status', adminBack); body.innerHTML = '<div class="mp-empty mini">Loading pulse…</div>'; bd.classList.add('show');
+  let h = await renderPulseCard(); h += await renderMpErrorsCard(); h += await renderMpEventsCard(); h += await renderRulesCard();
+  body.innerHTML = '<button type="button" class="btn btn-ghost wide" style="margin:0 0 10px;" onclick="openSystemStatusModal()">↻ Refresh</button>' + h;
 }
-function closeSystemStatusModal(){
-  document.getElementById('systemStatusBackdrop').classList.remove('show');
-}
+async function renderRulesCard(){ try{ const rv = await checkRulesVersion(); return mpCardHtml(rv.ok ? '🟢' : '🔴', 'Rules ' + rv.live + (rv.ok ? ' · matches app' : ' · app expects ' + EXPECTED_RULES), ['expected ' + EXPECTED_RULES + ' · set in settings/app after each publish']); }catch(e){ return mpCardHtml('⚪', 'Rules: unavailable', ['Could not read settings/app']); } }
+async function pulseFetch(ms){ try{ const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), ms || 5000); const res = await fetch(PULSE_STATUS_URL, { cache: 'no-store', signal: ctrl.signal }); clearTimeout(timer); return res.ok ? await res.json() : null; }catch(e){ return null; } }
+async function pulseSummary(){ /* سطر قصير لباب اللوحة */ const data = await pulseFetch(3000); if (!data || !data.at) return '⚪ pulse unavailable'; const age = Date.now() - new Date(data.at).getTime(); if (age > PULSE_STALE_MS) return '🔴 no check ' + pulseAgo(age); return (data.ok ? '🟢' : '🔴') + ' pulse ' + pulseAgo(age); }
 function pulseAgo(ms){
   if (ms < 60000) return Math.round(ms / 1000) + 's ago';
   if (ms < 3600000) return Math.round(ms / 60000) + 'm ago';
@@ -25,18 +24,7 @@ function pulseAgo(ms){
   return (ms / 86400000).toFixed(1) + 'd ago';
 }
 async function renderPulseCard(){
-  let data = null;
-  try{
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 5000);
-    const res = await fetch(PULSE_STATUS_URL, { cache: 'no-store', signal: ctrl.signal });
-    clearTimeout(timer);
-    if (res.ok) data = await res.json();
-  }catch(e){ data = null; }
-  const card = (dot, title, lines) => `<div style="border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:10px; background:var(--card);">
-      <div style="font-weight:700;">${dot} ${escapeHtml(title)}</div>
-      ${lines.map(l => `<div style="color:var(--ink-soft); font-size:11.5px; text-align:left;">${escapeHtml(l)}</div>`).join('')}
-    </div>`;
+  const data = await pulseFetch(5000); const card = mpCardHtml;
   if (!data) return card('⚪', 'Pulse: unavailable', ['Could not reach pulse.mypickz.app/status', 'Check the pulse worker deployment.']);
   if (!data.at) return card('⚪', 'Pulse: no check recorded yet', ['The hourly monitor has not run yet.']);
   const age = Date.now() - new Date(data.at).getTime();
@@ -48,11 +36,8 @@ async function renderPulseCard(){
 
 
 /* ===== أ-٣ الطبقة ٣-أ: بطاقتا القياس بنافذة System Status (قراءة عند الفتح فقط، للمالك) ===== */
-function mpCardHtml(dot, title, cardLines){
-  return `<div style="border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; margin-top:10px; background:var(--card); font-size:12.5px;">
-      <div style="font-weight:700;">${dot} ${escapeHtml(title)}</div>
-      ${cardLines.map(l => `<div style="color:var(--ink-soft); font-size:11.5px; text-align:left;">${escapeHtml(l)}</div>`).join('')}
-    </div>`;
+function mpCardHtml(dot, title, cardLines){ /* ب-٢-٢-ب: بطاقة بصنف واحد بدل الأنماط الداخلية */
+  return '<div class="admcard"><div class="pn">' + dot + ' ' + escapeHtml(title) + '</div>' + cardLines.map(l => '<div class="pl-sub">' + escapeHtml(l) + '</div>').join('') + '</div>';
 }
 async function renderMpErrorsCard(){
   try{
@@ -93,19 +78,18 @@ function renderAdminStats(){ // ر٧٢-أ-١ (إعادة البناء): بلاط
   const line = document.getElementById('adminLine'); if (line) line.textContent = 'Used My List ' + d.usedMyList + ' · Bookmarked something ' + d.usedBookmarks;
   const uc = document.getElementById('adminUsersCount'); if (uc) uc.textContent = d.total + ' ›';
 }
-function renderUsersModal(query){
+function renderUsersModal(query){ /* ب-٢-٢-ب (v2-ب · ٢): الصف بلا أزرار — النقر يفتح بطاقة المستخدم · Show more بعد ٥٠ */
   const d = adminStatsData();
-  const ctx = document.getElementById('usersCtx'); if (ctx) ctx.innerHTML = '<b>Users</b> · ' + d.total + ' registered · ' + d.publicCount + ' public · ' + d.curatorSet.size + (d.curatorSet.size === 1 ? ' curator' : ' curators');
+  const ctx = document.getElementById('usersCtx'); if (ctx) ctx.innerHTML = '<b>' + d.total + '</b> registered · ' + d.publicCount + ' public · ' + d.curatorSet.size + (d.curatorSet.size === 1 ? ' curator' : ' curators');
   const q = (query || '').trim().toLowerCase();
   const list = allUsersCache.filter(u => !q || (u.email || '').toLowerCase().includes(q) || (u.nickname || '').toLowerCase().includes(q)).sort((a, b) => (a.nickname || 'zz').localeCompare(b.nickname || 'zz'));
-  const wrap = document.getElementById('usersListBody');
-  if (!list.length){ wrap.innerHTML = '<div class="mp-empty mini">No users found</div>'; return; }
-  wrap.innerHTML = list.map(u => {
+  const wrap = document.getElementById('usersListBody'); if (!wrap) return;
+  if (!list.length){ wrap.innerHTML = '<div class="mp-empty mini">No users match</div>'; return; }
+  wrap.innerHTML = list.slice(0, adminUsersShown).map(u => {
     const isPublicNow = d.publicSet.has(u.uid); const isCur = d.curatorSet.has(u.uid);
     const badges = (isPublicNow ? '<span class="pl-flag ubadge">Public</span>' : '') + (isCur ? '<span class="curvb ubadge">✧ ' + CUR_BADGE + '</span>' : '') + (u.suspended ? '<span class="pl-flag ubadge danger">Suspended</span>' : '');
-    return '<div class="row rowblock urow"><div class="pn">' + (u.nickname ? escapeHtml(u.nickname) : '<span class="dim">(no nickname yet)</span>') + '</div><div class="pl-sub">' + escapeHtml(u.email || '') + '</div><div class="ubadges">' + badges + '</div>'
-      + '<div class="acts"><button type="button" class="actn' + (isCur ? ' on' : '') + '" onclick="toggleCuratorUser(\'' + attrStr(u.uid) + '\')">' + (isCur ? CUR_BADGE + ' ✓' : '＋ ' + CUR_BADGE) + '</button><button type="button" class="actn' + (u.suspended ? '' : ' danger') + '" onclick="toggleSuspendUser(\'' + attrStr(u.uid) + '\')">' + (u.suspended ? 'Unsuspend' : 'Suspend') + '</button></div></div>';
-  }).join('');
+    return '<button type="button" class="row rowblock urow" onclick="openAdminUserCard(\'' + attrStr(u.uid) + '\')"><div class="pn"><span class="curring" style="display:inline-flex; width:22px; height:22px; font-size:9px; margin-right:6px;">' + escapeHtml(curInitials({ nickname: u.nickname || '?' })) + '</span>' + (u.nickname ? escapeHtml(u.nickname) : '<span class="dim">(no nickname yet)</span>') + '</div><div class="pl-sub">' + escapeHtml(u.email || '') + '</div><div class="ubadges">' + badges + '</div></button>';
+  }).join('') + (list.length > adminUsersShown ? '<button type="button" class="dash-door ghost" onclick="adminUsersMore()"><span>Show more · ' + (list.length - adminUsersShown) + ' left</span><span></span></button>' : '');
 }
 async function toggleCuratorUser(uid){ // ر٧٢-أ-١ب: وسم المنتقي بيد المالك من التطبيق — الحقل القائم verified بالملف العام (M4.12)
   if (!isOwner) return;
@@ -117,51 +101,45 @@ async function toggleCuratorUser(uid){ // ر٧٢-أ-١ب: وسم المنتقي 
     if (isCur) curators = (curators || []).filter(function(c){ return c.uid !== uid; }); else curators = (curators || []).concat([{ uid: uid, nickname: u.nickname || '', verified: true, publicCityIds: (communityUsers.find(function(c){ return c.uid === uid; }) || {}).publicCityIds || [] }]);
     showToast(isCur ? 'Curator badge removed' : 'Marked as curator ✓');
   }catch(e){ showToast('Could not update — check your permissions'); }
-  renderUsersModal(document.getElementById('usersSearchInput').value);
+  openAdminUserCard(uid); /* ب-٢-٢-ب: البطاقة تتحدث في مكانها */
 }
+/* ب-٢-٢-ب (v2-ب · ٩): Users report بطاقة مقسَّمة بالأرقام نفسها · Copy as text بالصيغة النصية القائمة · Share بـmpSendText */
+let usersReportText = '';
 function generateUsersReport(){
-  const total = allUsersCache.length;
-  const publicSet = new Set(communityUsers.map(u => u.uid));
-  const publicCount = communityUsers.length;
-  const now = Date.now();
+  const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
+  const total = allUsersCache.length; const publicCount = communityUsers.length; const now = Date.now();
   const active7 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 7*24*60*60*1000).length;
   const active30 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 30*24*60*60*1000).length;
   const usedMyList = allUsersCache.filter(u => u.hasMyListActivity).length;
   const usedBookmarks = allUsersCache.filter(u => u.hasBookmarked).length;
   const suspendedCount = allUsersCache.filter(u => u.suspended).length;
-  const pct = (n) => total ? Math.round((n/total)*100) : 0;
-
-  const lines = [
-    `MyPickz — Users Report`,
-    `Generated: ${new Date().toLocaleString()}`,
-    ``,
-    `Total page visits: ${visitCount === null ? 'N/A' : visitCount}`,
-    `Total registered users: ${total}`,
-    `Active in last 7 days: ${active7} (${pct(active7)}%)`,
-    `Active in last 30 days: ${active30} (${pct(active30)}%)`,
-    `Used My List at least once: ${usedMyList} (${pct(usedMyList)}%)`,
-    `Bookmarked at least one place: ${usedBookmarks} (${pct(usedBookmarks)}%)`,
-    `Sharing publicly (Community Lists): ${publicCount} (${pct(publicCount)}%)`,
-    `Suspended accounts: ${suspendedCount}`,
-  ];
-  document.getElementById('reportTextArea').value = lines.join('\n');
-  document.getElementById('reportBackdrop').classList.add('show');
+  const curatorsCount = (curators || []).length;
+  const pct = (n) => total ? Math.round((n/total)*100) : 0; const when = new Date();
+  usersReportText = [
+    'MyPickz — Users Report', 'Generated: ' + when.toLocaleString(), '',
+    'Total page visits: ' + (visitCount === null ? 'N/A' : visitCount), 'Total registered users: ' + total,
+    'Active in last 7 days: ' + active7 + ' (' + pct(active7) + '%)', 'Active in last 30 days: ' + active30 + ' (' + pct(active30) + '%)',
+    'Used My List at least once: ' + usedMyList + ' (' + pct(usedMyList) + '%)', 'Bookmarked at least one place: ' + usedBookmarks + ' (' + pct(usedBookmarks) + '%)',
+    'Sharing publicly (Community Lists): ' + publicCount + ' (' + pct(publicCount) + '%)', 'Curators: ' + curatorsCount, 'Suspended accounts: ' + suspendedCount
+  ].join('\n');
+  const rowf = function(label, v){ return '<li><span>' + label + '</span><b>' + v + '</b></li>'; };
+  dashSet('📄 Users report', adminBack);
+  body.innerHTML = '<div class="ctx" style="text-align:center;">Generated · ' + escapeHtml(when.toLocaleString()) + '</div>'
+    + '<div class="gsec">Reach</div><div class="receipt"><ul>' + rowf('Total page visits', visitCount === null ? 'N/A' : visitCount) + rowf('Registered users', total) + '</ul></div>'
+    + '<div class="gsec">Activity</div><div class="receipt"><ul>' + rowf('Active · 7 days', active7 + ' · ' + pct(active7) + '%') + rowf('Active · 30 days', active30 + ' · ' + pct(active30) + '%') + rowf('Used My List at least once', usedMyList + ' · ' + pct(usedMyList) + '%') + rowf('Bookmarked at least one place', usedBookmarks + ' · ' + pct(usedBookmarks) + '%') + '</ul></div>'
+    + '<div class="gsec">Sharing & moderation</div><div class="receipt"><ul>' + rowf('Sharing publicly', publicCount + ' · ' + pct(publicCount) + '%') + rowf('Curators', curatorsCount) + rowf('Suspended accounts', suspendedCount) + '</ul></div>'
+    + '<div style="display:flex; gap:8px; margin-top:12px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="copyUsersReport()">📋 Copy as text</button><button type="button" class="btn btn-brass" style="flex:1" onclick="mpSendText(usersReportText)">📤 Share</button></div>';
+  bd.classList.add('show');
 }
-
 async function copyUsersReport(){
-  const text = document.getElementById('reportTextArea').value;
-  try{
-    await navigator.clipboard.writeText(text);
-    showToast('Report copied ✓');
-  }catch(e){
-    showToast('Could not copy — select and copy manually');
-  }
+  try{ await navigator.clipboard.writeText(usersReportText); showToast('Report copied ✓'); }catch(e){ showToast('Could not copy'); }
 }
 
 async function toggleSuspendUser(uid){
   const u = allUsersCache.find(x => x.uid === uid);
   if (!u) return;
   const newVal = !u.suspended;
+  if (newVal && !(await mpConfirm('Holds every public list and trip and the shared-by-name access. Unsuspend restores everything.', { title: '⛔ Suspend ' + (u.nickname || u.email || 'this user') + '?', ok: 'Suspend', danger: true }))) return; /* ب-٢-٢-ب: الإيقاف بورقة تأكيد */
   try{
     // v3: مصدر الحقيقة suspensions/{uid} — وجود المستند = إيقاف. users.suspended كتابة انتقالية (تُزال بدفعة ٢/ز).
     if (newVal) await mpData.suspensions.set(uid, { at: Date.now(), by: currentUser.uid, email: u.email || '' });
@@ -179,7 +157,7 @@ async function toggleSuspendUser(uid){
     u.suspended = newVal;
     showToast(newVal ? 'User suspended' : 'User unsuspended');
     await loadCommunityLists();
-    renderUsersModal(document.getElementById('usersSearchInput').value);
+    openAdminUserCard(uid); /* ب-٢-٢-ب */
   }catch(e){ showToast('Could not update user'); }
 }
 
