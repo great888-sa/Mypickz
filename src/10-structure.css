@@ -373,6 +373,16 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .sheet .btn{justify-content:center; padding:11px 18px; font-size:13.5px;}
   .sheet .btn.wide{margin-top:0; margin-bottom:8px;}
   .sheet .sheet-row{display:flex; gap:8px;} .sheet .sheet-row .btn{flex:1;}
+  /* ب-٢-٢-أ٢ (المسودة v3-ج): الدرج الليلي — بطاقة الملف بابٌ وفيها ✕ · التذييل روابط · المبدّل المقطعي للسياسات والمساعدة · عنوان الأعمدة */
+  .modal.drawer{display:flex; flex-direction:column; padding-top:12px; border-left-width:1px; border-left-style:solid;}
+  .acc-head.card{cursor:pointer; align-items:flex-start; padding:10px 10px 10px 12px; border:1.5px solid;} .acc-head .meta{flex:1; min-width:0;} .acc-sub{font-family:'Cairo',sans-serif; font-weight:800; font-size:10.5px; margin-top:3px;}
+  .acc-head .x{width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; border-width:1.5px; border-style:solid; font-weight:800; cursor:pointer; flex:none; font-family:inherit;}
+  .dr-foot{margin-top:auto; padding-top:10px; border-top:1px solid; display:flex; justify-content:space-between; align-items:center; font-size:11px;} .lnk{background:none; border:none; padding:0; font-family:'Cairo',sans-serif; font-weight:800; font-size:11px; cursor:pointer;}
+  .pseg{display:flex; gap:6px; margin:0 0 10px;} .pseg .chip{flex:1; justify-content:center; text-align:center;}
+  .ptext h3{text-align:center;} .ptext h4{font-family:'Cairo',sans-serif; margin:12px 0 4px; font-size:13px;} .ptext p,.ptext li{font-size:12.5px; line-height:1.7;} .ptext .pmeta{font-size:11px; text-align:center;}
+  .qrbox{display:flex; justify-content:center; padding:12px; border-radius:12px; margin:6px auto 0; width:fit-content;}
+  .dash-door.plain{cursor:default;} .dash-door .dsub{display:block; font-size:10.5px; font-weight:600; letter-spacing:0; margin-top:1px;} .dash-door .ok,.dash-door .no{font-weight:800;} .dash-door.danger{border-width:1px;}
+  .scap{display:flex; justify-content:space-between; font-size:10px; margin:6px 2px 0;} .sdays i.today{opacity:1;}
   .ownerchip{display:inline-flex; align-items:center; border-width:1.5px; border-style:solid; border-radius:999px; padding:3px 10px; font-size:11.5px; font-weight:700; text-decoration:none; cursor:pointer;} .pn .ownerchip{float:right; margin-left:6px;}
 </style>
 
