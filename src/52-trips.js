@@ -99,7 +99,6 @@ async function openReport(kind, docKey){ // r72p (٤): البلاغ — سبب �
   try{ await mpData.reports.create(currentUser.uid, kind, kind === 'app' ? '' : String(docKey).slice(0, 120), String(reason || '').slice(0, 200)); }catch(e){ mpSwallow(e, 'report'); showToast('Could not report · ' + ((e && e.code) || 'error')); return; }
   showToast(kind === 'app' ? 'Thanks — we will look into it' : 'Thanks — reported');
 }
-function reportAppProblem(){ openReport('app', ''); }
 async function removeMyTripCopy(srcTripId){ // r72n (٢): Saved ✓ ← تأكيد ← حذف نسختي (العدّاد على المصدر لا ينقص — بالعقد)
   const c = tripCopyOf(srcTripId); if (!c) return;
   const ok = await openConfirmModal('Remove your copy from My trips?', 'The original stays with its owner. Your edits on the copy are lost.'); if (!ok) return;
