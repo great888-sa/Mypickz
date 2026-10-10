@@ -509,11 +509,11 @@ function msDayLabel(d){ const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2}
 function msDaysHtml(days){ /* ب-٢-٢-أ٢ (ملاحظة المالك ١٠-١٠): عنوان فوق الأعمدة · تاريخا الطرفين تحتها · عمود اليوم بلون أغمق */
   const last = (days || []).slice(0, 14).reverse(); const max = Math.max(1, Math.max.apply(null, last.map(function(r){ return Number(r.page_view) || 0; }))); const n = last.length;
   return '<div class="scap"><span>Page views per day · last ' + n + ' days</span></div><div class="sdays">' + last.map(function(r, i){ const v = Number(r.page_view) || 0; return '<i' + (i === n - 1 ? ' class="today"' : '') + ' style="height:' + Math.max(4, Math.round(v / max * 100)) + '%" title="' + r.day + ' · ' + v + '"></i>'; }).join('') + '</div>' + (n ? '<div class="scap"><span>' + msDayLabel(last[0].day) + '</span><span>' + msDayLabel(last[n - 1].day) + ' · today</span></div>' : ''); }
-async function openMyStats(uid){
+async function openMyStats(uid, backFn){ /* ب-٢-٢-ب: للمالك backFn يعيد إلى قائمة المنتقين أو بطاقة المستخدم */
   if (!currentUser){ openAuthModal(); return; }
   const target = (typeof uid === 'string' && uid) ? uid : currentUser.uid; const asOwner = target !== currentUser.uid; if (asOwner && !isOwner) return;
   const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
-  dashSet('📊 My stats', asOwner ? function(){ openAdminPanel(); closeModalById('dashBackdrop'); } : null); /* ب-٢-٢-أ٢ (v3): من الدرج Back إليه عبر mpOpenThen */
+  dashSet('📊 My stats', asOwner ? (typeof backFn === 'function' ? backFn : adminBack) : null); /* ب-٢-٢-أ٢ (v3): من الدرج Back إليه عبر mpOpenThen · ب-٢-٢-ب: للمالك إلى من فتحها */
   body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; bd.classList.add('show');
   let prof = null, lists = [], trips = [];
   try{ const r = await Promise.all([mpData.profiles.get(target).catch(function(){ return null; }), mpData.cityLists.byOwner(target), mpData.trips.byOwner(target)]);
