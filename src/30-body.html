@@ -328,32 +328,25 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="reportBackdrop">
-    <div class="modal" style="max-width:460px;">
-      <h3 style="text-align:center;">📄 Users Report</h3>
-      <textarea id="reportTextArea" readonly style="width:100%; height:260px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:monospace; font-size:11.5px; text-align:left; background:var(--ivory-bright); color:var(--ink);"></textarea>
-      <button class="btn btn-brass" style="margin-top:10px;"  onclick="copyUsersReport()"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
-      <button class="btn btn-ghost" style="margin-top:8px;"  onclick="document.getElementById('reportBackdrop').classList.remove('show')">Close</button>
-    </div>
-  </div>
-
   <!-- ر٧٢-أ-١ (إعادة البناء): لوحة الإدارة بهيئة التطبيق — بلاطات ٢×٣ وأبواب تُفتح فوقها (لا إغلاق لها فلا يعود الدرج) -->
-  <div class="modal-backdrop" id="adminBackdrop">
+  <div class="modal-backdrop" id="adminBackdrop"><!-- ب-٢-٢-ب (المسودة v2-ب · ١): لوحة المالك — القشرة · البلاطات الست · ثلاث مجموعات (People · Content · System) · Rules سطرًا · النوافذ الفرعية كلها داخل dashBackdrop وتعود إليها بـBack -->
     <div class="modal night" style="max-width:460px;">
-      <div class="modal-topbar"><button class="btn btn-ghost" style="flex:1" onclick="closeModalById('adminBackdrop')">✕ Close</button></div>
-      <h3 style="text-align:center;">🛠 Admin panel</h3>
+      <div class="hdr"><button type="button" class="bk" onclick="closeModalById('adminBackdrop')">← Back</button><span class="ttl">🛠 Admin panel</span><button type="button" class="x" onclick="mpCloseAll('adminBackdrop')" aria-label="Close">✕</button></div>
       <div class="ctx" style="text-align:center;"><b>MyPickz at a glance</b> · owner</div>
       <div id="adminTiles" class="admtiles"></div>
       <div class="ctx" id="adminLine" style="text-align:center;"></div>
+      <div class="gsec">People</div>
       <button type="button" class="dash-door" onclick="openUsersModal()"><span>👥 Users</span><span id="adminUsersCount">›</span></button>
-      <button type="button" class="dash-door" onclick="openMostSavedStats()"><span>📊 Most saved places</span><span>›</span></button>
-      <button type="button" class="dash-door" onclick="openSystemStatusModal()"><span>🩺 System status</span><span>›</span></button>
-      <div class="ctx" id="adminRulesVer" style="text-align:center;">Rules: …</div>
-      <button type="button" class="dash-door" onclick="openAdminRequests()"><span>⭐ Requests</span><span id="adminReqCount">›</span></button>
+      <button type="button" class="dash-door" onclick="openAdminRequests()"><span>⭐ Curator requests</span><span id="adminReqCount">›</span></button>
+      <button type="button" class="dash-door" onclick="openAdminCuratorPicker()"><span>📊 Curator stats</span><span>pick a curator ›</span></button>
+      <div class="gsec">Content</div>
       <button type="button" class="dash-door" onclick="openAdminReports()"><span>⚑ Reports</span><span id="adminRepCount">›</span></button>
       <button type="button" class="dash-door" onclick="openAdminCustomCats()"><span>🏷 Custom categories</span><span id="adminCatsCount">›</span></button>
-      <button type="button" class="dash-door dim" disabled><span>🎛 View a curator's dashboard</span><span><span class="stage">ر٧٢-ب</span></span></button>
-      <button type="button" class="dash-door ghost" onclick="generateUsersReport()"><span>📄 Generate report</span><span></span></button>
+      <button type="button" class="dash-door" onclick="openMostSavedStats()"><span>📊 Most saved</span><span>places · lists ›</span></button>
+      <div class="gsec">System</div>
+      <button type="button" class="dash-door" onclick="openSystemStatusModal()"><span>🩺 System status</span><span id="adminPulseLine">›</span></button>
+      <div class="dash-door plain"><span>📏 Rules</span><span id="adminRulesVer">…</span></div>
+      <button type="button" class="dash-door" onclick="generateUsersReport()"><span>📄 Users report</span><span>›</span></button>
       <div id="usersStatsLine" style="display:none;"></div>
     </div>
   </div>
@@ -402,25 +395,7 @@
     </div>
   </div>
   <!-- ر٧٢-أ-١ب: نافذة المستخدمين بهيئة التطبيق — بحث · بطاقات بشاراتها · شريحتا Curator وSuspend -->
-  <div class="modal-backdrop" id="usersBackdrop">
-    <div class="modal" style="max-width:460px;">
-      <div class="modal-topbar"><button class="btn btn-ghost" style="flex:1" onclick="closeUsersModal()">Close</button></div>
-      <h3 style="text-align:center;">👥 Users</h3>
-      <div class="ctx" id="usersCtx" style="text-align:center;"></div>
-      <div class="headrow" style="margin:0 0 8px;"><input type="text" id="usersSearchInput" class="csel grow psearch" placeholder="Search by name or email…" oninput="renderUsersModal(this.value)" autocomplete="off"></div>
-      <div id="usersListBody"></div>
-    </div>
-  </div>
-
   <!-- أ-٣ الطبقة ٢ — System Status (للمالك فقط): بطاقة النبضة الآن، وتُضاف لها بطاقتا الطبقة ٣ (الأخطاء الميدانية) والطبقة ٥ (الاستهلاك) لاحقًا -->
-  <div class="modal-backdrop" id="systemStatusBackdrop">
-    <div class="modal" style="max-width:460px;">
-      <h3 style="text-align:center;">🩺 System Status</h3>
-      <div id="systemStatusBody" style="font-size:12.5px; line-height:1.8;"></div>
-      <button class="btn btn-ghost" style="margin-top:10px;"  onclick="closeSystemStatusModal()">Close</button>
-    </div>
-  </div>
-
   <div class="modal-backdrop" id="communityBackdrop">
     <div class="modal" style="max-width:460px;">
       <h3 style="text-align:center;">🌍 Community Lists</h3>
@@ -440,14 +415,6 @@
     </div>
   </div>
 
-
-  <div class="modal-backdrop" id="statsBackdrop">
-    <div class="modal" style="max-width:400px;">
-      <h3>📊 Most saved (all cities)</h3>
-      <div id="statsList" class="listbox"></div>
-      <button class="btn btn-ghost"  onclick="closeStatsModal()">Close</button>
-    </div>
-  </div>
 
   <div class="modal-backdrop" id="qrBackdrop">
     <div class="modal night">
