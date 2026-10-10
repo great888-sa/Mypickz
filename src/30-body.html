@@ -138,7 +138,7 @@
   </div>
 
   <div class="modal-backdrop" id="inputBackdrop">
-    <div class="modal">
+    <div class="modal night"><!-- ب-٢-٢-أ٢: سطح ليلي (قرار ١٠-١٠) — النوافذ المسماة تأتي بأ٢-٢-٢ -->
       <h3 id="inputModalTitle">Title</h3>
       <input type="text" id="inputModalField" class="modal-input" autocomplete="off" oninput="inputModalTouched=true; inputModalFilter()" onkeydown="if(event.key==='Enter') confirmInputModal();">
       <select id="inputModalSelect" class="modal-input" style="display:none;"></select>
@@ -185,19 +185,14 @@
   </div>
 
   <!-- خ١-ب: اختيار الوجهة الافتراضية (المشهد ٥) — مرة واحدة بعد النبذة؛ وتغييرها من التفضيلات بالدرج -->
-  <div class="modal-backdrop" id="homeBackdrop">
-    <div class="modal">
-      <h3 style="text-align:center;">Choose your home 🏠</h3>
-      <p style="text-align:center; color:var(--ink-soft); font-size:12px; margin:0 0 12px;">MyPickz will open here every time. You can change it later in My Account.</p>
-      <div class="homecards" id="homeCards">
+  <!-- ب-٢-٢-أ٢: بطاقات الوجهة الافتراضية — قالب يُنسخ إلى نافذة Home screen داخل القشرة (كانت نافذة homeBackdrop مستقلة) -->
+  <template id="homeCardsTpl"><div class="homecards" id="homeCards">
         <button type="button" class="hcard on" data-home="Places" onclick="pickHome(this)"><div class="hi"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></div><div class="hn">Places</div><div class="hd">Browse hand-picked places</div></button>
         <button type="button" class="hcard" data-home="Trips" onclick="pickHome(this)"><div class="hi"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="6" r="2.2"/><path d="M7 18h6a3 3 0 0 0 0-6h-2a3 3 0 0 1 0-6h6"/></svg></div><div class="hn">Trips</div><div class="hd">Plan &amp; organize trips</div></button>
         <button type="button" class="hcard" data-home="Community" onclick="pickHome(this)"><div class="hi"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M2.5 19c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5H2.5zM16 19c0-1.9-.7-3.5-1.9-4.6.9-.6 1.9-.9 2.9-.9 2.6 0 4.5 1.7 4.5 4.3V19H16z"/></svg></div><div class="hn">Community</div><div class="hd">Explore everyone's lists</div></button>
         <button type="button" class="hcard" data-home="Curators" onclick="pickHome(this)"><div class="hi">⭐</div><div class="hn">Curators</div><div class="hd">Follow trusted curators</div></button>
         <button type="button" class="hcard" data-home="Addresses" style="grid-column:1/3" onclick="pickHome(this)"><div class="hi"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M3 8h2M3 12h2M3 16h2"/><circle cx="12" cy="10" r="2.2"/><path d="M8.5 17c.6-1.9 1.9-2.8 3.5-2.8s2.9.9 3.5 2.8"/></svg></div><div class="hn">Personal Addresses</div><div class="hd">Always private — never shared</div></button>
-      </div>
-      <button class="btn btn-brass" style="margin-top:12px;"  onclick="saveHome()">Continue</button>
-    </div>
+      </div></template>
   </div>
 
   <!-- خ٢: إضافة/تعديل عنوان شخصي (المشهد ٦/و٢) — يكتب المستند الخاص فقط -->
@@ -274,56 +269,46 @@
     </div>
   </div>
 
-  <!-- خ١: الدرج (المشهد ٧) — الجزء الأعلى: نافذة الحساب المبنية بـ٢/أ (كما هي) · الأدوات · قسم المالك · السياسات (باب مغلق: المالك فقط) -->
+  <!-- ب-٢-٢-أ٢ (المسودة v3-ج · قرار ١٠-١٠): الدرج — سطح ليلي، بطاقة الملف وحدها عاجية وهي باب My profile · Me (My stats · Followers للمنتقي أو Become a curator بحالته) · App (Settings · Help · Report) · Owner · Coming next مطوية · تذييل السياسات · ✕ أعلى البطاقة يغلقه -->
   <div class="modal-backdrop" id="accountBackdrop" onclick="closeAccountModalOnBackdrop(event)">
-    <div class="modal">
-      <div class="acc-head">
+    <div class="modal night drawer">
+      <div class="acc-head card" id="accountCard" onclick="openFromDrawer(openMyProfile)">
         <span class="mini-av" id="accountAv">··</span>
-        <div>
+        <div class="meta">
           <div class="acc-name" id="accountName">—</div>
           <div class="acc-mail" id="accountEmail">—</div>
+          <div class="acc-sub" id="accountSub">My profile ›</div>
         </div>
+        <button type="button" class="x" onclick="event.stopPropagation(); closeAccountModal()" aria-label="Close">✕</button>
       </div>
-      <!-- ر٧٢-أ-١ (إعادة البناء): الدرج بالمرجع v1.42 §٧ — My account (مطوي) · My Dashboard · App · Owner · Policies -->
-      <button type="button" class="dr-head toggle" onclick="drToggleAccount()"><span>👤 My account</span><span id="drAccArrow">⌄</span></button>
-      <div id="drAccount" style="display:none;">
-        <button type="button" class="acc-item" onclick="openFromDrawer(chooseNickname)"><span>✏️ Change nickname</span><span id="drNickNow" class="dim mini"></span></button>
-        <button type="button" class="acc-item" onclick="openFromDrawer(function(){ openModalById('pwBackdrop'); })"><span>🔑 Change password</span><span></span></button>
-        <button type="button" class="acc-item" onclick="resendVerification()"><span>✉️ Resend verification</span><span></span></button>
-        <button type="button" class="acc-item" onclick="confirmLogout()"><span>🚪 Log out</span><span></span></button>
-        <button type="button" class="acc-item danger" onclick="openFromDrawer(openDeletePreview)"><span>🗑 Delete account</span><span></span></button>
-      </div>
-      <div class="dr-head">Me</div><!-- ب-٢-٢-أ (المسودة v2-أ · ١): بند واحد لكل وجهة · My stats حيًّا · Become a curator بحالته للمستخدم (المنتقي شارته بالترويسة) · Coming next آخر القائمة -->
-      <button type="button" class="dr-item" onclick="openFromDrawer(openDashboard)"><span>🎛 My dashboard</span><span class="dim mini">profile · followers</span></button>
-      <button type="button" class="dr-item" onclick="openFromDrawer(openMyStats)"><span>📊 My stats</span><span class="dim mini">reach · lists · trips</span></button>
-      <button type="button" class="dr-item" onclick="closeAccountModal(); switchTab('Places'); selectPlacesSource('bookmarked');"><span>🔖 My bookmarks</span><span class="dim mini">Places · Trips</span></button>
-      <button type="button" class="dr-item" id="drCuratorItem" onclick="openFromDrawer(openCuratorRequest)"><span>⭐ Become a curator</span><span class="dim mini" id="drCuratorStatus">request</span></button>
+      <div class="dr-head">Me</div>
+      <button type="button" class="dr-item" onclick="openFromDrawer(openMyStats)"><span>📊 My stats</span><span class="dim mini">reach · lists · trips ›</span></button>
+      <button type="button" class="dr-item" id="drFollowersItem" style="display:none;" onclick="openFromDrawer(curOpenFollowers)"><span>👥 Followers</span><span class="dim mini" id="drFollowersCount">›</span></button>
+      <button type="button" class="dr-item" id="drCuratorItem" onclick="openFromDrawer(openCuratorRequest)"><span>⭐ Become a curator</span><span class="dim mini" id="drCuratorStatus">request ›</span></button>
       <div class="dr-head">App</div>
-      <button type="button" class="dr-item" onclick="openFromDrawer(function(){ openHomeChooser(true); })"><span>⚙️ Preferences</span><span id="prefHomeLabel" style="font-size:11px; color:var(--ink-soft);"></span></button>
-      <button type="button" class="dr-item" onclick="openFromDrawer(openHelpModal)"><span>❓ <span id="helpBtnLabel">Help</span></span><span class="dim mini">guide · share · contact</span></button>
-      <button type="button" class="dr-item" onclick="openFromDrawer(reportAppProblem)"><span>⚑ Report a problem</span><span></span></button>
+      <button type="button" class="dr-item" onclick="openFromDrawer(openSettings)"><span>⚙️ Settings</span><span class="dim mini">account · preferences ›</span></button>
+      <button type="button" class="dr-item" onclick="openFromDrawer(openHelpModal)"><span>❓ <span id="helpBtnLabel">Help</span></span><span class="dim mini">guide · share · contact ›</span></button>
+      <button type="button" class="dr-item" onclick="openFromDrawer(reportAppProblem)"><span>⚑ Report a problem</span><span class="dim mini">›</span></button>
+      <div id="drawerOwner" style="display:none;">
+        <div class="dr-head">Owner</div>
+        <button type="button" class="dr-item on" onclick="openFromDrawer(openAdminPanel)"><span>🛠 Admin panel</span><span class="dim mini">users · status · report ›</span></button>
+      </div>
       <button type="button" class="dr-head toggle" onclick="drToggleComing()"><span>🕒 Coming next</span><span id="drComingArrow">⌄</span></button>
       <div id="drComing" style="display:none;">
         <button type="button" class="dr-item" disabled><span>📥 Import from Google Maps</span><span class="soon">أ-١٣</span></button>
         <button type="button" class="dr-item" disabled><span>🪪 Share cards · 📤 Export</span><span class="soon">المرحلة ب</span></button>
         <button type="button" class="dr-item" disabled><span>🅖 Continue with Google</span><span class="soon">هـ</span></button>
       </div>
-      <div id="drawerOwner" style="display:none;">
-        <div class="dr-head">Owner</div>
-        <button type="button" class="dr-item" onclick="openFromDrawer(openAdminPanel)"><span>🛠 Admin panel</span><span class="dim mini">users · status · report</span></button>
-      </div>
-      <div class="dr-head">Policies</div>
-      <button type="button" class="dr-item" onclick="closeAccountModal(); openPolicyModal('policy');"><span>📄 Privacy &amp; Terms</span><span></span></button>
-      <button type="button" class="dr-item" onclick="closeAccountModal(); openPolicyModal('rules');"><span>📏 Content rules</span><span></span></button>
-      <button class="btn btn-ghost" style="margin-top:16px;"  onclick="closeAccountModal()">Close</button>
+      <div class="dr-foot"><span><button type="button" class="lnk" onclick="openFromDrawer(function(){ openPolicyModal('policy'); })">Privacy &amp; Terms</button> · <button type="button" class="lnk" onclick="openFromDrawer(function(){ openPolicyModal('rules'); })">Content rules</button></span><span id="drBuild"></span></div>
     </div>
   </div>
 
   <!-- خ١: شاشة السياسة والضوابط — مبنية بنصها، بابها مغلق (المالك يراها من الدرج) — المشهد ١١ -->
   <div class="modal-backdrop" id="policyBackdrop">
-    <div class="modal" style="max-width:460px; text-align:left;">
-      <div class="modal-topbar"><button class="btn btn-ghost" style="flex:1" onclick="closePolicyModal()">Close</button></div>
-      <div id="policyBody"></div>
+    <div class="modal night" style="max-width:460px; text-align:left;">
+      <div class="hdr"><button type="button" class="bk" id="policyBackBtn" onclick="closePolicyModal()">← Back</button><span class="ttl" id="policyTitle">📄 Privacy &amp; Terms</span><button type="button" class="x" onclick="mpCloseAll('policyBackdrop')" aria-label="Close">✕</button></div><!-- ب-٢-٢-أ٢: القشرة — Back يعود للدرج عبر openFromDrawer · ✕ يغلق الكل -->
+      <div class="pseg"><button type="button" class="chip" id="policySegPolicy" onclick="openPolicyModal('policy')">📄 Privacy &amp; Terms</button><button type="button" class="chip" id="policySegRules" onclick="openPolicyModal('rules')">📏 Content rules</button></div>
+      <div id="policyBody" class="ptext"></div>
     </div>
   </div>
 
@@ -447,11 +432,9 @@
   </div>
 
   <div class="modal-backdrop" id="helpBackdrop">
-    <div class="modal" style="max-width:480px;">
-      <div style="display:flex; justify-content:center; gap:8px; margin-bottom:14px;">
-        <button type="button" class="btn" id="helpLangArBtn" style="margin:0; padding:8px 20px; font-size:12px;" onclick="setHelpLang('ar')">عربي</button>
-        <button type="button" class="btn" id="helpLangEnBtn" style="margin:0; padding:8px 20px; font-size:12px;" onclick="setHelpLang('en')">EN</button>
-      </div>
+    <div class="modal night" style="max-width:480px;">
+      <div class="hdr"><button type="button" class="bk" id="helpBackBtn" onclick="closeHelpModal()">← Back</button><span class="ttl">❓ Help</span><button type="button" class="x" onclick="mpNoReopenFor('helpBackdrop'); closeHelpModal()" aria-label="Close">✕</button></div><!-- ب-٢-٢-أ٢: القشرة — Back للدرج (حين يُفتح منه) · ✕ يغلق الكل -->
+      <div class="pseg"><button type="button" class="chip" id="helpLangEnBtn" onclick="setHelpLang('en')">EN</button><button type="button" class="chip" id="helpLangArBtn" onclick="setHelpLang('ar')">عربي</button></div>
       <h3 id="helpTitle" style="text-align:center;"></h3>
       <div id="helpSections"></div>
       <button class="btn btn-brass" style="margin-top:14px;"  onclick="closeHelpModal()" id="helpCloseBtn">إغلاق</button>
@@ -468,10 +451,10 @@
   </div>
 
   <div class="modal-backdrop" id="qrBackdrop">
-    <div class="modal">
-      <h3>Scan the code to open the guide</h3>
-      <div id="qrcode"></div>
-      <button class="btn btn-ghost" onclick="closeQR()">Close</button>
+    <div class="modal night">
+      <div class="hdr"><button type="button" class="bk hidden">← Back</button><span class="ttl">🀄 Scan to open</span><button type="button" class="x" onclick="closeQR()" aria-label="Close">✕</button></div>
+      <div class="ctx" style="text-align:center;">Point a camera at the code to open the guide</div>
+      <div id="qrcode" class="qrbox"></div>
     </div>
   </div>
 
