@@ -321,7 +321,7 @@ async function curToggleFollow(uid){ // ر٧٢-أ-٢: متابعة/إلغاء ذ
 }
 async function curOpenFollowers(){ // للمنتقي عن نفسه: أسماء متابعيه (٥٠ ثم more)
   if (!currentUser) return; const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
-  dashSet('👥 Followers', bd.classList.contains('show') ? openDashboard : null); /* ب-٢-٢-أ: القشرة — Back إلى اللوحة */
+  dashSet('👥 Followers', null); /* ب-٢-٢-أ٢ (v3): من الدرج يستلم Back إليه عبر mpOpenThen؛ من صفحة المنتقي بلا Back */
   body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; bd.classList.add('show');
   let ids = []; try{ ids = await mpData.follows.followersOf(currentUser.uid, 51); }catch(e){ mpSwallow(e, 'followers'); }
   const rows = await Promise.all(ids.slice(0, 50).map(function(id){ return mpData.profiles.get(id).catch(function(){ return null; }); }));
@@ -339,13 +339,14 @@ function profPickType(t){ profContactType = t; document.querySelectorAll('.prof-
 async function openMyProfile(){
   if (!currentUser) return; let pr = null; try{ pr = await mpData.profiles.get(currentUser.uid); }catch(e){} pr = pr || {};
   const ct = pr.contact ? { type: pr.contact.type, value: pr.contact.value } : contactFromUrl(pr.contactUrl || ''); profContactType = (pr.contact || pr.contactUrl) ? ct.type : 'instagram'; // r72t: contact{} أولًا ثم contactUrl انتقاليًّا
-  document.getElementById('formTitle').textContent = '✎ My profile'; document.getElementById('formSub').textContent = 'What visitors see on your curator page';
-  document.getElementById('formBody').innerHTML = '<label class="flabel">Tagline <span class="dim">· one line under your name · ≤ 40</span></label><input type="text" id="mpTagline" class="modal-input" maxlength="40" placeholder="e.g. Experiences I loved — you might too" value="' + attrStr(pr.tagline || '') + '">'
+  const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return; /* ب-٢-٢-أ٢ (v3 · ٥): بالقشرة الليلية — من البطاقة بالدرج أو من صفحة المنتقي */
+  dashSet('✎ My profile', null);
+  body.innerHTML = '<div class="ctx" style="text-align:center;">What visitors see on your curator page</div><label class="flabel">Tagline <span class="dim">· one line under your name · ≤ 40</span></label><input type="text" id="mpTagline" class="modal-input" maxlength="40" placeholder="e.g. Experiences I loved — you might too" value="' + attrStr(pr.tagline || '') + '">'
     + '<label class="flabel">About you <span class="dim">· ≤ 200</span></label><textarea id="mpBio" class="modal-input" rows="3" maxlength="200" placeholder="e.g. Coffee first, then everything else. I write about the places I return to.">' + escapeHtml(pr.bio || '') + '</textarea>'
     + '<label class="flabel">Contact <span class="dim">· a link or a social handle · optional</span></label><input type="text" id="mpContact" class="modal-input" maxlength="300" placeholder="@yourname or https://…" value="' + attrStr((pr.contact || pr.contactUrl) ? ct.value : '') + '">'
     + '<div class="chiprow">' + [['instagram', 'Instagram'], ['x', 'X'], ['snapchat', 'Snapchat'], ['website', 'Website'], ['email', 'Email'], ['phone', 'Phone'], ['whatsapp', 'WhatsApp']].map(function(t){ return '<button type="button" class="chip prof-ct' + (profContactType === t[0] ? ' on' : '') + '" data-t="' + t[0] + '" onclick="profPickType(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>' // r72t (M4.26 ٤): الأنواع السبعة
     + '<label class="flabel">Follower count on my page</label><div class="chiprow"><button type="button" class="chip' + (pr.showFollowerCount !== false ? ' on' : '') + '" id="mpShowFc" onclick="this.classList.add(\'on\'); document.getElementById(\'mpHideFc\').classList.remove(\'on\')">Show</button><button type="button" class="chip' + (pr.showFollowerCount === false ? ' on' : '') + '" id="mpHideFc" onclick="this.classList.add(\'on\'); document.getElementById(\'mpShowFc\').classList.remove(\'on\')">Hide</button></div>';
-  formOnSave = saveMyProfile; document.getElementById('formBackdrop').classList.add('show');
+  body.innerHTML += '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="dashBack()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" onclick="saveMyProfile()">Save</button></div>'; bd.classList.add('show');
 }
 async function saveMyProfile(){
   const tag = (document.getElementById('mpTagline').value || '').trim().slice(0, 40), bio = (document.getElementById('mpBio').value || '').trim().slice(0, 200), cv = (document.getElementById('mpContact').value || '').trim();
@@ -357,13 +358,13 @@ async function saveMyProfile(){
   patch.contact = cv ? { type: profContactType, value: isDirect ? val : (cv.trim().slice(0, 120)) } : mpData.fieldDelete(); patch.contactUrl = mpData.fieldDelete(); // r72t (M4.26 ٤): contact{} بدل contactUrl
   try{ await mpData.profiles.merge(currentUser.uid, patch); }catch(e){ mpSwallow(e, 'profile save'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
   const me = (curators || []).find(function(c){ return c.uid === currentUser.uid; }); if (me){ me.tagline = tag; me.bio = bio; me.contact = cv ? patch.contact : null; me.contactUrl = ''; me.showFollowerCount = patch.showFollowerCount; }
-  showToast('Profile saved ✓'); closeModalById('formBackdrop'); if (currentTab === 'Curators') renderCuratorsBody();
+  showToast('Profile saved ✓'); dashBack(); if (currentTab === 'Curators') renderCuratorsBody(); /* ب-٢-٢-أ٢: الحفظ يعود طبقة (الدرج أو الإغلاق) */
 }
 function curHeadHtml(u, d){
   const me = curIsMe(u); const cities = d.cities.map(function(c){ return c.name; }); const fc = curFollowers(u); const bio = String(u.bio || '').trim();
   const nPlaces = d.cities.reduce(function(a, c){ return a + c.count; }, 0);
   return '<div class="curidn"><div class="curtop"><span class="curava">' + escapeHtml(curInitials(u)) + '</span><div class="curwho"><div class="curnm2">' + escapeHtml(curName(u)) + ' <span class="curvb">✧ ' + CUR_BADGE + '</span></div>' + (u.tagline ? '<div class="curtag2">' + escapeHtml(u.tagline) + '</div>' : (me ? '<div class="curtag2 dim">Add a tagline in your profile</div>' : '')) + '</div>' // r72q-1: الشعار تحت الاسم · لا مدن بالرأس
-    + (me ? '<button type="button" class="curfollow me" onclick="openDashboard()">🎛 My dashboard</button>' : '<button type="button" class="curfollow' + (curIsFollowing(u.uid) ? ' on' : '') + '" onclick="curToggleFollow(\'' + attrStr(u.uid) + '\')">' + (curIsFollowing(u.uid) ? 'Following ✓' : '＋ Follow') + '</button>') + '</div>'
+    + (me ? '<button type="button" class="curfollow me" onclick="openMyStats()">📊 My stats</button>' : '<button type="button" class="curfollow' + (curIsFollowing(u.uid) ? ' on' : '') + '" onclick="curToggleFollow(\'' + attrStr(u.uid) + '\')">' + (curIsFollowing(u.uid) ? 'Following ✓' : '＋ Follow') + '</button>') + '</div>'
     + (bio ? '<div class="curvoice">' + escapeHtml(bio) + '</div>' : '')
     + '<div class="curstats"><span>Top places <b># ' + curTopPlaces(u, d, null).length + '</b></span>' + (fc !== null ? '<span>followers <b># ' + fc + '</b></span>' : '') + '<span>cities <b># ' + d.cities.length + '</b></span><span>views <b># ' + (u.viewCount || 0) + '</b></span><span>' + curAgo(u) + '</span></div>'
     + '<div class="cursmall">' + (me ? '<button type="button" class="curic" onclick="curOpenFollowers()">👥 Followers' + (curFollowers(u) !== null ? ' (' + curFollowers(u) + ')' : '') + '</button><button type="button" class="curic" onclick="openMyProfile()">✎ Edit profile</button>' + (contactHref(u) ? '' : '<button type="button" class="curic" onclick="openMyProfile()">✉ Contact <span class="stage">add in profile</span></button>') : ((contactHref(u) ? '<a class="curic" href="' + attrStr(contactHref(u)) + '" target="_blank" rel="noopener" onclick="mpTrack.statsCurator(\'' + attrStr(u.uid) + '\', \'contact_click\')">✉ Contact</a>' : '<span class="curic">✉ Contact <span class="stage">not set</span></span>') + '<span class="curic">📤 Share <span class="stage">stage</span></span><button type="button" class="curic flag" onclick="openReport(\'profile\', \'' + attrStr(u.uid) + '\')" title="Report this profile">⚑</button>')) + '</div></div>'
@@ -465,31 +466,38 @@ async function curBrowse(uid, what, cityId){ // All places / All trips / Open li
 function curArchiveBannerHtml(){ if (!curArchiveOf || !viewingUserUid || viewingUserUid !== curArchiveOf) return ''; const u = (curators || []).find(function(x){ return x.uid === curArchiveOf; }); return '<div class="curbrowse">👁 Browsing ' + escapeHtml(u ? curName(u) : 'a curator') + "'s " + (communityTab === 'trips' ? 'trips' : 'places') + ' — read only<button type="button" class="bk" onclick="curArchiveBack()">← Curator page</button></div>'; }
 function curArchiveBack(){ const uid = curArchiveOf; curArchiveOf = null; personLayerOnly = null; viewingUserUid = null; viewingUserData = null; curPage = (curators || []).find(function(x){ return x.uid === uid; }) || null; switchTab('Curators'); } // r72r-1: تبقى الشريحة والمدينة كما كانتا
 // لوحة My Dashboard (المرجع ٦/ز) — بطبقتيها؛ البلاطات المؤجلة بوسمها (الشكل كامل، التفعيل تدريجي)
+/* ═══ ب-٢-٢-أ٢ (المسودة v3 · ٢): Settings — تدمج My account وPreferences في نافذة واحدة بالقشرة: Account (Nickname · Password · Email بحالتيه) · Preferences (Home screen · Export language موسومة) · Session (Log out) · Danger zone (Delete). Back = الدرج · الأبواب الخارجية تعود إليها عند الإغلاق ═══ */
+function settingsDoor(icon, label, right, on, cls){ if (cls === 'plain') return '<div class="dash-door plain"><span>' + icon + ' ' + label + '</span><span>' + (right || '') + '</span></div>'; return '<button type="button" class="dash-door' + (cls ? ' ' + cls : '') + (on ? '' : ' dim') + '" ' + (on ? 'onclick="' + on + '"' : 'disabled') + '><span>' + icon + ' ' + label + '</span><span>' + (right || '') + '</span></button>'; }
+function settingsOpen(fn){ /* باب خارج القشرة (Password · Delete): تُغلق القشرة ثم تُفتح النافذة وتعود إلى Settings عند إغلاقها (✕ يغلق الكل) */ closeModalById('dashBackdrop'); mpOpenThen(fn, openSettings); }
+function openSettings(){
+  if (!currentUser){ openAuthModal(); return; }
+  const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
+  const name = (userListData && userListData.nickname) || '—'; const email = currentUser.email || '—'; const verified = !!currentUser.emailVerified;
+  let h = '<div class="gsec">Account</div>'
+    + settingsDoor('👤', 'Nickname', escapeHtml(name) + ' ›', 'settingsOpen(chooseNickname)')
+    + settingsDoor('🔑', 'Password', '•••••••• ›', "settingsOpen(function(){ openModalById('pwBackdrop'); })")
+    + (verified ? settingsDoor('✉️', 'Email<small class="dsub">' + escapeHtml(email) + '</small>', '<span class="ok">✓ Verified</span>', null, 'plain') : settingsDoor('✉️', 'Email<small class="dsub">' + escapeHtml(email) + '</small>', '<span class="no">Not verified · Resend ›</span>', 'resendVerification()'))
+    + '<div class="gsec">Preferences</div>'
+    + settingsDoor('🏠', 'Home screen', escapeHtml(homePrefLabel()) + ' ›', 'openHomeScreen()')
+    + settingsDoor('🌐', 'Export language', 'English <span class="stage">المرحلة ب</span>', null)
+    + '<div class="gsec">Session</div><button type="button" class="btn btn-ghost wide" onclick="confirmLogout()">🚪 Log out</button>'
+    + '<div class="gsec">Danger zone</div>' + settingsDoor('🗑', 'Delete account', 'permanent ›', 'settingsOpen(openDeletePreview)', 'danger');
+  dashSet('⚙️ Settings', function(){ closeModalById('dashBackdrop'); openAccountModal(); }); body.innerHTML = h; bd.classList.add('show');
+}
 async function resendVerification(){ // r72p (١٠): نداء واحد لخدمة المصادقة
   if (!currentUser){ openAuthModal(); return; }
   try{ await mpData.auth.sendVerification(); showToast('Verification email sent — check your inbox'); }catch(e){ mpSwallow(e, 'verify'); showToast('Could not send · ' + ((e && e.code) || 'error')); }
 }
 function drToggleComing(){ const el = document.getElementById('drComing'), ar = document.getElementById('drComingArrow'); if (!el) return; const open = el.style.display === 'none'; el.style.display = open ? '' : 'none'; if (ar) ar.textContent = open ? '⌃' : '⌄'; } /* ر٧٣-أب (٢): المؤجَّل مجمَّع لا مبعثر */
-function drToggleAccount(){ const el = document.getElementById('drAccount'); const on = el.style.display === 'none'; el.style.display = on ? '' : 'none'; const ar = document.getElementById('drAccArrow'); if (ar) ar.textContent = on ? '⌃' : '⌄'; } /* ب-٢-٢-أ٢ (ملاحظة المالك ١٠-١٠): السهم نصّ لا وسم */
-function drSyncCurator(){ // ب-٢-٢-أ: الشارة بترويسة الدرج للمنتقي (البند يختفي)؛ لغيره «⭐ Become a curator» بحالته (Request · Pending · Accepted · Declined)
-  const item = document.getElementById('drCuratorItem'); const av = document.getElementById('accountName'); if (!item) return;
-  const me = !!(currentUser && ((curators || []).some(function(c){ return c.uid === currentUser.uid; }) || (userListData && userListData.curatorSelf)));
-  item.style.display = me ? 'none' : '';
+function drSyncCurator(){ // ب-٢-٢-أ٢ (المسودة v3-ج): الدرج — للمنتقي الشارة بالاسم وبند Followers بعدده؛ لغيره «⭐ Become a curator» بحالته (request · Pending · Accepted · Declined) · سطر البطاقة «N followers · My profile ›»
+  const item = document.getElementById('drCuratorItem'); const fitem = document.getElementById('drFollowersItem'); const av = document.getElementById('accountName'); const sub = document.getElementById('accountSub'); if (!item) return;
+  const prof = currentUser ? ((curators || []).find(function(c){ return c.uid === currentUser.uid; }) || null) : null;
+  const me = !!(currentUser && (prof || (userListData && userListData.curatorSelf)));
+  const fc = prof && typeof prof.followerCount === 'number' ? prof.followerCount : null;
+  item.style.display = me ? 'none' : ''; if (fitem){ fitem.style.display = me ? '' : 'none'; const fcEl = document.getElementById('drFollowersCount'); if (fcEl) fcEl.textContent = fc !== null ? fc + ' ›' : '›'; }
   if (av){ const nm = av.textContent.replace(/ ✧ Curator$/, ''); av.textContent = me ? nm + ' ✧ Curator' : nm; }
-  if (!me && currentUser){ const st = document.getElementById('drCuratorStatus'); if (st) mpData.requests.mine(currentUser.uid).then(function(r){ st.textContent = r ? (({ pending: 'Pending', accepted: 'Accepted', declined: 'Declined' })[r.status] || r.status) : 'request'; }).catch(function(){}); }
-}
-function openDashboard(){ /* ب-٢-٢-أ (المسودة v2-أ · ٢): ثلاث مجموعات Profile · Insights · Tools — Back يعود للدرج (عبر openFromDrawer) و✕ يغلق الكل */
-  if (!currentUser){ openAuthModal(); return; }
-  const me = (curators || []).some(function(c){ return c.uid === currentUser.uid; }) || !!(userListData && userListData.curatorSelf);
-  const name = (userListData && userListData.nickname) || 'You';
-  const door = function(icon, label, right, on, stage){ return '<button type="button" class="dash-door' + (on ? '' : ' dim') + '" ' + (on ? 'onclick="' + on + '"' : 'disabled') + '><span>' + icon + ' ' + label + '</span><span>' + (right || '') + (stage ? ' <span class="stage">' + stage + '</span>' : '') + '</span></button>'; };
-  const prof = (curators || []).find(function(c){ return c.uid === currentUser.uid; }) || null; const fc = prof && typeof prof.followerCount === 'number' ? prof.followerCount : null;
-  let h = '<div class="ctx" style="text-align:center;"><b>' + escapeHtml(name) + '</b>' + (me ? ' · ✧ curator' + (fc !== null ? ' · ' + fc + (fc === 1 ? ' follower' : ' followers') : '') : ' · user') + '</div>';
-  if (me){ h += '<div class="gsec">Profile</div>' + door('✎', 'My profile', 'tagline · about · contact ›', 'openMyProfile()') + door('👥', 'Followers', (fc !== null ? fc + ' ›' : 'names ›'), 'curOpenFollowers()'); }
-  else { h += '<div class="gsec">Profile</div>' + door('👤', 'Change nickname', escapeHtml(name) + ' ›', 'chooseNickname()'); }
-  h += '<div class="gsec">Insights</div>' + door('📊', 'My stats', (me ? 'reach · lists · trips ›' : 'lists · trips ›'), 'openMyStats()');
-  h += '<div class="gsec">Tools</div>' + door('🪪', 'Share cards', 'image + QR', null, 'المرحلة ب') + door('📤', 'Export', 'lists & trips', null, 'المرحلة ب') + door('📥', 'Import from Google Maps', 'Takeout', null, 'أ-١٣');
-  dashSet('🎛 My Dashboard', null); document.getElementById('dashBody').innerHTML = h; document.getElementById('dashBackdrop').classList.add('show');
+  if (sub) sub.textContent = (me && fc !== null ? fc + (fc === 1 ? ' follower' : ' followers') + ' · ' : '') + 'My profile ›';
+  if (!me && currentUser){ const st = document.getElementById('drCuratorStatus'); if (st) mpData.requests.mine(currentUser.uid).then(function(r){ st.textContent = (r ? (({ pending: 'Pending', accepted: 'Accepted', declined: 'Declined' })[r.status] || r.status) : 'request') + ' ›'; }).catch(function(){}); }
 }
 /* ═══ ب-٢-٢-أ · My stats (المسودة v2-أ · ٣ و٣-ب) — القراءة مفردة عبر mpData.stats · الأرقام من اليوم الأول · Δ٪ من اليوم الثامن (قرار ١٠-٠٩-٠٧) · للمالك عرض أي منتقٍ (uid) ═══ */
 function msSum(rows, key){ return (rows || []).reduce(function(a, r){ return a + (Number(r && r[key]) || 0); }, 0); }
@@ -497,12 +505,15 @@ function msHasAny(rows){ return (rows || []).some(function(r){ return Object.key
 function msDelta(cur, prev, hasPrev){ if (!hasPrev) return '<span class="d">not enough data yet</span>'; if (!prev) return cur > 0 ? '<span class="d">▲ new</span>' : '<span class="d">—</span>'; const p = Math.round((cur - prev) / prev * 100); return '<span class="d">' + (p > 0 ? '▲ ' + p + '%' : p < 0 ? '▼ ' + Math.abs(p) + '%' : '— 0%') + '</span>'; }
 function msTile(v, label, delta){ return '<div class="admtile"><b>' + v + '</b><span>' + label + '</span>' + (delta || '') + '</div>'; }
 function msNum(n){ return '<span class="num">' + (Number(n) || 0) + '</span>'; }
-function msDaysHtml(days){ const last = (days || []).slice(0, 14).reverse(); const max = Math.max(1, Math.max.apply(null, last.map(function(r){ return Number(r.page_view) || 0; }))); return '<div class="sdays" title="daily page views · last 14 days">' + last.map(function(r){ const v = Number(r.page_view) || 0; return '<i style="height:' + Math.max(4, Math.round(v / max * 100)) + '%" title="' + r.day + ' · ' + v + '"></i>'; }).join('') + '</div>'; }
+function msDayLabel(d){ const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); if (!m) return ''; return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(m[2]) - 1] + ' ' + Number(m[3]); }
+function msDaysHtml(days){ /* ب-٢-٢-أ٢ (ملاحظة المالك ١٠-١٠): عنوان فوق الأعمدة · تاريخا الطرفين تحتها · عمود اليوم بلون أغمق */
+  const last = (days || []).slice(0, 14).reverse(); const max = Math.max(1, Math.max.apply(null, last.map(function(r){ return Number(r.page_view) || 0; }))); const n = last.length;
+  return '<div class="scap"><span>Page views per day · last ' + n + ' days</span></div><div class="sdays">' + last.map(function(r, i){ const v = Number(r.page_view) || 0; return '<i' + (i === n - 1 ? ' class="today"' : '') + ' style="height:' + Math.max(4, Math.round(v / max * 100)) + '%" title="' + r.day + ' · ' + v + '"></i>'; }).join('') + '</div>' + (n ? '<div class="scap"><span>' + msDayLabel(last[0].day) + '</span><span>' + msDayLabel(last[n - 1].day) + ' · today</span></div>' : ''); }
 async function openMyStats(uid){
   if (!currentUser){ openAuthModal(); return; }
   const target = (typeof uid === 'string' && uid) ? uid : currentUser.uid; const asOwner = target !== currentUser.uid; if (asOwner && !isOwner) return;
   const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
-  dashSet('📊 My stats', asOwner ? function(){ openAdminPanel(); closeModalById('dashBackdrop'); } : (bd.classList.contains('show') ? openDashboard : null));
+  dashSet('📊 My stats', asOwner ? function(){ openAdminPanel(); closeModalById('dashBackdrop'); } : null); /* ب-٢-٢-أ٢ (v3): من الدرج Back إليه عبر mpOpenThen */
   body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; bd.classList.add('show');
   let prof = null, lists = [], trips = [];
   try{ const r = await Promise.all([mpData.profiles.get(target).catch(function(){ return null; }), mpData.cityLists.byOwner(target), mpData.trips.byOwner(target)]);
@@ -539,7 +550,7 @@ async function openCuratorRequest(){ // r72p (٣): طلب واحد لكل حسا
   if (r){ showToast('Your request is ' + (r.status || 'pending')); return; }
   const text = await openInputModal('Become a curator', 'Tell us briefly why (≤ 300)', '', null, { allowFree: true }); if (text === null) return;
   try{ await mpData.requests.create(currentUser.uid, String(text || '').slice(0, 300)); }catch(e){ mpSwallow(e, 'request'); showToast('Could not send · ' + ((e && e.code) || 'error')); return; }
-  showToast('Request sent — pending'); const el = document.getElementById('drCuratorStatus'); if (el) el.textContent = 'Pending'; /* ب-٢-٢-أ: الحالة ببند الدرج */
+  showToast('Request sent — pending'); const el = document.getElementById('drCuratorStatus'); if (el) el.textContent = 'Pending ›'; /* ب-٢-٢-أ: الحالة ببند الدرج */
 }
 let vcuStep = ''; // ر٧٢-أ-٢ز: آخر مرحلة بلغها فتح طبقة الشخص (للتشخيص على الجهاز)
 async function viewCommunityUser(uid){
