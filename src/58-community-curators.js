@@ -8,7 +8,7 @@ const communityScreenState = { places: { city: '', marked: false, sort: 'recent'
 let communityMarkedOnly = false;
 let communitySort = 'views';          // ر٦٤: views | bookmarks (للرحلات: bookmarks افتراضًا)
 let communityCityFilter = '';   // 'city' | 'all'
-// ر٥٣ (بيان الفرز · ق٠٢-٠٦ والمشهد ٦/د): الفرز الحي الوحيد اليوم المشاهدة؛ «Most saved» (مجموع الحفظات المنسوبة) يُفعَّل بمصدره الحي بالمرحلة ٣
+// ر٥٣ (بيان الفرز · ق٠٢-٠٦ والمشهد ٦/د) · r72m: الفرز بالمشاهدة وبالتمييز وبالنسخ (copies = «الأكثر حفظًا») كلها حية — r74m: التعليق القديم «يُفعَّل بالمرحلة ٣» حُذف
 let viewingUserUid = null;
 let viewingUserData = null;
 let communityViewingCityId = null;
@@ -151,7 +151,7 @@ async function renderSharedListsInto(host){ // r72r-1: القوائم المشا
   host.innerHTML = sharedCityLists.length ? sharedCityLists.map(function(r){
     const owner = r.ownerId || String(r.docId || '').split('_')[0]; const cityId = r.cityId || String(r.docId || '').split('_').slice(1).join('_');
     const cityName = (allCities().find(function(x){ return x.id === cityId; }) || {}).name || cityId; const listId = owner + '_' + cityId;
-    return othersCard({ title: escapeHtml(cityName) + ' — ' + ownerLink(owner, r.ownerName), sub: 'Shared with you by name', bmOn: !!(listBookmarksMap && listBookmarksMap[listId]), cnt: r.bookmarkCount || 0, bmHandler: "toggleListBookmark('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", reportKind: 'list', reportKey: owner + '_' + cityId, saveMsg: 'Copy this list into yours — stage 3', exportHandler: "exportOtherList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", openHandler: "plOpenSharedList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')" });
+    return othersCard({ title: escapeHtml(cityName) + ' — ' + ownerLink(owner, r.ownerName), sub: 'Shared with you by name', bmOn: !!(listBookmarksMap && listBookmarksMap[listId]), cnt: r.bookmarkCount || 0, bmHandler: "toggleListBookmark('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", reportKind: 'list', reportKey: owner + '_' + cityId, saveHandler: "saveOthersList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", savedOn: !!myCopiedLists[owner + '_' + cityId], unsaveHandler: "showToast('Remove copied places from your list in Places')", exportHandler: "exportOtherList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", openHandler: "plOpenSharedList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')" });
   }).join('') : '<div class="mp-empty">No lists shared with you yet.</div>';
 }
 function plOpenSharedList(owner, cityId){ /* r74b-٢: فتح قائمة مشارَكة معي من وجهة الأماكن — عدّاد open_app (§١٧-ج) انتقل هنا من نافذة My List المحذوفة (كان openSharedCityList يسجّله على الفتح نفسه) */
@@ -161,7 +161,7 @@ function cmGroupByOwner(rows, ownerOf, nameOf, cardOf){ // r72r-3: مجموعة 
   const groups = []; const byO = {};
   rows.forEach(function(r){ const o = ownerOf(r) || ''; if (!byO[o]){ byO[o] = { owner: o, name: nameOf(r) || 'user', rows: [] }; groups.push(byO[o]); } byO[o].rows.push(r); });
   return groups.map(function(g){ const nm = g.name || 'user'; const ini = curInitials({ nickname: nm }); const head = '<button type="button" class="curpill cmpill" onclick="openCommunityUserFrom(\'' + attrStr(g.owner) + '\')"><span class="curring">' + escapeHtml(ini) + '</span><span class="curnm">' + escapeHtml(nm) + '</span></button>';
-    return '<div class="pgroup"><div class="pg-head">' + head + '<span class="pg-n"># ' + g.rows.length + '</span></div>' + g.rows.map(cardOf).join('') + '</div>'; }).join('');
+    return '<div class="pgroup"><div class="pg-head">' + head + '<span class="pg-n">· ' + g.rows.length + '</span></div>' + g.rows.map(cardOf).join('') + '</div>'; }).join('');
 }
 async function openCommunityUserFrom(uid){ cmDirect = false; await viewCommunityUser(uid); } // رأس المستخدم يفتح طبقة الشخص
 async function cmLoadMarket(){
@@ -337,16 +337,16 @@ function contactHref(u){ const c = u && u.contact; if (c && c.value){ const v = 
 function contactFromUrl(url){ const u = String(url || ''); let m; if ((m = u.match(/^https:\/\/(?:www\.)?instagram\.com\/([^/?#]+)/i))) return { type: 'instagram', value: '@' + m[1] }; if ((m = u.match(/^https:\/\/(?:www\.)?x\.com\/([^/?#]+)/i))) return { type: 'x', value: '@' + m[1] }; if ((m = u.match(/^https:\/\/(?:www\.)?snapchat\.com\/add\/([^/?#]+)/i))) return { type: 'snapchat', value: '@' + m[1] }; return { type: 'website', value: u }; }
 function profPickType(t){ profContactType = t; document.querySelectorAll('.prof-ct').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-t') === t); }); }
 async function openMyProfile(){
-  if (!currentUser) return; let pr = null; try{ pr = await mpData.profiles.get(currentUser.uid); }catch(e){} pr = pr || {};
+  if (!currentUser) return; const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return; /* ب-٢-٢-أ٢ (v3 · ٥): بالقشرة الليلية — من البطاقة بالدرج أو من صفحة المنتقي */
+  dashSet('✎ My profile', null); body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; bd.classList.add('show'); /* r74m (ق١٠-١٠-٠٦): القشرة تُعرض قبل قراءة الملف — وإلا لم تلتقطها آلية العودة من الدرج فغاب Back */
+  let pr = null; try{ pr = await mpData.profiles.get(currentUser.uid); }catch(e){} pr = pr || {};
   const ct = pr.contact ? { type: pr.contact.type, value: pr.contact.value } : contactFromUrl(pr.contactUrl || ''); profContactType = (pr.contact || pr.contactUrl) ? ct.type : 'instagram'; // r72t: contact{} أولًا ثم contactUrl انتقاليًّا
-  const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return; /* ب-٢-٢-أ٢ (v3 · ٥): بالقشرة الليلية — من البطاقة بالدرج أو من صفحة المنتقي */
-  dashSet('✎ My profile', null);
   body.innerHTML = '<div class="ctx" style="text-align:center;">What visitors see on your curator page</div><label class="flabel">Tagline <span class="dim">· one line under your name · ≤ 40</span></label><input type="text" id="mpTagline" class="modal-input" maxlength="40" placeholder="e.g. Experiences I loved — you might too" value="' + attrStr(pr.tagline || '') + '">'
     + '<label class="flabel">About you <span class="dim">· ≤ 200</span></label><textarea id="mpBio" class="modal-input" rows="3" maxlength="200" placeholder="e.g. Coffee first, then everything else. I write about the places I return to.">' + escapeHtml(pr.bio || '') + '</textarea>'
     + '<label class="flabel">Contact <span class="dim">· a link or a social handle · optional</span></label><input type="text" id="mpContact" class="modal-input" maxlength="300" placeholder="@yourname or https://…" value="' + attrStr((pr.contact || pr.contactUrl) ? ct.value : '') + '">'
     + '<div class="chiprow">' + [['instagram', 'Instagram'], ['x', 'X'], ['snapchat', 'Snapchat'], ['website', 'Website'], ['email', 'Email'], ['phone', 'Phone'], ['whatsapp', 'WhatsApp']].map(function(t){ return '<button type="button" class="chip prof-ct' + (profContactType === t[0] ? ' on' : '') + '" data-t="' + t[0] + '" onclick="profPickType(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>' // r72t (M4.26 ٤): الأنواع السبعة
     + '<label class="flabel">Follower count on my page</label><div class="chiprow"><button type="button" class="chip' + (pr.showFollowerCount !== false ? ' on' : '') + '" id="mpShowFc" onclick="this.classList.add(\'on\'); document.getElementById(\'mpHideFc\').classList.remove(\'on\')">Show</button><button type="button" class="chip' + (pr.showFollowerCount === false ? ' on' : '') + '" id="mpHideFc" onclick="this.classList.add(\'on\'); document.getElementById(\'mpShowFc\').classList.remove(\'on\')">Hide</button></div>';
-  body.innerHTML += '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="dashBack()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" onclick="saveMyProfile()">Save</button></div>'; bd.classList.add('show');
+  body.innerHTML += '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="dashBack()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" onclick="saveMyProfile()">Save</button></div>'; 
 }
 async function saveMyProfile(){
   const tag = (document.getElementById('mpTagline').value || '').trim().slice(0, 40), bio = (document.getElementById('mpBio').value || '').trim().slice(0, 200), cv = (document.getElementById('mpContact').value || '').trim();
@@ -715,7 +715,7 @@ async function renderBookmarkedLists(wrap, cityName){ // r72s (قرار الما
     Object.keys(g.places).forEach(function(key){ const arr = g.places[key]; const cityId = key.split('|')[0], cat = key.split('|')[1]; const cityNm = (allCities().find(function(z){ return z.id === cityId; }) || {}).name || (arr[0] && arr[0].cityName) || cityId;
       const cards = arr.map(function(b){ const pl = { id: String(b.key || b.pid || '').split(':').pop(), name: b.name || 'Place', url: (b.url && !/^(id|oid):/.test(b.url)) ? b.url : '', area: b.area || '' }; return othersPlaceRowHtml(pl, { uid: uid, nickname: nm }, { id: cityId, name: cityNm }, cat, cityId); }).join('');
       inner += placeGroupHtml(cityNm + ' · ' + (cat ? catLabelOf(cat) : 'Places'), arr.length, '<button type="button" class="go" onclick="cmOpenList(\'' + attrStr(uid) + '\', \'' + attrStr(cityId) + '\', \'curator\')">Open list →</button>', cards); });
-    html += '<div class="pgroup"><div class="pg-head">' + head + '<span class="pg-n"># ' + (g.lists.length + Object.keys(g.places).length) + '</span></div>' + inner + '</div>'; });
+    html += '<div class="pgroup"><div class="pg-head">' + head + '<span class="pg-n">· ' + (g.lists.length + Object.keys(g.places).length) + '</span></div>' + inner + '</div>'; });
   wrap.innerHTML = html || '<div class="mp-empty">No bookmarks in this city.</div>';
 }
 // ر٦٩ح: openBookmarkedListInCommunity حُذفت — الرأس القديم لشاشة المفكرة زال (N-040)
@@ -744,7 +744,7 @@ function renderCommunityUserList(wrap){
       const bmOn = !!(listBookmarksMap && listBookmarksMap[u.uid + '_' + c.id]);
       // v1.40 (٦/د٢): مفكرة القائمة أيقونة خطية بعدّاد على محتوى الآخرين (المبدأ التاسع)
       const mine = !!(currentUser && u.uid === currentUser.uid); // ر٧٢-أ-١هـ: بطاقة السوق نفسها (Open → · 📤 · مفكرة بعدّاد · Save بوسمه) — صف أفعال واحد بكل الواجهات
-      return othersCard({ title: escapeHtml(c.name), sub: n + (n === 1 ? ' place' : ' places'), stat: views + (views === 1 ? ' view' : ' views'), bmOn: bmOn, cnt: c.bookmarkCount || 0, bmSelf: mine, bmHandler: "toggleListBookmark('" + attrStr(u.uid) + "', '" + attrStr(c.id) + "')", reportKind: 'list', reportKey: u.uid + '_' + c.id, saveMsg: 'Copy this list into yours — stage 3', exportHandler: "exportOtherList('" + attrStr(u.uid) + "', '" + attrStr(c.id) + "')", openHandler: "openCommunityCityList('" + attrStr(c.id) + "')" });
+      return othersCard({ title: escapeHtml(c.name), sub: n + (n === 1 ? ' place' : ' places'), stat: views + (views === 1 ? ' view' : ' views'), bmOn: bmOn, cnt: c.bookmarkCount || 0, bmSelf: mine, bmHandler: "toggleListBookmark('" + attrStr(u.uid) + "', '" + attrStr(c.id) + "')", reportKind: 'list', reportKey: u.uid + '_' + c.id, saveHandler: "saveOthersList('" + attrStr(u.uid) + "', '" + attrStr(c.id) + "')", savedOn: !!myCopiedLists[u.uid + '_' + c.id], unsaveHandler: "showToast('Remove copied places from your list in Places')", exportHandler: "exportOtherList('" + attrStr(u.uid) + "', '" + attrStr(c.id) + "')", openHandler: "openCommunityCityList('" + attrStr(c.id) + "')" });
     }).join('');
     const __utrips = communityUserTripsCity ? communityUserTrips.filter(t => t.cityId === communityUserTripsCity || (Array.isArray(t.cities) && t.cities.indexOf(communityUserTripsCity) >= 0)) : communityUserTrips;
     if (personLayerOnly !== 'places' && __utrips.length){
