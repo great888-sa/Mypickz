@@ -664,10 +664,10 @@ function referenceConformanceGuard(label, s){
   const T = '§21 ' + label + ': ';
   const has = (...ps) => ps.every(p => p.test(s)); const none = (...ps) => !ps.some(p => p.test(s));
   const C = [
-    ['٦/أ المبدل الرباعي شبكة ٢×٢', has(/class="chipgrid c2" id="plSrcRow"/, /Saved from Curators <span class="dim">stage 3/)],
+    ['٦/أ صف المصدر بالرأس الثابت: My places · ＋ Add place · Search a place (r74m — بلا وسم stage 3)', has(/class="chipgrid c3 headgrid" id="plSrcRow"/, /Search a place/, /id="plAddBtn"/) && none(/Saved from Curators <span class="dim">stage 3/)],
     ['٦/أ المحدد بالمنسدلتين + ＋ City', has(/plToggle\w*Country|plPickCountry|plCountryBtn/, /＋<\/b> City|＋ City/)],
-    ['٦/أ صف الأفعال: Add place · Day plan موسوم · View', has(/Add place/, /Day plan <span class="dim">Soon/, /View: <b>List<\/b>/)],
-    ['٦/أ سطر السياق أخيرًا', s.indexOf('View: <b>List</b>') > 0 && s.indexOf('id="plCtx"') > s.indexOf('View: <b>List</b>')],
+    ['٦/أ الصف الرابع: Day plan موسوم · Export · العلنية · المشاركة (r74m)', has(/class="plrow4"/, /Day plan', 'Soon'/, /Export places list/, /id="plPublicBtn"/, /id="plShareBtn"/)],
+    ['٦/أ سطر السياق بعد الصف الرابع (r74m)', s.indexOf('class="plrow4"') > 0 && s.indexOf('id="plCtx"') > s.indexOf('class="plrow4"')],
     ['٦/أ المشاركة الصادرة «Share my list with…»', has(/Share my list with/)],
     ['٦/أ لا قسم Shared with you بالوجهتين', none(/Shared with you \(' \+ shared/, /moves into/)],
     ['٦/أ نافذة مفكرتي مجمَّعة بالمدينة', has(/bmCity|groupByCity|Bookmarked places[^\n]{0,400}cityName/)],
