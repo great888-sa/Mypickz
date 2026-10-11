@@ -78,6 +78,35 @@ function bmkSvg(on){
     ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>'
     : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>';
 }
+/* r75a (البند ٤ — مسودة بطاقة المكان): طقم الأيقونات الخطّي الواحد — SVG داخل الصفحة بسماكة واحدة بلون النص؛ لا إيموجي ولا خدمة خارجية. يُستعمل بالبطاقة والفقاعة وIcons guide والنوافذ، وتنتقل إليه بقية الشاشات حين تُمس */
+const MP_ICONS = {
+  maps: '<path d="M7 17 17 7M9 7h8v8"/>',
+  bookmark: '<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/>',
+  trip: '<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V5h6v3"/>',
+  share: '<path d="M12 3v12M8 7l4-4 4 4M5 13v6h14v-6"/>',
+  edit: '<path d="M4 20h4L18 10l-4-4L4 16z"/>',
+  top: '<path d="m12 3 2.8 5.9 6.2.8-4.5 4.4 1.1 6.3L12 17.4 6.4 20.4l1.1-6.3L3 9.7l6.2-.8z"/>',
+  pin: '<path d="M12 21s-6-6-6-11a6 6 0 0 1 12 0c0 5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/>',
+  move: '<path d="M12 21s-6-6-6-11a6 6 0 0 1 12 0c0 5-6 11-6 11z"/><path d="M3 3l3 3M18 18l3 3"/>',
+  check: '<path d="m5 12 4 4 10-10"/>',
+  save: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  flag: '<path d="M5 21V4h11l-1.5 3.5L16 11H5"/>',
+  locate: '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+  open: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  personPlus: '<circle cx="10" cy="8" r="3.5"/><path d="M3 20c0-4 3-6 7-6s7 2 7 6M19 8v6M16 11h6"/>',
+  chevronDown: '<path d="m6 9 6 6 6-6"/>',
+  chevronUp: '<path d="m6 15 6-6 6 6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  back: '<path d="M15 6l-6 6 6 6"/>',
+  lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  list: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  map: '<path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>'
+};
+function mpIcon(name, opt){ opt = opt || {}; const body = MP_ICONS[name]; if (!body) return ''; const sz = opt.size || 20; const fill = opt.fill ? 'currentColor' : 'none'; return '<svg class="mpi" data-ic="' + name + '" viewBox="0 0 24 24" width="' + sz + '" height="' + sz + '" fill="' + fill + '" stroke="currentColor" stroke-width="' + (opt.fill ? 1.5 : 2) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + body + '</svg>'; }
 // ر٥٨: الخريطتان من مرآة مستندك المحمَّل بالإقلاع — صفر استعلام (استعلام السجلات غير مُثبَت بالقواعد قصدًا)
 async function ensureListBookmarks(){
   if (listBookmarksMap !== null || !currentUser) return;
