@@ -135,10 +135,10 @@ function renderBookmarkedPlaces(body){
       byCat[cat].forEach(function(b){ // r72q-2 (وضع bookmark): Maps · 🔖 · 🧳 · 📤
         const q = function(v){ return String(v || '').replace(/'/g, "\\'"); };
         const actions = [
-          b.url ? { html: 'Maps ↗', href: b.url, title: 'Open in Google Maps' } : null,
-          { cls: 'bmk on', html: bmkSvg(true), on: "togglePlaceBookmark('" + q(b.url) + "', '" + q(b.name || 'Place') + "', '" + q(b.category) + "', '" + q(b.cityId) + "', '" + q(b.area) + "')", title: 'Bookmarked — tap to remove' },
-          { html: '🧳', on: "plAddToTripFor('" + q(b.cityId) + "', '" + q(b.category) + "', '" + q(String(b.pid || '').replace(/^id:/, '')) + "', '" + q(b.name || 'Place') + "')", title: 'Add to a trip' },
-          { html: '📤', on: "mpSendText('📍 ' + " + JSON.stringify(escapeHtml(b.name || 'Place')) + " + ('" + q(b.url) + "' ? '\\n' + '" + q(b.url) + "' : ''))", title: 'Send' }
+          b.url ? { icon: 'maps', label: 'Google Maps', href: b.url, title: 'Open in Google Maps' } : { icon: 'maps', label: 'Google Maps', disabled: true, title: 'No Maps link for this place' }, /* r75a-٢: الطقم بالمفكرة — أربع بلاطات (لا On map: المفكرة لا تحمل إحداثيات) */
+          { cls: 'bmk on', icon: 'bookmark', fill: true, label: 'Bookmark', on: "togglePlaceBookmark('" + q(b.url) + "', '" + q(b.name || 'Place') + "', '" + q(b.category) + "', '" + q(b.cityId) + "', '" + q(b.area) + "')", title: 'Bookmarked — tap to remove' },
+          { icon: 'trip', label: 'Trip', on: "plAddToTripFor('" + q(b.cityId) + "', '" + q(b.category) + "', '" + q(String(b.pid || '').replace(/^id:/, '')) + "', '" + q(b.name || 'Place') + "')", title: 'Add to a trip' },
+          { icon: 'share', label: 'Share', on: "mpSendText('📍 ' + " + JSON.stringify(escapeHtml(b.name || 'Place')) + " + ('" + q(b.url) + "' ? '\\n' + '" + q(b.url) + "' : ''))", title: 'Send' }
         ];
         __bmCards += placeCardHtml({ id: b.pid || b.url, name: b.name || 'Place', url: b.url, area: b.area, picks: b.picks, note: b.note }, 'bookmark', { actions: actions });
       });
@@ -226,8 +226,10 @@ function plRow4Html(){ /* r74m: الصف الرابع (غير ثابت) — تخ
     + '</div>';
 }
 function plMineActions(cityId, cat, pl, i, bm){ /* r72q-2 · r74m-٢ · r75a (اللوحة ١ — قرار المالك ١١ أكتوبر): ستة أفعال ثابتة للجميع بأسمائها — Maps ↗ · Bookmark · Trip · Share · Edit · Top؛ لا زر تثبيت بالبطاقة (التثبيت والنقل بفقاعة الخريطة) */
+  const st = plPlaceStatus(pl); const need = st.kind === 'suggested' || st.kind === 'probable' || st.kind === 'notFound';
   return [
-        pl.url ? { icon: 'maps', label: 'Maps', href: pl.url, title: 'Open in Google Maps' } : { icon: 'maps', label: 'Maps', disabled: true, title: 'No Maps link for this place' },
+        pl.url ? { icon: 'maps', label: 'Google Maps', href: pl.url, title: 'Open in Google Maps' } : { icon: 'maps', label: 'Google Maps', disabled: true, title: 'No Maps link for this place' },
+        { cls: 'onmap' + (need ? ' need' : ''), icon: 'map', label: 'On map', dot: need, on: "plGoToPin('" + cat.id + "', " + i + ")", title: st.kind === 'pinned' ? 'Show on our map' : (need ? 'Needs a pin — open our map to confirm' : 'Find it on our map') }, // r75a-٢ (قرار المالك): خريطتنا بلاطةً بنقطة حين يلزم تثبيت — لا شريحة بالرأس
         { cls: 'bmk' + (bm ? ' on' : ''), icon: 'bookmark', fill: bm, label: 'Bookmark', on: "plToggleBm('" + cat.id + "', " + i + ")", title: bm ? 'Bookmarked — tap to remove' : 'Bookmark' },
         (activeTripId && pl.id) ? { icon: 'trip', label: 'Trip', on: "addPlaceToTrip('mylist', '" + cityId + "', '" + cat.id + "', '" + pl.id + "', null, '" + attrStr(pl.name) + "')", title: 'Add to active trip' } : (pl.id ? { icon: 'trip', label: 'Trip', on: "plAddToTripFor('" + cityId + "', '" + cat.id + "', '" + pl.id + "', '" + attrStr(pl.name) + "')", title: 'Add to a trip' } : { icon: 'trip', label: 'Trip', disabled: true, title: 'Save this place first' }),
         { icon: 'share', label: 'Share', on: "plSendPlace('" + cat.id + "', " + i + ")", title: 'Send this place' },
@@ -241,14 +243,6 @@ function plPlaceStatus(p){
   const k = plSugKey(p); if (!(k in plSuggestCache)) return { kind: 'unknown' };
   const sg = plSuggestCache[k]; if (!sg) return { kind: 'notFound' };
   return sg.probable ? { kind: 'probable', n: sg.n || 1 } : { kind: 'suggested' };
-}
-function plStatusChipHtml(p, catId, i){
-  const st = plPlaceStatus(p); const on = "plGoToPin('" + attrStr(catId) + "', " + i + ")";
-  if (st.kind === 'pinned'){ const info = plPinInfo(p); return '<button type="button" class="pc-chip pc-status st-pinned' + (info ? ' fam-' + info.fam : '') + '" onclick="' + on + '" title="Pinned — tap to see it on the map">' + mpIcon('check', { size: 11 }) + 'Pinned</button>'; }
-  if (st.kind === 'suggested') return '<button type="button" class="pc-chip pc-status st-suggested" onclick="' + on + '" title="One match found — confirm it on the map">Suggested</button>';
-  if (st.kind === 'probable') return '<button type="button" class="pc-chip pc-status st-probable" onclick="' + on + '" title="Several matches — pick the right one on the map"><span class="pc-n">' + st.n + '</span>possible match' + (st.n === 1 ? '' : 'es') + '</button>';
-  if (st.kind === 'notFound') return '<button type="button" class="pc-chip pc-status st-notfound" onclick="' + on + '" title="Not in our data — place the pin on the map">Not found</button>';
-  return '<button type="button" class="pc-chip pc-status st-unknown" onclick="' + on + '" title="Find it on the map">Locate ›</button>';
 }
 let plMapOpenKey = null; /* r75a: مفتاح المكان الذي تُفتح فقاعته بعد رسم الخريطة (من شريحة الحالة) */
 function plGoToPin(catId, i){
@@ -309,7 +303,7 @@ function renderPlacesMine(){
       const pl = vx.q, i = vx.realIdx;
       const bm = isBookmarkedPlace(pl); // ر٦٨: المفتاح هوية العنصر (ر٦٤ كان بصمة الرابط)
       const actions = plMineActions(myListCityId, cat, pl, i, bm); // r74m-٢: باني الأفعال الواحد (يخدم النسخ بعرض Saved from أيضًا)
-      __cards += placeCardHtml(pl, 'mine', { actions: actions, fallbackName: cat.name, status: plStatusChipHtml(pl, cat.id, i) }); // r75a: شريحة الحالة
+      __cards += placeCardHtml(pl, 'mine', { actions: actions, fallbackName: cat.name }); // r75a-٢: الحالة على بلاطة On map
     });
     html += placeGroupHtml(cat.name + catLegacyHint(cat.id), visible.length, __catRight, __cards);
     secHtml[cat.sectionId] = (secHtml[cat.sectionId] || '') + html; secCount[cat.sectionId] = (secCount[cat.sectionId] || 0) + visible.length;
@@ -684,7 +678,7 @@ async function renderSavedFromInto(body, fromCurators){ // ز-١-ب: الأما�
   let html = '', total = 0;
   rows.forEach(function(list){ const cards = []; const __cid = String(list.cityId || ''); Object.keys(list.categories || {}).forEach(function(catId){ ((list.categories[catId] || {}).places || []).forEach(function(p, i){ if (!p.source || !p.source.ownerId) return; const isCur = !!curSet[p.source.ownerId]; if (isCur !== fromCurators) return;
         const __cat = plCatsAll().find(function(c){ return c.id === catId; }) || { id: catId, name: catLabelOf(catId) }; const __acts = plMineActions(__cid, __cat, p, i, isBookmarkedPlace(p)).map(function(a){ if (!a || !a.on) return a; return Object.assign({}, a, { on: "plSavedRun('" + attrStr(__cid) + "', function(){ return " + a.on + "; })" }); }); /* r74m-٢ (قرار المالك ١١ أكتوبر): النسخة بأفعال مكاني كلها — كل فعل ينتقل إلى مدينتها أولًا */
-        cards.push(placeCardHtml(p, 'mine', { cat: { id: catId }, index: i, actions: __acts, status: plStatusChipHtml(p, catId, i), extraLines: '<div class="pc-lab">Category</div><div class="pc-val" dir="auto">' + escapeHtml(catLabelOf(catId)) + '</div>' })); }); });
+        cards.push(placeCardHtml(p, 'mine', { cat: { id: catId }, index: i, actions: __acts, extraLines: '<div class="pc-lab">Category</div><div class="pc-val" dir="auto">' + escapeHtml(catLabelOf(catId)) + '</div>' })); }); });
     if (cards.length){ total += cards.length; html += placeGroupHtml(list.cityName || list.cityId, cards.length, '', cards.join('')); } });
   plSetSrcTitle(total);
   body.innerHTML = html || '<div class="mp-empty">' + (fromCurators ? '⭐<br>Places you save from curators land here — with credit.' : '🌍<br>Places you save from the community land here — with credit.') + '</div>';
