@@ -181,7 +181,7 @@
   .modal .addr-chip.on,.modal .pl-catpick.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
   .modal .psearch{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
 .chip.label{background:transparent; border-color:var(--line-night); color:var(--night-4);}
-  .csel.label,.actn.label{background:transparent; border-color:var(--line-night); color:var(--night-3);}
+  .csel.label,.actn.label{background:transparent; border-color:var(--line-night); color:var(--night-3);} .modal .csel.label{color:var(--ink); border-color:var(--line-ivory);} /* r75b-٢ (ملاحظة المالك): عنوان خريطة السياق بحبر لا رمادي على العاجي */
   .actn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
   .actn.danger{background:var(--surf); border-color:var(--line-strong); color:var(--danger-night);}
   .avatar{background:var(--surf); border-color:var(--line-strong); color:var(--night-4);}
