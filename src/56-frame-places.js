@@ -54,10 +54,10 @@ function plSourceCounts(){ // r72w: عدد الأماكن لكل مصدر (من 
   const mine = myCityListData ? liveCountOf(myCityListData.categories) : 0; const bm = Object.keys(placeBmMap()).filter(function(k){ const b = placeBmMap()[k]; return b && !b.ownerUid && /^id:/.test(String(b.key || b.url || '')); }).length;
   const shared = (sharedCityLists || []).reduce(function(a, r){ return a + liveCountOf(r.categories); }, 0);
   return { mine: mine, bookmarked: bm, curators: 0, community: 0, shared: shared }; }
-function plToggleShowPanel(){ plShowOpen = !plShowOpen; plSetSrcTitle(plLastCount); const el = document.getElementById('plShowPanel'); if (!el) return; const cnt = plSourceCounts(); el.innerHTML = plShowOpen ? pickerPanel({ id: 'plShow', bare: true, onPick: 'plPickSource', items: PL_SOURCES.map(function(x){ return { id: x[0], name: x[1] + ((x[0] === 'curators' || x[0] === 'community') ? ' · stage 3' : ''), count: cnt[x[0]], selected: placesSource === x[0] }; }) }) : ''; }
-function plPickSource(id){ plShowOpen = false; const el = document.getElementById('plShowPanel'); if (el) el.innerHTML = ''; if (id === 'curators' || id === 'community'){ showSoon('Your copies of places arrive with Save (stage 3)'); return; } selectPlacesSource(id); }
+function plToggleShowPanel(){ plShowOpen = !plShowOpen; plSetSrcTitle(plLastCount); const el = document.getElementById('plShowPanel'); if (!el) return; const cnt = plSourceCounts(); el.innerHTML = plShowOpen ? pickerPanel({ id: 'plShow', bare: true, onPick: 'plPickSource', items: PL_SOURCES.map(function(x){ return { id: x[0], name: x[1], count: cnt[x[0]], selected: placesSource === x[0] }; }) }) : ''; }
+function plPickSource(id){ plShowOpen = false; const el = document.getElementById('plShowPanel'); if (el) el.innerHTML = ''; selectPlacesSource(id); } // r74m (ق١٠-١٠-١٣): بابا «Saved from Curators / Community» مفتوحان — الراسم حي منذ ز-١-ب وكان القفل وسمًا قديمًا
 function plSourceLabel(){ return (PL_SOURCES.find(function(x){ return x[0] === placesSource; }) || PL_SOURCES[0])[1]; }
-function plSetSrcTitle(n){ if (typeof n === 'number') plLastCount = n; else n = plLastCount; const t = document.getElementById('plSrcTitle'); if (t) t.innerHTML = '<b>' + escapeHtml(plSourceLabel()) + '</b>' + (typeof n === 'number' ? ' <span class="cnt"># ' + n + '</span>' : '') + ' <span class="arr">' + (plShowOpen ? '⌃' : '⌄') + '</span>'; } // r72v (قرار المالك): الشريحة نفسها قائمة المصادر — كامل الصف
+function plSetSrcTitle(n){ if (typeof n === 'number') plLastCount = n; else n = plLastCount; const t = document.getElementById('plSrcTitle'); if (t) t.innerHTML = '<b>' + escapeHtml(plSourceLabel()) + '</b>' + (typeof n === 'number' ? ' <span class="cnt">· ' + n + '</span>' : '') + ' <span class="arr">' + (plShowOpen ? '⌃' : '⌄') + '</span>'; } // r72v (قرار المالك): الشريحة نفسها قائمة المصادر — كامل الصف
 function selectPlacesSource(src){
   placesSource = src;
   if (currentUser && userListData && userListData.placesSource !== src){ userListData.placesSource = src; mpData.userLists.merge(currentUser.uid, { placesSource: src }).catch(function(){}); } // ر٦٩ع (N-052)
@@ -75,15 +75,11 @@ function plSetCtx(){
 }
 async function renderPlacesBody(){
   const body = document.getElementById('plBody'); if (!body) return;
-  if (!currentUser){ body.innerHTML = '<div class="mp-empty" style=""><div class="big">📍</div>Sign in to build your places.</div>'; return; }
+  if (!currentUser){ plHeadSet('other'); body.innerHTML = '<div class="mp-empty" style=""><div class="big">📍</div>Sign in to build your places.</div>'; return; }
+  if (placesSource !== 'mine') plHeadSet('other'); // r74m: المصادر الأخرى بلا صفَّي السياق والتصفية
   if (placesSource === 'bookmarked'){ renderBookmarkedPlaces(body); return; }
   if (placesSource === 'shared'){ body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; await renderSharedListsInto(body); plSetSrcTitle(sharedCityLists.length); return; } // r72r-1
-  if (placesSource === 'curators' || placesSource === 'community'){ await renderSavedFromInto(body, placesSource === 'curators'); return; } // ز-١-ب: حي
-  if (placesSource !== 'mine'){
-    const t = { curators:['⭐','Curators'], community:['🌍','Community'] }[placesSource];
-    body.innerHTML = '<div class="mp-empty" style=""><div class="big">' + t[0] + '</div>' + t[1] + ' — opens in stage 3 of this step.</div>';
-    return;
-  }
+  if (placesSource === 'curators' || placesSource === 'community'){ await renderSavedFromInto(body, placesSource === 'curators'); return; } // ز-١-ب: حي · r74m: الفرع الميت «opens in stage 3» حُذف
   if (!myListCityId){ // أ-١٢-١ (قرار المالك): لا مدينة تُفرض — انظر plInitialCityPick
     const pick = plInitialCityPick(); myListCityId = pick ? pick.id : null; myListCountry = pick ? pick.country : null;
   }
@@ -131,7 +127,7 @@ function renderBookmarkedPlaces(body){
   }).forEach(function(cid){
     const c = meta[cid];
     const anyRec = byCity[cid][0] || {}; const head = c ? ((c.country ? c.country + ' · ' : '') + c.name) : (anyRec.cityName || (myListAllCities().find(function(x){ return x.id === cid; }) || {}).name || 'Other places'); // r72r-1: اسم المدينة من السجل أو من مدني الخاصة
-    html += '<div class="pl-sechead"><span>' + escapeHtml(head) + '</span><span class="seccnt"># ' + byCity[cid].length + (byCity[cid].length === 1 ? ' place' : ' places') + '</span></div>';
+    html += '<div class="pl-sechead"><span>' + escapeHtml(head) + '</span><span class="seccnt">· ' + byCity[cid].length + (byCity[cid].length === 1 ? ' place' : ' places') + '</span></div>';
     const byCat = {};
     byCity[cid].forEach(function(b){ (byCat[b.category || ''] = byCat[b.category || ''] || []).push(b); });
     Object.keys(byCat).sort().forEach(function(cat){
@@ -171,7 +167,7 @@ function plTogglePanel(which){ plPanel = (plPanel === which) ? null : which; if 
 let plFilterMain = '', plFilterSub = ''; // ر٧٠ط (N-082)
 catPairRegister('plFilter', function(v){ plFilterMain = v || ''; plFilterSub = ''; renderPlacesMine(); }, function(v){ plFilterSub = v || ''; renderPlacesMine(); });
 function plPlaceNamesOf(catId){ const e = (myCityListData && myCityListData.categories || {})[catId]; return ((e && e.places) || []).map(function(q){ return q && q.name ? q.name : ''; }).filter(Boolean); }
-function secHeadHtml(name, count, closed, onclick){ /* خ-٦: رأس القسم الرئيسي المطوي — مكوّن واحد لشاشة الأماكن ولأماكن الآخرين (المنتقون والمجتمع) */ return '<div class="pl-sechead' + (closed ? ' closed' : '') + '" onclick="' + onclick + '"><span>' + escapeHtml(name) + '</span><span class="seccnt"># ' + count + (count === 1 ? ' place' : ' places') + ' ' + (closed ? '<span class="arr">⌄</span>' : '<span class="arr">⌃</span>') + '</span></div>'; }
+function secHeadHtml(name, count, closed, onclick){ /* خ-٦: رأس القسم الرئيسي المطوي — مكوّن واحد لشاشة الأماكن ولأماكن الآخرين (المنتقون والمجتمع) */ return '<div class="pl-sechead' + (closed ? ' closed' : '') + '" onclick="' + onclick + '"><span>' + escapeHtml(name) + '</span><span class="seccnt">· ' + count + (count === 1 ? ' place' : ' places') + ' ' + (closed ? '<span class="arr">⌄</span>' : '<span class="arr">⌃</span>') + '</span></div>'; }
 let plSecCollapsed = {}; // ر٧٠ج: حالة طي الأقسام للجلسة · ز-١-ج-٣ (قرار المالك): مغلقة افتراضيًّا؛ القيمة false تعني فتحها المستخدم
 function plToggleSection(id){ plSecCollapsed[id] = !plSecIsClosed(id); renderPlacesMine(); }
 let plSearchQ = ''; let plSearchTimer = null; // خ-٣ (قرار المالك): بحث بالاسم بالصف الأول — يصفّي القائمة والخريطة ويفتح الأقسام التي فيها نتائج
@@ -205,43 +201,59 @@ function plExportCityList(){
   out += '\nSent via MyPickz · mypickz.app';
   mpSendText(out);
 }
+function plRow1Html(){ /* r74m (قرار المالك ١١ أكتوبر): الصف الأول الثابت — الدولة · المدينة · ＋ City؛ بلا مدينة محددة تظهر «Select city» (أ-١٢-١) */
+  return '<div class="headrow"><button type="button" class="csel" onclick="plTogglePanel(\'countries\')">' + (myListCountry ? ((countryFlag(myListCountry) ? countryFlag(myListCountry) + ' ' : '') + plCountryCode(myListCountry)) : 'Country') + ' ' + (plPanel === 'countries' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button>' // ر٧٠ج (N-067): العلم بواجهة الشاشة
+    + '<button type="button" class="csel grow" onclick="plTogglePanel(\'cities\')"><b>' + (myListCityId ? escapeHtml(plCityName()) : 'Select city') + '</b> ' + (plPanel === 'cities' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button>'
+    + '<button type="button" class="actn primary hact" onclick="plAddCity()"><b>＋</b> City</button></div>'; // ر٧٠ج (N-068): فعل رئيس بحيز أوضح — النص كما بالمرجع ٦/أ (إبرة §٢١)
+}
+function plViewSegHtml(){ return '<div class="pseg plseg"><button type="button" class="chip' + (plView !== 'map' ? ' on' : '') + '" onclick="plSetView(\'list\')">☰ List</button><button type="button" class="chip' + (plView === 'map' ? ' on' : '') + '" onclick="plSetView(\'map\')">🗺 Map</button></div>'; } // r74m: مبدّل العرض بحالتين — المفعَّلة مظللة
+function plSetView(v){ if (plView === v) return; plView = v; renderPlacesMine(); }
+function plRow3Html(){ return catPairRow({ id: 'plFilter', main: plFilterMain, sub: plFilterSub, allowAll: true, allLabel: 'All categories', allSubLabel: 'All in this category', countOf: plCatCount, placesOf: plPlaceNamesOf, rerender: 'renderPlacesMine', lead: plViewSegHtml(), noHost: true }); } // ر٧٠ط (N-082): التصفية رئيسي ← فرعي · r74m: مع مبدّل العرض أقصى اليسار، ولوحتها خارج الرأس الثابت
+function plHeadSet(mode){ /* r74m: الرأس الثابت — 'city' الصفوف الثلاثة · 'nocity' الصف الأول فقط · 'other' (المفكرة · المشارَك · المنسوخ) بلا صفَّي السياق والتصفية ولا زر الإضافة */
+  const r1 = document.getElementById('plRow1'), r3 = document.getElementById('plRow3'), add = document.getElementById('plAddBtn'), row = document.getElementById('plSrcRow');
+  if (r1) r1.innerHTML = mode === 'other' ? '' : plRow1Html();
+  if (r3) r3.innerHTML = mode === 'city' ? plRow3Html() : '';
+  if (add) add.style.display = mode === 'city' ? '' : 'none';
+  if (row){ row.classList.toggle('c3', mode === 'city'); row.classList.toggle('c2', mode !== 'city'); }
+}
+function plRow4Html(){ /* r74m: الصف الرابع (غير ثابت) — تخطيط اليوم (بابه هنا وجسمه بحزمة الرحلات) · التصدير · العلنية · المشاركة بالاسم */
+  const d = myCityListData || {}; const nShared = (d.sharedWith || []).length;
+  return '<div class="plrow4">'
+    + soonChip('🗓 Day plan', 'Soon', 'Day plans arrive with the trips batch', 'actn')
+    + '<button type="button" class="actn wide2" onclick="openExportPreview(\'list\')" title="Preview and send this city list">📤 Export places list</button>'
+    + '<button type="button" class="actn ico' + (d.public ? ' on' : '') + '" id="plPublicBtn" onclick="plTogglePublic()" title="' + (d.public ? 'Public — tap to make private' : 'Private — tap to allow others to view') + '">🌐</button>'
+    + '<button type="button" class="actn ico' + (nShared ? ' on' : '') + '" id="plShareBtn" onclick="openShareModal(\'list\')" title="' + (nShared ? 'Shared with ' + nShared + ' — tap to manage' : 'Share my list with…') + '">' + shareSvg() + '</button>' // ر٦٩ص (N-055): زعفراني حين تكون مشارَكة
+    + '</div>';
+}
+function plMineActions(cityId, cat, pl, i, bm){ /* r72q-2 (وضع mine): Maps · 🔖 · 🧳 · 📤 · ★ · ✏️ · 📍 — r74m-٢ (قرار المالك ١١ أكتوبر): النسخة بأفعال مكاني كلها، بمدينتها */
+  return [
+        pl.url ? { html: 'Maps ↗', href: pl.url, title: 'Open in Google Maps' } : null,
+        { cls: 'bmk' + (bm ? ' on' : ''), html: bmkSvg(bm), on: "plToggleBm('" + cat.id + "', " + i + ")", title: bm ? 'Bookmarked — tap to remove' : 'Bookmark' },
+        (activeTripId && pl.id) ? { html: '🧳', on: "addPlaceToTrip('mylist', '" + cityId + "', '" + cat.id + "', '" + pl.id + "', null, '" + attrStr(pl.name) + "')", title: 'Add to active trip' } : (pl.id ? { html: '🧳', on: "plAddToTripFor('" + cityId + "', '" + cat.id + "', '" + pl.id + "', '" + attrStr(pl.name) + "')", title: 'Add to a trip' } : null),
+        { html: '📤', on: "plSendPlace('" + cat.id + "', " + i + ")", title: 'Send this place' },
+        { cls: 'star' + (pl.topPlace ? ' on' : ''), html: '★', on: "plToggleTopRow('" + cat.id + "', " + i + ")", title: pl.topPlace ? 'Top place — tap to remove' : 'Add to Top places' },
+        { html: '✏️', on: "openPlPlaceModal('" + cat.id + "', " + i + ")", title: 'Edit' },
+        (pl.geo && typeof pl.geo.lat === 'number') ? { html: '📍 Edit pin', on: "plConfirmPin('" + cat.id + "', " + i + ")", title: 'Move or remove this pin' } : { html: '📍 Confirm', on: "plConfirmPin('" + cat.id + "', " + i + ")", title: 'Confirm this place on the map' } // خ-٤ (قرار المالك): له دبوس → «Edit pin» يفتح خطوة الخريطة على موضعه
+  ];
+}
 function renderPlacesMine(){
+  if (placesSource === 'curators' || placesSource === 'community' || placesSource === 'bookmarked' || placesSource === 'shared'){ renderPlacesBody(); return; } /* r74m-٢: أي فعل يعيد الرسم وعرضٌ آخر فعّال (النسخ · المفكرة · المشارَك) يعيد ذلك العرض لا قائمة المدينة */
   try{ plSetSrcTitle(myCityListData ? liveCountOf(myCityListData.categories) : 0); }catch(_){} // r72r-1: العنوان بعدده
   const body = document.getElementById('plBody'); if (!body) return;
   if (!myListCityId){ // أ-١٢-١: بلا مدينة محددة — صف الرأس بشريحة «Select city» وإرشاد قصير؛ لا مدينة تُفرض
-    let h = '<div class="headrow"><button type="button" class="csel" onclick="plTogglePanel(\'countries\')">' + (myListCountry ? ((countryFlag(myListCountry) ? countryFlag(myListCountry) + ' ' : '') + plCountryCode(myListCountry)) : 'Country') + ' ' + (plPanel === 'countries' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button>'
-      + '<button type="button" class="csel grow" onclick="plTogglePanel(\'cities\')"><b>Select city</b> ' + (plPanel === 'cities' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button>'
-      + '<button type="button" class="actn primary hact" onclick="plAddCity()"><b>＋</b> City</button></div>';
+    plHeadSet('nocity'); let h = '';
     if (plPanel === 'countries'){ h += pickerPanel({ id: 'plCountries', title: 'Browse countries', filterPlaceholder: 'Type a country…', onPick: 'plPickCountry', onClose: 'plTogglePanel(null)', items: myListAllCountries().map(function(k){ return { id: k, name: k, icon: countryFlag(k) || '', count: myListAllCities().filter(function(c){ return c.country === k; }).length }; }) }); }
-    else if (plPanel === 'cities'){ const inC = myListAllCities().filter(function(c){ return !myListCountry || c.country === myListCountry; }); h += pickerPanel({ id: 'plCities', title: 'Browse cities' + (myListCountry ? ' · ' + myListCountry : ''), filterPlaceholder: 'Type a city…', onPick: 'plPickCity', onClose: 'plTogglePanel(null)', editable: true, onDelete: 'plRemoveCity', canAdd: true, onAdd: 'plAddCity()', emptyText: 'No city yet — add one', items: inC.map(function(c){ const n = (userListData && userListData.cityPlaceCounts) ? userListData.cityPlaceCounts[c.id] : 0; return { id: c.id, name: c.name, count: (typeof n === 'number') ? n : 0, custom: c.id.indexOf('mylist_') === 0 }; }) }); } // ر٧٠س-٣: وضع التحرير بفرع «بلا مدينة» أيضًا
+    else if (plPanel === 'cities'){ const inC = myListAllCities().filter(function(c){ return !myListCountry || c.country === myListCountry; }); h += pickerPanel({ id: 'plCities', title: 'Browse cities' + (myListCountry ? ' · ' + myListCountry : ''), filterPlaceholder: 'Type a city…', onPick: 'plPickCity', onClose: 'plTogglePanel(null)', editable: true, onDelete: 'plRemoveCity', canAdd: true, onAdd: 'plAddCity()', emptyText: 'No city matches — add it below', items: inC.map(function(c){ const n = (userListData && userListData.cityPlaceCounts) ? userListData.cityPlaceCounts[c.id] : undefined; return { id: c.id, name: c.name, count: (typeof n === 'number') ? n : 0, custom: true }; }) }); }
     h += plEmptyGuideHtml();
     body.innerHTML = h; return;
   }
   if (!myCityListData) return;
   const cats = plCatsAll();
   const inCountry = myListAllCities().filter(c => c.country === myListCountry);
-
-  /* الصف الأول — المحدد الواحد والفعل الأساسي (المشهد ٦/أ · القرار ٢٠٢٦-٠٨-٢٩-٠٥) */
   const countriesAll = myListAllCountries();
-  const oneCountry = countriesAll.length <= 1;
-  let outerHtml = '<div class="headrow">'
-    + '<button type="button" class="csel" onclick="plTogglePanel(\'countries\')">' + (countryFlag(myListCountry) ? countryFlag(myListCountry) + ' ' : '') + plCountryCode(myListCountry) + ' ' + (plPanel === 'countries' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button>' // ر٧٠ج (N-067): العلم بواجهة الشاشة
-    + '<button type="button" class="csel grow" onclick="plTogglePanel(\'cities\')"><b>' + escapeHtml(plCityName()) + '</b> ' + (plPanel === 'cities' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button>' // أ-١٢-١: رمز مدينتي بصف الرأس (قرار المالك)
-    + '<button type="button" class="actn primary hact" onclick="plAddCity()"><b>＋</b> City</button>' // ر٧٠ج (N-068): فعل رئيس بحيز أوضح — النص كما بالمرجع ٦/أ (إبرة §٢١)
-    + '</div>';
-
-  /* الصف الثاني — التصنيفات وطريقة العرض */
-  outerHtml += '<div class="chipgrid c3 headgrid">' // ر٦٩ش (N-056): الصف الثاني — أفعال الملكية بثلاثة أعمدة
-    + '<button type="button" class="actn primary" onclick="plTogglePanel(\'cats\')"><b>＋</b> Add place</button>' // ر٧٠ل-٣ (قرار المالك): فعل رئيس زعفراني
-    + '<button type="button" class="actn' + (myCityListData.public ? ' on' : '') + '" id="plPublicBtn" onclick="plTogglePublic()" title="' + (myCityListData.public ? 'Public — tap to make private' : 'Private — tap to allow others to view') + '">' + '🌐' + '</button>'
-    + '<button type="button" class="actn' + (((myCityListData.sharedWith || []).length) ? ' on' : '') + '" id="plShareBtn" onclick="openShareModal(\'list\')" title="' + (((myCityListData.sharedWith || []).length) ? 'Shared with ' + myCityListData.sharedWith.length + ' — tap to manage' : 'Share my list with…') + '">' + shareSvg() + '</button>' // ر٦٩ص (N-055): زعفراني حين تكون مشارَكة
-    + '</div>'
-    + catPairRow({ id: 'plFilter', main: plFilterMain, sub: plFilterSub, allowAll: true, allLabel: 'All categories', allSubLabel: 'All in this category', countOf: plCatCount, placesOf: plPlaceNamesOf, rerender: 'renderPlacesMine' }) // ر٧٠ط (N-082): التصفية رئيسي ← فرعي
-    + '<div class="chipgrid c3 headgrid">' // ر٦٩ش (N-056): الصف الثالث — أدوات العرض والتصدير بثلاثة أعمدة
-    + '<button type="button" class="actn" onclick="plToggleView()">' + (plView === 'map' ? 'View: <b>Map</b> · List' : 'View: <b>List</b> · Map') + '</button>' // ز-١-ب: العرض القائم يصير حيًّا (List ⇄ Map)
-    + '<button type="button" class="actn soon" onclick="showSoon(\'Day plans arrive with the day-plan batch\')">🗓 Day plan <span class="dim">Soon</span></button>'
-    + '<button type="button" class="actn" onclick="openExportPreview(\'list\')" title="Preview and send this city list">📤 Export places list</button>'
-    + '</div><div class="ctx" id="plCtx"><b>My places</b></div>';
+  plHeadSet('city'); /* الصفوف ١–٣ بالرأس الثابت */
+  { const __own = []; Object.keys(myCityListData.categories || {}).forEach(function(k){ ((myCityListData.categories[k] || {}).places || []).forEach(function(p){ if (p && p.source && p.source.ownerId && !(p.source.ownerId in plOwnerCache)) __own.push(p.source.ownerId); }); }); if (__own.length) plEnsureOwners(__own).then(function(did){ if (did && placesSource === 'mine') renderPlacesMine(); }); } /* r74m-٢: سطر From بالاسم الحي — يُجلب مرة ثم يُعاد الرسم */
+  let outerHtml = catPairHost('plFilter') + plRow4Html() + '<div class="ctx" id="plCtx"><b>My places</b></div>';
 
   /* ر٧٠ب (N-011 · ق٠٩-٠٧-٠٥): اللوحات الثلاث بلوحة الاختيار المشتركة — الدول (بعلمها N-067) · المدن (عدّاد ثابت · المختارة بنقطة · الحذف بوضع التحرير على مدني الخاصة · ＋ Add city أسفل النتائج) · التصنيفات (＋ على كل تصنيف بما فيه الفارغ) */
   if (plPanel === 'countries'){
@@ -258,10 +270,8 @@ function renderPlacesMine(){
       + catPairRow({ id: 'plAdd', main: plAddMain, sub: '', countOf: plCatCount, placesOf: plPlaceNamesOf, rerender: 'renderPlacesMine', subLabel: 'Pick a sub-category' }) + '</div>';
   }
 
-  /* ر٦٩ز: قائمة الأسماء انتقلت إلى نافذة Shared with */
-  /* ر٦٩ز (N-034): الضابطان انتقلا لصف أفعال الرأس (🌐/🔒 · 🔗 بنافذة Shared with) */
 
-  /* التصنيفات التي فيها أماكن — بعدّادها و＋ · ثم صف المكان بأفعاله الخمسة */
+  /* التصنيفات التي فيها أماكن — بعدّادها و＋ · ثم صف المكان بأفعاله · r74m: القائمة تُجمَّع بمتغيّر مستقل فلا تُقتطع بتعبير نمطي (علة الخريطة مع الأقسام المطوية) */
   let any = false;
   const secOrder = catSections(); const secHtml = {}, secCount = {}; // ر٧٠ج (N-081 أ): التدرج — القسم الرئيسي عنوانًا قابلًا للطي وتحته فرعياته بأماكنها
   cats.filter(cat => (!plFilterMain || cat.sectionId === plFilterMain) && (!plFilterSub || cat.id === plFilterSub)).forEach(cat => { // ر٧٠ط: التصفية
@@ -276,23 +286,22 @@ function renderPlacesMine(){
     visible.forEach(vx => {
       const pl = vx.q, i = vx.realIdx;
       const bm = isBookmarkedPlace(pl); // ر٦٨: المفتاح هوية العنصر (ر٦٤ كان بصمة الرابط)
-      const actions = [ // r72q-2 (وضع mine): Maps · 🔖 · 🧳 · 📤 · ★ · ✏️
-        pl.url ? { html: 'Maps ↗', href: pl.url, title: 'Open in Google Maps' } : null,
-        { cls: 'bmk' + (bm ? ' on' : ''), html: bmkSvg(bm), on: "plToggleBm('" + cat.id + "', " + i + ")", title: bm ? 'Bookmarked — tap to remove' : 'Bookmark' },
-        (activeTripId && pl.id) ? { html: '🧳', on: "addPlaceToTrip('mylist', '" + myListCityId + "', '" + cat.id + "', '" + pl.id + "', null, '" + attrStr(pl.name) + "')", title: 'Add to active trip' } : (pl.id ? { html: '🧳', on: "plAddToTripFor('" + myListCityId + "', '" + cat.id + "', '" + pl.id + "', '" + attrStr(pl.name) + "')", title: 'Add to a trip' } : null),
-        { html: '📤', on: "plSendPlace('" + cat.id + "', " + i + ")", title: 'Send this place' },
-        { cls: 'star' + (pl.topPlace ? ' on' : ''), html: '★', on: "plToggleTopRow('" + cat.id + "', " + i + ")", title: pl.topPlace ? 'Top place — tap to remove' : 'Add to Top places' },
-        { html: '✏️', on: "openPlPlaceModal('" + cat.id + "', " + i + ")", title: 'Edit' },
-        (pl.geo && typeof pl.geo.lat === 'number') ? { html: '📍 Edit pin', on: "plConfirmPin('" + cat.id + "', " + i + ")", title: 'Move or remove this pin' } : { html: '📍 Confirm', on: "plConfirmPin('" + cat.id + "', " + i + ")", title: 'Confirm this place on the map' } // خ-٤ (قرار المالك): له دبوس → «Edit pin» يفتح خطوة الخريطة على موضعه
-      ];
+      const actions = plMineActions(myListCityId, cat, pl, i, bm); // r74m-٢: باني الأفعال الواحد (يخدم النسخ بعرض Saved from أيضًا)
       __cards += placeCardHtml(pl, 'mine', { actions: actions, fallbackName: cat.name });
     });
     html += placeGroupHtml(cat.name + catLegacyHint(cat.id), visible.length, __catRight, __cards);
     secHtml[cat.sectionId] = (secHtml[cat.sectionId] || '') + html; secCount[cat.sectionId] = (secCount[cat.sectionId] || 0) + visible.length;
   });
+  let listHtml = '';
   secOrder.forEach(function(sc){ if (!secHtml[sc.id]) return; const closed = plSecIsClosed(sc.id);
-    outerHtml += secHeadHtml(sc.name, secCount[sc.id], closed, "plToggleSection('" + attrStr(sc.id) + "')"); // ر٧٠ل-٣: العدّاد بارز
-    if (!closed) outerHtml += secHtml[sc.id]; });
+    listHtml += secHeadHtml(sc.name, secCount[sc.id], closed, "plToggleSection('" + attrStr(sc.id) + "')"); // ر٧٠ل-٣: العدّاد بارز
+    if (!closed) listHtml += secHtml[sc.id]; });
+  if (!any && !myCityListLoadFailed) listHtml += (totalMyPlaces() > 0 ? ('<div class="mp-empty">No places in ' + escapeHtml(plCityName()) + ' yet<br>'
+    + '<button type="button" class="cta" onclick="plTogglePanel(\'cats\')"><b>＋</b> Add place</button>'
+    + '<button type="button" class="actn" onclick="selectPlacesSource(\'community\')">Browse curators &amp; community</button></div>') : plEmptyGuideHtml()); // أ-١٢-٢: بلا مكان بالحساب كله تُعرض لوحة الأبواب الأربعة
+  let __mapPlaces = null;
+  if (plView === 'map'){ __mapPlaces = Object.keys(myCityListData.categories || {}).flatMap(function(k){ return ((myCityListData.categories[k] || {}).places || []).filter(function(q){ return q && (q.name || q.url) && plSearchHit(q); }); }); outerHtml += '<div class="ctx" id="plMapLine" style="text-align:center;">' + __mapPlaces.length + ' places: finding suggestions…</div><div class="pinkeys" id="plMapKey" style="display:none;"></div><div id="plMapInline" class="geo-map"></div>'; } // ز-١-ب: عرض الخريطة بدل القائمة
+  else outerHtml += listHtml;
   if (currentUserSuspended){
     outerHtml += '<div class="warnline">🚫 <span><b>Account Suspended</b><br>You can browse everything, but saving, publishing and sharing are turned off.</span></div>';
   }
@@ -300,18 +309,15 @@ function renderPlacesMine(){
     outerHtml += '<div class="warnline">⚠️ <span><b>Could not load this city</b><br>Nothing is saved until it loads, so your places stay safe. <span class="dim">(' + escapeHtml(myCityListLoadError) + ')</span></span></div>'
       + '<button type="button" class="cta wide" onclick="retryLoadCity()">Try again</button>';
   }
-  if (!any && !myCityListLoadFailed) outerHtml += (totalMyPlaces() > 0 ? ('<div class="mp-empty">No places in ' + escapeHtml(plCityName()) + ' yet<br>'
-    + '<button type="button" class="cta" onclick="plTogglePanel(\'cats\')"><b>＋</b> Add place</button>'
-    + '<button type="button" class="actn" onclick="selectPlacesSource(\'community\')">Browse curators &amp; community</button></div>') : plEmptyGuideHtml()); // أ-١٢-٢: بلا مكان بالحساب كله تُعرض لوحة الأبواب الأربعة
   outerHtml += plUnsortedPanelHtml(); // ز-١-ج-٣ (قرار المالك ٢٩ سبتمبر): «Import places still not categorized» — لكل مستخدم؛ مخرج الهجرة والاستيراد
-  if (plView === 'map'){ const __places = Object.keys(myCityListData.categories || {}).flatMap(function(k){ return ((myCityListData.categories[k] || {}).places || []).filter(function(q){ return q && (q.name || q.url) && plSearchHit(q); }); }); const __withGeo = __places.filter(function(q){ return q.geo && typeof q.geo.lat === 'number'; }); outerHtml = outerHtml.replace(/<div class="pl-sechead"[\s\S]*$/, '') + '<div class="ctx" id="plMapLine" style="text-align:center;">' + __withGeo.length + ' of ' + __places.length + ' places have a pin — finding suggestions…</div><div class="pinkeys" id="plMapKey" style="display:none;"></div><div id="plMapInline" class="geo-map"></div>'; body.innerHTML = outerHtml; renderInlineMap('plMapInline', __places, null); return; } // ز-١-ب: عرض الخريطة بدل القائمة
   body.innerHTML = outerHtml;
+  if (__mapPlaces) renderInlineMap('plMapInline', __mapPlaces, null);
 }
 
-async function plPickCountry(v){ if (pendingCity) pendingCity = null; plCityPanelAll = false; /* r72r-1: اختيار دولة يضيّق اللوحة إلى مدنها */ await selectMyListCountry(v); renderPlacesMine(); }
+async function plPickCountry(v){ if (pendingCity) pendingCity = null; plCityPanelAll = false; /* r72r-1: اختيار دولة يضيّق اللوحة إلى مدنها */ await selectMyListCountry(v); plPanel = null; renderPlacesMine(); } // r74m (قرار المالك): اللوحة تُغلق بعد الاختيار
 let plSessionCity = null; // أ-١٢-١: المدينة التي اختارها المستخدم بهذه الجلسة (تبقى محددة ولو بلا محتوى)
 let plCityPanelAll = true; // r72r-1: اللوحة عبر الدول افتراضيًّا؛ شريحة الدولة تضيّقها اختياريًّا
-async function plPickCity(id){ if (pendingCity && pendingCity.id !== id) pendingCity = null; plSessionCity = id; const __c = myListAllCities().find(function(x){ return x.id === id; }); if (__c && __c.country && __c.country !== myListCountry) await selectMyListCountry(__c.country); /* r72r-1: الدولة تتبع المدينة */ await selectMyListCity(id); renderPlacesMine(); try{ mpTrack.statsCity(id, 'open'); }catch(_){} } // r72m
+async function plPickCity(id){ if (pendingCity && pendingCity.id !== id) pendingCity = null; plSessionCity = id; const __c = myListAllCities().find(function(x){ return x.id === id; }); if (__c && __c.country && __c.country !== myListCountry) await selectMyListCountry(__c.country); /* r72r-1: الدولة تتبع المدينة */ await selectMyListCity(id); plPanel = null; renderPlacesMine(); try{ mpTrack.statsCity(id, 'open'); }catch(_){} } // r72m · r74m (قرار المالك): لوحة المدن تُغلق بعد الاختيار
 async function plAddCity(){ await addMyListCity(); plSessionCity = myListCityId; await loadMyCityList(myListCityId); renderPlacesMine(); }
 let plAddMain = ''; // ر٧٠ط-٢: القسم المختار بلوحة «＋ Add place»
 catPairRegister('plAdd', function(v){ plAddMain = v || ''; if (v){ const st = __cp.plAdd; if (st) st.open = 'sub'; } renderPlacesMine(); }, function(v){ if (v){ plPanel = null; openPlPlaceModal(v, null); } else renderPlacesMine(); });
@@ -524,12 +530,18 @@ async function openContextMap(places, title, focusId){ // ز-١-ب: خريطة �
   setTimeout(function(){ ctxMap.resize(); }, 60);
 }
 let plView = 'list', tripView = 'days';
-function plToggleView(){ plView = plView === 'map' ? 'list' : 'map'; renderPlacesMine(); }
 function tripToggleView(){ tripView = tripView === 'map' ? 'days' : 'map'; renderMyTripsModal(); } // العرض يُعاد بالمسار الطبيعي (جسم الرحلات)
 const inlineMaps = {};
-let plSuggestDiag = { err: [], index: '', slowest: 0, batches: 0, sent: '' }; // خ-٢: تشخيص آخر بحث (نوع الفشل · الفهرس المُجيب) — يظهر بسطر الخريطة
-const plSuggestCache = {}; // خ-٢ (قرار المالك): اقتراحات المواضع لأماكني بلا دبوس — بالجلسة، لا تُحفظ إلا بتأكيد صاحبها
+let plSuggestDiag = { err: [], index: '', slowest: 0, batches: 0, sent: '', city: '', asked: 0, known: 0, cachedBefore: 0, dropped: [] }; // خ-٢: تشخيص آخر بحث — r74m: لا يُصفَّر بإعادة الرسم (يُصفَّر عند سؤال العامل فقط) ويُقرأ من نافذة «ⓘ Diag» بنسخة الاختبار
+const plSuggestCache = {}; // خ-٢ (قرار المالك): اقتراحات المواضع لأماكني بلا دبوس — بالجلسة، لا تُحفظ إلا بتأكيد صاحبها · r74m: المفتاح المدينة + المكان (كان المكان وحده فورث مكانٌ اقتراحَ مدينة أخرى)
 function plPlaceKey(p){ return p.id || p.url || p.name; }
+function plSugKey(p){ return myListCityId + '|' + plPlaceKey(p); } // r74m
+function plKm(a, b){ const R = 6371, t = function(x){ return x * Math.PI / 180; }; const dLat = t(b.lat - a.lat), dLng = t(b.lng - a.lng); const q = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(t(a.lat)) * Math.cos(t(b.lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2); return 2 * R * Math.asin(Math.sqrt(q)); } // r74m: حارس المسافة بالعميل
+let plMapKeyOpen = false; // r74m (قرار المالك): مفتاح الألوان مطوي افتراضيًّا خلف «Key ⌄» — الحالة بالجلسة
+function plMapKeyToggle(){ plMapKeyOpen = !plMapKeyOpen; renderPlacesMine(); }
+function plDiagText(){ const d = plSuggestDiag; const lines = ['City: ' + plCityName() + ' (' + myListCityId + ')' + (d.city && d.city !== myListCityId ? ' — last worker query was for ' + d.city : ''), 'Sent: ' + (d.sent || '—'), 'Index: ' + (d.index || '—'), 'Asked worker: ' + (d.asked || 0) + ' · batches ' + (d.batches || 0) + ' · slowest ' + ((d.slowest || 0) / 1000).toFixed(1) + 's', 'From session cache: ' + (d.cachedBefore || 0) + ' · from pinned-before identity: ' + (d.known || 0), 'Dropped by distance (> 1.5 × radius): ' + (d.dropped || []).length].concat((d.dropped || []).map(function(x){ return '  ✗ ' + x.name + ' ← cached for ' + x.city + ' · ' + x.km + ' km away'; })); if (d.err && d.err.length) lines.push('ERR: ' + d.err.join(', ')); lines.push('Build: ' + (window.__mpBuild || '')); return lines.join('\n'); } // r74m: التشخيص نصًّا قابلًا للنسخ
+function plOpenDiag(){ const bd = document.getElementById('dashBackdrop'), body = document.getElementById('dashBody'); if (!bd || !body) return; bd.classList.add('show'); dashSet('ⓘ Map diagnostics', null); body.innerHTML = '<pre class="diagtxt" id="plDiagPre">' + escapeHtml(plDiagText()) + '</pre><button type="button" class="dash-door plain" onclick="plCopyDiag()"><span>📋 Copy</span><span>›</span></button>'; } // r74m: نافذة بالقشرة (نسخة الاختبار فقط)
+function plCopyDiag(){ const t = plDiagText(); if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){ showToast('Copied ✓'); }, function(){ showToast('Could not copy'); }); } else showToast('Could not copy'); }
 const PIN_FAMILY = { cafes_sweets: 'cafe', restaurants_dish: 'dish', restaurants_cuisine: 'cuisine', shopping_store: 'store', shopping_product: 'product', parks_gardens: 'parks', squares_streets: 'squares' }; /* خ-٥ (قرار مشترك ٣ أكتوبر): ٧ أقسام بألوان مميّزة بأسمائها الأصلية — الكثيفة بوسط المدينة · بقية الأقسام نحاسي («Other categories») · بلا أيقونات */
 const PIN_FAMILY_LABEL = { cafe: 'Cafes & Sweets', dish: 'Restaurants · by dish', cuisine: 'Restaurants · by cuisine', store: 'Shopping · by store', product: 'Shopping · by product', parks: 'Parks & Gardens', squares: 'Squares & Streets', rest: 'Other categories' };
 let plMapFam = ''; /* مصفّي عائلة بالخريطة (شريحة المفتاح) */
@@ -539,23 +551,24 @@ async function plSuggestFor(places){ if (plSuggestRun && plSuggestRunCity === my
 function plSuggestProgress(txt){ const line = document.getElementById('plMapLine'); if (line) line.textContent = txt; }
 async function plSuggestRunOnce(places, gen){ // يقين المطابق (أو سجل الهوية) فقط؛ غير ذلك → null (لا تخمين) · التشخيص يتراكم · يتوقف إن تغيّرت المدينة (gen)
   const alive = function(){ if (gen !== plSuggestGen){ plSuggestProgress('Cancelled — city changed'); return false; } return true; };
-  const g = await cityGeoOf(myListCityId); const todo = (places || []).filter(function(p){ return p && (p.name || p.url) && !(p.geo && typeof p.geo.lat === 'number') && !(plPlaceKey(p) in plSuggestCache); });
+  const g = await cityGeoOf(myListCityId); const noGeo = (places || []).filter(function(p){ return p && (p.name || p.url) && !(p.geo && typeof p.geo.lat === 'number'); }); const todo = noGeo.filter(function(p){ return !(plSugKey(p) in plSuggestCache); });
   if (!alive()) return [];
-  plSuggestDiag = { err: [], index: plSuggestDiag.index || '', slowest: 0, batches: 0, sent: (g ? mpData.geo.ccOf(myListCityId) + ' ' + (+g.lat).toFixed(3) + ',' + (+g.lng).toFixed(3) + ' r' + g.r : 'no centre') }; /* ما يُرسل فعلًا للعامل (تشخيص) */
+  if (!todo.length){ if (plSuggestDiag.city === myListCityId) plSuggestDiag.cachedBefore = noGeo.length; return noGeo.map(function(p){ return { p: p, s: plSuggestCache[plSugKey(p)] || null }; }); } /* r74m: كل شيء بالذاكرة — لا تصفير للتشخيص */
+  plSuggestDiag = { err: [], index: plSuggestDiag.index || '', slowest: 0, batches: 0, city: myListCityId, asked: 0, known: 0, cachedBefore: noGeo.length - todo.length, dropped: [], sent: (g ? mpData.geo.ccOf(myListCityId) + ' ' + (+g.lat).toFixed(3) + ',' + (+g.lng).toFixed(3) + ' r' + g.r : 'no centre') }; /* ما يُرسل فعلًا للعامل (تشخيص) */
   if (!g){ plSuggestDiag.err.push('no city centre'); }
   const rest = []; plSuggestProgress('Checking pinned-before places… ' + todo.length); const idKeys = todo.map(function(p){ return mpData.identity.keyOf(myListCityId, p.name); }); const knownMap = await mpData.identity.getMany(idKeys); if (!alive()) return [];
-  todo.forEach(function(p, k){ const known = knownMap[idKeys[k]]; if (known && typeof known.lat === 'number') plSuggestCache[plPlaceKey(p)] = { lat: known.lat, lng: known.lng, openId: known.openId || null, source: known.source === 'user_pin' ? 'user_pin' : 'overture', known: true }; else rest.push(p); });
+  todo.forEach(function(p, k){ const known = knownMap[idKeys[k]]; if (known && typeof known.lat === 'number') plSuggestCache[plSugKey(p)] = { lat: known.lat, lng: known.lng, openId: known.openId || null, source: known.source === 'user_pin' ? 'user_pin' : 'overture', known: true, city: myListCityId }; else rest.push(p); }); plSuggestDiag.known = todo.length - rest.length; plSuggestDiag.asked = rest.length;
   const chunks = []; for (let i = 0; i < rest.length; i += 40) chunks.push(rest.slice(i, i + 40)); const nb = chunks.length; let done = 0;
-  const runChunk = async function(chunk){ const __t0 = Date.now(); try{ const r = await mpData.geo.matchBatch(myListCityId, chunk.map(function(p){ return { name: p.name || '', addr: p.area || '' }; }), g); if (!alive()) return; if (r && r.index) plSuggestDiag.index = r.index; if (r && r.noData) plSuggestDiag.err.push('noData'); (r && r.results || []).forEach(function(res, k){ const p = chunk[k]; if (!p) return; const top = (res && res.candidates && res.candidates[0]) || null; plSuggestCache[plPlaceKey(p)] = (res && res.auto) ? { lat: res.auto.lat, lng: res.auto.lng, openId: res.auto.id || null, source: 'overture' } : (top ? { lat: top.lat, lng: top.lng, openId: top.id || null, source: 'overture', probable: true, n: (res.candidates || []).length } : null); }); }catch(e){ plSuggestDiag.err.push(/abort/i.test(String(e)) ? 'timeout' : String((e && e.message) || e).slice(0, 24)); } plSuggestDiag.batches++; plSuggestDiag.slowest = Math.max(plSuggestDiag.slowest, Date.now() - __t0); done++; if (alive()) plSuggestProgress('Finding suggestions… ' + done + '/' + nb); };
+  const runChunk = async function(chunk){ const __t0 = Date.now(); try{ const r = await mpData.geo.matchBatch(myListCityId, chunk.map(function(p){ return { name: p.name || '', addr: p.area || '' }; }), g); if (!alive()) return; if (r && r.index) plSuggestDiag.index = r.index; if (r && r.noData) plSuggestDiag.err.push('noData'); (r && r.results || []).forEach(function(res, k){ const p = chunk[k]; if (!p) return; const top = (res && res.candidates && res.candidates[0]) || null; plSuggestCache[plSugKey(p)] = (res && res.auto) ? { lat: res.auto.lat, lng: res.auto.lng, openId: res.auto.id || null, source: 'overture', city: myListCityId } : (top ? { lat: top.lat, lng: top.lng, openId: top.id || null, source: 'overture', probable: true, n: (res.candidates || []).length, city: myListCityId } : null); }); }catch(e){ plSuggestDiag.err.push(/abort/i.test(String(e)) ? 'timeout' : String((e && e.message) || e).slice(0, 24)); } plSuggestDiag.batches++; plSuggestDiag.slowest = Math.max(plSuggestDiag.slowest, Date.now() - __t0); done++; if (alive()) plSuggestProgress('Finding suggestions… ' + done + '/' + nb); };
   for (let i = 0; i < chunks.length; i += 2){ if (!alive()) return []; await Promise.all(chunks.slice(i, i + 2).map(runChunk)); } /* دفعتان بالتوازي */
   if (!alive()) return [];
-  return places.filter(function(p){ return p && !(p.geo && typeof p.geo.lat === 'number'); }).map(function(p){ return { p: p, s: plSuggestCache[plPlaceKey(p)] || null }; });
+  return noGeo.map(function(p){ return { p: p, s: plSuggestCache[plSugKey(p)] || null }; });
 }
 let plPinLists = { probable: [], notFound: [] };
 let plMapFocus = null; // خ-٤ (قرار المالك): بعد تأكيد دبوس من عرض الخريطة تعود الخريطة إلى موضعه (لا ضمّ كل الدبابيس)
 function plOpenPinList(kind){ // نافذة فرعية بأسماء المحتملة/غير الموجودة، لكل اسم زر التأكيد على الخريطة (قرار المالك: لا ازدحام بالسطر)
   const list = plPinLists[kind] || []; const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return; bd.classList.add('show'); dashSet(kind === 'notFound' ? '🔍 Not found' : '❓ Probable', null); /* ب-٢-٢-أ: القشرة */
-  body.innerHTML = '<div class="ctx" style="text-align:center;"><b>' + (kind === 'notFound' ? 'Not found in our data' : 'Probable — needs your confirmation') + '</b> · ' + list.length + '</div>' + (list.length ? list.map(function(p){ const sg = plSuggestCache[plPlaceKey(p)]; return '<div class="row rowblock pin-row">' + mpMap.popupHtml(p, { mine: true, confirm: true, inList: true, note: kind === 'notFound' ? 'Not found in our data — place the pin yourself' : (sg && sg.probable ? (sg.n === 1 ? '1 possible match — name differs slightly' : sg.n + ' possible matches') : 'Probable') }) + '</div>'; }).join('') : '<div class="mp-empty mini">Nothing here.</div>'); // قرار المالك: الصف = نافذة الدبوس نفسها
+  body.innerHTML = '<div class="ctx" style="text-align:center;"><b>' + (kind === 'notFound' ? 'Not found in our data' : 'Probable — needs your confirmation') + '</b> · ' + list.length + '</div>' + (list.length ? list.map(function(p){ const sg = plSuggestCache[plSugKey(p)]; return '<div class="row rowblock pin-row">' + mpMap.popupHtml(p, { mine: true, confirm: true, inList: true, note: kind === 'notFound' ? 'Not found in our data — place the pin yourself' : (sg && sg.probable ? (sg.n === 1 ? '1 possible match — name differs slightly' : sg.n + ' possible matches') : 'Probable') }) + '</div>'; }).join('') : '<div class="mp-empty mini">Nothing here.</div>'); // قرار المالك: الصف = نافذة الدبوس نفسها
 }
 function plOpenCardAt(catId, index){ // خ-٤: من نافذة الدبوس إلى بطاقة المكان بموضعها (القسم يُفتح والبطاقة تُوسَّع وتُمرَّر إليها)
   try{ closeModalById('mapBackdrop'); }catch(_){} const cat = plCatsAll().find(function(c){ return c.id === catId; }); if (cat) plSecCollapsed[cat.sectionId] = false; plView = 'list'; const p = ((myCityListData.categories || {})[catId] || { places: [] }).places[index]; const key = p ? ('mine:' + (p.id || hashUrl(p.url || '') || p.name)) : ''; if (key) plCardOpen[key] = true; renderPlacesMine();
@@ -575,14 +588,18 @@ async function renderInlineMap(elId, places, labelOf){ // خريطة داخل ا
   let map; try{ map = await mpMap.create(el, { center: center, zoom: __focus ? 16 : 14 }); }catch(e){ el.innerHTML = '<div class="mp-empty mini">Map could not load</div>'; return; } inlineMaps[elId] = map; // خ-٢: خرائطنا
   const __mine = elId === 'plMapInline' && !!myCityListData; const __fams = {};
   withGeo.forEach(function(p){ const lbl = labelOf ? labelOf(p) : ''; let fam = null; if (__mine && !lbl){ const info = plPinInfo(p); if (info){ fam = info; __fams[info.fam] = (__fams[info.fam] || 0) + 1; if (plMapFam && info.fam !== plMapFam) return; } } map.marker([p.geo.lat, p.geo.lng], { label: lbl || '', family: fam ? fam.fam : undefined, popup: mpMap.popupHtml(p, { mine: __mine }) }); });
-  if (__mine){ const key = document.getElementById('plMapKey'); if (key){ const fams = Object.keys(__fams); key.innerHTML = fams.length ? fams.map(function(f){ return '<button type="button" class="chip pinkey pinkey-' + f + (plMapFam === f ? ' on' : '') + '" onclick="plMapFam = plMapFam === \'' + f + '\' ? \'\' : \'' + f + '\'; renderPlacesMine()"><span class="pinkey-dot"></span>' + escapeHtml(PIN_FAMILY_LABEL[f] || f) + ' <span class="cnt"># ' + __fams[f] + '</span></button>'; }).join('') : ''; key.style.display = fams.length ? '' : 'none'; } } /* خ-٥: مفتاح الألوان يصفّي الخريطة */
+  if (__mine){ const key = document.getElementById('plMapKey'); if (key){ const fams = Object.keys(__fams); key.innerHTML = fams.length ? fams.map(function(f){ return '<button type="button" class="chip pinkey pinkey-' + f + (plMapFam === f ? ' on' : '') + '" onclick="plMapFam = plMapFam === \'' + f + '\' ? \'\' : \'' + f + '\'; renderPlacesMine()"><span class="pinkey-dot"></span>' + escapeHtml(PIN_FAMILY_LABEL[f] || f) + ' <span class="cnt"># ' + __fams[f] + '</span></button>'; }).join('') : ''; key.style.display = (fams.length && plMapKeyOpen) ? '' : 'none'; key.setAttribute('data-fams', String(fams.length)); } } /* خ-٥: مفتاح الألوان يصفّي الخريطة · r74m: مطوي خلف «Key ⌄» */
   if (withGeo.length > 1 && !__focus) map.fitBounds(withGeo.map(function(p){ return [p.geo.lat, p.geo.lng]; }));
   setTimeout(function(){ map.resize(); }, 60);
-  if (elId === 'plMapInline' && myCityListData){ const sugg = (await plSuggestFor(places)).filter(function(x){ return plSearchHit(x.p); }); const shown = sugg.filter(function(x){ return x.s; }), need = sugg.filter(function(x){ return !x.s; }); // خ-٢: المقترح (مجوَّف) والمحتاج لدبوس
+  if (elId === 'plMapInline' && myCityListData){ const sugg0 = (await plSuggestFor(places)).filter(function(x){ return plSearchHit(x.p); }); const __lim = __g ? (__g.r || 12) * 1.5 : 0; const __dropped = []; const sugg = sugg0.map(function(x){ if (x.s && __g){ const km = plKm(__g, x.s); if (km > __lim){ __dropped.push({ name: x.p.name || x.p.url || '', city: x.s.city || '?', km: Math.round(km) }); return { p: x.p, s: null }; } } return x; }); if (plSuggestDiag.city === myListCityId || !plSuggestDiag.city) plSuggestDiag.dropped = __dropped; /* r74m: حارس المسافة — اقتراح أبعد من ١٫٥ × نصف القطر لا يُعرض ويُعدّ not found ويُسمَّى بالتشخيص */
+    const shown = sugg.filter(function(x){ return x.s; }), need = sugg.filter(function(x){ return !x.s; }); // خ-٢: المقترح (مجوَّف) والمحتاج لدبوس
     const sure = shown.filter(function(x){ return !x.s.probable; }), prob = shown.filter(function(x){ return x.s.probable; });
     shown.forEach(function(x){ map.marker([x.s.lat, x.s.lng], { suggested: true, probable: !!x.s.probable, count: x.s.n || 0, popup: mpMap.popupHtml(x.p, { mine: true, confirm: true, note: (x.s.probable ? (x.s.n === 1 ? '1 possible match — name differs slightly; tap Confirm to check' : x.s.n + ' possible matches — tap Confirm and pick the right one') : 'Suggested') + (x.s.known ? ' · pinned before by users' : '') }) }); });
     plPinLists = { probable: prob.map(function(x){ return x.p; }), notFound: need.map(function(x){ return x.p; }) }; // للنافذة الفرعية
-    const line = document.getElementById('plMapLine'); if (line) line.innerHTML = withGeo.length + ' pinned · ' + sure.length + ' suggested · ' + (prob.length ? '<button type="button" class="act on" onclick="plOpenPinList(\'probable\')">' + prob.length + ' probable ›</button>' : '0 probable') + ' · ' + (need.length ? '<button type="button" class="act on" onclick="plOpenPinList(\'notFound\')">' + need.length + ' not found ›</button>' : '0 not found') + (plSuggestDiag.index ? ' · index: ' + plSuggestDiag.index : '') + (plSuggestDiag.batches ? ' · ' + plSuggestDiag.batches + ' batches · slowest ' + (plSuggestDiag.slowest / 1000).toFixed(1) + 's' : '') + (plSuggestDiag.sent ? ' · sent: ' + escapeHtml(plSuggestDiag.sent) : '') + (plSuggestDiag.err.length ? ' · ERR ' + escapeHtml(plSuggestDiag.err.join(', ')) : '');
+    const line = document.getElementById('plMapLine'); const __keyEl = document.getElementById('plMapKey'); const __nf = __keyEl ? +(__keyEl.getAttribute('data-fams') || 0) : 0;
+    if (line) line.innerHTML = (places || []).length + ' places: ' + withGeo.length + ' pinned · ' + sure.length + ' suggested · ' + (prob.length ? '<button type="button" class="act" onclick="plOpenPinList(\'probable\')">' + prob.length + ' probable ›</button>' : '0 probable') + ' · ' + (need.length ? '<button type="button" class="act" onclick="plOpenPinList(\'notFound\')">' + need.length + ' not found ›</button>' : '0 not found')
+      + (__nf ? ' · <button type="button" class="act" onclick="plMapKeyToggle()">Key ' + (plMapKeyOpen ? '⌃' : '⌄') + '</button>' : '') + ((plMapFam && !plMapKeyOpen) ? ' · <button type="button" class="act on" onclick="plMapFam = \'\'; renderPlacesMine()">' + escapeHtml(PIN_FAMILY_LABEL[plMapFam] || plMapFam) + ' ✕</button>' : '')
+      + (typeof window.__mpBuild === 'string' ? ' · <button type="button" class="act" onclick="plOpenDiag()">ⓘ Diag ›</button>' : ''); /* r74m (قرار المالك): الأعداد الأربعة بكلمة places · المفتاح خلف Key ⌄ (المرشِّح الفعّال يبقى ظاهرًا) · التشخيص بنافذة ⓘ بنسخة الاختبار لا بالشاشة */
     const allPts = withGeo.map(function(p){ return [p.geo.lat, p.geo.lng]; }).concat(shown.map(function(x){ return [x.s.lat, x.s.lng]; })); if (allPts.length > 1 && !__focus) map.fitBounds(allPts); }
 }
 // ═══ ز-١-ج-٣: أماكن بتصنيف لا يعرضه التطبيق (هجرة الدليل · استيراد Takeout · نسخ) → صندوق بشاشة الأماكن يوطّنها صاحبها بنفسه بعدّ متطابق — ولا يختفي مكان أبدًا
@@ -630,12 +647,19 @@ async function saveOthersList(ownerUid, cityId){ // ز-١-ب: نسخة القا�
   if (prevCity !== cityId){ myListCityId = prevCity; if (prevCity) await loadMyCityList(prevCity); }
   if (typeof renderCommunityModal === 'function' && currentTab === 'Community') renderCommunityModal(); if (currentTab === 'Curators') renderCuratorsBody(); if (currentTab === 'Places') renderPlacesMine();
 }
+const plOwnerCache = {}; /* r74m-٢: ملفات أصحاب الأصل (null = حساب لم يعد موجودًا) — بالجلسة */
+function plOwnerName(uid, snapshot){ if (!uid || !(uid in plOwnerCache)) return snapshot || 'a user'; const pr = plOwnerCache[uid]; return pr ? (pr.nickname || pr.displayName || snapshot || 'a user') : 'ex-member'; } /* الاسم حيًّا من الملف العام؛ الحساب المحذوف → ex-member (قرار المالك) */
+async function plEnsureOwners(uids){ const todo = (uids || []).filter(function(u){ return u && !(u in plOwnerCache); }); if (!todo.length) return false; await Promise.all([...new Set(todo)].map(async function(u){ try{ plOwnerCache[u] = await mpData.profiles.get(u); }catch(e){ plOwnerCache[u] = null; } })); return true; }
+async function plSavedRun(cityId, fn){ if (cityId && cityId !== myListCityId){ await selectMyListCity(cityId); plSessionCity = cityId; } return fn(); } /* r74m-٢: فعل على نسخة بمدينة أخرى — الانتقال إليها ثم الفعل القائم نفسه؛ إعادة الرسم تعود إلى عرض Saved from عبر renderPlacesMine */
 async function renderSavedFromInto(body, fromCurators){ // ز-١-ب: الأماكن المنسوخة بإسناد بكل مدني — مجموعة لكل مدينة · بطاقة مكاني + سطر «From»
   body.innerHTML = '<div class="mp-empty mini">Loading…</div>';
   if (curators === null){ try{ curators = await mpData.profiles.curators(200); }catch(e){ curators = []; } } const curSet = {}; (curators || []).forEach(function(c){ curSet[c.uid] = true; });
   let rows = []; try{ const snap = await mpData.cityLists.byOwner(currentUser.uid); const parents = []; snap.forEach(function(d){ parents.push({ id: d.id, ...d.data() }); }); rows = await Promise.all(parents.map(function(r){ return mpData.cityLists._compose(r, r.id); })); }catch(e){ mpSwallow(e, 'saved from'); }
+  const __owners = []; rows.forEach(function(list){ Object.keys(list.categories || {}).forEach(function(catId){ ((list.categories[catId] || {}).places || []).forEach(function(p){ if (p && p.source && p.source.ownerId) __owners.push(p.source.ownerId); }); }); }); await plEnsureOwners(__owners); /* r74m-٢: الاسم حيًّا · ex-member للمحذوف */
   let html = '', total = 0;
-  rows.forEach(function(list){ const cards = []; Object.keys(list.categories || {}).forEach(function(catId){ ((list.categories[catId] || {}).places || []).forEach(function(p, i){ if (!p.source || !p.source.ownerId) return; const isCur = !!curSet[p.source.ownerId]; if (isCur !== fromCurators) return; cards.push(placeCardHtml(p, 'mine', { cat: { id: catId }, index: i, extraLines: '<div class="pc-lab">From</div><div class="pc-val" dir="auto">' + escapeHtml(p.source.ownerName || 'a user') + ' · ' + escapeHtml(catLabelOf(catId)) + '</div>' })); }); });
+  rows.forEach(function(list){ const cards = []; const __cid = String(list.cityId || ''); Object.keys(list.categories || {}).forEach(function(catId){ ((list.categories[catId] || {}).places || []).forEach(function(p, i){ if (!p.source || !p.source.ownerId) return; const isCur = !!curSet[p.source.ownerId]; if (isCur !== fromCurators) return;
+        const __cat = plCatsAll().find(function(c){ return c.id === catId; }) || { id: catId, name: catLabelOf(catId) }; const __acts = plMineActions(__cid, __cat, p, i, isBookmarkedPlace(p)).map(function(a){ if (!a || !a.on) return a; return Object.assign({}, a, { on: "plSavedRun('" + attrStr(__cid) + "', function(){ return " + a.on + "; })" }); }); /* r74m-٢ (قرار المالك ١١ أكتوبر): النسخة بأفعال مكاني كلها — كل فعل ينتقل إلى مدينتها أولًا */
+        cards.push(placeCardHtml(p, 'mine', { cat: { id: catId }, index: i, actions: __acts, extraLines: '<div class="pc-lab">From</div><div class="pc-val" dir="auto">' + escapeHtml(plOwnerName(p.source.ownerId, p.source.ownerName)) + ' · ' + escapeHtml(catLabelOf(catId)) + '</div>' })); }); });
     if (cards.length){ total += cards.length; html += placeGroupHtml(list.cityName || list.cityId, cards.length, '', cards.join('')); } });
   plSetSrcTitle(total);
   body.innerHTML = html || '<div class="mp-empty">' + (fromCurators ? '⭐<br>Places you save from curators land here — with credit.' : '🌍<br>Places you save from the community land here — with credit.') + '</div>';
