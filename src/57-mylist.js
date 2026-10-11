@@ -7,6 +7,7 @@ let sharedCityLists = [];  // قوائم مدن مستخدمين آخرين شُ
 let myCityListCatsDirty = false, myCityListOldKeys = []; // ر٧٠ط
 let myCityListData = null; // بيانات المدينة الحالية بـMy List (المرحلة ١ من إعادة الهيكلة): { public, sharedWith, sharedWithNames, favoriteCount, categories:{} }
 let myCityListLoadedFor = null;
+let myCityListLoadSeq = 0, myCityListLoading = false; /* r74m-٣ (سبب عطل الخريطة): تحميلان متزامنان لمدينتين كان الأبطأ منهما يكتب بياناته فوق الأحدث — فتظهر أماكن مدينة تحت اسم أخرى؛ الرقم التسلسلي يُسقط كل تحميل تجاوزه تحميل أحدث */
 let myCityListLoadFailed = false;   // القراءة فشلت — يُمنع كل حفظ حتى تنجح
 let myCityListLoadError = '';
 async function retryLoadCity(){        // إعادة محاولة صريحة بيد المستخدم
@@ -74,13 +75,16 @@ async function loadUserList(){
 // تحميل بيانات مدينة معيّنة بـMy List (المرحلة ١ من إعادة الهيكلة) — مستند مستقل لكل مدينة
 async function loadMyCityList(cityId){
   if (!currentUser || !cityId){ myCityListData = null; myCityListLoadedFor = null; return; }
-  if (myCityListLoadedFor === cityId && myCityListData) return; // محمَّلة أصلًا، لا داعي لإعادة القراءة
+  if (myCityListLoadedFor === cityId && myCityListData && !myCityListLoading) return; // محمَّلة أصلًا، لا داعي لإعادة القراءة
+  const seq = ++myCityListLoadSeq; myCityListLoading = true; const stale = function(){ return seq !== myCityListLoadSeq; }; /* r74m-٣ */
   try{
     const data = (await withAuthRetry(() => mpData.cityLists.get(currentUser.uid, cityId))) || {};
+    if (stale()) return; /* تحميل أحدث بدأ — هذا يُهمل بلا أثر */
     let priv = {};
     try{ priv = await mpData.privatePlaces.get(currentUser.uid, cityId); }catch(e){ priv = {}; }
+    if (stale()) return;
     let raw = (data.categories && typeof data.categories === 'object') ? data.categories : {};
-    if (doc0Exists(data) && !liveCountOf(raw)){ try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){} raw = {}; } // ر٧٠ط-٢: قائمة فارغة موروثة تُحذف فور فتحها (القاعدة: لا قائمة بلا مكان)
+    if (doc0Exists(data) && !liveCountOf(raw)){ try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){} raw = {}; if (stale()) return; } // ر٧٠ط-٢: قائمة فارغة موروثة تُحذف فور فتحها (القاعدة: لا قائمة بلا مكان)
     if ((data.catsV || 1) < CATS_VERSION){ myCityListOldKeys = Object.keys(raw).filter(function(k){ return !!CAT_ID_MAP_ONCE[k] || (!catKnown(k) && !isPrivateCategoryId(k)); }); const mg = migrateCategoryKeys(raw, true); raw = mg.categories; myCityListCatsDirty = true; } // ر٧٠ط: إعادة كتابة المعرّفات القديمة لمرة واحدة (تُحفظ مع أول حفظ، والمفاتيح القديمة تُحذف من المستند)
     // ٢٦ أغسطس (٣-ب) — ترحيل مرة واحدة: مفاتيح خاصة موروثة داخل مستند القائمة ⇒ تُنقل للمستند الخاص وتُحذف من القائمة
     // (يُتخطى للموقوف — القواعد ترفض كتابته؛ يبقى الدمج بالذاكرة فقط)
@@ -95,6 +99,7 @@ async function loadMyCityList(cityId){
           await mpData.userLists.addPrivateCity(currentUser.uid, cityId);
         }catch(e){}
       }
+      if (stale()) return;
     }
     myCityListData = {
       public: data.public === true,
@@ -110,6 +115,7 @@ async function loadMyCityList(cityId){
       mpData.cityLists.save(currentUser.uid, cityId, { ownerId: currentUser.uid, cityId, cityName: cityNameOf(cityId) || cityId, categories: myCityListData.categories }).catch(()=>{});
     }
   }catch(e){
+    if (stale()) return;
     const code = (e && e.code) || '';
     // v1.40 · قواعد ٣٫٨ (ق٠١-٠٧): قراءة المستند الغائب لصاحب البادئة تعود «غير موجود» بلا خطأ —
     // فالمسار الطبيعي للحساب والمدينة الجديدين يمر من فرع !doc.exists أعلاه، وتصنيف الحارس الثالث صار دقيقًا:
@@ -117,10 +123,10 @@ async function loadMyCityList(cityId){
     myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, bookmarkCount:0, categories:{} };
     myCityListLoadFailed = true; myCityListLoadedFor = null;
     myCityListLoadError = (code === 'permission-denied') ? 'permission denied (rules 3.8: absent docs read as empty — this is a real denial)' : (code || (e && e.message) || 'unknown');
-    return;
+    myCityListLoading = false; return;
   }
   myCityListLoadFailed = false;
-  myCityListLoadedFor = cityId;
+  myCityListLoadedFor = cityId; myCityListLoading = false;
 }
 
 // حفظ بيانات المدينة الحالية بـMy List — مستند مستقل، مو الملف الشامل القديم
