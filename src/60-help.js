@@ -134,21 +134,23 @@ function iconsGuideHtml(){
   const fams = ['cafe', 'dish', 'cuisine', 'store', 'product', 'parks', 'squares', 'rest'];
   return '<div class="ig">'
     + sec('Place card actions')
-    + row(mpIcon('maps', { size: 18 }), 'Maps ↗', 'Opens the place in your maps app')
+    + row(mpIcon('maps', { size: 18 }), 'Google Maps', 'Opens the place in Google Maps, outside the app')
+    + row(mpIcon('map', { size: 18 }) + '<span class="pc-dot ig-dot" aria-hidden="true"></span>', 'On map', 'Shows the place on our map. A saffron dot means it still needs a pin — confirm or move it there')
     + row(mpIcon('bookmark', { size: 18 }), 'Bookmark', 'Keep it in your private Bookmarked list — any place, yours or others’')
     + row(mpIcon('trip', { size: 18 }), 'Trip', 'Add it to one of your trips')
     + row(mpIcon('share', { size: 18 }), 'Share', 'Send this one place as a card or a message')
+    + row(mpIcon('save', { size: 18 }), 'Save', 'Copy a place from someone’s list into yours — with credit (Saved ✓ once copied)')
+    + row(mpIcon('flag', { size: 18 }), 'Report', 'Flag someone’s place or list to the owner of the app', 'flag')
+    + row(mpIcon('phone', { size: 18 }), 'Call', 'Personal addresses only — dials the saved number')
     + row(mpIcon('edit', { size: 18 }), 'Edit', 'Name, area, note, category — and delete')
     + row(mpIcon('top', { size: 18, fill: true }), 'Top', 'Mark it among your top places — shown on your curator page', 'on')
     + sec('Sharing a whole list')
     + row(mpIcon('globe', { size: 18 }), 'Public', 'Your city list is open to everyone in Community')
     + row(mpIcon('personPlus', { size: 18 }), 'Share with', 'Give one person access — appears in their “Shared with you”')
     + sec('Pins on the map')
-    + '<div class="ig-pins">' + fams.map(function(f){ return '<span class="ig-pk"><span class="pinkey-dot pinkey-' + f + '"></span>' + escapeHtml(PIN_FAMILY_LABEL[f] || f) + '</span>'; }).join('')
+    + '<div class="ig-pins">' + fams.map(function(f){ return '<span class="ig-pk"><span class="pinkey-' + f + '"><span class="pinkey-dot"></span></span>' + escapeHtml(PIN_FAMILY_LABEL[f] || f) + '</span>'; }).join('')
     + '<span class="ig-pk"><span class="pinkey-dot ig-sugg"></span>Suggested — one match, not confirmed</span><span class="ig-pk"><span class="pinkey-dot ig-prob"></span>Probable — several matches, numbered</span></div>'
-    + sec('Location status on a card')
-    + '<div class="ig-pins"><span class="pc-chip pc-status st-pinned">' + mpIcon('check', { size: 11 }) + 'Pinned</span><span class="pc-chip pc-status st-suggested">Suggested</span><span class="pc-chip pc-status st-probable"><span class="pc-n">3</span>possible matches</span><span class="pc-chip pc-status st-notfound">Not found</span><span class="pc-chip pc-status st-unknown">Locate ›</span></div>'
-    + '<div class="ig-ds" style="padding:2px 0 0;">Tap the chip to open the map on that place. Confirming, choosing or moving a pin happens on the map.</div>'
+    + '<div class="ig-ds" style="padding:2px 0 0;">Confirming, choosing or moving a pin happens on the map — tap On map, then use the pin’s popup.</div>'
     + sec('Badges')
     + row('<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="m9 12 2 2 4-4"/></svg>', 'Curator', 'Carries the Curator badge — their lists appear under Curators')
     + row('<span style="font-size:10px; font-weight:800;">From</span>', 'From …', 'A copy saved from someone’s list; “From ex-member” when that account is gone')
