@@ -285,7 +285,7 @@ async function toggleTripPublicFor(id){ currentTripId = id; await toggleTripPubl
 // الإطار: عاجي خارجي (رأس القسم يرسمه المستدعي) · كريمي داخلي مقسوم: بيانات يسارًا (الاسم ثم Area · Picks · Note للمكتوب فقط) · Actions يمينًا (شبكة عمودين تلتف على الموجود)
 // More/Less: المطوي = الاسم · Area · أول فعلين (Maps · 🔖)؛ الحالة تُذكر بالجلسة لكل بطاقة؛ تُفتح تلقائيًّا حيث مقترح منتقٍ (open:true)
 const plCardOpen = {}; // key → true (ذاكرة الجلسة)
-function placeGroupHtml(title, count, right, inner){ return '<div class="pgroup"><div class="pg-head"><span class="pg-title">' + escapeHtml(title) + (count !== null && count !== undefined ? ' <span class="pg-n"># ' + count + '</span>' : '') + '</span>' + (right || '') + '</div>' + inner + '</div>'; } // r72r-1: المجموعة العاجية برأس التصنيف الفرعي — البنية الواحدة بكل الواجهات
+function placeGroupHtml(title, count, right, inner){ return '<div class="pgroup"><div class="pg-head"><span class="pg-title">' + escapeHtml(title) + (count !== null && count !== undefined ? ' <span class="pg-n">· ' + count + '</span>' : '') + '</span>' + (right || '') + '</div>' + inner + '</div>'; } // r72r-1: المجموعة العاجية برأس التصنيف الفرعي — البنية الواحدة بكل الواجهات
 function plCardToggle(btn, key){ const card = btn.closest('.pcard'); if (!card) return; const open = !card.classList.contains('open'); card.classList.toggle('open', open); plCardOpen[key] = open; btn.innerHTML = open ? 'Less <span class="arr">⌃</span>' : 'More <span class="arr">⌄</span>'; } /* ب-٢-٢-أ٢ (ملاحظة المالك ١٠-١٠): كان textContent فظهر الوسم نصًّا */
 function placeCardHtml(p, mode, ctx){
   ctx = ctx || {}; const key = mode + ':' + (p.id || hashUrl(p.url || '') || p.name); const open = ctx.open === true || plCardOpen[key] === true;
@@ -298,7 +298,7 @@ function placeCardHtml(p, mode, ctx){
     + (p.area ? '<div class="pc-lab">Area</div><div class="pc-val pc-area" dir="auto">' + escapeHtml(p.area) + '</div>' : '')
     + (picks ? '<div class="pc-lab pc-more">Picks</div><div class="pc-val pc-more" dir="auto">' + escapeHtml(picks) + '</div>' : '')
     + (p.note ? '<div class="pc-lab pc-more">Note</div><div class="pc-val pc-more" dir="auto">' + escapeHtml(p.note) + '</div>' : '')
-    + ((p.source && p.source.ownerName && !ctx.extraLines) ? '<div class="pc-more"><div class="pc-lab">From</div><div class="pc-val" dir="auto">' + escapeHtml(p.source.ownerName) + '</div></div>' : '') // ز-١-ب: الإسناد ظاهر بالمكان المنسوخ
+    + ((p.source && p.source.ownerId && !ctx.extraLines) ? '<div class="pc-more"><div class="pc-lab">From</div><div class="pc-val" dir="auto">' + escapeHtml(plOwnerName(p.source.ownerId, p.source.ownerName)) + '</div></div>' : '') // ز-١-ب: الإسناد ظاهر بالمكان المنسوخ
     + ((mode === 'mine' && p.fromCat) ? '<div class="pc-more"><div class="pc-lab">Old category</div><div class="pc-val" dir="auto">' + escapeHtml(p.fromCat) + '</div></div>' : '') // ز-١-ج-٣: أصل المكان الموطَّن — لصاحبه
     + (ctx.extraLines ? '<div class="pc-more">' + ctx.extraLines + '</div>' : '')
     + (hasMore ? '<button type="button" class="pc-toggle" onclick="plCardToggle(this, \'' + attrStr(key) + '\')">' + (open ? 'Less <span class="arr">⌃</span>' : 'More <span class="arr">⌄</span>') + '</button>' : '')
@@ -327,7 +327,7 @@ function othersCard(o){ // ر٦٩ذ (N-062) · r72r-3: بطاقة القائمة
   acts.push({ html: o.openLabel || 'Open →', on: o.openHandler, title: 'Open' });
   if (!o.bmSelf) acts.push({ cls: 'bmk' + (o.bmOn ? ' on' : ''), html: bmkSvg(!!o.bmOn) + '<span class="bmk-cnt">' + (o.cnt || 0) + '</span>', on: o.bmHandler, title: o.bmOn ? 'Bookmarked — tap to remove' : 'Bookmark' });
   if (o.exportHandler) acts.push({ html: '📤', on: o.exportHandler, title: 'Send' });
-  if (!o.bmSelf){ if (o.saveHandler){ acts.push(o.savedOn ? { cls: 'on', html: 'Saved ✓', on: o.unsaveHandler || '', title: 'In your trips — tap to remove your copy' } : { html: 'Save', on: o.saveHandler, title: 'Copy into my trips — with credit' }); } else acts.push({ cls: 'soon', html: 'Save <span class="dim">3</span>', on: "showSoon('" + attrStr(o.saveMsg || 'Copy into yours — stage 3') + "')", title: 'Copy — stage 3' }); }
+  if (!o.bmSelf && o.saveHandler){ acts.push(o.savedOn ? { cls: 'on', html: 'Saved ✓', on: o.unsaveHandler || '', title: 'In your trips — tap to remove your copy' } : { html: 'Save', on: o.saveHandler, title: 'Copy into my trips — with credit' }); } /* r74m: لا زر «Save 3» — بطاقة بلا معالج حفظ لا تعرض حفظًا */
   if (!o.bmSelf && o.reportKey) acts.push({ cls: 'flag', html: '⚑', on: "openReport('" + attrStr(o.reportKind || 'list') + "', '" + attrStr(o.reportKey) + "')", title: 'Report' });
   const btn = function(a){ return '<button type="button" class="pc-a' + (a.cls ? ' ' + a.cls : '') + '" onclick="' + (a.on || '') + '" title="' + attrStr(a.title || '') + '">' + a.html + '</button>'; };
   const lines = (o.lines || []).map(function(l){ return '<div class="pc-lab">' + escapeHtml(l[0]) + '</div><div class="pc-val">' + l[1] + '</div>'; }).join('');
