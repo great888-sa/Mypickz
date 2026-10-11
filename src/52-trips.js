@@ -290,13 +290,14 @@ function plCardToggle(btn, key){ const card = btn.closest('.pcard'); if (!card) 
 function placeCardHtml(p, mode, ctx){ /* r75a (اللوحات ١–٣): ثلاث درجات خط — الاسم وحده كبير · الحي سطرًا بدبوس · الملاحظة بشريط اقتباس خلف More · شريحة الحالة بلا فعل · صف الأفعال خارج الطيّ بأيقونات خطّية بأسمائها (pc-tile) — لا زر تثبيت بالبطاقة */
   ctx = ctx || {}; const key = mode + ':' + (p.id || hashUrl(p.url || '') || p.name); const open = ctx.open === true || plCardOpen[key] === true;
   const acts = (ctx.actions || []).filter(Boolean); // [{cls, icon, label, html, on, title, href}] — بترتيب ثابت للوضع
-  const inner = function(a){ return a.label ? '<span class="pc-ico">' + (a.icon ? mpIcon(a.icon, { fill: !!a.fill }) : (a.html || '')) + '</span><span class="pc-lbl">' + escapeHtml(a.label) + '</span>' : a.html; };
+  const inner = function(a){ return a.label ? '<span class="pc-ico">' + (a.icon ? mpIcon(a.icon, { fill: !!a.fill }) : (a.html || '')) + '</span><span class="pc-lbl">' + escapeHtml(a.label) + '</span>' + (a.dot ? '<span class="pc-dot" aria-hidden="true"></span>' : '') : a.html; }; /* r75a-٢: نقطة الحالة على البلاطة (On map حين يلزم تثبيت) */
   const btn = function(a){ const cls = (a.label ? 'pc-tile' : 'pc-a') + (a.cls ? ' ' + a.cls : ''); if (a.href) return '<a class="' + cls + '" ' + (a.attrs || '') + ' href="' + attrStr(a.href) + '" target="_blank" rel="noopener" title="' + attrStr(a.title || '') + '">' + inner(a) + '</a>'; return '<button type="button" class="' + cls + '"' + (a.disabled ? ' disabled' : '') + ' onclick="' + (a.on || '') + '" title="' + attrStr(a.title || '') + '">' + inner(a) + '</button>'; };
   const picks = (p.picks || []).map(function(x){ return x && x.name ? String(x.name) : (typeof x === 'string' ? x : ''); }).filter(Boolean).join(' · ');
   const hasMore = !!(picks || p.note || (ctx.extraLines || '') || (mode === 'mine' && p.fromCat));
   return '<div class="pcard' + (open ? ' open' : '') + '" data-key="' + attrStr(key) + '"><div class="pc-data">'
     + '<div class="pc-head"><div class="pc-name" dir="auto">' + escapeHtml(p.name || ctx.fallbackName || 'Place') + '</div>' + (ctx.status || '') + '</div>' + flagsHtml(p.flags)
     + (p.area ? '<div class="pc-area" dir="auto">' + mpIcon('pin', { size: 13 }) + escapeHtml(p.area) + '</div>' : '')
+    + (p.phone ? '<div class="pc-phone" dir="ltr">' + mpIcon('phone', { size: 13 }) + escapeHtml(p.phone) + '</div>' : '') /* r75a-٢: الهاتف سطرًا بسماعة (العناوين) لا بسطر الحي */
     + ((p.source && p.source.ownerId) ? '<div class="pc-fromrow"><span class="pc-chip pc-from" dir="auto">From ' + escapeHtml(plOwnerName(p.source.ownerId, p.source.ownerName)) + '</span></div>' : '') // ز-١-ب · r74m-٢ · r75a: الإسناد شريحة صغيرة تحت الحي — ظاهرة دائمًا
     + (picks ? '<div class="pc-lab pc-more">Picks</div><div class="pc-val pc-more" dir="auto">' + escapeHtml(picks) + '</div>' : '')
     + (p.note ? '<div class="pc-note pc-more" dir="auto">' + escapeHtml(p.note) + '</div>' : '')
@@ -311,14 +312,13 @@ function othersPlaceRowHtml(p, owner, cityObj, catId, tripCityId, extra){ // ر�
   const okey = 'oid:' + owner.uid + ':' + (cityObj ? cityObj.id : '') + ':' + (p.id || hashUrl(p.url || ''));
   const cat = (catId || '').replace(/'/g, "\\'"); const mine = !!(currentUser && owner.uid === currentUser.uid);
   const actions = [ /* r75a: البلاطات بأيقونات الطقم وأسمائها (وضع others) */
-    p.url ? { icon: 'maps', label: 'Maps', href: p.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="community" data-mpcat="' + attrStr(catId || '') + '"' } : null,
+    p.url ? { icon: 'maps', label: 'Google Maps', href: p.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="community" data-mpcat="' + attrStr(catId || '') + '"' } : { icon: 'maps', label: 'Google Maps', disabled: true, title: 'No Maps link for this place' },
+    (p.geo && typeof p.geo.lat === 'number' && cityObj) ? { cls: 'onmap', icon: 'map', label: 'On map', on: "cmOpenPersonCityMap('" + attrStr(cityObj.id) + "', '" + attrStr(p.id || p.url) + "')", title: 'Show on our map' } : { cls: 'onmap', icon: 'map', label: 'On map', disabled: true, title: 'No pin for this place yet' }, // ز-١-ب · r75a-٢: خريطتنا بلاطةً ثانية بالصف (قرار المالك) — لا «Map» بآخره
     { cls: 'bmk' + (isBookmarked(okey) ? ' on' : ''), icon: 'bookmark', fill: isBookmarked(okey), label: 'Bookmark', on: "togglePlaceBookmark('" + okey + "', '" + safeName + "', '" + cat + "', '" + (cityObj ? cityObj.id : '').replace(/'/g, "\\'") + "', '" + safeArea + "', '" + owner.uid + "', '" + safeUrl + "')", title: isBookmarked(okey) ? 'Bookmarked — tap to remove' : 'Bookmark' },
     { icon: 'trip', label: 'Trip', on: "cmAddOthersPlaceToTrip('" + attrStr(tripCityId || (cityObj ? cityObj.id : '')) + "', '" + cat + "', '" + attrStr(p.id || '') + "', '" + owner.uid + "', '" + safeName + "')", title: 'Add to one of my trips' },
     { icon: 'share', label: 'Share', on: "cmExportOthersPlace('" + okey + "', '" + safeName + "', '" + safeUrl + "', '" + escapeHtml(owner.nickname || 'a user').replace(/'/g, "\\'") + "', '" + safeArea + "', '" + safeCity + "', '" + cat + "')", title: 'Preview and send' },
     mine ? null : (placeCopyOf(owner.uid, (cityObj ? cityObj.id : ''), cat, p.id || hashUrl(p.url || '')) ? { cls: 'on', icon: 'check', label: 'Saved', on: "showToast('Already in your list — with credit')", title: 'In your list — with credit' } : { icon: 'save', label: 'Save', on: "saveOthersPlace('" + owner.uid + "', '" + attrStr(cityObj ? cityObj.id : '') + "', '" + cat + "', '" + attrStr(p.id || '') + "')", title: 'Copy into my list — with credit' }), // ز-١-ب: حي
-    mine ? null : { cls: 'flag', icon: 'flag', label: 'Report', on: "openReport('place', '" + attrStr(owner.uid + ':' + (cityObj ? cityObj.id : '') + ':' + cat + ':' + (p.id || '')) + "')", title: 'Report' },
-    extra ? { cls: 'edit', icon: 'edit', label: 'Edit', on: extra, title: 'Edit in my list' } : null,
-    (p.geo && typeof p.geo.lat === 'number' && cityObj) ? { icon: 'locate', label: 'Map', on: "cmOpenPersonCityMap('" + attrStr(cityObj.id) + "', '" + attrStr(p.id || p.url) + "')", title: 'Show on map' } : null // ز-١-ب
+    mine ? (extra ? { cls: 'edit', icon: 'edit', label: 'Edit', on: extra, title: 'Edit in my list' } : null) : { cls: 'flag', icon: 'flag', label: 'Report', on: "openReport('place', '" + attrStr(owner.uid + ':' + (cityObj ? cityObj.id : '') + ':' + cat + ':' + (p.id || '')) + "')", title: 'Report' } // r75a-٢: على مكاني Edit مكان Report
   ];
   return placeCardHtml(p, 'others', { actions: actions, open: !!(p.topPlace && (p.note || (p.picks || []).length)) });
 }
