@@ -166,7 +166,7 @@ function tripsEmptyGuideHtml(){ // بلا رحلة بالحساب: أبواب أ
   return '<div class="pl-guide"><div class="pl-guide-h">Start here — four ways to get a trip</div>'
     + '<button type="button" class="pl-guide-row" onclick="openCreateTripFlow()"><b>1 · Create your first trip</b><span>Pick the city and the days, then add places from any source — the sources card meets you on day one.</span></button>'
     + '<button type="button" class="pl-guide-row" onclick="tripsGuideGo(\'community\')"><b>2 · Save a community trip</b><span>Other users\' public trips by city — save one to your world.</span></button>'
-    + '<button type="button" class="pl-guide-row dashed" onclick="tripsGuideGo(\'curators\')"><b>3 · Trips from curators</b><span>Active members whose favorites you may like · stage 3</span></button>'
+    + '<button type="button" class="pl-guide-row" onclick="tripsGuideGo(\'curators\')"><b>3 · Trips from curators</b><span>Active members whose favorites you may like</span></button>'
     + '<button type="button" class="pl-guide-row" onclick="tripsGuideGo(\'shared\')"><b>4 · Trips shared with you</b><span>By name, from one person — they stay between you two.</span></button>'
     + '</div>';
 }
@@ -180,10 +180,10 @@ function tripSourcesCardHtml(trip, dIdx){
   const trows = (typeof __cmSummary !== 'undefined' && __cmSummary && Array.isArray(__cmSummary.trips)) ? __cmSummary.trips : null;
   const trips = trows ? trows.filter(function(r){ return !cityId || r.cityId === cityId || (Array.isArray(r.cities) && r.cities.indexOf(cityId) >= 0); }).length : null;
   const n = function(v){ return (v === null || v === undefined) ? '' : ' (' + v + ')'; };
-  const btn = function(src, label, count, stage){ return '<button type="button" class="pl-src' + (stage ? ' dashed' : '') + '" onclick="tripGoSource(\'' + attrStr(trip.id) + '\', \'' + src + '\')">' + label + n(count) + (stage ? ' <span class="dim">· stage 3</span>' : '') + '</button>'; };
+  const btn = function(src, label, count){ return '<button type="button" class="pl-src" onclick="tripGoSource(\'' + attrStr(trip.id) + '\', \'' + src + '\')">' + label + n(count) + '</button>'; }; /* r74m: لا وسم stage 3 — زر المنتقين حي (ينقل إلى التبويب) */
   return '<div class="trip-srcs"><div class="pl-sub">Add places to this day from:</div><div class="chipgrid c3">'
     + btn('mine', 'My places', mine) + btn('bookmarks', 'My bookmarks', bm) + btn('shared', 'Shared with me', null)
-    + btn('curators', 'Curators', null, true) + btn('lists', 'Community lists', lists) + btn('trips', 'Community trips', trips) + '</div></div>';
+    + btn('curators', 'Curators', null) + btn('lists', 'Community lists', lists) + btn('trips', 'Community trips', trips) + '</div></div>';
 }
 async function tripGoSource(tripId, src){ // كل زر ينقل إلى موضعه مصفًّى على مدينة الرحلة ووضع الإضافة قائم
   const trip = (userTrips || []).find(function(t){ return t.id === tripId; }); const cityId = trip ? (trip.cityId || (trip.cities && trip.cities[0]) || null) : null;
