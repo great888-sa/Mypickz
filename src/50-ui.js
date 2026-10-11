@@ -111,9 +111,7 @@ const SURFACES = { backchip: 'paper', 'pl-src': 'paper', chip: 'paper', csel: 'p
 // ═══ ر٦٨ — القوالب المشتركة (المرجع v1.42: ٦/د٢ ولوحة الاختيار) — دالتا بناء بلا تركيب؛ يستهلكهما ر٦٩–ر٧١ ═══
 const SOURCE_CHIPS = [['all','All'],['views','Most viewed'],['bookmarked','Most bookmarked'],['shared','Shared with you'],['mine','🔖 My bookmarked'],['saved','Most saved']];
 function sourceScreen(spec){
-  const chips = SOURCE_CHIPS.map(([id, label]) => (id === 'saved' && spec.savedSoon !== false)
-    ? soonChip(label, 'stage 3', 'Sort by copies made with Save — arrives with stage 3', 'chip')
-    : '<button type="button" class="chip' + (spec.active === id ? ' on' : '') + '" onclick="' + (spec.onChip || 'void') + '(\'' + id + '\')">' + escapeHtml(label) + '</button>').join('');
+  const chips = SOURCE_CHIPS.map(([id, label]) => '<button type="button" class="chip' + (spec.active === id ? ' on' : '') + '" onclick="' + (spec.onChip || 'void') + '(\'' + id + '\')">' + escapeHtml(label) + '</button>').join(''); // r74m: «Most saved» شريحة عادية — الفرز بالنسخ حي منذ r72m (كان موسومًا stage 3)
   return '<div class="stickyhead"><div class="headrow">' + backChip(spec.backLabel || '← Back', spec.backHandler || 'void(0)') + '<span class="csel label"><b>' + escapeHtml(spec.title || '') + '</b></span></div>'
     + '<div class="headrow"><span class="csel" onclick="' + (spec.onCountry || 'void(0)') + '">' + escapeHtml(spec.countryLabel || '') + ' <span class="arr">⌄</span></span><span class="csel grow" onclick="' + (spec.onCity || 'void(0)') + '"><b>' + escapeHtml(spec.cityLabel || 'All cities') + '</b> <span class="arr">⌄</span></span></div>'
     + '<div class="chipgrid c3">' + chips + '</div>'
@@ -209,10 +207,11 @@ function catPairRow(spec){
   const id = spec.id; const st = __cp[id] || (__cp[id] = { open: null }); st.spec = spec;
   const secs = catSections(); const main = secs.find(function(x){ return x.id === spec.main; });
   const sub = spec.sub ? plCatsAll().find(function(c){ return c.id === spec.sub; }) : null;
-  return '<div class="headrow cprow"><button type="button" class="csel grow' + (st.open === 'main' ? ' on' : '') + '" onclick="catPairToggle(\'' + attrStr(id) + '\', \'main\')"><b>' + escapeHtml(main ? main.name : (spec.allLabel || 'Category')) + '</b> ' + (st.open === 'main' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button>'
+  return '<div class="headrow cprow">' + (spec.lead || '') + '<button type="button" class="csel grow' + (st.open === 'main' ? ' on' : '') + '" onclick="catPairToggle(\'' + attrStr(id) + '\', \'main\')"><b>' + escapeHtml(main ? main.name : (spec.allLabel || 'Category')) + '</b> ' + (st.open === 'main' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button>'
     + '<button type="button" class="csel grow' + (st.open === 'sub' ? ' on' : '') + '" onclick="catPairToggle(\'' + attrStr(id) + '\', \'sub\')"' + (main ? '' : ' disabled') + '><b>' + escapeHtml(sub ? sub.name : (spec.subLabel || 'Sub-category')) + '</b> ' + (st.open === 'sub' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button></div>'
-    + '<div id="cp_' + attrStr(id) + '_host">' + catPairPanel(id) + '</div>';
+    + (spec.noHost ? '' : catPairHost(id)); // r74m: lead = عنصر يسبق الشريحتين بالصف (مبدّل العرض) · noHost = اللوحة تُرسم في موضع آخر (خارج الرأس الثابت)
 }
+function catPairHost(id){ return '<div id="cp_' + attrStr(id) + '_host">' + catPairPanel(id) + '</div>'; }
 function catSections(){ const out = []; DATA.forEach(function(sec){ const d = sectionDisplay(sec); out.push({ id: sec.id || sec.title, name: d.name }); }); return out; }
 function catPairPanel(id){
   const st = __cp[id]; if (!st || !st.spec || !st.open) return ''; const sp = st.spec; const cnt = sp.countOf || function(){ return undefined; };
