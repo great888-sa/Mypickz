@@ -147,12 +147,12 @@
 
   /* ═ النموذج القياسي — الهوية ═ */
   .csel{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);}
-  .cta{background:var(--saffron); color:var(--ink);}
-  .modal .cta{background:var(--saffron); color:var(--ink);} /* ر٧٠د (N-071) */
+  .cta{background:var(--surf); border-color:var(--saffron); color:var(--on-night);} /* r74m (قاعدة المالك ١١ أكتوبر): الفعل الأساسي على الليلي = إطار زعفراني لا تعبئة؛ المختار وحده مملوء */
+  .modal .cta,.panel .cta{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} /* ر٧٠د (N-071): على العاجي يبقى مملوءًا */
   .actn{background:transparent; border-color:var(--line-strong); color:var(--night-2);}
   .modal .actn{background:transparent; border-color:var(--line-ivory); color:var(--ink);}
 
-  .cta b{color:var(--ink);}
+  .cta b{color:var(--saffron);} .modal .cta b,.panel .cta b{color:var(--ink);}
   .actn .dim,.dim{color:var(--night-4);}
   .block{background:var(--surf); color:var(--night-2);}
   .shname button{background:none; color:var(--night-2);}
@@ -215,7 +215,7 @@
   .bmk-btn.on{color:var(--ink); background:var(--saffron);}
   .actn b,.block .actn b,.btn-ghost b{color:var(--saffron);}
   .modal .actn b,.modal .btn-ghost b,.pl-row .actn b,.row .actn b{color:var(--ink);} /* ر٦٨ب: الحبر على الكريمي فقط — كان يعمّ الليل */
-  .actn.primary b{color:inherit;} /* ر٧٠د (N-069): الزائد يرث لون الزر الرئيس (حبر على الزعفران) */ /* ر٦٨ب: الحبر على الكريمي فقط — كان يعمّ الليل */
+  .actn.primary b{color:var(--saffron);} .modal .actn.primary b{color:var(--ink);} /* ر٧٠د (N-069): الزائد يرث لون الزر الرئيس (حبر على الزعفران) */ /* ر٦٨ب: الحبر على الكريمي فقط — كان يعمّ الليل */
   .modal{border-color:var(--line-ivory);}
   .modal-topbar{border-bottom-color:var(--line-ivory);}
   .modal label,.modal .flabel{color:var(--ink-strong);}
@@ -227,7 +227,8 @@
   .panel .prow .dot{background:var(--saffron);}
   .panel .prow .cnt-num{color:var(--ink-strong);}
   .panel .prow .del{border-color:var(--line-ivory); color:var(--ink-strong);}
-  .actn.primary{background:var(--saffron); border-color:var(--saffron); color:var(--ink);}
+  .actn.primary{background:var(--surf); border-color:var(--saffron); color:var(--on-night);} /* r74m: إطار زعفراني بدل التعبئة (قاعدة المالك) */
+  .plsrc{border-color:var(--saffron);} .plsrc .cnt{color:var(--saffron);} .plrow4{background:var(--surf);} #plMapLine .act{background:var(--surf); border-color:var(--on-night); color:var(--on-night);} #plMapLine .act.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} .diagtxt{background:var(--ivory); color:var(--ink);} /* r74m */
 
   /* ر٦٩ب (ميداني ر٦٩): أسطح زر العودة والمؤجل على الليل · حلقة المنتقي · توحيد صف الأفعال */
   .backchip,.curhead .act.soon,.stickyhead .act.soon{background:var(--surf);}
