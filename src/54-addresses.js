@@ -124,15 +124,15 @@ function renderAddresses(){
     cats.forEach(cat => {
       const places = (catsMap[cat.id] && catsMap[cat.id].places) || [];
       if (!places.length) return;                 // منطق الأماكن نفسه: الفارغ باللوحة لا بالجسم
-      let __acards = ''; const __aright = '<button type="button" class="pg-add go" onclick="openAddrModal(\'' + cityId + '\',\'' + cat.id + '\')" title="Add under ' + escapeHtml(cat.name) + '">＋ Add</button>'; // r72r-1: العناوين بالبطاقة الموحَّدة (وضع address) — بلا أيقونة
+      let __acards = ''; const __aright = '<button type="button" class="pg-add go" onclick="openAddrModal(\'' + cityId + '\',\'' + cat.id + '\')" title="Add an address under ' + escapeHtml(cat.name) + '">' + mpIcon('plus', { size: 13 }) + ' Add address</button>'; // r72r-1 · r75a-٢: «+ Add address» بالاسم الكامل
       places.forEach((p, i) => {
-        const aActions = [
-          { html: 'Maps ↗', href: p.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="app" data-mpcat="' + cat.id + '" data-mppersonal="1"' },
-          p.phone ? { html: '📞', href: 'tel:' + String(p.phone).replace(/[^+\d]/g, ''), title: 'Call' } : null,
-          { html: '📤', on: "sendAddr('" + cityId + "','" + cat.id + "'," + i + ")", title: 'Send via MyPickz' },
-          { html: '✏️', on: "openAddrModal('" + cityId + "','" + cat.id + "'," + i + ")", title: 'Edit' }
+        const aActions = [ /* r75a-٢: الطقم بالعناوين — أربع بلاطات: Google Maps · Call · Share · Edit */
+          { icon: 'maps', label: 'Google Maps', href: p.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="app" data-mpcat="' + cat.id + '" data-mppersonal="1"' },
+          p.phone ? { icon: 'phone', label: 'Call', href: 'tel:' + String(p.phone).replace(/[^+\d]/g, ''), title: 'Call' } : { icon: 'phone', label: 'Call', disabled: true, title: 'No phone saved' },
+          { icon: 'share', label: 'Share', on: "sendAddr('" + cityId + "','" + cat.id + "'," + i + ")", title: 'Send via MyPickz' },
+          { icon: 'edit', label: 'Edit', on: "openAddrModal('" + cityId + "','" + cat.id + "'," + i + ")", title: 'Edit' }
         ];
-        __acards += placeCardHtml({ id: p.id || p.url, name: p.name || cat.name, url: p.url, area: p.phone ? String(p.phone) : '', note: p.note }, 'address', { actions: aActions, open: true });
+        __acards += placeCardHtml({ id: p.id || p.url, name: p.name || cat.name, url: p.url, phone: p.phone ? String(p.phone) : '', note: p.note }, 'address', { actions: aActions, open: true });
       });
       html += placeGroupHtml(cat.name, places.length, __aright, __acards, 'address');
     });
