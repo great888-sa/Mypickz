@@ -104,7 +104,8 @@ const MP_ICONS = {
   trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
   list: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   map: '<path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/>',
-  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>'
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+  phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>'
 };
 function mpIcon(name, opt){ opt = opt || {}; const body = MP_ICONS[name]; if (!body) return ''; const sz = opt.size || 20; const fill = opt.fill ? 'currentColor' : 'none'; return '<svg class="mpi" data-ic="' + name + '" viewBox="0 0 24 24" width="' + sz + '" height="' + sz + '" fill="' + fill + '" stroke="currentColor" stroke-width="' + (opt.fill ? 1.5 : 2) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + body + '</svg>'; }
 // ر٥٨: الخريطتان من مرآة مستندك المحمَّل بالإقلاع — صفر استعلام (استعلام السجلات غير مُثبَت بالقواعد قصدًا)
