@@ -134,7 +134,7 @@ function renderAddresses(){
         ];
         __acards += placeCardHtml({ id: p.id || p.url, name: p.name || cat.name, url: p.url, area: p.phone ? String(p.phone) : '', note: p.note }, 'address', { actions: aActions, open: true });
       });
-      html += placeGroupHtml(cat.name, places.length, __aright, __acards);
+      html += placeGroupHtml(cat.name, places.length, __aright, __acards, 'address');
     });
   }
   document.getElementById('addrBody').innerHTML = html;
