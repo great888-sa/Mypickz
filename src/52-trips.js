@@ -211,8 +211,8 @@ function renderMyTripsModal(){
         + (tripTypeLine(t) ? '<div class="pc-lab">Type</div><div class="pc-val pc-area">' + tripTypeLine(t) + '</div>' : '')
         + '<div class="pc-lab">Places</div><div class="pc-val pc-area"># ' + tripPlaceCount(t) + '</div><div class="pc-lab">Days</div><div class="pc-val pc-area"># ' + t.days.length + '</div>' + (t.public ? '<div class="pc-lab">Saved by users</div><div class="pc-val pc-area"># ' + (t.copyCount || 0) + '</div>' : '')
         + (t.source ? '<div class="pc-lab">From</div><div class="pc-val pc-area" dir="auto">' + escapeHtml(tripSourceName(t)) + '</div>' : '')
-        + '</div><div class="pc-acts"><div class="pc-lab pc-actlab">Actions</div><div class="pc-grid">' + acts.map(btn).join('') + '</div></div></div>'; }).join('');
-      html += placeGroupHtml(cityNm, byCityT[cityNm].length, '', cards); });
+        + '</div><div class="pc-acts"><div class="pc-grid">' + acts.map(btn).join('') + '</div></div></div>'; }).join('');
+      html += placeGroupHtml(cityNm, byCityT[cityNm].length, '', cards, 'trip'); });
   }
   if (currentUserSuspended){
     html += '<div class="warnline">🚫 <span><b>Account Suspended</b><br>Your account has been suspended and can no longer create trips or add places.</span></div>';
@@ -285,39 +285,40 @@ async function toggleTripPublicFor(id){ currentTripId = id; await toggleTripPubl
 // الإطار: عاجي خارجي (رأس القسم يرسمه المستدعي) · كريمي داخلي مقسوم: بيانات يسارًا (الاسم ثم Area · Picks · Note للمكتوب فقط) · Actions يمينًا (شبكة عمودين تلتف على الموجود)
 // More/Less: المطوي = الاسم · Area · أول فعلين (Maps · 🔖)؛ الحالة تُذكر بالجلسة لكل بطاقة؛ تُفتح تلقائيًّا حيث مقترح منتقٍ (open:true)
 const plCardOpen = {}; // key → true (ذاكرة الجلسة)
-function placeGroupHtml(title, count, right, inner){ return '<div class="pgroup"><div class="pg-head"><span class="pg-title">' + escapeHtml(title) + (count !== null && count !== undefined ? ' <span class="pg-n">· ' + count + '</span>' : '') + '</span>' + (right || '') + '</div>' + inner + '</div>'; } // r72r-1: المجموعة العاجية برأس التصنيف الفرعي — البنية الواحدة بكل الواجهات
+function placeGroupHtml(title, count, right, inner, unit){ unit = unit || 'place'; return '<div class="pgroup"><div class="pg-head"><span class="pg-title">' + escapeHtml(title) + (count !== null && count !== undefined ? ' <span class="pg-n">· ' + count + ' ' + (count === 1 ? unit : unit + (unit === 'address' ? 'es' : 's')) + '</span>' : '') + '</span>' + (right || '') + '</div>' + inner + '</div>'; } // r72r-1 · r75a (اللوحة ١): رأس التصنيف الفرعي سطرٌ على الليل لا صندوقًا عاجيًّا — العدّ بكلمة places؛ البطاقة وحدها عاجية
 function plCardToggle(btn, key){ const card = btn.closest('.pcard'); if (!card) return; const open = !card.classList.contains('open'); card.classList.toggle('open', open); plCardOpen[key] = open; btn.innerHTML = open ? 'Less <span class="arr">⌃</span>' : 'More <span class="arr">⌄</span>'; } /* ب-٢-٢-أ٢ (ملاحظة المالك ١٠-١٠): كان textContent فظهر الوسم نصًّا */
-function placeCardHtml(p, mode, ctx){
+function placeCardHtml(p, mode, ctx){ /* r75a (اللوحات ١–٣): ثلاث درجات خط — الاسم وحده كبير · الحي سطرًا بدبوس · الملاحظة بشريط اقتباس خلف More · شريحة الحالة بلا فعل · صف الأفعال خارج الطيّ بأيقونات خطّية بأسمائها (pc-tile) — لا زر تثبيت بالبطاقة */
   ctx = ctx || {}; const key = mode + ':' + (p.id || hashUrl(p.url || '') || p.name); const open = ctx.open === true || plCardOpen[key] === true;
-  const acts = (ctx.actions || []).filter(Boolean); // [{cls, html, on, title, href}] — بترتيب ثابت للوضع
-  const btn = function(a, i){ if (a.href) return '<a class="pc-a' + (a.cls ? ' ' + a.cls : '') + (i >= 2 ? ' pc-more' : '') + '" ' + (a.attrs || '') + ' href="' + attrStr(a.href) + '" target="_blank" rel="noopener" title="' + attrStr(a.title || '') + '">' + a.html + '</a>'; return '<button type="button" class="pc-a' + (a.cls ? ' ' + a.cls : '') + (i >= 2 ? ' pc-more' : '') + '"' + (a.disabled ? ' disabled' : '') + ' onclick="' + (a.on || '') + '" title="' + attrStr(a.title || '') + '">' + a.html + '</button>'; };
+  const acts = (ctx.actions || []).filter(Boolean); // [{cls, icon, label, html, on, title, href}] — بترتيب ثابت للوضع
+  const inner = function(a){ return a.label ? '<span class="pc-ico">' + (a.icon ? mpIcon(a.icon, { fill: !!a.fill }) : (a.html || '')) + '</span><span class="pc-lbl">' + escapeHtml(a.label) + '</span>' : a.html; };
+  const btn = function(a){ const cls = (a.label ? 'pc-tile' : 'pc-a') + (a.cls ? ' ' + a.cls : ''); if (a.href) return '<a class="' + cls + '" ' + (a.attrs || '') + ' href="' + attrStr(a.href) + '" target="_blank" rel="noopener" title="' + attrStr(a.title || '') + '">' + inner(a) + '</a>'; return '<button type="button" class="' + cls + '"' + (a.disabled ? ' disabled' : '') + ' onclick="' + (a.on || '') + '" title="' + attrStr(a.title || '') + '">' + inner(a) + '</button>'; };
   const picks = (p.picks || []).map(function(x){ return x && x.name ? String(x.name) : (typeof x === 'string' ? x : ''); }).filter(Boolean).join(' · ');
-  const hasMore = !!(picks || p.note || (ctx.extraLines || '') || acts.length > 2);
+  const hasMore = !!(picks || p.note || (ctx.extraLines || '') || (mode === 'mine' && p.fromCat));
   return '<div class="pcard' + (open ? ' open' : '') + '" data-key="' + attrStr(key) + '"><div class="pc-data">'
-    + '<div class="pc-name" dir="auto">' + escapeHtml(p.name || ctx.fallbackName || 'Place') + '</div>' + flagsHtml(p.flags)
-    + (p.area ? '<div class="pc-lab">Area</div><div class="pc-val pc-area" dir="auto">' + escapeHtml(p.area) + '</div>' : '')
+    + '<div class="pc-head"><div class="pc-name" dir="auto">' + escapeHtml(p.name || ctx.fallbackName || 'Place') + '</div>' + (ctx.status || '') + '</div>' + flagsHtml(p.flags)
+    + (p.area ? '<div class="pc-area" dir="auto">' + mpIcon('pin', { size: 13 }) + escapeHtml(p.area) + '</div>' : '')
+    + ((p.source && p.source.ownerId) ? '<div class="pc-fromrow"><span class="pc-chip pc-from" dir="auto">From ' + escapeHtml(plOwnerName(p.source.ownerId, p.source.ownerName)) + '</span></div>' : '') // ز-١-ب · r74m-٢ · r75a: الإسناد شريحة صغيرة تحت الحي — ظاهرة دائمًا
     + (picks ? '<div class="pc-lab pc-more">Picks</div><div class="pc-val pc-more" dir="auto">' + escapeHtml(picks) + '</div>' : '')
-    + (p.note ? '<div class="pc-lab pc-more">Note</div><div class="pc-val pc-more" dir="auto">' + escapeHtml(p.note) + '</div>' : '')
-    + ((p.source && p.source.ownerId && !ctx.extraLines) ? '<div class="pc-more"><div class="pc-lab">From</div><div class="pc-val" dir="auto">' + escapeHtml(plOwnerName(p.source.ownerId, p.source.ownerName)) + '</div></div>' : '') // ز-١-ب: الإسناد ظاهر بالمكان المنسوخ
+    + (p.note ? '<div class="pc-note pc-more" dir="auto">' + escapeHtml(p.note) + '</div>' : '')
     + ((mode === 'mine' && p.fromCat) ? '<div class="pc-more"><div class="pc-lab">Old category</div><div class="pc-val" dir="auto">' + escapeHtml(p.fromCat) + '</div></div>' : '') // ز-١-ج-٣: أصل المكان الموطَّن — لصاحبه
     + (ctx.extraLines ? '<div class="pc-more">' + ctx.extraLines + '</div>' : '')
     + (hasMore ? '<button type="button" class="pc-toggle" onclick="plCardToggle(this, \'' + attrStr(key) + '\')">' + (open ? 'Less <span class="arr">⌃</span>' : 'More <span class="arr">⌄</span>') + '</button>' : '')
-    + '</div><div class="pc-acts"><div class="pc-lab pc-actlab">Actions</div><div class="pc-grid">' + acts.map(btn).join('') + '</div></div></div>';
+    + '</div>' + (acts.length ? '<div class="pc-acts"><div class="pc-grid">' + acts.map(btn).join('') + '</div></div>' : '') + '</div>';
 }
 function othersPlaceRowHtml(p, owner, cityObj, catId, tripCityId, extra){ // ر٧٢-أ-١د · r72q-2: صف مكان الآخرين — يمرّ بالمكوّن الموحَّد (وضع others)
   const safeUrl = String(p.url || '').replace(/'/g, "\\'"), safeName = String(p.name || '').replace(/'/g, "\\'");
   const safeCity = (cityObj ? cityObj.name : '').replace(/'/g, "\\'"), safeArea = (p.area || '').replace(/'/g, "\\'");
   const okey = 'oid:' + owner.uid + ':' + (cityObj ? cityObj.id : '') + ':' + (p.id || hashUrl(p.url || ''));
   const cat = (catId || '').replace(/'/g, "\\'"); const mine = !!(currentUser && owner.uid === currentUser.uid);
-  const actions = [
-    p.url ? { html: 'Maps ↗', href: p.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="community" data-mpcat="' + attrStr(catId || '') + '"' } : null,
-    { cls: 'bmk' + (isBookmarked(okey) ? ' on' : ''), html: bmkSvg(isBookmarked(okey)), on: "togglePlaceBookmark('" + okey + "', '" + safeName + "', '" + cat + "', '" + (cityObj ? cityObj.id : '').replace(/'/g, "\\'") + "', '" + safeArea + "', '" + owner.uid + "', '" + safeUrl + "')", title: isBookmarked(okey) ? 'Bookmarked — tap to remove' : 'Bookmark' },
-    { html: '🧳', on: "cmAddOthersPlaceToTrip('" + attrStr(tripCityId || (cityObj ? cityObj.id : '')) + "', '" + cat + "', '" + attrStr(p.id || '') + "', '" + owner.uid + "', '" + safeName + "')", title: 'Add to one of my trips' },
-    { html: '📤', on: "cmExportOthersPlace('" + okey + "', '" + safeName + "', '" + safeUrl + "', '" + escapeHtml(owner.nickname || 'a user').replace(/'/g, "\\'") + "', '" + safeArea + "', '" + safeCity + "', '" + cat + "')", title: 'Preview and send' },
-    mine ? null : (placeCopyOf(owner.uid, (cityObj ? cityObj.id : ''), cat, p.id || hashUrl(p.url || '')) ? { cls: 'on', html: 'Saved ✓', on: "showToast('Already in your list — with credit')", title: 'In your list — with credit' } : { html: 'Save', on: "saveOthersPlace('" + owner.uid + "', '" + attrStr(cityObj ? cityObj.id : '') + "', '" + cat + "', '" + attrStr(p.id || '') + "')", title: 'Copy into my list — with credit' }), // ز-١-ب: حي
-    mine ? null : { cls: 'flag', html: '⚑', on: "openReport('place', '" + attrStr(owner.uid + ':' + (cityObj ? cityObj.id : '') + ':' + cat + ':' + (p.id || '')) + "')", title: 'Report' },
-    extra ? { cls: 'edit', html: '✎', on: extra, title: 'Edit in my list' } : null,
-    (p.geo && typeof p.geo.lat === 'number' && cityObj) ? { html: '🗺', on: "cmOpenPersonCityMap('" + attrStr(cityObj.id) + "', '" + attrStr(p.id || p.url) + "')", title: 'Show on map' } : null // ز-١-ب
+  const actions = [ /* r75a: البلاطات بأيقونات الطقم وأسمائها (وضع others) */
+    p.url ? { icon: 'maps', label: 'Maps', href: p.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="community" data-mpcat="' + attrStr(catId || '') + '"' } : null,
+    { cls: 'bmk' + (isBookmarked(okey) ? ' on' : ''), icon: 'bookmark', fill: isBookmarked(okey), label: 'Bookmark', on: "togglePlaceBookmark('" + okey + "', '" + safeName + "', '" + cat + "', '" + (cityObj ? cityObj.id : '').replace(/'/g, "\\'") + "', '" + safeArea + "', '" + owner.uid + "', '" + safeUrl + "')", title: isBookmarked(okey) ? 'Bookmarked — tap to remove' : 'Bookmark' },
+    { icon: 'trip', label: 'Trip', on: "cmAddOthersPlaceToTrip('" + attrStr(tripCityId || (cityObj ? cityObj.id : '')) + "', '" + cat + "', '" + attrStr(p.id || '') + "', '" + owner.uid + "', '" + safeName + "')", title: 'Add to one of my trips' },
+    { icon: 'share', label: 'Share', on: "cmExportOthersPlace('" + okey + "', '" + safeName + "', '" + safeUrl + "', '" + escapeHtml(owner.nickname || 'a user').replace(/'/g, "\\'") + "', '" + safeArea + "', '" + safeCity + "', '" + cat + "')", title: 'Preview and send' },
+    mine ? null : (placeCopyOf(owner.uid, (cityObj ? cityObj.id : ''), cat, p.id || hashUrl(p.url || '')) ? { cls: 'on', icon: 'check', label: 'Saved', on: "showToast('Already in your list — with credit')", title: 'In your list — with credit' } : { icon: 'save', label: 'Save', on: "saveOthersPlace('" + owner.uid + "', '" + attrStr(cityObj ? cityObj.id : '') + "', '" + cat + "', '" + attrStr(p.id || '') + "')", title: 'Copy into my list — with credit' }), // ز-١-ب: حي
+    mine ? null : { cls: 'flag', icon: 'flag', label: 'Report', on: "openReport('place', '" + attrStr(owner.uid + ':' + (cityObj ? cityObj.id : '') + ':' + cat + ':' + (p.id || '')) + "')", title: 'Report' },
+    extra ? { cls: 'edit', icon: 'edit', label: 'Edit', on: extra, title: 'Edit in my list' } : null,
+    (p.geo && typeof p.geo.lat === 'number' && cityObj) ? { icon: 'locate', label: 'Map', on: "cmOpenPersonCityMap('" + attrStr(cityObj.id) + "', '" + attrStr(p.id || p.url) + "')", title: 'Show on map' } : null // ز-١-ب
   ];
   return placeCardHtml(p, 'others', { actions: actions, open: !!(p.topPlace && (p.note || (p.picks || []).length)) });
 }
@@ -332,7 +333,7 @@ function othersCard(o){ // ر٦٩ذ (N-062) · r72r-3: بطاقة القائمة
   const btn = function(a){ return '<button type="button" class="pc-a' + (a.cls ? ' ' + a.cls : '') + '" onclick="' + (a.on || '') + '" title="' + attrStr(a.title || '') + '">' + a.html + '</button>'; };
   const lines = (o.lines || []).map(function(l){ return '<div class="pc-lab">' + escapeHtml(l[0]) + '</div><div class="pc-val">' + l[1] + '</div>'; }).join('');
   return '<div class="pcard open"><div class="pc-data"><div class="pc-name" dir="auto">' + o.title + '</div>' + (o.sub ? '<div class="pc-lab">Details</div><div class="pc-val pc-area" dir="auto">' + o.sub + '</div>' : '') + lines + (o.stat ? '<div class="pc-lab">Views</div><div class="pc-val pc-area">' + o.stat.replace(' views', '') + '</div>' : '') + (o.bmSelf ? '<div class="pc-lab" title="' + (o.selfKind === 'trip' ? 'Bookmarks on your trip — the counter counts others' : 'Bookmarks on your list — the counter counts others') + '">Bookmarks</div><div class="pc-val pc-area">' + (o.cnt || 0) + '</div>' : '') + '</div>'
-    + '<div class="pc-acts"><div class="pc-lab pc-actlab">Actions</div><div class="pc-grid">' + acts.map(btn).join('') + '</div></div></div>';
+    + '<div class="pc-acts"><div class="pc-grid">' + acts.map(btn).join('') + '</div></div></div>';
 }
 function ownerLink(uid, name){ return '<a class="place-link linklike" onclick="viewCommunityUser(\'' + attrStr(uid) + '\')">' + escapeHtml(name || 'user') + '</a>'; } // ر٦٩ذ (N-060): الاسم نصًّا؛ شريحة الرجوع في مفكرتي فقط
 let shareModalKind = 'trip';
