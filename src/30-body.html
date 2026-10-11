@@ -24,8 +24,11 @@
   <!-- قرار المالك ٢٧ أغسطس: الغلاف الكبير أُلغي — الهوية بالشريط العلوي -->
   <!-- خ٥/م٢: وجهة الأماكن الجديدة — مبدّل المصدر الرباعي (المشهد ٦/أ v1.25)؛ الواجهة القديمة مغلَّفة مخفية حتى الترحيل بالمرحلة ٥ ودوالها حية -->
   <div class="wrap destbody">
-  <div class="stickyhead"><div class="chipgrid c2" id="plSrcRow"><button type="button" class="csel srcttl" id="plSrcTitle" onclick="plToggleShowPanel()"><b>My places</b> <span class="arr">⌄</span></button><button type="button" class="csel srcttl" id="plSearchChip" onclick="plSearchToggle()"><b>🔍 Search</b> <span class="arr" id="plSearchArr">⌄</span></button></div>
-    <div class="pl-search" id="plSearchRow" style="display:none;"><span class="pl-search-ic" aria-hidden="true">🔍</span><input type="search" id="plSearch" class="modal-input" placeholder="Search my places by name, area or note" autocomplete="off" oninput="plSearchInput(this.value)"><button type="button" class="pl-search-x" id="plSearchX" onclick="plSearchClear()" title="Clear" style="display:none;">×</button></div><div id="plShowPanel"></div></div>
+  <div class="stickyhead plsticky" id="plSticky"><!-- r74m (قرار المالك ١١ أكتوبر): الصفوف الثلاثة ثابتة عند التمرير — السياق (الدولة · المدينة) ثم الفعل (المصدر · الإضافة · البحث) ثم العرض والتصفية -->
+    <div id="plRow1"></div>
+    <div class="chipgrid c3 headgrid" id="plSrcRow"><button type="button" class="csel plsrc" id="plSrcTitle" onclick="plToggleShowPanel()"><b>My places</b> <span class="arr">⌄</span></button><button type="button" class="actn primary" id="plAddBtn" onclick="plTogglePanel('cats')"><b>＋</b> Add place</button><button type="button" class="csel plsrc" id="plSearchChip" onclick="plSearchToggle()"><b>Search a place</b> <span class="arr" id="plSearchArr">⌄</span></button></div>
+    <div class="pl-search" id="plSearchRow" style="display:none;"><span class="pl-search-ic" aria-hidden="true">🔍</span><input type="search" id="plSearch" class="modal-input" placeholder="Search my places by name, area or note" autocomplete="off" oninput="plSearchInput(this.value)"><button type="button" class="pl-search-x" id="plSearchX" onclick="plSearchClear()" title="Clear" style="display:none;">×</button></div><div id="plShowPanel"></div>
+    <div id="plRow3"></div></div>
   <div id="plBody"></div>
   </div><!-- /غلاف الأماكن -->
   <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:var(--ivory-bright); border:1px dashed var(--danger); border-radius:10px; font-size:12px; color:var(--danger); word-break:break-word; text-align:center;"></div>
@@ -334,7 +337,6 @@
       <div class="hdr"><button type="button" class="bk" onclick="closeModalById('adminBackdrop')">← Back</button><span class="ttl">🛠 Admin panel</span><button type="button" class="x" onclick="mpCloseAll('adminBackdrop')" aria-label="Close">✕</button></div>
       <div class="ctx" style="text-align:center;"><b>MyPickz at a glance</b> · owner</div>
       <div id="adminTiles" class="admtiles"></div>
-      <div class="ctx" id="adminLine" style="text-align:center;"></div>
       <div class="gsec">People</div>
       <button type="button" class="dash-door" onclick="openUsersModal()"><span>👥 Users</span><span id="adminUsersCount">›</span></button>
       <button type="button" class="dash-door" onclick="openAdminRequests()"><span>⭐ Curator requests</span><span id="adminReqCount">›</span></button>
