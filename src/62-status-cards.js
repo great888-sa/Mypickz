@@ -71,11 +71,10 @@ function adminStatsData(){
     usedMyList: allUsersCache.filter(u => u.hasMyListActivity).length, usedBookmarks: allUsersCache.filter(u => u.hasBookmarked).length,
     curatorSet: new Set((curators || []).map(function(c){ return c.uid; })) };
 }
-function renderAdminStats(){ // ر٧٢-أ-١ (إعادة البناء): بلاطات ٢×٣ + سطر تكميلي
+function renderAdminStats(){ // ر٧٢-أ-١ (إعادة البناء) · r74m (ق١٠-١٠-٠٦ الخيار أ): بلاطات ٢×٤ — الرقمان المنفردان صارا بلاطتين
   const d = adminStatsData(); const tiles = document.getElementById('adminTiles'); if (!tiles) return;
   const tile = function(v, l){ return '<div class="admtile"><b>' + v + '</b><span>' + l + '</span></div>'; };
-  tiles.innerHTML = tile(visitCount === null ? '…' : visitCount, 'visits') + tile(d.total, 'registered') + tile(d.publicCount, 'public · ' + d.pct + '%') + tile(d.curatorSet.size, 'curators') + tile(d.active7, 'active 7d') + tile(d.active30, 'active 30d');
-  const line = document.getElementById('adminLine'); if (line) line.textContent = 'Used My List ' + d.usedMyList + ' · Bookmarked something ' + d.usedBookmarks;
+  tiles.innerHTML = tile(visitCount === null ? '…' : visitCount, 'visits') + tile(d.total, 'registered') + tile(d.publicCount, 'public · ' + d.pct + '%') + tile(d.curatorSet.size, 'curators') + tile(d.active7, 'active 7d') + tile(d.active30, 'active 30d') + tile(d.usedMyList, 'Saved a place') + tile(d.usedBookmarks, 'Bookmarked');
   const uc = document.getElementById('adminUsersCount'); if (uc) uc.textContent = d.total + ' ›';
 }
 function renderUsersModal(query){ /* ب-٢-٢-ب (v2-ب · ٢): الصف بلا أزرار — النقر يفتح بطاقة المستخدم · Show more بعد ٥٠ */
