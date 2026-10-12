@@ -155,20 +155,19 @@ function mpSheet(o){
   const alt2 = el('sheetAlt2'); if (alt2){ alt2.style.display = o.alt2 ? '' : 'none'; alt2.textContent = o.alt2 || '·'; } /* r75c: 'alt2' */
   el('sheetCancel').textContent = o.cancel || 'Cancel';
   const inp = el('sheetInput'); __sheetHasInput = !!o.input; inp.style.display = o.input ? '' : 'none'; inp.value = (o.input && o.input.value) || ''; inp.placeholder = (o.input && o.input.placeholder) || '';
-  el('sheetCard').style.transform = ''; el('sheetBackdrop').classList.add('show'); sheetLift();
+  const alts = el('sheetAlts'); if (alts) alts.style.display = (o.alt || o.alt2) ? '' : 'none'; /* r75d-٢: البديلان بصف واحد */
+  el('sheetCard').style.transform = ''; el('sheetBackdrop').classList.add('show'); sheetBarsHide(true); /* r75d-٢ (ملاحظة المالك ١٢ أكتوبر): الأشرطة السفلية تختفي ما دامت الورقة مفتوحة — الورقة على حافة الشاشة بلا قياس ولا رفع (بديل sheetLift) */
   if (o.input) setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(_){} }, 30);
   return new Promise(function(res){ __sheetResolve = res; });
 }
 function sheetDone(v){
   const r = __sheetResolve; __sheetResolve = null;
   const out = (v === 'ok' && __sheetHasInput) ? document.getElementById('sheetInput').value : v;
-  document.getElementById('sheetBackdrop').classList.remove('show');
+  document.getElementById('sheetBackdrop').classList.remove('show'); sheetBarsHide(false);
   if (r) r(out);
 }
-function sheetLift(cardId){ /* ملاحظة المالك ١٠-١٠ (Safari): الأشرطة السفلية الثابتة (الشريط الخمسي · شريط التوقيت بنسخة الاختبار · شريط الرحلة النشطة) تُرسم فوق الورقة على Safari فتحجب أسفلها — الورقة تقيسها وتستقر فوق أعلاها أيًّا كان ترتيب الرسم */
-  const card = document.getElementById(cardId || 'sheetCard'); if (!card) return; const H = window.innerHeight || 0; let lift = 0;
-  ['mpTabbar', 'mpTimingBox', 'activeTripBar'].forEach(function(id){ const b = document.getElementById(id); if (!b || !b.getBoundingClientRect) return; const cs = window.getComputedStyle ? window.getComputedStyle(b) : null; if (cs && (cs.display === 'none' || cs.visibility === 'hidden')) return; const r = b.getBoundingClientRect(); if (!r.height) return; lift = Math.max(lift, H - r.top); });
-  const on = lift > 0 && lift < H * 0.6; card.style.marginBottom = on ? Math.round(lift) + 'px' : ''; card.classList.toggle('lifted', on);
+function sheetBarsHide(on){ /* r75d-٢ (قرار المالك ١٢ أكتوبر — يغلق ملاحظة ١٠-١٠ جذريًّا): الشريط الخمسي وشريط التوقيت وشريط الرحلة النشطة تُخفى ما دامت ورقة مفتوحة (العتمة تحجبها أصلًا) فتجلس الورقة على حافة الشاشة مع المنطقة الآمنة — لا قياس يتعطل حين يبدّل سفاري ارتفاع نافذته */
+  document.body.classList.toggle('sheet-open', !!on);
 }
 function sheetBackdropTap(ev){ if (ev && ev.target && ev.target.id === 'sheetBackdrop') sheetDone(null); }
 function sheetKey(ev){ if (!ev) return; if (ev.key === 'Enter'){ ev.preventDefault(); sheetDone('ok'); } else if (ev.key === 'Escape'){ sheetDone(null); } }
