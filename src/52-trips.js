@@ -494,7 +494,7 @@ async function sendExportCard(kind, id){
 }
 function openExportPreview(kind, id){
   const bd = document.getElementById('tripShareBackdrop'); shareModalKind = 'export'; __xcLast = { kind: kind, id: id }; // ر٧٠ح
-  bd.innerHTML = '<div class="modal"><div class="modal-topbar"><h3 style="margin:0;flex:1">📤 Send</h3><button type="button" class="btn btn-ghost" style="width:auto;margin:0" onclick="closeExportPreview()">✕</button></div>' + exportCardHtml(kind, id)
+  bd.innerHTML = '<div class="modal night"><div class="hdr"><button type="button" class="bk hidden">← Back</button><span class="ttl">📤 Send</span><button type="button" class="x" onclick="closeExportPreview()" aria-label="Close">✕</button></div>' + exportCardHtml(kind, id) /* r75c (البند ١٠): معاينة الإرسال على القشرة الليلية */
     + '<button type="button" class="cta wide" style="margin-top:12px" onclick="sendExportCard(\'' + kind + '\', \'' + attrStr(id || '') + '\')">Send as card</button>'
     + '<button type="button" class="btn btn-ghost" onclick="closeExportPreview(); ' + (kind === 'trip' ? "exportOwnTripRow('" + attrStr(id) + "')" : kind === 'olist' ? "exportOtherList('" + attrStr(String(id).split('_')[0]) + "', '" + attrStr(String(id).split('_').slice(1).join('_')) + "')" : kind === 'otrip' ? "exportOtherTrip('" + attrStr(id) + "')" : kind === 'oplace' ? "cmSendCachedPlace('" + attrStr(id) + "')" : 'plExportCityList()') + '">Send as message</button>'
     + '<button type="button" class="btn btn-ghost" onclick="closeExportPreview()">Cancel</button></div>';
