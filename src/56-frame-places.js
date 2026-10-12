@@ -425,8 +425,8 @@ function plRenderModalCats(){
   const cur = cats.find(function(c){ return c.id === plModalCat; }); if (cur) plModalMainId = cur.sectionId; else if (!plModalMainId && plModalSec){ const sc = catSections().find(function(x){ return x.name === plModalSec; }); if (sc) plModalMainId = sc.id; }
   const isEdit = !!plEdit;
   document.getElementById('plModalCats').innerHTML = catPairRow({ id: 'plModal', main: plModalMainId, sub: plModalCat, rerender: 'plRenderModalCats' })
-    + '<div class="chiprow" style="margin-top:8px;"><button type="button" class="chip' + (plModalFine ? ' on' : '') + '" onclick="plModalFine = !plModalFine; plRenderModalCats()">Fine dining</button>'
-    + '<button type="button" class="chip' + (plModalTop ? ' on' : '') + '" onclick="plToggleTop()">⭐ Top place</button>' // ر٧٢-أ-١د (قرار المالك): ظاهر للجميع، مفعّل للمنتقي
+    + '<div class="chiprow" style="margin-top:8px;"><button type="button" class="chip tog' + (plModalFine ? ' on' : '') + '" onclick="plModalFine = !plModalFine; plRenderModalCats()">Fine dining</button>'
+    + '<button type="button" class="chip tog' + (plModalTop ? ' on' : '') + '" onclick="plToggleTop()">⭐ Top place</button>' // ر٧٢-أ-١د (قرار المالك): ظاهر للجميع، مفعّل للمنتقي
     + (isEdit ? '<button type="button" class="chip" onclick="plMoveMode = true; catPairToggle(\'plModal\', \'main\')">Move to another category</button>' : '') + '</div>'
     + (plMoveMode ? '<div class="pl-sub" style="margin-top:4px;">Pick the new category — the place moves as soon as you choose a sub-category.</div>' : '');
 }
@@ -757,9 +757,8 @@ async function openGeoStep(place){
   let known = null; const idKey = mpData.identity.keyOf(myListCityId, place.name); try{ known = await mpData.identity.get(idKey); }catch(_){} // سجل الهوية: موضع مصدَّق سابقًا
   if (known && typeof known.lat === 'number'){ const kc = { id: known.openId || ('mp:' + idKey), name: place.name + ' · confirmed', addr: '', lat: known.lat, lng: known.lng, score: 1, known: true }; res.candidates = [kc].concat((res.candidates || []).filter(function(c){ return !(Math.abs(c.lat - kc.lat) < 0.0005 && Math.abs(c.lng - kc.lng) < 0.0005); })); if (!res.auto) res.auto = kc; }
   geoCands = (res.candidates || []).slice(0, 3); const auto = res.auto || null; geoPick = (place.geo && typeof place.geo.lat === 'number') ? { lat: place.geo.lat, lng: place.geo.lng, id: place.openId || null, name: place.name, addr: place.area || '', keep: true } : (auto || geoCands[0] || null);
-  const __rm = document.getElementById('geoRemove'); if (__rm) __rm.style.display = (place.geo && typeof place.geo.lat === 'number') ? '' : 'none'; // خ-٤
   const center = geoPick ? [geoPick.lat, geoPick.lng] : (g ? [g.lat, g.lng] : [24.7136, 46.6753]);
-  document.getElementById('geoStatus').textContent = (geoPick && geoPick.keep) ? 'Your saved pin — drag to move, or Remove pin.' : (auto && auto.known) ? 'Pinned before by MyPickz users — confirm or drag.' : auto ? 'Is this the place? Confirm or drag the pin.' : (geoCands.length ? 'Pick the right one, or drag the pin.' : (res.noData ? 'No place suggestions for this city yet — drop the pin.' : (timedOut ? 'Suggestions are slow right now — drop the pin, or skip.' : 'Not found in our data — drag the pin to where it is, or skip.')));
+  document.getElementById('geoStatus').textContent = (geoPick && geoPick.keep) ? 'Your saved pin — drag to move (Remove pin lives in Move pin on the map).' : (auto && auto.known) ? 'Pinned before by MyPickz users — confirm or drag.' : auto ? 'Is this the place? Confirm or drag the pin.' : (geoCands.length ? 'Pick the right one, or drag the pin.' : (res.noData ? 'No place suggestions for this city yet — drop the pin.' : (timedOut ? 'Suggestions are slow right now — drop the pin, or skip.' : 'Not found in our data — drag the pin to where it is, or skip.')));
   document.getElementById('geoCands').innerHTML = geoCands.map(function(c, i){ return '<button type="button" class="chip geo-cand' + (geoPick && geoPick.id === c.id ? ' on' : '') + '" onclick="geoChoose(' + i + ')">' + (i + 1) + ' · ' + escapeHtml(c.name) + (c.addr ? ' <span class="dim">' + escapeHtml(c.addr) + '</span>' : '') + '</button>'; }).join('');
   const el = document.getElementById('geoMap'); if (geoMap){ geoMap.remove(); geoMap = null; }
   try{ geoMap = await mpMap.create(el, { center: center, zoom: geoPick ? 16 : 14 }); }catch(e){ document.getElementById('geoStatus').textContent = 'Map could not load — you can skip.'; return; } // خ-٢: خرائطنا
@@ -788,8 +787,9 @@ function geoHere(){ // ز-١-ج-٢: موضع الجهاز بإذن المتصف�
   if (!navigator.geolocation){ showToast('Location is not available on this device'); return; }
   navigator.geolocation.getCurrentPosition(function(pos){ const ll = [pos.coords.latitude, pos.coords.longitude]; geoPick = { lat: ll[0], lng: ll[1], id: null, dragged: true }; if (geoPin) geoPin.setLatLng(ll); if (geoMap) geoMap.setView(ll, 17); document.getElementById('geoStatus').textContent = 'Pinned at your location — confirm.'; document.querySelectorAll('.geo-cand').forEach(function(b){ b.classList.remove('on'); }); geoShowArea(ll[0], ll[1], 'Pinned at your location — confirm'); }, function(){ showToast('Location permission denied — drag the pin instead'); }, { enableHighAccuracy: true, timeout: 8000 });
 }
-async function geoRemovePin(){ // خ-٤: يزيل الدبوس المحفوظ ويعيد المكان إلى «بلا دبوس»
-  plGeoResult = { geo: null, openId: null }; plGeoConfirmed = true; closeModalById('geoBackdrop'); await savePlPlace();
+function geoBack(all){ /* r75c (البند ١٠): Back يغلق خطوة الخريطة ويعود إلى النموذج بلا حفظ · ✕ (all) يلغي النموذج كله — زر Remove pin القديم زال: الإزالة بوضع الدبوس الثابت (plPinRemove · r75b) */
+  closeModalById('geoBackdrop'); plGeoConfirmed = false; plGeoResult = null; if (geoMap){ try{ geoMap.remove(); }catch(_){} geoMap = null; }
+  const form = document.getElementById('plPlaceBackdrop'); if (all || !(form && form.classList.contains('show'))) closePlPlaceModal();
 }
 async function geoSkip(){ if (plView === 'map'){ const c = geoPick || null; if (c) plMapFocus = { lat: c.lat, lng: c.lng }; else if (geoMap && geoMap.map && geoMap.map.getCenter){ try{ const ce = geoMap.map.getCenter(); plMapFocus = { lat: ce.lat, lng: ce.lng }; }catch(_){} } } /* خ-٤: Skip يبقي الخريطة على موضع الدبوس كما ✓ */ plGeoResult = { geo: null, openId: null }; plGeoConfirmed = true; closeModalById('geoBackdrop'); await savePlPlace(); }
 async function savePlPlace(){
