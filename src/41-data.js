@@ -1,15 +1,7 @@
 /* =========================================================
    2) بيانات المدن والتصنيفات
    ========================================================= */
-const CITIES = [
-  { id:"paris",     name:"Paris",    country:"France" },
-  { id:"marbella",  name:"Marbella", country:"Spain" },
-  { id:"london",    name:"London",   country:"UK" },
-  { id:"barcelona", name:"Barcelona", country:"Spain" },
-  { id:"geneva",    name:"Geneva",   country:"Switzerland" },
-  { id:"madrid",    name:"Madrid",   country:"Spain" },
-  { id:"mallorca",  name:"Mallorca", country:"Spain" },
-];
+/* r75c (البند ١١): زال ثابت CITIES (دليل المدن القياسية الموروث) — المدن كلها من معجم المستخدم (myListAllCities) منذ ز-١-ج-٢؛ لا مستعمل له بالكود ولا بالمحطات */
 
 let customCities = []; // مدن أضفتها لاحقًا: [{id, name, country}]
 let customCountries = []; // دول أضفتها بدون مدن بعد: ["اسم1", "اسم2"]
@@ -176,8 +168,7 @@ const ADDR_SECTIONS = [
 /* =========================================================
    3) الحالة العامة
    ========================================================= */
-let currentCityId = CITIES[0].id;
-let currentCountry = CITIES[0].country;
+/* r75c (البند ١١): زال currentCityId/currentCountry — الحالة الحقيقية myListCityId/myListCountry بجزء القائمة */
 let links = {};          // (لكل مدينة) { itemId: {active, places:[{name,url,area}]} }
 let editMode = false;
 let isOwner = false; // true فقط عندما currentUser.uid == settings/app.ownerUid — يُحدَّد داخل onAuthStateChanged
