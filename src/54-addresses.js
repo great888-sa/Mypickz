@@ -216,9 +216,9 @@ async function openCityDeleteChooser(cityId, from){ /* r75c (البند ١٠): �
   const plural = function(n, w){ return n + ' ' + w + (n === 1 ? '' : (/s$/.test(w) ? 'es' : 's')); }; /* r75c: «addresses» لا «addresss» (كانت تجمع بـs وحدها) */
   const n2 = (from === 'addr') ? nList : nAddr;
   const v = await mpSheet({ title: '🗑 ' + name, text: plural(nList, 'place') + ' in My List · ' + plural(nAddr, 'address') + '. Choose what to delete.',
-    ok: 'Delete city everywhere — ' + plural(nList + nAddr, 'item'), danger: true,
-    alt: (from === 'addr') ? 'Remove my addresses here (' + nAddr + ')' : 'Clear my list for this city (' + nList + ')',
-    alt2: n2 > 0 ? ((from === 'addr') ? 'Clear my list for this city (' + n2 + ')' : 'Remove my addresses here (' + n2 + ')') : null });
+    ok: 'Delete everywhere · ' + plural(nList + nAddr, 'item'), danger: true, /* r75d-٢: تسميات أقصر — المدينة بالعنوان */
+    alt: (from === 'addr') ? 'Remove addresses (' + nAddr + ')' : 'Clear my list (' + nList + ')',
+    alt2: n2 > 0 ? ((from === 'addr') ? 'Clear my list (' + n2 + ')' : 'Remove addresses (' + n2 + ')') : null });
   if (!cityDelCtx || cityDelCtx.cityId !== cityId) return;
   if (v === 'ok') return cityDelFull();
   if (v === 'alt') return cityDelSide();
