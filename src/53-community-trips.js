@@ -94,7 +94,7 @@ function closeGate(){ document.getElementById('authBackdrop').classList.remove('
 function openAuthModal(mode){
   const errEl = document.getElementById('authError');
   errEl.textContent = '';
-  errEl.style.color = 'var(--danger)';
+  errEl.className = 'errline'; /* r75c */
   document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
   const signup = mode === 'signup';
@@ -141,7 +141,7 @@ let __dashBack = null; /* ب-٢-٢-أ: معالج Back الحالي لنافذة
 function dashSet(title, backFn){ const t = document.getElementById('dashTitle'); if (t) t.textContent = title || ''; __dashBack = (typeof backFn === 'function') ? backFn : null; const b = document.getElementById('dashBackBtn'); if (b) b.classList.toggle('hidden', !__dashBack); }
 function dashBack(){ const f = __dashBack; if (f) f(); else closeModalById('dashBackdrop'); }
 
-/* ب-٢-٢-أ٢ (القرار ١ من ٦): الورقة السفلية — بديل confirm()/prompt() المتصفح. mpSheet(o) يعيد وعدًا: 'ok' للفعل الأساسي · 'alt' للبديل الاختياري · null للإلغاء (زر Cancel أو النقر خارجها أو السحب لأسفل).
+/* ب-٢-٢-أ٢ (القرار ١ من ٦): الورقة السفلية — بديل confirm()/prompt() المتصفح. mpSheet(o) يعيد وعدًا: 'ok' للفعل الأساسي · 'alt' للبديل الاختياري · 'alt2' لبديل ثانٍ (r75c) · null للإلغاء (زر Cancel أو النقر خارجها أو السحب لأسفل).
    o = { title, text, ok, alt, cancel, danger, input: { value, placeholder } } — مع input يعيد النص المكتوب بدل 'ok'. المحاكي يجيب عبر window.__mpSheetAuto(o) بلا رسم (كما __geoAuto). */
 let __sheetResolve = null, __sheetHasInput = false, __sheetTouchY = null;
 function mpSheet(o){
@@ -152,6 +152,7 @@ function mpSheet(o){
   el('sheetTitle').textContent = o.title || ''; el('sheetText').textContent = o.text || ''; el('sheetText').style.display = o.text ? '' : 'none';
   const ok = el('sheetOk'); ok.textContent = o.ok || 'OK'; ok.classList.toggle('btn-danger', !!o.danger); ok.classList.toggle('btn-brass', !o.danger);
   const alt = el('sheetAlt'); alt.style.display = o.alt ? '' : 'none'; alt.textContent = o.alt || '·';
+  const alt2 = el('sheetAlt2'); if (alt2){ alt2.style.display = o.alt2 ? '' : 'none'; alt2.textContent = o.alt2 || '·'; } /* r75c: 'alt2' */
   el('sheetCancel').textContent = o.cancel || 'Cancel';
   const inp = el('sheetInput'); __sheetHasInput = !!o.input; inp.style.display = o.input ? '' : 'none'; inp.value = (o.input && o.input.value) || ''; inp.placeholder = (o.input && o.input.placeholder) || '';
   el('sheetCard').style.transform = ''; el('sheetBackdrop').classList.add('show'); sheetLift();
