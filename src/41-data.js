@@ -1,7 +1,7 @@
 /* =========================================================
    2) بيانات المدن والتصنيفات
    ========================================================= */
-/* r75c (البند ١١): زال ثابت CITIES (دليل المدن القياسية الموروث) — المدن كلها من معجم المستخدم (myListAllCities) منذ ز-١-ج-٢؛ لا مستعمل له بالكود ولا بالمحطات */
+/* r75c (البند ١١): زال ثابت CITIES (دليل المدن القياسية الموروث) — المدن كلها من معجم المستخدم (cityListAllCities) منذ ز-١-ج-٢؛ لا مستعمل له بالكود ولا بالمحطات */
 
 let customCities = []; // مدن أضفتها لاحقًا: [{id, name, country}]
 let customCountries = []; // دول أضفتها بدون مدن بعد: ["اسم1", "اسم2"]
@@ -75,7 +75,7 @@ function isoFlagEmoji(code){
 function isLatinOnly(text){
   return /^[A-Za-z\s.,'\-]+$/.test(text.trim());
 }
-async function syncCitiesFromMyLists(){ // ز-١-ج-٢: كل مدينة عندي فيها قائمة تدخل «مدني» باسمها ودولتها (الرمز يُترجم باسم الدولة) — مرة عند الدخول
+async function syncCitiesFromCityLists(){ // ز-١-ج-٢: كل مدينة عندي فيها قائمة تدخل «مدني» باسمها ودولتها (الرمز يُترجم باسم الدولة) — مرة عند الدخول
   if (!currentUser || !userListData) return; let snap; try{ snap = await mpData.cityLists.byOwner(currentUser.uid); }catch(e){ mpSwallow(e, 'sync cities'); return; }
   if (!Array.isArray(userListData.customCities)) userListData.customCities = []; let added = 0;
   snap.forEach(function(d){ const r = d.data() || {}; const id = String(r.cityId || ''); if (!id || userListData.customCities.some(function(c){ return c.id === id; })) return; const cc = String(r.country || ''); const cn = (/^[A-Z]{2}$/.test(cc) ? ((WORLD_COUNTRIES.find(function(w){ return w.code === cc; }) || {}).name || cc) : cc) || ''; userListData.customCities.push({ id: id, name: r.cityName || id, country: cn }); added++; });
@@ -168,7 +168,7 @@ const ADDR_SECTIONS = [
 /* =========================================================
    3) الحالة العامة
    ========================================================= */
-/* r75c (البند ١١): زال currentCityId/currentCountry — الحالة الحقيقية myListCityId/myListCountry بجزء القائمة */
+/* r75c (البند ١١): زال currentCityId/currentCountry — الحالة الحقيقية cityListCityId/cityListCountry بجزء القائمة */
 let links = {};          // (لكل مدينة) { itemId: {active, places:[{name,url,area}]} }
 let editMode = false;
 let isOwner = false; // true فقط عندما currentUser.uid == settings/app.ownerUid — يُحدَّد داخل onAuthStateChanged
