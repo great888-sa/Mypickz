@@ -313,13 +313,13 @@ const CAP_COLORS_OUTSIDE_IDENTITY = { [TEST]: 139, [PROD]: 149 }; // ر42 = ١٤
 const CONTROL_CLASSES = ['btn', 'chip', 'act', 'actn', 'cta', 'csel', 'pl-src', 'mp-tab', 'dr-item', 'acc-item', 'switch-btn', 'pl-actbtn', 'addr-chip', 'pl-catpick', 'city-tab', 'area-chip', 'hcard', 'remove-btn', 'bmk-btn', 'reorder-btn', 'add-place-btn', 'quick-nav-btn', 'action-btn', 'status-toggle', 'mp-burger', 'mp-idchip', 'pw-eye', 'show-more-btn', 'pclose', 'prow', 'addmini'];
 const LIFE_PATHS = [ // مسارات الحياة العشرة — دالة مدخل مسمّاة لكل مسار: معرَّفة ومستدعاة
   ['signup', ['doSignUp']], ['signin', ['doSignIn']], ['save place', ['savePlPlace', 'saveMyCityList']],
-  ['publish & share', ['plTogglePublic', 'shareMyListWithSomeone']], ['trip', ['openCreateTripFlow', 'saveTrip']],
+  ['publish & share', ['plTogglePublic', 'shareCityListWithSomeone']], ['trip', ['openCreateTripFlow', 'saveTrip']],
   ['private address', ['saveAddr']], ['bookmark', ['togglePlaceBookmark']], ['suspend', ['toggleSuspendUser']],
   ['delete', ['deleteTrip', 'plDeleteRow', 'deleteAddr', 'openDeletePreview']], ['sign out', ['doSignOut', 'confirmLogout']]
 ];
 // عقود مسارات الكتابة على بيانات المستخدم — الحرّاس الثلاثة (مصفوفة الأمان M4.19 · دليل التشغيل v1.21)
 const WRITE_CONTRACTS = [
-  ['if (myCityListLoadedFor !== myListCityId){', 1, 'حارس التطابق داخل saveMyCityList'],
+  ['if (myCityListLoadedFor !== cityListCityId){', 1, 'حارس التطابق داخل saveMyCityList'],
   ['myCityListLoadFailed = true; myCityListLoadedFor = null;', 1, 'حارس فشل القراءة: تبقى غير محمَّلة'],
   ["permission denied (rules 3.8", 1, 'تصنيف قراءة الغائب ٣٫٨: الرفض حقيقي لا غيابًا (ق٠١-٠٧ — ر٥٢)'],
   ['myCityListLoadFailed = false; myCityListLoadedFor = null;', 1, 'إعادة المحاولة الصريحة تصفّر العلمين معًا'],
