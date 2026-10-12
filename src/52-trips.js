@@ -44,7 +44,7 @@ function tripToggleShowPanel(){ tripShowOpen = !tripShowOpen; tripSetSrcTitle();
 function tripPickSource(id){ tripShowOpen = false; const el = document.getElementById('tripShowPanel'); if (el) el.innerHTML = ''; selectTripsSource(id); }
 function tripSourceLabel(){ return (TRIP_SOURCES.find(function(x){ return x[0] === tripsSource; }) || TRIP_SOURCES[0])[1]; }
 let tripLastCount = null;
-function tripSetSrcTitle(n){ if (typeof n === 'number') tripLastCount = n; else n = tripLastCount; const t = document.getElementById('tripSrcTitle'); if (t) t.innerHTML = '<b>' + escapeHtml(tripSourceLabel()) + '</b>' + (typeof n === 'number' ? ' <span class="dim"># ' + n + '</span>' : '') + ' ' + (tripShowOpen ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>'); } // r72v
+function tripSetSrcTitle(n){ if (typeof n === 'number') tripLastCount = n; else n = tripLastCount; const t = document.getElementById('tripSrcTitle'); if (t) t.innerHTML = '<b>' + escapeHtml(tripSourceLabel()) + '</b>' + (typeof n === 'number' ? ' <span class="dim">· ' + n + '</span>' : '') + ' ' + (tripShowOpen ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>'); } // r72v
 function selectTripsSource(src){
   tripsSource = src; tripSetSrcTitle();
   const ctx = document.getElementById('tripCtx');
@@ -209,7 +209,7 @@ function renderMyTripsModal(){
       const btn = function(a){ return '<button type="button" class="pc-a' + (a.cls ? ' ' + a.cls : '') + '" onclick="' + a.on + '" title="' + attrStr(a.title || '') + '">' + a.html + '</button>'; };
       return '<div class="pcard open"><div class="pc-data"><div class="pc-name" dir="auto">' + escapeHtml(tripTitle(t)) + '</div>'
         + (tripTypeLine(t) ? '<div class="pc-lab">Type</div><div class="pc-val pc-area">' + tripTypeLine(t) + '</div>' : '')
-        + '<div class="pc-lab">Places</div><div class="pc-val pc-area"># ' + tripPlaceCount(t) + '</div><div class="pc-lab">Days</div><div class="pc-val pc-area"># ' + t.days.length + '</div>' + (t.public ? '<div class="pc-lab">Saved by users</div><div class="pc-val pc-area"># ' + (t.copyCount || 0) + '</div>' : '')
+        + '<div class="pc-lab">Places</div><div class="pc-val pc-area">· ' + tripPlaceCount(t) + (tripPlaceCount(t) === 1 ? ' place' : ' places') + '</div><div class="pc-lab">Days</div><div class="pc-val pc-area">· ' + t.days.length + (t.days.length === 1 ? ' day' : ' days') + '</div>' + (t.public ? '<div class="pc-lab">Saved by users</div><div class="pc-val pc-area">· ' + (t.copyCount || 0) + ((t.copyCount || 0) === 1 ? ' save' : ' saves') + '</div>' : '')
         + (t.source ? '<div class="pc-lab">From</div><div class="pc-val pc-area" dir="auto">' + escapeHtml(tripSourceName(t)) + '</div>' : '')
         + '</div><div class="pc-acts"><div class="pc-grid">' + acts.map(btn).join('') + '</div></div></div>'; }).join('');
       html += placeGroupHtml(cityNm, byCityT[cityNm].length, '', cards, 'trip'); });
@@ -227,7 +227,7 @@ async function openCreateTripFlow(){
   newTripType = 'city'; tcPickType('city'); // ر٥٥: إعادة الافتراضي بكل فتح
   const f = document.getElementById('tcCity'); if (f) f.value = '';
   tcCityId = tcPresetCityId || null; tcPresetCityId = null; delete __pk.tcCity; tcRenderCityPanel(); // ر٧٠د (N-075) · ر٧٠و: المدينة محددة عند الإضافة من مكان
-  if (tcCityId){ const pc = myListAllCities().find(c => c.id === tcCityId); if (f && pc) f.value = pc.name; }
+  if (tcCityId){ const pc = cityListAllCities().find(c => c.id === tcCityId); if (f && pc) f.value = pc.name; }
   const d = document.getElementById('tcDays'); if (d) d.value = '3';
   const l = document.getElementById('tcLabel'); if (l) l.value = '';
   document.getElementById('tcError').textContent = '';
@@ -237,20 +237,20 @@ async function openCreateTripFlow(){
 let tcCityId = null;
 function tcRenderCityPanel(){
   const host = document.getElementById('tcCityHost'); if (!host) return;
-  const cur = myListAllCities().find(c => c.id === tcCityId);
+  const cur = cityListAllCities().find(c => c.id === tcCityId);
   host.innerHTML = pickerRow({ id: 'tcCity', label: cur ? cur.name : 'Choose a city', placeholder: 'Type a city…', onPick: 'tcPickCity', canAdd: true, onAdd: 'tcAddCity()', emptyText: 'No city matches — add it below',
-    items: myListAllCities().map(c => ({ id: c.id, name: c.name, icon: countryFlag(c.country) || '', selected: c.id === tcCityId })) });
+    items: cityListAllCities().map(c => ({ id: c.id, name: c.name, icon: countryFlag(c.country) || '', selected: c.id === tcCityId })) });
 }
 function tcPickCity(id){
-  const c = myListAllCities().find(x => x.id === id); if (!c) return;
+  const c = cityListAllCities().find(x => x.id === id); if (!c) return;
   tcCityId = c.id;
   document.getElementById('tcCity').value = c.name;
   document.getElementById('tcError').textContent = '';
   pickerRowClose('tcCity'); tcRenderCityPanel();
 }
 async function tcAddCity(){
-  await addMyListCity();
-  if (myListCityId && myListAllCities().some(c => c.id === myListCityId)) tcPickCity(myListCityId);
+  await addCityListCity();
+  if (cityListCityId && cityListAllCities().some(c => c.id === cityListCityId)) tcPickCity(cityListCityId);
 }
 let newTripType = 'city'; // ر٥٥: النوع المختار بنافذة الإنشاء — الافتراضي Single city (بنية النموذج الحالية)
 function tcPickType(id){
@@ -259,7 +259,7 @@ function tcPickType(id){
 }
 let freshTripId = null;   // ٦/ب٢ + قرار المالك: الإلغاء يتخلص من الرحلة الفارغة المنشأة توًّا
 async function tcCreate(){
-  const cities = myListAllCities(); // ر٧٠ج: الرحلة تشير لأي مدينة من مدني (ق٠٩-٠٧-٠٣)
+  const cities = cityListAllCities(); // ر٧٠ج: الرحلة تشير لأي مدينة من مدني (ق٠٩-٠٧-٠٣)
   const name = String(document.getElementById('tcCity').value || '').trim().toLowerCase();
   const cityObj = (tcCityId && cities.find(c => c.id === tcCityId)) || cities.find(c => c.name.toLowerCase() === name); // ر٧٠د: بالمعرّف من اللوحة
   if (!cityObj){ document.getElementById('tcError').textContent = 'Pick a city from the list'; return; }
@@ -507,7 +507,7 @@ function openShareModal(kind, id){ // ر٦٩ز: نافذة «Shared with» وا�
   const isTrip = kind === 'trip'; const target = isTrip ? userTrips.find(t => t.id === id) : myCityListData; if (!target) return; if (isTrip) currentTripId = id;
   const bd = document.getElementById('tripShareBackdrop'); shareModalKind = kind;
   const names = (target.sharedWith || []).map(function(uid){ return { uid: uid, name: (target.sharedWithNames || {})[uid] || 'user' }; });
-  const title = isTrip ? tripTitle(target) : ((allCities().find(function(x){ return x.id === myListCityId; }) || {}).name || 'My list');
+  const title = isTrip ? tripTitle(target) : ((allCities().find(function(x){ return x.id === cityListCityId; }) || {}).name || 'My list');
   bd.innerHTML = '<div class="modal"><div class="modal-topbar"><h3 style="margin:0;flex:1">🔗 Shared with</h3><button type="button" class="btn btn-ghost" style="width:auto;margin:0" onclick="closeTripShareModal()">✕</button></div>'
     + '<label class="flabel">' + escapeHtml(title) + ' — ' + (names.length ? names.length + ' ' + (names.length === 1 ? 'person' : 'people') : 'nobody yet') + '</label>'
     + (names.length ? names.map(function(n){ return '<div class="sharerow"><span>👤 ' + escapeHtml(n.name) + '</span><button type="button" class="btn btn-ghost" style="width:auto;margin:0;padding:5px 10px" onclick="removeShareFromModal(\'' + attrStr(n.uid) + '\')" title="Stop sharing">✕</button></div>'; }).join('') : '<div class="mp-empty mini">Share with someone by their username.</div>')
