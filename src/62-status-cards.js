@@ -68,13 +68,13 @@ function adminStatsData(){
   return { total: total, publicSet: publicSet, publicCount: publicCount, pct: pct,
     active7: allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 7*24*60*60*1000).length,
     active30: allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 30*24*60*60*1000).length,
-    usedMyList: allUsersCache.filter(u => u.hasMyListActivity).length, usedBookmarks: allUsersCache.filter(u => u.hasBookmarked).length,
+    usedCityList: allUsersCache.filter(u => u.hasMyListActivity).length, usedBookmarks: allUsersCache.filter(u => u.hasBookmarked).length,
     curatorSet: new Set((curators || []).map(function(c){ return c.uid; })) };
 }
 function renderAdminStats(){ // ر٧٢-أ-١ (إعادة البناء) · r74m (ق١٠-١٠-٠٦ الخيار أ): بلاطات ٢×٤ — الرقمان المنفردان صارا بلاطتين
   const d = adminStatsData(); const tiles = document.getElementById('adminTiles'); if (!tiles) return;
   const tile = function(v, l){ return '<div class="admtile"><b>' + v + '</b><span>' + l + '</span></div>'; };
-  tiles.innerHTML = tile(visitCount === null ? '…' : visitCount, 'visits') + tile(d.total, 'registered') + tile(d.publicCount, 'public · ' + d.pct + '%') + tile(d.curatorSet.size, 'curators') + tile(d.active7, 'active 7d') + tile(d.active30, 'active 30d') + tile(d.usedMyList, 'Saved a place') + tile(d.usedBookmarks, 'Bookmarked');
+  tiles.innerHTML = tile(visitCount === null ? '…' : visitCount, 'visits') + tile(d.total, 'registered') + tile(d.publicCount, 'public · ' + d.pct + '%') + tile(d.curatorSet.size, 'curators') + tile(d.active7, 'active 7d') + tile(d.active30, 'active 30d') + tile(d.usedCityList, 'Saved a place') + tile(d.usedBookmarks, 'Bookmarked');
   const uc = document.getElementById('adminUsersCount'); if (uc) uc.textContent = d.total + ' ›';
 }
 function renderUsersModal(query){ /* ب-٢-٢-ب (v2-ب · ٢): الصف بلا أزرار — النقر يفتح بطاقة المستخدم · Show more بعد ٥٠ */
@@ -109,7 +109,7 @@ function generateUsersReport(){
   const total = allUsersCache.length; const publicCount = communityUsers.length; const now = Date.now();
   const active7 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 7*24*60*60*1000).length;
   const active30 = allUsersCache.filter(u => u.lastSeen && (now - u.lastSeen) <= 30*24*60*60*1000).length;
-  const usedMyList = allUsersCache.filter(u => u.hasMyListActivity).length;
+  const usedCityList = allUsersCache.filter(u => u.hasMyListActivity).length;
   const usedBookmarks = allUsersCache.filter(u => u.hasBookmarked).length;
   const suspendedCount = allUsersCache.filter(u => u.suspended).length;
   const curatorsCount = (curators || []).length;
@@ -118,14 +118,14 @@ function generateUsersReport(){
     'MyPickz — Users Report', 'Generated: ' + when.toLocaleString(), '',
     'Total page visits: ' + (visitCount === null ? 'N/A' : visitCount), 'Total registered users: ' + total,
     'Active in last 7 days: ' + active7 + ' (' + pct(active7) + '%)', 'Active in last 30 days: ' + active30 + ' (' + pct(active30) + '%)',
-    'Used My List at least once: ' + usedMyList + ' (' + pct(usedMyList) + '%)', 'Bookmarked at least one place: ' + usedBookmarks + ' (' + pct(usedBookmarks) + '%)',
+    'Used My List at least once: ' + usedCityList + ' (' + pct(usedCityList) + '%)', 'Bookmarked at least one place: ' + usedBookmarks + ' (' + pct(usedBookmarks) + '%)',
     'Sharing publicly (Community Lists): ' + publicCount + ' (' + pct(publicCount) + '%)', 'Curators: ' + curatorsCount, 'Suspended accounts: ' + suspendedCount
   ].join('\n');
   const rowf = function(label, v){ return '<li><span>' + label + '</span><b>' + v + '</b></li>'; };
   dashSet('📄 Users report', adminBack);
   body.innerHTML = '<div class="ctx" style="text-align:center;">Generated · ' + escapeHtml(when.toLocaleString()) + '</div>'
     + '<div class="gsec">Reach</div><div class="receipt"><ul>' + rowf('Total page visits', visitCount === null ? 'N/A' : visitCount) + rowf('Registered users', total) + '</ul></div>'
-    + '<div class="gsec">Activity</div><div class="receipt"><ul>' + rowf('Active · 7 days', active7 + ' · ' + pct(active7) + '%') + rowf('Active · 30 days', active30 + ' · ' + pct(active30) + '%') + rowf('Used My List at least once', usedMyList + ' · ' + pct(usedMyList) + '%') + rowf('Bookmarked at least one place', usedBookmarks + ' · ' + pct(usedBookmarks) + '%') + '</ul></div>'
+    + '<div class="gsec">Activity</div><div class="receipt"><ul>' + rowf('Active · 7 days', active7 + ' · ' + pct(active7) + '%') + rowf('Active · 30 days', active30 + ' · ' + pct(active30) + '%') + rowf('Used My List at least once', usedCityList + ' · ' + pct(usedCityList) + '%') + rowf('Bookmarked at least one place', usedBookmarks + ' · ' + pct(usedBookmarks) + '%') + '</ul></div>'
     + '<div class="gsec">Sharing & moderation</div><div class="receipt"><ul>' + rowf('Sharing publicly', publicCount + ' · ' + pct(publicCount) + '%') + rowf('Curators', curatorsCount) + rowf('Suspended accounts', suspendedCount) + '</ul></div>'
     + '<div style="display:flex; gap:8px; margin-top:12px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="copyUsersReport()">📋 Copy as text</button><button type="button" class="btn btn-brass" style="flex:1" onclick="mpSendText(usersReportText)">📤 Share</button></div>';
   bd.classList.add('show');
