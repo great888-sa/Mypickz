@@ -50,18 +50,18 @@ async function doForgotPassword(){
   const email = document.getElementById('authEmail').value.trim();
   const errEl = document.getElementById('authError');
   if (!email){
-    errEl.style.color = 'var(--danger)';
+    errEl.className = 'errline'; /* r75c: الحالة صنفًا لا لونًا مضمَّنًا — تُقرأ على الليلي */
     errEl.textContent = 'Enter your email in the field above, then tap "Forgot password?"';
     return;
   }
-  errEl.style.color = 'var(--ink-strong)';
+  errEl.className = 'errline ok';
   errEl.textContent = 'Sending...';
   try{
     await mpData.auth.sendReset(email);
-    errEl.style.color = 'var(--saffron)';
+    errEl.className = 'errline ok';
     errEl.textContent = 'Reset link sent to your email ✓ Check your inbox (and spam)';
   }catch(e){
-    errEl.style.color = 'var(--danger)';
+    errEl.className = 'errline';
     if ((e.code||'').includes('invalid-email')) errEl.textContent = 'Invalid email format';
     else errEl.textContent = 'Could not send — make sure the email is correct and try again';
   }
