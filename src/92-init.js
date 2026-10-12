@@ -17,7 +17,7 @@
       const tasks = [loadUserList(), registerUserRecord(), loadUserTrips(), loadSharedCityLists()]; // v1.40: مفكرات الأماكن تأتي مع userLists (placeBookmarks)
       if (isOwner) tasks.push(linkOwnerUid());
       await Promise.all(tasks);
-      await syncCitiesFromMyLists(); // ز-١-ج-٢: «مدني» يشمل كل مدينة لي فيها قائمة (مثل قوائم الدليل المهاجَرة بمعرّف المعجم)
+      await syncCitiesFromCityLists(); // ز-١-ج-٢: «مدني» يشمل كل مدينة لي فيها قائمة (مثل قوائم الدليل المهاجَرة بمعرّف المعجم)
       logTiming('User data loaded (bookmarks, My List, Trips) — login features ready');
       resolveAuthReady();
       if (currentTab === 'Places') renderPlacesBody(); // خ٥/م٢-ج: أول تحميل واستعادة الجلسة والدخول والخروج — الوجهة الجديدة تتحدث مع كل تغيّر حالة
