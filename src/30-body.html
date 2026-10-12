@@ -32,16 +32,9 @@
   <div id="plBody"></div>
   </div><!-- /غلاف الأماكن -->
   <div id="debugBanner" style="display:none; max-width:760px; margin:14px auto 0; padding:11px 18px; background:var(--ivory-bright); border:1px dashed var(--danger); border-radius:10px; font-size:12px; color:var(--danger); word-break:break-word; text-align:center;"></div>
-  <div class="modal-backdrop" id="cityDelBackdrop"><div class="modal">
-    <h3 id="cityDelTitle">🗑 Delete city</h3>
-    <p id="cityDelHint" class="flabel"></p>
-    <button type="button" class="btn btn-ghost wide" id="cityDelSideBtn" onclick="cityDelSide()"></button>
-    <button type="button" class="btn btn-ghost wide" id="cityDelSideBtn2" onclick="cityDelSide(true)" style="display:none;"></button>
-    <button type="button" class="btn btn-danger wide" id="cityDelFullBtn" onclick="cityDelFull()">Delete city everywhere</button>
-    <button type="button" class="btn btn-ghost wide" onclick="closeModalById('cityDelBackdrop')">Cancel</button>
-  </div></div>
-  <div class="modal-backdrop" id="plPlaceBackdrop"><div class="modal">
-    <h3 id="plPlaceTitle">➕ Add a place</h3>
+  <!-- r75c (البند ١٠): حذف المدينة صار ورقة سفلية (mpSheet بخيارين وبديل ثانٍ) — النافذة القديمة زالت -->
+  <div class="modal-backdrop" id="plPlaceBackdrop"><div class="modal night"><!-- r75c (البند ١٠): نموذج المكان على القشرة الليلية — الحقول عاجية · Save مملوء · ✕ يلغي -->
+    <div class="hdr"><button type="button" class="bk hidden">← Back</button><span class="ttl" id="plPlaceTitle">➕ Add a place</span><button type="button" class="x" onclick="closePlPlaceModal()" aria-label="Close">✕</button></div>
     <div class="chiprow" id="plMethodRow"><button type="button" class="chip on" id="plMethodPaste" onclick="plSetMethod(true)">📋 Paste from Maps</button><button type="button" class="chip" id="plMethodManual" onclick="plSetMethod(false)">✍️ Enter manually</button></div>
     <div id="plPasteWrap">
       <textarea id="plShareText" class="modal-input" rows="3" placeholder="Paste what Google Maps shared…" onpaste="setTimeout(plParseShare, 0)" onchange="plParseShare()"></textarea>
@@ -70,9 +63,8 @@
     <textarea id="plNote" class="modal-input" rows="3" placeholder="e.g. best pancakes before 11 — book ahead"></textarea>
     <div style="display:flex; gap:6px; margin-top:10px;">
       <button type="button" class="btn btn-brass" style="flex:1;" onclick="savePlPlace()">Save</button>
-      <button type="button" class="btn btn-ghost" id="plDeleteBtn" style="display:none; color:var(--danger); border-color:var(--danger);" onclick="deletePlPlaceFromModal()">🗑 Delete</button>
+      <button type="button" class="btn btn-ghost danger" id="plDeleteBtn" style="display:none;" onclick="deletePlPlaceFromModal()">🗑 Delete</button>
       <button type="button" class="btn btn-ghost" onclick="closePlPlaceModal()">Cancel</button>
-      
     </div>
   </div></div>
   </div><!-- /screenPlaces -->
@@ -156,17 +148,17 @@
 
   <!-- خ١-ب: البوابة (المشهد ١) والنافذة (المشهد ٢) مشهدان داخل العنصر نفسه — يحفظ عقد حارس التشغيل (authBackdrop يُفتح للزائر) -->
   <div class="modal-backdrop" id="authBackdrop">
-    <div class="modal">
+    <div class="modal night"><!-- r75c (البند ١٠): البوابة والنموذج على القشرة الليلية — البوابة بلا رأس (إلزامية) · النموذج: Back يعود للبوابة · لا ✕ قبل الدخول -->
       <div id="authGateView" style="text-align:center;">
         <div class="gate-eyebrow">MyPickz 🗺️</div>
-        <h3 style="margin-top:2px; font-size:16px; color:var(--ink-soft);">Welcome 👋</h3>
-        <p style="color:var(--ink-soft); font-size:13px; margin:0 0 14px;">Your places, your trips — all in one spot.</p>
+        <h3 style="margin-top:2px; font-size:16px;">Welcome 👋</h3>
+        <p class="ctx" style="font-size:13px; margin:0 0 14px;">Your places, your trips — all in one spot.</p>
         <button class="btn btn-brass wide" onclick="openAuthModal('signin')">Sign In</button>
         <button class="btn btn-ghost wide" onclick="openAuthModal('signup')">Create Account</button>
-        <div id="gatePolicyLink" style="display:none; margin-top:12px;"><button type="button" class="btn btn-ghost" style="border:none; font-size:11.5px; padding:4px 8px;" onclick="openPolicyModal('policy')">Privacy Policy</button></div>
+        <div id="gatePolicyLink" style="display:none; margin-top:12px;"><button type="button" class="lnk" onclick="openPolicyModal('policy')">Privacy Policy</button></div>
       </div>
       <div id="authFormView" style="display:none;">
-      <h3 id="authTitle">👤 Welcome back</h3>
+      <div class="hdr"><button type="button" class="bk" onclick="openGate()">← Back</button><span class="ttl" id="authTitle">👤 Welcome back</span><button type="button" class="x hidden" aria-label="Close">✕</button></div>
       <p id="authSubtitle" class="flabel">Sign in to your account</p>
       <input type="text" id="authNickname" class="modal-input" placeholder="Username (shown to other users)" autocomplete="nickname" autocapitalize="off" spellcheck="false">
       <input type="email" id="authEmail" class="modal-input" placeholder="Email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" style=" text-align:left; margin-top:8px;">
@@ -174,15 +166,14 @@
         <input type="password" id="authPassword" class="modal-input" placeholder="Password (8+ characters for new accounts)" autocomplete="current-password" style=" text-align:left; margin-top:0;">
         <button type="button" class="pw-eye" onclick="togglePasswordVisibility('authPassword', this)" aria-label="Show password">👁</button>
       </div>
-      <button type="button" id="forgotPasswordLink" onclick="doForgotPassword()" style="background:none; border:none; padding:0; margin-top:8px; font-family:'Cairo',sans-serif; font-size:11.5px; font-weight:700; color:var(--brass); cursor:pointer;">Forgot password?</button>
-      <div id="authError" style="color:var(--danger);font-size:12px;min-height:16px;margin-top:6px;"></div>
+      <button type="button" id="forgotPasswordLink" class="lnk" onclick="doForgotPassword()" style="margin-top:8px;">Forgot password?</button>
+      <div id="authError" class="errline"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
         <button class="btn btn-brass" id="authLoginBtn" style="flex:1" onclick="doSignIn()">Log In</button>
         <button class="btn btn-brass" id="authSignupBtn" style="flex:1; display:none;" onclick="doSignUp()">Create Account</button>
       </div>
       <button type="button" class="btn btn-ghost soon" style="margin-top:10px;" onclick="showSoon('Available when Google sign-in arrives')">Continue with Google <span class="soon-tag">Soon</span> <span class="dim">later</span></button>
-      <p id="authVerifyHint" style="display:none; font-size:10.5px; color:var(--ink-soft); margin-top:8px;">We'll email you a verification link after sign-up.</p>
-      <button type="button" class="btn btn-ghost wide" style="margin-top:8px; border:none; font-size:11.5px;" onclick="openGate()">← Back</button>
+      <p id="authVerifyHint" class="ctx" style="display:none; font-size:10.5px; margin-top:8px;">We'll email you a verification link after sign-up.</p>
       </div>
     </div>
   </div>
@@ -200,8 +191,8 @@
 
   <!-- خ٢: إضافة/تعديل عنوان شخصي (المشهد ٦/و٢) — يكتب المستند الخاص فقط -->
   <div class="modal-backdrop" id="addrBackdrop">
-    <div class="modal">
-      <h3 id="addrModalTitle">🔒 Add address</h3>
+    <div class="modal night"><!-- r75c (البند ١٠): نموذج العنوان على القشرة الليلية + خانة Area (قرار المالك ١٢ أكتوبر) -->
+      <div class="hdr"><button type="button" class="bk hidden">← Back</button><span class="ttl" id="addrModalTitle">🔒 Add address</span><button type="button" class="x" onclick="closeModalById('addrBackdrop')" aria-label="Close">✕</button></div>
       <label class="flabel">City</label>
       <div id="addrModalCityHost" class="tcpanel"></div><!-- ر٧٠د (٦/و٢): مدينة العنوان بلوحة الاختيار المشتركة — الدولة مشتقة من المدينة (قرار ٣١ أغسطس) -->
       <div style="height:10px"></div>
@@ -214,14 +205,18 @@
       <input id="addrName" class="modal-input" placeholder="e.g. Home" autocomplete="off">
       <label class="flabel">Google Maps link</label>
       <div style="display:flex; gap:6px; align-items:center;"><input id="addrUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" inputmode="url" autocomplete="off" style=" flex:1;"><button type="button" class="chip" onclick="pasteToAddrUrl()" title="Paste link from clipboard">📋 Paste from Maps</button></div>
+      <label class="flabel">Area (optional)</label><!-- r75c: الحي سطرًا بدبوس على بطاقة العنوان — الحقل area كان محفوظًا فارغًا -->
+      <input id="addrArea" class="modal-input" placeholder="e.g. Al Olaya" autocomplete="off">
       <label class="flabel">Note (optional)</label>
       <input id="addrNote" class="modal-input" placeholder="e.g. Gate 3" autocomplete="off">
       <label class="flabel">Phone (optional)</label>
       <input id="addrPhone" class="modal-input" placeholder="e.g. +966 5x xxx xxxx" inputmode="tel" autocomplete="off" >
-      <div id="addrError" style="color:var(--danger); font-size:12px; min-height:16px; margin-top:6px;"></div>
-      <button class="btn btn-brass" style="margin-top:8px;"  onclick="saveAddr()">Save</button>
-      <button class="btn btn-ghost" id="addrDeleteBtn" style="margin-top:8px; display:none; color:var(--danger); border-color:var(--danger);" onclick="addrModalDelete()">🗑 Delete</button>
-      <button class="btn btn-ghost" style="margin-top:6px;"  onclick="closeModalById('addrBackdrop')">Cancel</button>
+      <div id="addrError" class="errline"></div>
+      <div style="display:flex; gap:6px; margin-top:8px;">
+        <button class="btn btn-brass" style="flex:1;" onclick="saveAddr()">Save</button>
+        <button class="btn btn-ghost danger" id="addrDeleteBtn" style="display:none;" onclick="addrModalDelete()">🗑 Delete</button>
+        <button class="btn btn-ghost" onclick="closeModalById('addrBackdrop')">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -355,24 +350,23 @@
   </div>
   <!-- ز-١-ب: خريطة السياق (قائمتي · قائمة شخص · رحلة) -->
   <div class="modal-backdrop" id="mapBackdrop">
-    <div class="modal geo-modal">
-      <div class="headrow" style="margin:2px 0 6px;"><button type="button" class="backchip" onclick="closeModalById('mapBackdrop')">← Back</button><span class="csel label"><b id="mapTitle">Map</b></span></div>
+    <div class="modal night geo-modal"><!-- r75c (البند ١٠): خريطة السياق على القشرة الليلية — Back يغلق · ✕ يغلق الكل -->
+      <div class="hdr"><button type="button" class="bk" onclick="closeModalById('mapBackdrop')">← Back</button><span class="ttl" id="mapTitle">Map</span><button type="button" class="x" onclick="mpCloseAll('mapBackdrop')" aria-label="Close">✕</button></div>
       <div id="mapCount" class="geo-note"></div>
       <div id="ctxMap" class="geo-map"></div>
       <div class="geo-note">Map © OpenStreetMap contributors · Protomaps · pins come from the list you opened</div>
     </div>
   </div>
-  <!-- ز-١-ب: خطوة الخريطة بملء الشاشة — التأكيد دائمًا -->
+  <!-- ز-١-ب: خطوة الخريطة بملء الشاشة — التأكيد دائمًا · r75c (البند ١٠): على القشرة الليلية — Back يعود إلى النموذج بلا حفظ · ✕ يلغي النموذج كله · زر Remove pin القديم زال (Remove pin صار بوضع الدبوس الثابت r75b) -->
   <div class="modal-backdrop" id="geoBackdrop">
-    <div class="modal geo-modal">
-      <h3 id="geoTitle" style="text-align:center;">Place</h3>
+    <div class="modal night geo-modal">
+      <div class="hdr"><button type="button" class="bk" onclick="geoBack()">← Back</button><span class="ttl" id="geoTitle">Place</span><button type="button" class="x" onclick="geoBack(true)" aria-label="Close">✕</button></div>
       <div id="geoStatus" class="geo-note">Finding it on the map…</div>
       <div id="geoCands" class="chiprow"></div>
       <div id="geoMap" class="geo-map"></div>
       <div style="display:flex; gap:8px; margin-top:10px;">
         <button class="btn btn-brass" style="flex:2" onclick="geoConfirm()">✓ This is the place</button>
         <button class="btn btn-ghost" style="flex:1" onclick="geoHere()" title="Use my current location">📍 I'm here</button>
-        <button class="btn btn-ghost" style="flex:1; display:none;" id="geoRemove" onclick="geoRemovePin()" title="Remove the saved pin">Remove pin</button>
         <button class="btn btn-ghost" style="flex:1" onclick="geoSkip()">Skip</button>
       </div>
       <div class="geo-note">Map © OpenStreetMap contributors · Protomaps · your pin is saved in your list</div>
@@ -435,6 +429,7 @@
       <p class="sheet-txt" id="sheetText"></p>
       <input class="modal-input" id="sheetInput" type="text" maxlength="60" autocomplete="off" onkeydown="sheetKey(event)">
       <button type="button" class="btn btn-ghost wide" id="sheetAlt" onclick="sheetDone('alt')">·</button>
+      <button type="button" class="btn btn-ghost wide" id="sheetAlt2" onclick="sheetDone('alt2')">·</button><!-- r75c: بديل ثانٍ اختياري (حذف المدينة: الوجه الآخر حين له محتوى) -->
       <div class="sheet-row"><button type="button" class="btn btn-ghost sheet-cancel" id="sheetCancel" onclick="sheetDone(null)">Cancel</button><button type="button" class="btn btn-brass" id="sheetOk" onclick="sheetDone('ok')">OK</button></div><!-- ملاحظة المالك ١٠-١٠: Cancel بجوار الفعل في صف واحد -->
     </div>
   </div>
