@@ -55,24 +55,25 @@ async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويست�
       if (SHORT.test(new URL(final).hostname)){ const mm = html.match(/https?:\/\/(?:www\.google\.[a-z.]+|maps\.google\.[a-z.]+)\/maps[^"'<>\s\\]{0,600}/); if (mm){ final = mm[0].replace(/&amp;/g, '&').replace(/\\u0026/g, '&'); try{ const r3 = await fetch(final, { redirect: 'follow', headers: H }); final = r3.url || final; txt = await r3.text(); html = txt.slice(0, 400000); }catch(_){ } } }
     } }catch(_){ }
   const looksLikeToken = s => !/[A-Za-z\u0600-\u06FF]/.test(s) || (s.length > 40 && !/\s/.test(s));
-  let name = '', addr = '';
+  let name = '', addr = '', via = 'none'; // r76 (دراسة التوافق): via = من أين جاء الاسم — path · query · html · none — قياسٌ قبل أي تعديل على طريقة القراءة
   const m = final.match(/\/maps\/place\/([^/?#]+)/);
   const dec = x => { let y = x; for (let k = 0; k < 2; k++){ try{ const z = decodeURIComponent(y); if (z === y) break; y = z; }catch(_){ break; } } return y; }; // ترميز مضاعف (Constituci%25C3%25B3n)
-  if (m){ const seg = dec(m[1].replace(/\+/g, ' ')); if (!looksLikeToken(seg)){ const parts = seg.split(',').map(x => x.trim()).filter(Boolean); const k = pickNamePart(parts); name = parts[k] || ''; addr = parts.filter((_, i) => i !== k).join(', '); } }
+  if (m){ const seg = dec(m[1].replace(/\+/g, ' ')); if (!looksLikeToken(seg)){ const parts = seg.split(',').map(x => x.trim()).filter(Boolean); const k = pickNamePart(parts); name = parts[k] || ''; addr = parts.filter((_, i) => i !== k).join(', '); if (name) via = 'path'; } }
   if (!name && html){ // عنوان الصفحة: og:title = «الاسم · العنوان» أو <title>الاسم - Google Maps</title>
     const og = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i);
     let t = og ? og[1] : ((html.match(/<title>([^<]+)<\/title>/i) || [])[1] || '');
     t = t.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s*[-–]\s*Google Maps\s*$/i, '').replace(/\s*·\s*Google Maps\s*$/i, '').trim();
-    if (t && !/^Google Maps$/i.test(t)){ const parts = t.split(/\s*[·•]\s*/); name = parts[0].trim(); addr = parts.slice(1).join(' · ').trim(); }
+    if (t && !/^Google Maps$/i.test(t)){ const parts = t.split(/\s*[·•]\s*/); name = parts[0].trim(); addr = parts.slice(1).join(' · ').trim(); if (name) via = 'html'; }
   }
-  if (!name){ try{ const q = new URL(final).searchParams.get('q'); if (q && !/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(q)) name = q; }catch(_){ } }
+  if (!name){ try{ const q = new URL(final).searchParams.get('q'); if (q && !/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(q)){ name = q; via = 'query'; } }catch(_){ } }
   for (let k = 0; k < 3 && /^https?:\/\//i.test(name); k++){ // رابط متداخل (maps?q=… أو /maps/place/…) → يُفكّ حتى يبقى نص
     try{ const inner = new URL(name); const q = inner.searchParams.get('q'); const mm = inner.pathname.match(/\/maps\/place\/([^/?#]+)/); name = q ? dec(q) : (mm ? dec(mm[1].replace(/\+/g, ' ')) : ''); }catch(_){ name = ''; }
   }
   if (name && !addr && name.indexOf(',') > 0){ const parts = name.split(',').map(x => x.trim()).filter(Boolean); const k = pickNamePart(parts); name = parts[k]; addr = parts.filter((_, i) => i !== k).join(', '); } // «Shop 2104 Building, Caribou Coffee…, 1435 Rd 4626, Manama» → الاسم الجزء الأعلى حروفًا بلا أوصاف الوحدات؛ الباقي عنوان
   if (/^-?\d+(\.\d+)?$/.test(name)) name = ''; // لا نقبل رقمًا (إحداثية) اسمًا
+  if (!name) via = 'none';
   let host = ''; try{ host = new URL(final).hostname; }catch(_){ }
-  const out = { name: name.slice(0, 120), addr: addr.slice(0, 160), host }; // لا lat/lng إطلاقًا
+  const out = { name: name.slice(0, 120), addr: addr.slice(0, 160), host, via }; // لا lat/lng إطلاقًا · via للقياس
   if (debug){ let path = ''; try{ const f = new URL(final); path = (f.pathname + f.search).replace(/@-?\d+\.?\d*,-?\d+\.?\d*[^/]*/g, '@…').replace(/[?&](ll|q|center|sll|near)=-?\d+\.?\d*,-?\d+\.?\d*/g, '?…').slice(0, 200); }catch(_){ }
     const t = (html.match(/<title>([^<]{0,160})<\/title>/i) || [])[1] || ''; const og = (html.match(/property=["']og:title["'][^>]+content=["']([^"']{0,160})["']/i) || [])[1] || '';
     const mask = x => String(x).replace(/-?\d{1,3}\.\d{3,}/g, '#').replace(/\s+/g, ' ');
