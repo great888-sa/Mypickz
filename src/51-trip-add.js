@@ -188,7 +188,7 @@ function tripSourcesCardHtml(trip, dIdx){
 async function tripGoSource(tripId, src){ // كل زر ينقل إلى موضعه مصفًّى على مدينة الرحلة ووضع الإضافة قائم
   const trip = (userTrips || []).find(function(t){ return t.id === tripId; }); const cityId = trip ? (trip.cityId || (trip.cities && trip.cities[0]) || null) : null;
   activeTripId = tripId; activeTripAdded = []; activeTripAddedRefs = []; updateActiveTripBanner();
-  if (src === 'mine' || src === 'bookmarks'){ if (cityId && cityId !== myListCityId){ plSessionCity = cityId; try{ await selectMyListCity(cityId); }catch(e){} } switchTab('Places'); selectPlacesSource(src === 'mine' ? 'mine' : 'bookmarked'); return; }
+  if (src === 'mine' || src === 'bookmarks'){ if (cityId && cityId !== cityListCityId){ plSessionCity = cityId; try{ await selectCityListCity(cityId); }catch(e){} } switchTab('Places'); selectPlacesSource(src === 'mine' ? 'mine' : 'bookmarked'); return; }
   if (src === 'curators'){ switchTab('Curators'); return; }
   communityTab = (src === 'trips') ? 'trips' : 'places'; communityScreen = 'source'; if (cityId) communityScreenState[communityTab].city = cityId; communityScreenState[communityTab].shared = (src === 'shared');
   switchTab('Community');
@@ -272,7 +272,7 @@ let pendingPlaceRef = null;
 // يُستدعى من زر "➕" على أي بطاقة مكان — يظهر فقط أثناء وضع الإضافة النشط لرحلة معيّنة
 // ر٦٩ي (N-041): من المكان إلى رحلة — اختر الرحلة (بمدينة المكان) ثم اليوم ثم التصنيف
 // ر٦٩ش (N-059): من مكان مميَّز بمدينة أخرى إلى رحلة بتلك المدينة
-function plAddToTripFor(cityId, catId, placeId, placeName){ const keep = myListCityId; if (cityId) myListCityId = cityId; try{ plAddToTrip(catId, placeId, placeName); } finally { if (!document.getElementById('tripPickerBackdrop').classList.contains('show')) myListCityId = keep; } }
+function plAddToTripFor(cityId, catId, placeId, placeName){ const keep = cityListCityId; if (cityId) cityListCityId = cityId; try{ plAddToTrip(catId, placeId, placeName); } finally { if (!document.getElementById('tripPickerBackdrop').classList.contains('show')) cityListCityId = keep; } }
 // ر٦٩خ (N-062): مكان من قائمة شخص إلى إحدى رحلاتي — المُختار نفسه (أي رحلة ← أي يوم ← أي تصنيف)
 function cmSendCachedPlace(id){ const p = cmCache.places[id] || {}; if (p.myCat != null) return plSendPlaceText(p.myCat, p.myIndex); mpSendText('📍 ' + (p.name || 'Place') + '\n' + (p.url || '') + '\nfrom ' + (p.owner || 'a user') + "'s list · MyPickz"); statsExportFor('oplace', id); /* ب-٢-١ */ } // ر٧٠و: مكاني يُرسل بنصه المعتاد
 function cmExportOthersPlace(id, name, url, owner, area, city, category){ cmCache.places[id] = { name: name, url: url, owner: owner, area: area, city: city, category: category }; openExportPreview('oplace', id); } // ر٦٩ض (N-057): بطاقة مكان واحد بوسم صاحبه
@@ -287,8 +287,8 @@ function cmAddOthersPlaceToTrip(cityId, subcatId, placeId, sourceUid, placeName)
 let tripAddOrigin = null, tripAddPendingTripId = null, tripAddPendingDay = null, tcPresetCityId = null, tcAfterCreate = null;
 function plAddToTrip(catId, placeId, placeName){
   if (!currentUser){ openAuthModal(); return; }
-  pendingPlaceRef = { sourceType: 'mylist', cityId: myListCityId, subcatId: catId, placeId: placeId, sourceUid: null, name: placeName || 'Place' };
-  tripAddStart(myListCityId);
+  pendingPlaceRef = { sourceType: 'mylist', cityId: cityListCityId, subcatId: catId, placeId: placeId, sourceUid: null, name: placeName || 'Place' };
+  tripAddStart(cityListCityId);
 }
 function tripAddStart(cityId){
   const trips = (userTrips || []).filter(function(t){ return t.cityId === cityId; });
