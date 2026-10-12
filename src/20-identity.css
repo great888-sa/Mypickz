@@ -45,13 +45,13 @@
   .curhead > .pn, .curhead > div:not(.row) .pn{color:var(--on-night);} /* ر٥٤: استثناء صفوف الأماكن — المحدد الجامح كان يمحو أسماءها (تباين ١٫٠٦) */
   .curhead > div:not(.row) .ps{color:var(--night-3);}
   .curhead > .stattext{color:var(--night-2);}
-  .mp-chipmenu{background:var(--ivory); border-color:var(--line-ivory); box-shadow:0 10px 26px rgba(0,0,0,.5);}
-  .mp-chipmenu button{background:none; color:var(--ink); border-bottom-color:var(--line-ivory);}
+  .mp-chipmenu{background:var(--bar); border-color:var(--line-strong); box-shadow:0 10px 26px rgba(0,0,0,.5);} /* r75d (قرار المالك ١٢ أكتوبر): قائمة شريحة المستخدم تبقى بوظيفتيها وتصير ليلية */
+  .mp-chipmenu button{background:var(--bar); color:var(--ivory-bright); border-bottom-color:var(--line-night);}
   .mp-tabbar{background:var(--bar); border-top-color:var(--line-bar);}
-  .mp-tab{background:none; color:var(--night-4);}
-  .mp-tab.on{color:var(--saffron);}
-  .mp-tab .ti{background:var(--surf); color:var(--night-2);}
-  .mp-tab.on .ti{background:var(--saffron); color:var(--ink);}
+  .mp-tab{background:none; color:var(--night-3);}
+  .mp-tab.on{color:var(--on-night);} /* r75d: الفعّال بالحبر الليلي الفاتح والدائرة وحدها زعفرانية */
+  .mp-tab .ti{background:var(--surf); color:var(--night-2); border-color:var(--line-strong);}
+  .mp-tab.on .ti{background:var(--saffron); color:var(--ink); border-color:var(--saffron);}
   #authBackdrop.gate-mode{background:var(--paper);}
 
   /* ── الرؤوس اللاصقة وما يقع فوق الورق مباشرة ── */
@@ -156,12 +156,13 @@
   .actn .dim,.dim{color:var(--night-4);}
   .block{background:var(--surf); color:var(--night-2);}
   .shname button{background:none; color:var(--night-2);}
-  .panel{background:var(--ivory); color:var(--ink);}
-  .panel .pinned{background:var(--ivory-bright); color:var(--ink);}
-  .panel .pclose-top{color:var(--ink-faint);}
-  .panel .prow.on{background:var(--ivory-bright);}
-  .panel .prow.dim{color:var(--ink-faint);}
-  .panel .prow .dim{color:var(--ink-faint);}
+  /* r75d (قرار المالك ١٢ أكتوبر): لوحات الاختيار (pickerPanel — الدول · المدن · Show · التصنيفات · الأيام) قوائم تنقّل لا بطاقات ⇒ ليلية: الصف surf · المختار بإطار زعفراني بلا تعبئة · حقل البحث عاجي (حقل) · Add city مملوء (فعل أساسي) */
+  .panel{background:var(--bar); color:var(--ivory-bright); border-color:var(--line-strong);}
+  .panel .pinned{background:var(--surf); color:var(--ivory-bright);}
+  .panel .pclose-top{background:var(--bar); color:var(--night-3);}
+  .panel .prow.on{background:var(--surf); border-color:var(--saffron); color:var(--on-night);}
+  .panel .prow.dim{background:var(--bar); color:var(--night-3);}
+  .panel .prow .dim{color:var(--night-3);}
   .trip-on{color:var(--saffron);}
   .pl-ownerpanel b{color:var(--saffron);}
   .pl-ownerpanel .pl-sub{color:var(--night-2);}
@@ -198,7 +199,7 @@
   #activeTripBar{background:var(--bar); border-top-color:var(--line-strong); box-shadow:0 -8px 20px rgba(0,0,0,.45);}
   #activeTripLabel{color:var(--on-night);}
   #activeTripLabel b{color:var(--saffron);}
-  .pclose{color:var(--ink-strong); border-top-color:var(--line-ivory);}
+  .pclose{background:var(--bar); color:var(--night-2); border-top-color:var(--line-night);}
   .cur-shell{opacity:1;} /* ر٦٢ (حكم الميداني): التعتيم أُلغي — الحالة تُعلن بشارة معاينة صريحة لا بالبهتان */
   .act[disabled]{opacity:.5;}
   .daynum{background:var(--surf); color:var(--on-night);}
@@ -219,14 +220,14 @@
   .modal{border-color:var(--line-ivory);}
   .modal-topbar{border-bottom-color:var(--line-ivory);}
   .modal label,.modal .flabel{color:var(--ink-strong);}
-  .panel .phead{border-bottom-color:var(--line-ivory);}
-  .panel .phead .x,.panel .phead .edit{border-color:var(--line-ivory); color:var(--ink);}
-  .panel .search{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink-faint);}
-  .panel .prow{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
-  .panel .prow.sel{border-color:var(--saffron);}
+  .panel .phead{background:var(--bar); color:var(--ivory-bright); border-bottom-color:var(--line-night);}
+  .panel .phead .x,.panel .phead .edit{background:var(--surf); border-color:var(--line-strong); color:var(--ivory-bright);} .panel .phead .edit.on{border-color:var(--saffron); color:var(--on-night);}
+  .panel .search{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
+  .panel .prow{background:var(--surf); border-color:var(--line-night); color:var(--ivory-bright);}
+  .panel .prow.sel{background:var(--surf); border-color:var(--saffron); color:var(--on-night);}
   .panel .prow .dot{background:var(--saffron);}
-  .panel .prow .cnt-num{color:var(--ink-strong);}
-  .panel .prow .del{border-color:var(--line-ivory); color:var(--ink-strong);}
+  .panel .prow .cnt-num{background:var(--surf); color:var(--night-2);}
+  .panel .prow .del{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
   .actn.primary{background:var(--surf); border-color:var(--saffron); color:var(--on-night);} /* r74m: إطار زعفراني بدل التعبئة (قاعدة المالك) */
   .plsrc{border-color:var(--saffron);} .plsrc .cnt{color:var(--saffron);} .plrow4{background:var(--surf);} #plMapLine .act{background:var(--surf); border-color:var(--on-night); color:var(--on-night);} #plMapLine .act.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} .diagtxt{background:var(--ivory); color:var(--ink);} /* r74m */
 
