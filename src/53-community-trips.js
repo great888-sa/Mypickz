@@ -224,8 +224,8 @@ async function consumePendingShare(){
   const t = pendingShareText; pendingShareText = null; try{ sessionStorage.removeItem('mypickz_pending_share'); }catch(e){}
   if (!t || !currentUser) return;
   const r = parseMapsShare(t); const c = inferCityFrom(r.parts || []);
-  if (c && c.id !== myListCityId){ plSessionCity = c.id; try{ await selectMyListCity(c.id); }catch(e){} }
-  switchTab('Places'); if (!myListCityId){ showToast('Pick a city first, then paste again'); return; }
+  if (c && c.id !== cityListCityId){ plSessionCity = c.id; try{ await selectCityListCity(c.id); }catch(e){} }
+  switchTab('Places'); if (!cityListCityId){ showToast('Pick a city first, then paste again'); return; }
   openPlPlaceModal(null, null); plSetMethod(true); document.getElementById('plShareText').value = t; plParseShare();
 }
 // أ-١٢-١: الوجهة الافتراضية — يدويًّا ما اختاره؛ وإلا: له أماكن → الأماكن على مدينته؛ وإلا → المجتمع
