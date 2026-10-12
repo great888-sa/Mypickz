@@ -653,6 +653,7 @@ function finish(){
   referenceConformanceGuard(TEST, test);
   slashCommentGuard(TEST, test);
   buildGuard();
+  manifestGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
@@ -775,3 +776,17 @@ function dialogGuard(label, s){
   const sheet = /function mpSheet\(o\)\{/.test(s) && /id="sheetBackdrop"/.test(s) && /function sheetDone\(v\)\{/.test(s);
   check(sheet, T + 'the in-app sheet exists (mpSheet · sheetDone · #sheetBackdrop)');
 }
+
+// ---------- §26 (r76 · دراسة التوافق مع خرائط جوجل ت٤ — ملاحظة المالك ١٢ أكتوبر): بيان التطبيق المثبَّت يشير إلى الصفحة المنشورة فعلًا ----------
+// start_url كان ./index.html وهي لا تُبنى قبل المرحلة د ⇒ أيقونة الشاشة الرئيسية تفتح فراغًا. الحارس: الملف الذي يسمّيه start_url موجود بالمستودع، وما دام الإنتاج غير منشور فهو نسخة الاختبار؛ ولون الإقلاع من لوحة الهوية الليلية.
+function manifestGuard(){
+  const T = '§26 manifest: ';
+  const mp = path.join(ROOT, 'manifest.json'); if (!fs.existsSync(mp)){ warn(T + 'manifest.json absent — skipped'); return; }
+  let m; try{ m = JSON.parse(fs.readFileSync(mp, 'utf8')); }catch(e){ fail(T + 'manifest.json parses', String(e && e.message || e)); return; }
+  const su = String(m.start_url || ''); const file = su.replace(/^\.?\//, '').split(/[?#]/)[0];
+  check(!!file && fs.existsSync(path.join(ROOT, file)), T + 'start_url names a file that exists in the repo (' + su + ')');
+  if (!prod) check(file === TEST, T + 'production not published yet ⇒ start_url is ' + TEST, 'found ' + su);
+  const paper = (test.match(/--paper:(#[0-9A-Fa-f]{6})/) || [])[1];
+  check(!paper || String(m.background_color || '').toUpperCase() === paper.toUpperCase(), T + 'splash background_color equals --paper (' + paper + ')', 'found ' + m.background_color);
+}
+
