@@ -910,13 +910,13 @@ function requestReauth(){
     reauthResolver = resolve;
     document.getElementById('reauthPassword').value = '';
     document.getElementById('reauthError').textContent = '';
-    document.getElementById('reauthBackdrop').classList.add('show'); sheetLift('reauthCard'); /* ب-٢-٢-أ٢: ورقة سفلية فوق الأشرطة */
+    document.getElementById('reauthBackdrop').classList.add('show'); sheetBarsHide(true); /* ب-٢-٢-أ٢ · r75d-٢: ورقة سفلية — الأشرطة تختفي */
     setTimeout(() => document.getElementById('reauthPassword').focus(), 50);
   });
 }
 function reauthBackdropTap(ev){ if (ev && ev.target && ev.target.id === 'reauthBackdrop') closeReauthModal(false); } /* ب-٢-٢-أ٢: النقر خارج الورقة = إلغاء */
 function closeReauthModal(result){
-  document.getElementById('reauthBackdrop').classList.remove('show');
+  document.getElementById('reauthBackdrop').classList.remove('show'); sheetBarsHide(false);
   const r = reauthResolver; reauthResolver = null;
   if (r) r(result === true);
 }
