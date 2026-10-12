@@ -132,7 +132,7 @@ function renderAddresses(){
           { icon: 'share', label: 'Share', on: "sendAddr('" + cityId + "','" + cat.id + "'," + i + ")", title: 'Send via MyPickz' },
           { icon: 'edit', label: 'Edit', on: "openAddrModal('" + cityId + "','" + cat.id + "'," + i + ")", title: 'Edit' }
         ];
-        __acards += placeCardHtml({ id: p.id || p.url, name: p.name || cat.name, url: p.url, phone: p.phone ? String(p.phone) : '', note: p.note }, 'address', { actions: aActions, open: true });
+        __acards += placeCardHtml({ id: p.id || p.url, name: p.name || cat.name, url: p.url, area: p.area ? String(p.area) : '', phone: p.phone ? String(p.phone) : '', note: p.note }, 'address', { actions: aActions, open: true }); /* r75c: الحي سطرًا بدبوس */
       });
       html += placeGroupHtml(cat.name, places.length, __aright, __acards, 'address');
     });
@@ -200,41 +200,29 @@ function openAddrModal(cityId, catId, index){
   document.getElementById('addrModalCats').innerHTML = cats.map(c => `<button type="button" class="addr-chip ${c.id === addrModalCat ? 'on' : ''}" onclick="addrModalCat='${c.id}'; this.parentNode.querySelectorAll('.addr-chip').forEach(b=>b.classList.remove('on')); this.classList.add('on');">${escapeHtml(c.name)}</button>`).join('');
   document.getElementById('addrName').value = existing.name || '';
   document.getElementById('addrUrl').value = existing.url || '';
+  document.getElementById('addrArea').value = existing.area || ''; /* r75c: خانة الحي */
   document.getElementById('addrNote').value = existing.note || '';
   document.getElementById('addrPhone').value = existing.phone || '';
   document.getElementById('addrError').textContent = '';
   openModalById('addrBackdrop');
 }
 let cityDelCtx = null; // {cityId, from:'addr'|'places'}
-async function openCityDeleteChooser(cityId, from){
+async function openCityDeleteChooser(cityId, from){ /* r75c (البند ١٠): ورقة سفلية بدل النافذة القديمة — العدّادان يُقرآن أولًا (لا يحذف أحد وهو يجهل حجم ما يفقد · قرار المالك ٣٠ أغسطس) ثم الخيارات: هذا الوجه · الوجه الآخر حين له محتوى (قرار ١ سبتمبر) · الحذف الشامل فعلًا أحمر */
   const isCustom = true; // ز-١-ج-٢: كل مدني ملكي (لا قياسية)
   const name = cityNameOf(cityId);
   cityDelCtx = { cityId: cityId, from: from, isCustom: isCustom };
-  document.getElementById('cityDelTitle').textContent = '🗑 ' + name;
-  document.getElementById('cityDelHint').textContent = 'Counting…';
-  document.getElementById('cityDelSideBtn').textContent = '…';
-  document.getElementById('cityDelFullBtn').style.display = isCustom ? '' : 'none';
-  openModalById('cityDelBackdrop');
-  // العدّادان: لا يحذف أحد وهو يجهل حجم ما يفقد (قرار المالك ٣٠ أغسطس) — قراءتان بفعل نادر
   const nList = await cityCountList(cityId), nAddr = await cityCountAddr(cityId);
-  if (!cityDelCtx || cityDelCtx.cityId !== cityId) return;   // أُغلقت أو تغيّرت أثناء القراءة
-  const plural = function(n, w){ return n + ' ' + w + (n === 1 ? '' : 's'); };
-  document.getElementById('cityDelHint').textContent = isCustom
-    ? plural(nList, 'place') + ' in My List · ' + plural(nAddr, 'address') + '. Choose what to delete.'
-    : (from === 'addr' ? plural(nAddr, 'address') + ' here. This removes your own content only.'
-                       : plural(nList, 'place') + ' here. This removes your own content only.');
-  document.getElementById('cityDelSideBtn').textContent = (from === 'addr')
-    ? 'Remove my addresses here (' + nAddr + ')'
-    : 'Clear my list for this city (' + nList + ')';
-  // المرجع ٦/أ: خيارات بالأسطح — الوجه الآخر يظهر زرًّا ثانيًا حين للمدينة محتوى فيه (قرار المالك ١ سبتمبر)
-  const other = document.getElementById('cityDelSideBtn2');
-  if (other){
-    const n2 = (from === 'addr') ? nList : nAddr;
-    other.style.display = n2 > 0 ? '' : 'none';
-    other.textContent = (from === 'addr') ? 'Clear my list for this city (' + n2 + ')' : 'Remove my addresses here (' + n2 + ')';
-  }
-  document.getElementById('cityDelFullBtn').textContent =
-    'Delete city everywhere — ' + plural(nList + nAddr, 'item') + ' · cannot be undone';
+  if (!cityDelCtx || cityDelCtx.cityId !== cityId) return;   // تغيّرت أثناء القراءة
+  const plural = function(n, w){ return n + ' ' + w + (n === 1 ? '' : (/s$/.test(w) ? 'es' : 's')); }; /* r75c: «addresses» لا «addresss» (كانت تجمع بـs وحدها) */
+  const n2 = (from === 'addr') ? nList : nAddr;
+  const v = await mpSheet({ title: '🗑 ' + name, text: plural(nList, 'place') + ' in My List · ' + plural(nAddr, 'address') + '. Choose what to delete.',
+    ok: 'Delete city everywhere — ' + plural(nList + nAddr, 'item'), danger: true,
+    alt: (from === 'addr') ? 'Remove my addresses here (' + nAddr + ')' : 'Clear my list for this city (' + nList + ')',
+    alt2: n2 > 0 ? ((from === 'addr') ? 'Clear my list for this city (' + n2 + ')' : 'Remove my addresses here (' + n2 + ')') : null });
+  if (!cityDelCtx || cityDelCtx.cityId !== cityId) return;
+  if (v === 'ok') return cityDelFull();
+  if (v === 'alt') return cityDelSide();
+  if (v === 'alt2') return cityDelSide(true);
 }
 async function cityCountList(cityId){ // عدد أماكن قائمة المدينة (للطرف الآخر)
   try{ const d = await mpData.cityLists.get(currentUser.uid, cityId); if (!d || !d.categories) return 0;
@@ -249,7 +237,6 @@ async function cityDelSide(other){
   if (other) from = (from === 'addr') ? 'list' : 'addr';   // الزر الثاني = الوجه الآخر
   const n1 = from === 'addr' ? await cityCountAddr(cityId) : await cityCountList(cityId);
   if (!(await mpConfirm('This cannot be undone.', { title: (from === 'addr' ? '🗑 Remove your ' + n1 + ' address' + (n1 === 1 ? '' : 'es') + ' in ' : '🗑 Clear your list of ' + n1 + ' place' + (n1 === 1 ? '' : 's') + ' in ') + cityNameOf(cityId) + '?', ok: from === 'addr' ? 'Remove addresses' : 'Clear list', danger: true }))) return; /* ب-٢-٢-أ٢ */
-  closeModalById('cityDelBackdrop');
   if (from === 'addr'){
     try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); }catch(e){}
     delete addrData[cityId];
@@ -271,7 +258,6 @@ async function cityDelFull(){
   const { cityId } = cityDelCtx || {}; if (!cityId) return;
   const nA = await cityCountAddr(cityId), nL = await cityCountList(cityId);
   if (!(await mpConfirm((nA + nL) + ' item' + (nA + nL === 1 ? '' : 's') + ' will be lost. This cannot be undone.', { title: '🗑 Delete ' + cityNameOf(cityId) + ' everywhere?', ok: 'Delete everywhere', danger: true }))) return; /* ب-٢-٢-أ٢ */
-  closeModalById('cityDelBackdrop');
   try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); }catch(e){}
   delete addrData[cityId];
   addrCities = addrCities.filter(c => c !== cityId);
@@ -289,6 +275,7 @@ async function saveAddr(){
   const url = document.getElementById('addrUrl').value.trim();
   const note = document.getElementById('addrNote').value.trim();
   const phone = document.getElementById('addrPhone').value.trim();
+  const area = document.getElementById('addrArea').value.trim().slice(0, 80); /* r75c (قرار المالك ١٢ أكتوبر): الحي اختياري — كان يُحفظ فارغًا */
   const err = document.getElementById('addrError');
   err.textContent = '';
   if (!name){ err.textContent = 'Enter a name'; return; }
@@ -297,7 +284,7 @@ async function saveAddr(){
   if (!cityId){ err.textContent = 'Choose a city'; return; }
   const catsMap = addrData[cityId] || (addrData[cityId] = {});
   const entry = catsMap[catId] || (catsMap[catId] = { active: true, places: [] });
-  const place = { id: 'p_' + Date.now().toString(36), name, url, note, phone, area: '' };
+  const place = { id: 'p_' + Date.now().toString(36), name, url, note, phone, area };
   if (addrEditRef && addrEditRef.cityId === cityId && addrEditRef.catId === catId){
     place.id = (entry.places[addrEditRef.index] || place).id || place.id;
     entry.places[addrEditRef.index] = place;
