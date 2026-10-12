@@ -72,7 +72,7 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 .status-divider{width:1px; height:16px;}
 .status-stat{font-family:'Cairo',sans-serif; font-weight:700; font-size:12.5px;}
 .footer-note{max-width:760px; margin:40px auto 0; padding:16px 20px; text-align:center; font-size:11.5px; line-height:1.8; border-top:1px solid;}
-.modal-backdrop{position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:20px 20px 64px; z-index:2000;}
+.modal-backdrop{position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:20px 20px 68px; z-index:2000;}
 .modal-backdrop.show{display:flex;}
 .modal{border-radius:16px; padding:14px 13px; max-width:340px; width:100%; max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch; text-align:left;}
 .modal > :first-child{margin-top:0;}
@@ -94,7 +94,7 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 .modal-topbar{position:sticky; top:-1px; z-index:3; padding:2px 0 8px; margin-bottom:8px; border-bottom:1px dashed; display:flex; gap:8px;}
 .modal-topbar .btn{margin-top:0; padding:9px 12px; font-size:12.5px;}
 /* ===== خ١ (٢٧ أغسطس ٢٠٢٦) — الإطار: الشريط العلوي · الشريط الخمسي · الوجهات · الدرج (النموذج المعلَّم: المشاهد ٦ و٧) ===== */
-  body{padding-top:44px; padding-bottom:54px;}
+  body{padding-top:44px; padding-bottom:58px;}
 .mp-topbar{position:fixed; top:0; left:0; right:0; height:44px; z-index:700; border-bottom:1px solid; display:flex; align-items:center; justify-content:space-between; padding:0 12px;}
 .mp-burger{border:1.5px solid; border-radius:8px; width:32px; height:32px; font-size:16px; cursor:pointer;}
 .mp-idchip{display:inline-flex; align-items:center; gap:7px; border:1.5px solid; border-radius:999px; padding:3px 10px 3px 3px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px;}
@@ -108,10 +108,10 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 .mp-chipmenu button:last-child{border-bottom:none;}
 /* البوابة الإلزامية (المشهد ١): خلفية معتمة كاملة — لا واجهة قديمة خلفها */
   #authBackdrop.gate-mode{z-index:1150;}
-.mp-tabbar{position:fixed; bottom:0; left:0; right:0; height:calc(54px + env(safe-area-inset-bottom)); padding-bottom:env(safe-area-inset-bottom); z-index:700; border-top:1px solid; display:flex;} /* ر٧٠ل-٣ */
-.mp-tab{flex:1; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:10.5px;}
-.mp-tab .ti{width:26px; height:26px; line-height:26px; border-radius:50%; margin:0 auto 2px; font-size:13px; display:flex; align-items:center; justify-content:center;}
-.mp-tab .ti svg{width:13px; height:13px; display:block;}
+.mp-tabbar{position:fixed; bottom:0; left:0; right:0; height:calc(58px + env(safe-area-inset-bottom)); padding-bottom:env(safe-area-inset-bottom); z-index:700; border-top:1px solid; display:flex;} /* ر٧٠ل-٣ */
+.mp-tab{flex:1; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px;}
+.mp-tab .ti{width:32px; height:32px; line-height:32px; border-radius:50%; margin:0 auto 1px; font-size:16px; display:flex; align-items:center; justify-content:center; border-width:1.5px; border-style:solid;} /* r75d (ملاحظة المالك ١٢ أكتوبر): الأيقونة ١٨ بدائرة ٣٢ بإطار — كانت ١٣ بدائرة ٢٦ */
+.mp-tab .ti svg{width:18px; height:18px; display:block;}
 
 .mp-screen{display:none;}
 .mp-screen.on{display:block;}
@@ -229,7 +229,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .shname{display:inline-flex; align-items:center; gap:4px; margin-right:8px;}
 .shname button{border:none; cursor:pointer; font-size:11px;}
 
-.panel{border-radius:12px; padding:8px; font-size:11px; text-align:left;}
+.panel{border-radius:12px; padding:8px; font-size:11px; text-align:left; border-width:1px; border-style:solid;} /* r75d: إطار خفيف للوحة الليلية */
 .panel .pinned{border-radius:8px; padding:6px 8px; margin:0 0 5px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; display:flex; justify-content:space-between; align-items:center; gap:8px;}
 .panel .pclose-top{font-size:12px; padding:0 4px; cursor:pointer; flex:none;}
 .panel .prow{display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-radius:8px; cursor:pointer;}
@@ -278,7 +278,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 #activeTripAddedRow .chip{font-size:12px; padding:6px 11px; line-height:1.4;}
 #activeTripAddedRow .chip b{cursor:pointer; margin-inline-start:4px;}
 
-#activeTripBar{display:none; position:fixed; left:0; right:0; bottom:54px; z-index:800; padding:9px 12px 11px; max-height:38vh; overflow-y:auto; border-top:1px solid;}
+#activeTripBar{display:none; position:fixed; left:0; right:0; bottom:58px; z-index:800; padding:9px 12px 11px; max-height:38vh; overflow-y:auto; border-top:1px solid;}
 .flabel{display:block; font-size:11px; margin:0 0 3px;}
 .ctx{font-family:'Cairo',sans-serif; font-weight:700; font-size:11.5px; margin:6px 0 2px; user-select:none; -webkit-user-select:none;}
 .stattext{font-size:11px; user-select:none; -webkit-user-select:none;}
@@ -393,5 +393,12 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   button.urow{width:100%; border:none; font-family:inherit; cursor:pointer; text-align:left;} .dash-door .ok,.dash-door .no{font-size:12px;}
   .scap{display:flex; justify-content:space-between; font-size:10px; margin:6px 2px 0;} .sdays i.today{opacity:1;}
   .ownerchip{display:inline-flex; align-items:center; border-width:1.5px; border-style:solid; border-radius:999px; padding:3px 10px; font-size:11.5px; font-weight:700; text-decoration:none; cursor:pointer;} .pn .ownerchip{float:right; margin-left:6px;}
+  /* r75d (ملاحظة المالك ١٢ أكتوبر): مقياس واحد لصفوف الرأس بالخمس واجهات — مرجعه الأماكن (r74m): شريحة ٣٠ · خط ١٢ · حشو ٧/١١ · فاصل ٨ · هامش صف ٤ — كان بالرحلات عنوان ١٥ وحشو ٩/١٤، وبالمنتقين ١٠٫٥، وبالمجتمع التفاف سطرين */
+  .stickyhead{padding:6px 0 4px;}
+  .stickyhead .headrow,.stickyhead .chipgrid,.stickyhead .sixgrid,.stickyhead .headgrid{margin:4px 0; gap:8px;}
+  .stickyhead .cprow{margin:4px 0 0;}
+  .stickyhead .csel,.stickyhead .chip,.stickyhead .actn,.stickyhead .cta,.stickyhead .pl-src{font-size:12px; line-height:1.2; padding:7px 11px; min-height:30px; box-sizing:border-box;}
+  .stickyhead .csel.srcttl{font-size:13px; padding:7px 11px;}
+  .stickyhead .chipgrid>.chip,.stickyhead .chipgrid>.pl-src,.stickyhead .sixgrid .pl-src,.stickyhead .headgrid>.csel,.stickyhead .headgrid>.actn{padding:7px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .stickyhead .ctx{margin:2px 0 4px;}
 </style>
-
