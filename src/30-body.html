@@ -312,7 +312,7 @@
   </div>
 
   <!-- ٢/أ: تأكيد الهوية — المشهد ٨ بالنموذج الحاكم، بمسارين من اليوم الأول (المسار الثاني خامل حتى ٢/و). لا يستدعيه أحد قبل ٢/ب و٢/د -->
-  <div class="modal-backdrop sheetbd" id="reauthBackdrop" onclick="reauthBackdropTap(event)"><!-- ب-٢-٢-أ٢ (المسودة v3 · ١٢-ب): تأكيد الهوية ورقة سفلية — فوق الأشرطة (sheetLift) · النقر خارجها = إلغاء -->
+  <div class="modal-backdrop sheetbd" id="reauthBackdrop" onclick="reauthBackdropTap(event)"><!-- ب-٢-٢-أ٢ (المسودة v3 · ١٢-ب): تأكيد الهوية ورقة سفلية — الأشرطة تختفي ما دامت مفتوحة (r75d-٢) · النقر خارجها = إلغاء -->
     <div class="sheet" id="reauthCard" role="dialog" aria-modal="true">
       <div class="grip"></div>
       <h4>🔒 Confirm it's you</h4>
@@ -428,8 +428,7 @@
       <h4 id="sheetTitle"></h4>
       <p class="sheet-txt" id="sheetText"></p>
       <input class="modal-input" id="sheetInput" type="text" maxlength="60" autocomplete="off" onkeydown="sheetKey(event)">
-      <button type="button" class="btn btn-ghost wide" id="sheetAlt" onclick="sheetDone('alt')">·</button>
-      <button type="button" class="btn btn-ghost wide" id="sheetAlt2" onclick="sheetDone('alt2')">·</button><!-- r75c: بديل ثانٍ اختياري (حذف المدينة: الوجه الآخر حين له محتوى) -->
+      <div class="sheet-alts" id="sheetAlts"><button type="button" class="btn btn-ghost" id="sheetAlt" onclick="sheetDone('alt')">·</button><button type="button" class="btn btn-ghost" id="sheetAlt2" onclick="sheetDone('alt2')">·</button></div><!-- r75c: بديل ثانٍ اختياري (حذف المدينة: الوجه الآخر حين له محتوى) · r75d-٢: البديلان بصف واحد -->
       <div class="sheet-row"><button type="button" class="btn btn-ghost sheet-cancel" id="sheetCancel" onclick="sheetDone(null)">Cancel</button><button type="button" class="btn btn-brass" id="sheetOk" onclick="sheetDone('ok')">OK</button></div><!-- ملاحظة المالك ١٠-١٠: Cancel بجوار الفعل في صف واحد -->
     </div>
   </div>
