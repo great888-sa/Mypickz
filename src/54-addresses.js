@@ -31,7 +31,7 @@ async function loadAddresses(force){
   addrLoaded = true;
   renderAddresses();
 }
-function cityNameOf(id){ const c = myListAllCities().find(x => x.id === id) || allCities().find(x => x.id === id); return c ? c.name : id; }
+function cityNameOf(id){ const c = cityListAllCities().find(x => x.id === id) || allCities().find(x => x.id === id); return c ? c.name : id; }
 // خ٢-r4: إضافة مدينة بنفس منهج قائمتي والأماكن — اسم المدينة (إنجليزي فقط) ثم الدولة؛ تُحفظ بمدنك الخاصة (مشتركة مع قائمتي)
 async function addAddrCity(){
   if (!currentUser) return;
@@ -44,14 +44,14 @@ async function addAddrCity(){
   if (!name || !name.trim()) return;
   if (!isLatinOnly(name)) { showToast('City name must be in English letters only'); return; }
   // ر٧٠ب: منع التكرار بالمفتاح المطبَّع (الطبقة ٢) ثم «هل تقصد؟» بالتقارب داخل الدولة نفسها (الطبقة ٣ — ق٠٩-١٠-٠٢)
-  const inSameCountry = myListAllCities().filter(c => c.country.toLowerCase() === country.trim().toLowerCase());
+  const inSameCountry = cityListAllCities().filter(c => c.country.toLowerCase() === country.trim().toLowerCase());
   let existing = inSameCountry.find(c => pickerNormalize(c.name) === pickerNormalize(name));
   if (!existing){ const near = pickerNearest(name, inSameCountry); if (near){ const pick = await mpSheet({ title: 'Did you mean ' + near.name + '?', text: 'You already have ' + near.name + ' in ' + country.trim() + '.', ok: 'Use ' + near.name, alt: 'Add "' + name.trim() + '" as a new city' }); if (pick === null) return; if (pick === 'ok') existing = near; } } /* ب-٢-٢-أ٢: ورقة بزرّين بدل confirm */
   let id = existing ? existing.id : null;
   if (!id){
     const __row = await gazFindCity(country.trim(), name); // ز-١-ج-٢: المعجم وحده — لا مدينة يدوية
     if (!__row){ showToast('City not found in the list — pick one of the suggestions'); return; }
-    id = String(__row.id); const __dup = myListAllCities().find(function(c){ return c.id === id; }); if (__dup){ existing = __dup; }
+    id = String(__row.id); const __dup = cityListAllCities().find(function(c){ return c.id === id; }); if (__dup){ existing = __dup; }
     if (!Array.isArray(userListData.customCities)) userListData.customCities = []; // ر٧٠د: تخليد فوري (قرار المالك)
     if (!existing) userListData.customCities.push(gazEntryToCity(__row, country.trim()));
     pendingCity = null;
@@ -63,7 +63,7 @@ async function addAddrCity(){
   renderAddresses();
   openAddrModal(id, null);
 }
-function countryOfCity(cityId){ const c = myListAllCities().find(x => x.id === cityId) || allCities().find(x => x.id === cityId); return c ? c.country : null; }
+function countryOfCity(cityId){ const c = cityListAllCities().find(x => x.id === cityId) || allCities().find(x => x.id === cityId); return c ? c.country : null; }
 function pickAddrCountry(country){
   addrCurrentCountry = country;
   const inCountry = addrCities.filter(c => countryOfCity(c) === country);
@@ -157,16 +157,16 @@ async function pasteToAddrUrl(){
 // نافذة الإضافة/التعديل (٦/و٢): الدولة ثم المدينة بالمنهج الموحَّد — المختارة مسبقًا مدينة العناوين الحالية
 // ر٧٠د (٦/و٢): مدينة نافذة العنوان بلوحة الاختيار المشتركة — مدني كلها بعلم دولتها · المختارة مسبقًا مدينة العناوين الحالية · ＋ Add city بمسار الإضافة نفسه
 function addrFillCountries(selectedCityId){
-  const list = myListAllCities().filter(c => c.country);
+  const list = cityListAllCities().filter(c => c.country);
   addrModalCity = list.some(c => c.id === selectedCityId) ? selectedCityId : (list.some(c => c.id === addrModalCity) ? addrModalCity : (list[0] ? list[0].id : null));
   delete __pk.addrModalCity;
   addrModalRenderCityPanel();
 }
 function addrModalRenderCityPanel(){
   const host = document.getElementById('addrModalCityHost'); if (!host) return;
-  const cur = myListAllCities().find(c => c.id === addrModalCity);
+  const cur = cityListAllCities().find(c => c.id === addrModalCity);
   host.innerHTML = pickerRow({ id: 'addrModalCity', label: cur ? cur.name : 'Choose a city', placeholder: 'Type a city…', onPick: 'addrModalPickCity', canAdd: true, onAdd: 'addrModalAddCity()', emptyText: 'No city matches — add it below',
-    items: myListAllCities().filter(c => c.country).map(c => ({ id: c.id, name: c.name, icon: countryFlag(c.country) || '', selected: c.id === addrModalCity })) });
+    items: cityListAllCities().filter(c => c.country).map(c => ({ id: c.id, name: c.name, icon: countryFlag(c.country) || '', selected: c.id === addrModalCity })) });
 }
 function addrModalPickCity(id){ addrModalCity = id; pickerRowClose('addrModalCity'); addrModalRenderCityPanel(); }
 async function addrModalAddCity(){ await addAddrCity(); if (addrCurrentCity) addrFillCountries(addrCurrentCity); }
@@ -242,14 +242,14 @@ async function cityDelSide(other){
     delete addrData[cityId];
     addrCities = addrCities.filter(c => c !== cityId);
     if (addrCurrentCity === cityId) addrCurrentCity = null;
-    if (cityDelCtx.isCustom && (await cityCountList(cityId)) === 0) await removeMyListCity(cityId, { confirmed: true }); // منع الشبح (الخاصة فقط)
+    if (cityDelCtx.isCustom && (await cityCountList(cityId)) === 0) await removeCityListCity(cityId, { confirmed: true }); // منع الشبح (الخاصة فقط)
     showToast('Removed from Addresses');
     renderAddresses(); if (currentTab === 'Places') renderPlacesBody();
   } else {
     try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){} try{ await syncCommunityProfile(); }catch(e){} // ر٧٢-أ-١د: إلغاء المحتوى بمدينة قياسية يزامن الملف العام أيضًا
     if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
-    if (cityDelCtx.isCustom && (await cityCountAddr(cityId)) === 0){ await removeMyListCity(cityId, { confirmed: true }); }
-    else if (myListCityId === cityId){ const rem = myListAllCities().filter(c => c.country === myListCountry && c.id !== cityId); myListCityId = rem.length ? rem[0].id : null; }
+    if (cityDelCtx.isCustom && (await cityCountAddr(cityId)) === 0){ await removeCityListCity(cityId, { confirmed: true }); }
+    else if (cityListCityId === cityId){ const rem = cityListAllCities().filter(c => c.country === cityListCountry && c.id !== cityId); cityListCityId = rem.length ? rem[0].id : null; }
     showToast('Removed from My List');
     renderPlacesBody(); 
   }
@@ -262,7 +262,7 @@ async function cityDelFull(){
   delete addrData[cityId];
   addrCities = addrCities.filter(c => c !== cityId);
   if (addrCurrentCity === cityId) addrCurrentCity = null;
-  await removeMyListCity(cityId, { confirmed: true });
+  await removeCityListCity(cityId, { confirmed: true });
   renderAddresses(); if (currentTab === 'Places') renderPlacesBody();
 }
 async function removeAddrCity(cityId){
@@ -357,7 +357,7 @@ async function doAccountDelete(){
     try{ (await mpData.trips.byOwner(uid)).forEach(function(d){ tripIds.add(d.id); }); }catch(e){ mpSwallow(e, 'cascade'); }
     for (const id of tripIds){ try{ await mpData.trips.remove(id); }catch(_){ } }
     const cityIds = [...new Set(
-      (typeof myListAllCities === 'function' ? myListAllCities() : []).map(c => c && c.id)
+      (typeof cityListAllCities === 'function' ? cityListAllCities() : []).map(c => c && c.id)
         .concat(((userListData && userListData.privateCities) || []))
         .filter(Boolean)
     )];
