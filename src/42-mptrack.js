@@ -15,7 +15,7 @@ const mpTrack = (function(){
   const dayStr = function(){ const d = new Date(), p = function(n){ return String(n).padStart(2,'0'); };
     return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()); };
   const cityOkId = function(){ /* v3.13 (ر٧٣-ب): المدينة الحقيقية = معرّف المعجم أو الجزيرة من «مدني» (المدينة المفتوحة بالأماكن) — غيرها 'all' */
-    const id = String(typeof myListCityId !== 'undefined' && myListCityId ? myListCityId : '');
+    const id = String(typeof cityListCityId !== 'undefined' && cityListCityId ? cityListCityId : '');
     if (!/^(\d{3,9}|i_[a-z0-9_]{2,30})$/.test(id)) return 'all';
     const mine = (typeof allCities === 'function') ? allCities() : [];
     return mine.some(function(c){ return c && c.id === id; }) ? id : 'all'; };
