@@ -150,11 +150,12 @@ async function renderSharedListsInto(host){ // r72r-1: القوائم المشا
 function plOpenSharedList(owner, cityId){ /* r74b-٢: فتح قائمة مشارَكة معي من وجهة الأماكن — عدّاد open_app (§١٧-ج) انتقل هنا من نافذة My List المحذوفة (كان openSharedCityList يسجّله على الفتح نفسه) */
   cmOpenList(owner, cityId, 'app'); /* ب-٢-١: العدّ بنقطة واحدة (openCommunityCityList) بمنشأ app — كان يُعدّ هنا ثم يمرّ بالمجتمع فيُحتمل عدّه مرتين */
 }
-function cmGroupByOwner(rows, ownerOf, nameOf, cardOf){ // r72r-3: مجموعة عاجية لكل مستخدم — رأسها كبسولته (الحرفان + الاسم) وتحته بطاقاته
+function cmGroupByOwner(rows, ownerOf, nameOf, cardOf, unit){ // r72r-3: مجموعة عاجية لكل مستخدم — رأسها كبسولته (الحرفان + الاسم) وتحته بطاقاته · r75c (ملاحظة المالك ١٢ أكتوبر): العدد بكلمته «· 2 cities» / «· 3 trips»
   const groups = []; const byO = {};
   rows.forEach(function(r){ const o = ownerOf(r) || ''; if (!byO[o]){ byO[o] = { owner: o, name: nameOf(r) || 'user', rows: [] }; groups.push(byO[o]); } byO[o].rows.push(r); });
   return groups.map(function(g){ const nm = g.name || 'user'; const ini = curInitials({ nickname: nm }); const head = '<button type="button" class="curpill cmpill" onclick="openCommunityUserFrom(\'' + attrStr(g.owner) + '\')"><span class="curring">' + escapeHtml(ini) + '</span><span class="curnm">' + escapeHtml(nm) + '</span></button>';
-    return '<div class="pgroup"><div class="pg-head">' + head + '<span class="pg-n">· ' + g.rows.length + '</span></div>' + g.rows.map(cardOf).join('') + '</div>'; }).join('');
+    const n = g.rows.length, u = unit ? ' ' + (n === 1 ? unit.replace(/ies$/, 'y').replace(/s$/, '') : unit) : '';
+    return '<div class="pgroup"><div class="pg-head">' + head + '<span class="pg-n">· ' + n + u + '</span></div>' + g.rows.map(cardOf).join('') + '</div>'; }).join('');
 }
 async function openCommunityUserFrom(uid){ cmDirect = false; await viewCommunityUser(uid); } // رأس المستخدم يفتح طبقة الشخص
 async function cmLoadMarket(){
@@ -187,7 +188,7 @@ async function cmLoadMarket(){
         const owner = r.ownerId || (r.id || '').split('_')[0]; const cnt = r.bookmarkCount || 0; cmCache.lists[owner + '_' + r.cityId] = r; const mine = !!(currentUser && owner === currentUser.uid);
         const places = Object.values(r.categories || {}).reduce(function(a, e){ return a + ((e && e.places) || []).length; }, 0);
         return othersCard({ title: escapeHtml(r.cityName || r.cityId), sub: 'Places · ' + places + (r._matches ? ' · matches · ' + r._matches : ''), stat: (r.viewCount || 0) + ' views', bmSelf: mine, bmOn: !!(listBookmarksMap && listBookmarksMap[owner + '_' + r.cityId]), cnt: cnt, bmHandler: "toggleListBookmark('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')", reportKind: 'list', reportKey: owner + '_' + r.cityId, saveHandler: "saveOthersList('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')", savedOn: !!myCopiedLists[owner + '_' + r.cityId], unsaveHandler: "showToast('Remove copied places from your list in Places')", exportHandler: "openExportPreview('olist', '" + attrStr(owner + '_' + r.cityId) + "')", openHandler: "cmOpenList('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')" });
-      });
+      }, 'cities'); /* r75c: «Xxx · 2 cities» */
     } else {
       let rows = await mpData.trips.publicTrips();
       if (currentUser) rows = rows.filter(function(t){ return t.ownerId !== currentUser.uid; }); // ر٦٩ب: رحلاتك تسكن الرحلات لا المجتمع
@@ -202,7 +203,7 @@ rows.sort(function(a, b){ return communitySort === 'recent' ? String(b.updatedAt
       host.innerHTML = cmGroupByOwner(rows, function(t){ return t.ownerId || ''; }, function(t){ return t.ownerName || nick[t.ownerId]; }, function(t){ // r72r-3
         const cnt = t.saveCount || 0; const title = t.customLabel ? (t.cityName + ' — ' + t.customLabel) : (t.cityName || 'Trip'); t.ownerName = t.ownerName || nick[t.ownerId]; cmCache.trips[t.id] = t; const mine = !!(currentUser && t.ownerId === currentUser.uid);
         return othersCard({ title: escapeHtml(title), sub: (tripTypeLine(t) ? tripTypeLine(t) : 'Trip') + ' · places · ' + tripPlaceCount(t) + ' · days · ' + ((t.days && t.days.length) || 0), lines: [['Saved by users', '· ' + (t.copyCount || 0)]], bmSelf: mine, bmOn: !!(tripSavesMap && tripSavesMap[t.id]), cnt: cnt, bmHandler: "toggleTripSave('" + attrStr(t.id) + "')", saveHandler: "copyOthersTrip('" + attrStr(t.id) + "')", savedOn: !!tripCopyOf(t.id), unsaveHandler: "removeMyTripCopy('" + attrStr(t.id) + "')", reportKind: 'trip', reportKey: t.id, exportHandler: "openExportPreview('otrip', '" + attrStr(t.id) + "')", openHandler: "openCommunityTrip('" + attrStr(t.id) + "')" });
-      });
+      }, 'trips'); /* r75c: «Xxx · 3 trips» */
     }
   }catch(e){ mpSwallow(e, 'market'); host.innerHTML = '<div class="mp-empty">Could not load — try again.</div>'; }
 }
@@ -708,7 +709,8 @@ async function renderBookmarkedLists(wrap, cityName){ // r72s (قرار الما
     Object.keys(g.places).forEach(function(key){ const arr = g.places[key]; const cityId = key.split('|')[0], cat = key.split('|')[1]; const cityNm = (allCities().find(function(z){ return z.id === cityId; }) || {}).name || (arr[0] && arr[0].cityName) || cityId;
       const cards = arr.map(function(b){ const pl = { id: String(b.key || b.pid || '').split(':').pop(), name: b.name || 'Place', url: (b.url && !/^(id|oid):/.test(b.url)) ? b.url : '', area: b.area || '' }; return othersPlaceRowHtml(pl, { uid: uid, nickname: nm }, { id: cityId, name: cityNm }, cat, cityId); }).join('');
       inner += placeGroupHtml(cityNm + ' · ' + (cat ? catLabelOf(cat) : 'Places'), arr.length, '<button type="button" class="go" onclick="cmOpenList(\'' + attrStr(uid) + '\', \'' + attrStr(cityId) + '\', \'curator\')">Open list →</button>', cards); });
-    html += '<div class="pgroup"><div class="pg-head">' + head + '<span class="pg-n">· ' + (g.lists.length + Object.keys(g.places).length) + '</span></div>' + inner + '</div>'; });
+    const nL = g.lists.length, nP = Object.keys(g.places).reduce(function(a, k){ return a + g.places[k].length; }, 0); /* r75c: العدد بكلمته */
+    html += '<div class="pgroup"><div class="pg-head">' + head + '<span class="pg-n">' + (nL ? '· ' + nL + (nL === 1 ? ' list' : ' lists') : '') + (nP ? ' · ' + nP + (nP === 1 ? ' place' : ' places') : '') + '</span></div>' + inner + '</div>'; });
   wrap.innerHTML = html || '<div class="mp-empty">No bookmarks in this city.</div>';
 }
 // ر٦٩ح: openBookmarkedListInCommunity حُذفت — الرأس القديم لشاشة المفكرة زال (N-040)
