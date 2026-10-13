@@ -219,7 +219,7 @@ function plHeadSet(mode){ /* r74m: الرأس الثابت — 'city' الصفو
 function plRow4Html(){ /* r74m: الصف الرابع (غير ثابت) — تخطيط اليوم (بابه هنا وجسمه بحزمة الرحلات) · التصدير · العلنية · المشاركة بالاسم */
   const d = myCityListData || {}; const nShared = (d.sharedWith || []).length;
   return '<div class="plrow4">'
-    + soonChip('🗓 Day plan', 'Soon', 'Day plans arrive with the trips batch', 'actn')
+    + '<button type="button" class="actn" onclick="openTripBuilder({ cityId: cityListCityId, dayPlan: true })" title="Plan a day in this city — same builder as a trip, one day prefilled">🗓 Day plan</button>' /* r77 (اللوحة ٩): باب خطة اليوم حي — المنشئ نفسه والمدينة ويوم واحد ممتلئان */
     + '<button type="button" class="actn wide2" onclick="openExportPreview(\'list\')" title="Preview and send this city list">📤 Export places list</button>'
     + '<button type="button" class="actn ico' + (d.public ? ' on' : '') + '" id="plPublicBtn" onclick="plTogglePublic()" title="' + (d.public ? 'Public — tap to make private' : 'Private — tap to allow others to view') + '">🌐</button>'
     + '<button type="button" class="actn ico' + (nShared ? ' on' : '') + '" id="plShareBtn" onclick="openShareModal(\'list\')" title="' + (nShared ? 'Shared with ' + nShared + ' — tap to manage' : 'Share my list with…') + '">' + shareSvg() + '</button>' // ر٦٩ص (N-055): زعفراني حين تكون مشارَكة
@@ -557,8 +557,7 @@ async function openContextMap(places, title, focusId){ // ز-١-ب: خريطة �
   if (!focus && withGeo.length > 1) ctxMap.fitBounds(withGeo.map(function(p){ return [p.geo.lat, p.geo.lng]; }));
   setTimeout(function(){ ctxMap.resize(); }, 60);
 }
-let plView = 'list', tripView = 'days';
-function tripToggleView(){ tripView = tripView === 'map' ? 'days' : 'map'; renderMyTripsModal(); } // العرض يُعاد بالمسار الطبيعي (جسم الرحلات)
+let plView = 'list'; // r77: مبدّل الخريطة بالرحلة صار تبويبًا بعرض الرحلة (tripPickTab)
 const inlineMaps = {};
 const plSuggestDiagByCity = {}; /* r74m-٣ (ملاحظة المالك): سجل تشخيص لكل مدينة — النافذة لا تعرض إلا أرقام المدينة المفتوحة */
 function plDiagNew(city){ return { err: [], index: '', slowest: 0, batches: 0, sent: '', city: city, asked: 0, known: 0, cachedBefore: 0, dropped: [], visits: 0, cachedVisit: 0, askedAt: 0 }; }
