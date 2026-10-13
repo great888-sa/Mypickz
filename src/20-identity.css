@@ -107,7 +107,7 @@
   .modal-topbar{background:var(--ivory); border-bottom-color:var(--line-ivory);}
   .modal-input,select.modal-input,.place-row{
     background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
-  .modal-input::placeholder,.place-note-input::placeholder{color:var(--ink-faint);}
+  .modal-input::placeholder,.place-note-input::placeholder{color:var(--ink-faint);} .modal-input.err{border-color:var(--danger); box-shadow:0 0 0 1px var(--danger) inset;} /* ب-٤: حقل تاريخ مقلوب الترتيب */
   .place-note-input,.place-name-input,.place-url-input,.place-area-input,.name-edit{
     background:transparent; color:var(--ink); border-color:var(--line-ivory);}
   .acc-head,.receipt{background:var(--ivory-bright); color:var(--ink);}
