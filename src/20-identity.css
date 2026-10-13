@@ -311,6 +311,13 @@
   .trip-tray{background:var(--bar); border-color:var(--saffron); color:var(--on-night);} .trip-tray-h .dim{color:var(--night-3);} .trip-tray-i{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);} .trip-tray-i .dim{color:var(--night-4);} .trip-tray-i .arr{color:var(--saffron);}
   .trip-warn{background:var(--bar); border-color:var(--danger-night); color:var(--danger-night);}
   .trip-stay{background:var(--bar); border-color:var(--line-strong); color:var(--on-night);} .trip-stay-t .dim{color:var(--night-4);}
+  .tr-status{background:var(--bar); border-color:var(--line-strong); color:var(--night-2);} .tr-status.warn{border-color:var(--saffron); color:var(--saffron);} .tr-status.ok{border-color:var(--saffron); color:var(--on-night);} .tr-status.late{border-color:var(--danger-night); color:var(--danger-night);}
+  .tr-lab{color:var(--night-2);} .tr-fields.ro{color:var(--night-3);} .tr-fields.ro b{color:var(--on-night);}
+  .tr-stay{background:var(--bar); border-color:var(--line-strong); color:var(--on-night);} .tr-time{color:var(--saffron);}
+  .tr-leg{border-color:var(--line-strong); color:var(--night-3);} .tr-leg.missing{border-color:var(--saffron);} .tr-leg.missing .tr-min .modal-input{border-color:var(--saffron);} .tr-leg-km{color:var(--night-2);} .tr-leg-m{color:var(--night-3);} .tr-leg .tr-min{color:var(--night-2);} .tr-leg .actn.sm.tr-nav{background:var(--surf); border-color:var(--saffron); color:var(--on-night);}
+  .tr-stop{background:var(--ivory-bright); border-color:var(--sand-line); color:var(--ink);} .tr-sub{color:var(--copper);} .tr-times{color:var(--ink-soft);} .tr-stop .tr-min{color:var(--ink);}
+  .tr-rest{background:var(--bar); border-color:var(--line-strong); color:var(--night-2);} .tr-rest b{color:var(--on-night);} .tr-rest .dim{color:var(--night-4);}
+  .tr-tick,.pl-src.on .tr-tick{color:var(--saffron);} .tr-tick.late,.pl-src.on .tr-tick.late{color:var(--danger-night);} .pc-chip.ok{color:var(--copper);}
   .trip-badge{background:var(--ivory); border-color:var(--line-ivory); color:var(--ink-soft);} .trip-badge.soon,.trip-badge.now{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} .trip-badge.draft{background:var(--ivory-bright); border-color:var(--copper); color:var(--copper);} .trip-badge.done{opacity:.7;}
   .pc-chip.warn{color:var(--danger); border-color:var(--sand-line);}
   .pc-alert{color:var(--danger);}
