@@ -367,8 +367,9 @@ const mpData = (function(){
 let visitCount = null;
 
 /* عرض ملاحظة المكان — بتضيف "More/Less" تلقائيًا لو النص طويل، وتعرضه كامل من غير أي زر لو قصير */
+function mpStripBidi(str){ return String(str == null ? '' : str).replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, ''); } // ب-٥: علامات الاتجاه الخفية (تأتي مع النص المستورد) تقلب «7th arr.» إلى «.7th arr»
 function escapeHtml(str){
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  return mpStripBidi(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 async function loadVisitCount(){
   try{
