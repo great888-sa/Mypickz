@@ -224,12 +224,12 @@ const mpData = (function(){
     },
     cityLists: { // r72t (M4.26 · أ-١٤): التقسيم — الأم فهرسًا + مستند لكل تصنيف؛ الطبقة تعيد الشكل القديم (categories) لكل الواجهات · انتقالي: مستند قديم بلا splitV يُقرأ كما هو
       _compose: async function(parent, id){ // الأم (+ الفرعية إن كانت مقسَّمة) → مستند بالشكل القديم — r72u: الاستعلام يثبت شرط القراءة (قاعدة Firestore: لا استعلام على قوائم الآخرين بلا قيد public/sharedWith)
-        if (!parent) return null; if (parent.cityId && parent.cityName) rememberCity(parent.cityId, parent.cityName, parent.country); if (parent.splitV !== 1) return parent;
+        if (!parent) return null; if (parent.cityId && parent.cityName) rememberCity(parent.cityId, parent.cityName, parent.country); if (parent.splitV !== 1){ if (parent.categories) mpFixAreaPlaces(parent.categories); return parent; } // ب-٦
         const me = currentUser && currentUser.uid; let q = col('userCityListCats').where('ownerId', '==', parent.ownerId).where('cityId', '==', parent.cityId);
         if (parent.ownerId !== me && !isOwner){ if (parent.public === true) q = q.where('public', '==', true); else if (me && (parent.sharedWith || []).indexOf(me) >= 0) q = q.where('sharedWith', 'array-contains', me); else return Object.assign({}, parent, { categories: {} }); }
         const snap = await q.get();
         const cats = {}; snap.forEach(function(d){ const c = d.data(); cats[c.catId] = { active: c.active !== false, places: c.places || [] }; });
-        return Object.assign({}, parent, { categories: cats });
+        return Object.assign({}, parent, { categories: mpFixAreaPlaces(cats) }); // ب-٦
       },
       _indexOf: function(categories){ const ix = []; Object.keys(categories || {}).forEach(function(k){ (((categories[k] || {}).places) || []).forEach(function(p){ if (!p || !(p.name || p.url)) return; const o = { id: p.id || '', name: p.name || '', catId: k }; if (p.topPlace === true) o.top = true; if (p.topAt || p.updatedAt) o.at = p.topAt || p.updatedAt; if (p.updatedAt) o.up = p.updatedAt; /* خ-٦: ختم التعديل وحده — Latest يقرؤه من الفهرس (قرار r73y: المعدَّل لا Top) */ ix.push(o); }); }); return ix; },
       _fromIndex: function(parent){ // للشاشات الجماعية: categories مصغَّرة من الفهرس (اسم · معرّف · top · at) بلا قراءة فرعية
@@ -367,6 +367,8 @@ const mpData = (function(){
 let visitCount = null;
 
 /* عرض ملاحظة المكان — بتضيف "More/Less" تلقائيًا لو النص طويل، وتعرضه كامل من غير أي زر لو قصير */
+function mpFixAreaDot(s){ s = String(s == null ? '' : s); const m = /^([.,;:!])([^\s.,;:!].*)$/.exec(s); if (!m || /[\u0600-\u06FF]/.test(s)) return s; return m[2] + m[1]; } // ب-٦ (قرار المالك): حيٌّ مهاجر كُتب في حقل يميني فجاءت نقطته أولًا → تُنقل إلى آخره؛ الحيّ وحده، اللاتيني وحده، علامة واحدة
+function mpFixAreaPlaces(cats){ Object.keys(cats || {}).forEach(function(k){ (((cats[k] || {}).places) || []).forEach(function(p){ if (p && typeof p.area === 'string'){ const f = mpFixAreaDot(p.area); if (f !== p.area) p.area = f; } }); }); return cats; }
 function mpStripBidi(str){ return String(str == null ? '' : str).replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, ''); } // ب-٥: علامات الاتجاه الخفية (تأتي مع النص المستورد) تقلب «7th arr.» إلى «.7th arr»
 function escapeHtml(str){
   return mpStripBidi(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
