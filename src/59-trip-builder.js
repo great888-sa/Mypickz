@@ -159,10 +159,10 @@ function tbDraftHtml(){
   if (day){
     const city = TB.cities.find(function(c){ return c.cityId === day.cityId; }) || {}; const es = tripDayEntries(day);
     h += '<div class="ctx trip-ctx"><span>' + escapeHtml(tripDayLabel(day)) + (day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : '') + (TB.cities.length > 1 ? ' · ' + escapeHtml(city.cityName || '') : '') + ' — ' + es.length + (es.length === 1 ? ' stop' : ' stops') + (day.rest ? ' · 1 rest' : '') + '</span></div>';
-    warns.filter(function(w){ return w.dayIdx === TB.daySel; }).forEach(function(w){ h += '<div class="trip-warn">⚠ ' + escapeHtml(w.text) + '</div>'; });
+    const dayWarns = warns.filter(function(w){ return w.dayIdx === TB.daySel; }); dayWarns.filter(function(w){ return w.kind !== 'longLeg'; }).forEach(function(w){ h += '<div class="trip-warn">⚠ ' + escapeHtml(w.text) + '</div>'; }); const legWarnOf = function(id){ return dayWarns.find(function(w){ return w.kind === 'longLeg' && w.toId === id; }); }; // ب-٥: الرِّجل الطويلة في موضعها
     let n = 0; tripDayAvailable(day).forEach(function(p){ const arr = day.periods[p] || []; let inner = '';
       if (p === 'afternoon' && day.rest) inner += '<div class="trip-rest"><span><b>Rest at ' + escapeHtml((city.stay && city.stay.name) || 'your stay') + '</b> <span class="dim">· about ' + Math.round(day.rest.minutes / 60) + ' h</span></span><button type="button" class="actn" onclick="tbRestRemove()">Remove</button></div>';
-      arr.forEach(function(e){ n++; inner += tbCardHtml(e, { n: n }); });
+      arr.forEach(function(e){ n++; const lw = legWarnOf(e.id); if (lw) inner += tripLegWarnHtml(lw); inner += tbCardHtml(e, { n: n }); });
       if (!arr.length) inner += '<div class="trip-empty-p">— nothing here · move a place in</div>';
       h += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', inner, 'stop'); });
   }
