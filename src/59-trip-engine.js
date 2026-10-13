@@ -26,7 +26,7 @@ const TRIP_RHYTHM = { // ═══ جدول الإيقاع (البيان v1.2 ·
   },
   defaultRole: { role: 'visit', periods: ['morning', 'midday', 'afternoon', 'evening'], minutes: 60 },
   walkKm: 1.2, pocketKm: { transit: 1.5, car: 8 }, detour: { walk: 1.3, transit: 1.3, car: 1.4 },
-  rest: { minutes: 120, maxKm: 3, minStops: 4 }, longLegKm: { walk: 3, car: 25 },
+  rest: { minutes: 120, maxKm: 3, minStops: 4 }, longLegKm: { walk: 3, transit: 8, car: 25 }, // ب-٥: الحدّ بحسب وسيلة الرِّجل (مشي · مترو ومواصلات · سيارة)
   altCap: 2, // ب-٣: البناء التلقائي يضع بديلين على الأكثر لكل محطة؛ ما زاد إلى الصينية (يدويًّا بلا حد)
   orderTiers: { morning: { light: 0 }, midday: { meal: 0, light: 1 }, afternoon: { light: 1 }, evening: { meal: 1, light: 2 } } // ب-٣: ترتيب داخل الفترة بالدور ثم القرب — ما لم يُذكر رتبته ٠ (أو ١ حيث يُذكر غيره قبله)
 };
@@ -150,7 +150,7 @@ function tripWarnings(plan, spec){ // الخطوة ٦: الجدوى — تحذي
   const out = []; const version = (spec && spec.version) || 'balanced';
   (plan.days || []).forEach(function(d, i){ const cap = tripDayAvailable(d).reduce(function(a, p){ return a + tripDayCapacity(d, p, version); }, 0); const n = tripDayEntries(d).length; if (n > cap) out.push({ dayIdx: i, kind: 'dense', text: tripDayLabel(d) + ' holds ' + n + ' stops for a ' + version + ' day of ' + cap });
     const city = ((spec && spec.cities) || []).find(function(c){ return c.cityId === d.cityId; }) || {}; const mode = city.fallback === 'car' ? 'car' : 'transit'; const es = tripDayEntries(d);
-    for (let k = 1; k < es.length; k++){ const km = tripRouteKm(es[k - 1].geo, es[k].geo, mode); const lim = TRIP_RHYTHM.longLegKm[mode === 'car' ? 'car' : 'walk']; if (km !== null && km > lim) out.push({ dayIdx: i, kind: 'longLeg', text: tripDayLabel(d) + ': ' + es[k - 1].name + ' → ' + es[k].name + ' ≈ ' + Math.round(km) + ' km' }); } });
+    for (let k = 1; k < es.length; k++){ const straight = tripKm(es[k - 1].geo, es[k].geo); const legMode = tripLegMode(straight, mode); const km = tripRouteKm(es[k - 1].geo, es[k].geo, legMode); const lim = TRIP_RHYTHM.longLegKm[legMode] || TRIP_RHYTHM.longLegKm.walk; if (km !== null && km > lim) out.push({ dayIdx: i, kind: 'longLeg', fromId: es[k - 1].id, toId: es[k].id, km: km, mode: legMode, text: tripDayLabel(d) + ': ' + es[k - 1].name + ' → ' + es[k].name + ' ≈ ' + Math.round(km) + ' km' }); } }); // ب-٥: الرِّجل بوسيلتها الافتراضية وحدّها؛ تُعرض في موضعها قبل المحطة
   return out;
 }
 function tripPlanNormalize(plan){ // قراءة مستند قديم أو ناقص بأمان: الفترات الأربع دائمًا، والمصفوفات موجودة
