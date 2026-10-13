@@ -36,26 +36,25 @@ function tripRouteKm(a, b, mode){ const d = tripKm(a, b); if (d === null) return
 function tripMinutesOf(hhmm){ const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim()); if (!m) return null; const v = parseInt(m[1], 10) * 60 + parseInt(m[2], 10); return (v >= 0 && v < 1440) ? v : null; }
 function tripDateAdd(ymd, n){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '')); if (!m) return null; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + (n || 0))); return d.toISOString().slice(0, 10); } // نصوص يوم بلا مناطق زمنية (الاختيار ٤)
 function tripDateLabel(ymd){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '')); if (!m) return ''; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); const D = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; return D[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + M[d.getUTCMonth()]; }
+function tripDaysFromDates(arrDate, depDate){ const d = tripDateDiff(arrDate, depDate); return (d === null) ? null : Math.max(1, Math.min(30, d + 1)); } // r77-٢ (القرار ٣): التواريخ تحكم العدّاد
 function tripDateDiff(a, b){ const x = tripDateAdd(a, 0), y = tripDateAdd(b, 0); if (!x || !y) return null; return Math.round((Date.parse(y + 'T00:00:00Z') - Date.parse(x + 'T00:00:00Z')) / 86400000); }
 function tripEmptyPeriods(){ return { morning: [], midday: [], afternoon: [], evening: [] }; }
 function tripDayAvailable(day){ // الفترة متاحة في اليوم الجزئي إن بقي منها ساعة ونصف على الأقل بعد الوصول أو قبل المغادرة (البيان ٥-١)
   return TRIP_PERIODS.filter(function(p){ const w = TRIP_RHYTHM.windows[p]; if (typeof day.from === 'number' && w[1] - 90 < day.from) return false; if (typeof day.to === 'number' && w[0] + 90 > day.to) return false; return true; });
 }
-function tripDayLabel(day){ return 'Day ' + day.n + (day.kind === 'arrival' ? ' · arrival' : day.kind === 'departure' ? ' · departure' : ''); }
+function tripDayLabel(day){ return 'Day ' + day.n + (typeof day.from === 'number' ? ' · arrival ' + tripHHMM(day.from) : '') + (typeof day.to === 'number' ? ' · departure ' + tripHHMM(day.to) : ''); } // r77-٢ (القرار ٢): لا يوم ٠ — الطرفان يُقصّان لا يُشتقّان
+function tripHHMM(min){ if (typeof min !== 'number' || isNaN(min)) return ''; const m = ((min % 1440) + 1440) % 1440; return (m < 600 ? '0' : '') + Math.floor(m / 60) + ':' + (m % 60 < 10 ? '0' : '') + (m % 60); }
 function tripNewEntry(p){ // p = { id?, ref, name, geo, sec }
   return { id: p.id || ('e_' + String(p.ref && p.ref.placeId || p.name || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 7)), ref: Object.assign({}, p.ref || {}), name: p.name || 'Place', geo: (p.geo && typeof p.geo.lat === 'number' && typeof p.geo.lng === 'number') ? { lat: p.geo.lat, lng: p.geo.lng } : null, sec: p.sec || '', alts: [], alert: p.alert || '' };
 }
-function tripCityDays(city, startN, first){ // أيام مدينة: جزئي الوصول (اليوم ٠ للمدينة الأولى) · الأيام الكاملة · جزئي المغادرة
+function tripCityDays(city, startN){ // r77-٢ (القرار ٢): N يومًا بالضبط؛ وقت الوصول يقصّ اليوم الأول ووقت المغادرة يقصّ اليوم الأخير؛ التاريخ من الوصول أو من المغادرة
   const out = []; let n = startN; const N = Math.max(1, Math.min(30, parseInt(city.days, 10) || 1));
-  let firstDate = null; const arr = city.arrival && city.arrival.date ? city.arrival : null; const dep = city.departure && city.departure.date ? city.departure : null;
-  if (city.single){ const from = tripMinutesOf(city.arrival && city.arrival.time), to = tripMinutesOf(city.departure && city.departure.time); out.push({ n: n++, kind: 'full', cityId: city.cityId, date: (arr && arr.date) || (dep && dep.date) || null, from: (typeof from === 'number') ? from : null, to: (typeof to === 'number') ? to : null, periods: tripEmptyPeriods(), rest: null, excursion: null }); return { days: out, next: n }; } // خطة يوم واحد (اللوحة ٩): البداية والعودة نافذتا اليوم نفسه
-  if (arr){ const from = tripMinutesOf(arr.time); const d = { n: first ? 0 : n, kind: 'arrival', cityId: city.cityId, date: arr.date, from: (typeof from === 'number') ? from : null, to: null, periods: tripEmptyPeriods(), rest: null, excursion: null }; if (tripDayAvailable(d).length){ out.push(d); if (!first) n++; } firstDate = tripDateAdd(arr.date, 1); }
-  else if (dep){ firstDate = tripDateAdd(dep.date, -N); }
-  for (let i = 0; i < N; i++){ out.push({ n: n++, kind: 'full', cityId: city.cityId, date: firstDate ? tripDateAdd(firstDate, i) : null, from: null, to: null, periods: tripEmptyPeriods(), rest: null, excursion: null }); }
-  if (dep){ const to = tripMinutesOf(dep.time); const d = { n: n, kind: 'departure', cityId: city.cityId, date: dep.date, from: null, to: (typeof to === 'number') ? to : null, periods: tripEmptyPeriods(), rest: null, excursion: null }; if (tripDayAvailable(d).length && (!firstDate || tripDateDiff(firstDate, dep.date) >= N)){ out.push(d); n++; } }
+  const arr = city.arrival || null, dep = city.departure || null; const from = tripMinutesOf(arr && arr.time), to = tripMinutesOf(dep && dep.time);
+  let firstDate = (arr && arr.date) ? tripDateAdd(arr.date, 0) : ((dep && dep.date) ? tripDateAdd(dep.date, -(N - 1)) : null);
+  for (let i = 0; i < N; i++){ out.push({ n: n++, kind: 'full', cityId: city.cityId, date: firstDate ? tripDateAdd(firstDate, i) : null, from: (i === 0 && typeof from === 'number') ? from : null, to: (i === N - 1 && typeof to === 'number') ? to : null, periods: tripEmptyPeriods(), rest: null, excursion: null }); }
   return { days: out, next: n };
 }
-function tripPlanDays(cities){ let n = 1; const days = []; (cities || []).forEach(function(c, i){ const r = tripCityDays(c, n, i === 0); days.push.apply(days, r.days); n = r.next; }); return days; }
+function tripPlanDays(cities){ let n = 1; const days = []; (cities || []).forEach(function(c){ const r = tripCityDays(c, n); days.push.apply(days, r.days); n = r.next; }); return days; }
 function tripDayEntries(day){ const out = []; TRIP_PERIODS.forEach(function(p){ (day.periods[p] || []).forEach(function(e){ out.push(e); }); }); return out; }
 function tripPeriodCount(day, p){ return (day.periods[p] || []).length + ((day.excursion && TRIP_PERIODS.indexOf(p) > 0 && (day.periods[TRIP_PERIODS[TRIP_PERIODS.indexOf(p) - 1]] || []).some(function(e){ return e.id === day.excursion; })) ? 1 : 0); } // النزهة الطويلة تُحتسب في الفترتين
 function tripPeriodRoom(day, p, version){ return tripCapacity(version, p) - tripPeriodCount(day, p); }
@@ -94,10 +93,27 @@ function tripBuildPlan(spec){ // spec = { cities:[{cityId, days, stay:{geo}|null
     const pinned = mine.filter(function(e){ return !!e.geo && tripEntryRole(e).role !== 'none'; }); mine.filter(function(e){ return !e.geo || tripEntryRole(e).role === 'none'; }).sort(tripById).forEach(function(e){ plan.tray.push(e); });
     if (!dayIdx.length){ pinned.sort(tripById).forEach(function(e){ plan.tray.push(e); }); return; }
     const pockets = tripPockets(pinned, TRIP_RHYTHM.pocketKm[city.fallback === 'car' ? 'car' : 'transit']);
-    pockets.forEach(function(pk){ // الخطوة ٣: الجيوب على الأيام — اليوم الأوسع فراغًا أولًا؛ الفائض ينتقل للتالي؛ ما لم يجد خانة في كل الأيام → الصينية
-      const order = dayIdx.slice().sort(function(a, b){ return (tripDayRoom(plan.days[b], version) - tripDayRoom(plan.days[a], version)) || (a - b); });
-      pk.items.forEach(function(e){ let done = false; for (let k = 0; k < order.length && !done; k++){ const day = plan.days[order[k]]; const t = tripTryPlace(day, e, version, true); if (t){ tripInsert(plan, order[k], t.period, e, t.alt, !!t.excursion); done = true; } } if (!done) plan.tray.push(e); });
+    // الخطوة ٣ (r77-٢ · القرار ٩ — التوازن): هدف لكل يوم ≈ الأماكن ÷ الأيام بسقف سعته؛ الجيب يبدأ باليوم الأوسع هدفًا ويُقسَّم فائضه على اليوم الأقرب جغرافيًّا؛ ما فاض عن الأهداف يذهب لأي يوم فيه فراغ؛ وإلا الصينية
+    const room = {}; dayIdx.forEach(function(i){ room[i] = tripDayRoom(plan.days[i], version); });
+    const subcats = {}; pinned.forEach(function(e){ subcats[(e.ref && e.ref.subcatId) || e.id] = true; }); const nMain = Object.keys(subcats).length; // المحطات الرئيسة ≈ التصنيفات الفرعية المختلفة (ما زاد من التصنيف نفسه يصير بديلًا ولا يُحتسب)
+    const target = {}; const base = Math.floor(nMain / dayIdx.length); dayIdx.forEach(function(i){ target[i] = Math.min(room[i], base); }); // القاعدة ٢ ثم الباقي واحدًا واحدًا على الأيام الأوسع فراغًا (٧ على ٣ أيام = ٣·٢·٢ لا ٣·٣·١)
+    const growOrder = dayIdx.slice().sort(function(a, b){ return (room[b] - room[a]) || (a - b); });
+    let sum = dayIdx.reduce(function(a, i){ return a + target[i]; }, 0); let guard = 0;
+    while (sum < nMain && guard++ < 200){ let grew = false; for (let k = 0; k < growOrder.length && sum < nMain; k++){ const i = growOrder[k]; if (target[i] < room[i]){ target[i]++; sum++; grew = true; } } if (!grew) break; }
+    const left = {}; dayIdx.forEach(function(i){ left[i] = target[i]; });
+    const nearest = function(c, pool){ let best = null, bd = Infinity; pool.forEach(function(i){ const dc = tripDayCentroid(plan.days[i]); const d = tripKm(c, dc); const dd = (d === null) ? 1e9 : d; if (dd < bd || (dd === bd && best !== null && i < best)){ bd = dd; best = i; } }); return best; };
+    const pending = [];
+    pockets.forEach(function(pk){
+      let cur = null; const pool = function(){ return dayIdx.filter(function(i){ return left[i] > 0; }); };
+      pk.items.forEach(function(e){
+        for (let k = 0; k < dayIdx.length; k++){ const ta = tripTryPlace(plan.days[dayIdx[k]], e, version, true); if (ta && ta.alt){ tripInsert(plan, dayIdx[k], ta.period, e, ta.alt, false); return; } } // البديل أولًا: التصنيف الفرعي نفسه في يوم ما لا يُحتسب في التوازن
+        if (cur === null || left[cur] <= 0){ const p = pool(); if (!p.length){ pending.push(e); return; } const byLeft = p.slice().sort(function(a, b){ return (left[b] - left[a]) || (a - b); }); const near = (cur === null) ? null : nearest(pk.c, p); cur = (near !== null && tripDayCentroid(plan.days[near])) ? near : byLeft[0]; }
+        const t = tripTryPlace(plan.days[cur], e, version, true);
+        if (t){ tripInsert(plan, cur, t.period, e, t.alt, !!t.excursion); if (!t.alt) left[cur]--; }
+        else { let done = false; const others = dayIdx.filter(function(i){ return i !== cur; }).sort(function(a, b){ return (left[b] - left[a]) || (a - b); }); for (let k = 0; k < others.length && !done; k++){ const t2 = tripTryPlace(plan.days[others[k]], e, version, true); if (t2){ tripInsert(plan, others[k], t2.period, e, t2.alt, !!t2.excursion); if (!t2.alt) left[others[k]]--; done = true; } } if (!done) pending.push(e); }
+      });
     });
+    pending.forEach(function(e){ let done = false; const order = dayIdx.slice().sort(function(a, b){ return (tripDayRoom(plan.days[b], version) - tripDayRoom(plan.days[a], version)) || (a - b); }); for (let k = 0; k < order.length && !done; k++){ const t = tripTryPlace(plan.days[order[k]], e, version, true); if (t){ tripInsert(plan, order[k], t.period, e, t.alt, !!t.excursion); done = true; } } if (!done) plan.tray.push(e); });
     dayIdx.forEach(function(i){ const day = plan.days[i]; const stay = city.stay && city.stay.geo; tripOrderDay(day, stay); day.rest = tripRestFor(day, stay); });
   });
   plan.tray.sort(tripById);
@@ -118,5 +134,5 @@ function tripWarnings(plan, spec){ // الخطوة ٦: الجدوى — تحذي
   return out;
 }
 function tripPlanNormalize(plan){ // قراءة مستند قديم أو ناقص بأمان: الفترات الأربع دائمًا، والمصفوفات موجودة
-  plan = plan || {}; const days = Array.isArray(plan.days) ? plan.days : []; days.forEach(function(d){ d.periods = d.periods || {}; TRIP_PERIODS.forEach(function(p){ if (!Array.isArray(d.periods[p])) d.periods[p] = []; d.periods[p].forEach(function(e){ e.alts = Array.isArray(e.alts) ? e.alts : []; e.alert = e.alert || ''; }); }); if (d.rest && typeof d.rest.minutes !== 'number') d.rest = null; if (!d.excursion) d.excursion = null; }); plan.days = days; plan.tray = Array.isArray(plan.tray) ? plan.tray : []; return plan;
+  plan = plan || {}; const days = Array.isArray(plan.days) ? plan.days : []; days.forEach(function(d){ d.periods = d.periods || {}; TRIP_PERIODS.forEach(function(p){ if (!Array.isArray(d.periods[p])) d.periods[p] = []; d.periods[p].forEach(function(e){ e.alts = Array.isArray(e.alts) ? e.alts : []; e.alert = e.alert || ''; }); }); if (d.rest && typeof d.rest.minutes !== 'number') d.rest = null; if (!d.excursion) d.excursion = null; }); days.forEach(function(d, i){ d.n = i + 1; if (d.kind !== 'full') d.kind = 'full'; if (typeof d.from !== 'number') d.from = null; if (typeof d.to !== 'number') d.to = null; }); plan.days = days; plan.tray = Array.isArray(plan.tray) ? plan.tray : []; return plan; // r77-٢: مسودات الدفعة أ (يوم ٠ · أنواع الطرفين) تُرقَّم ١..N عند القراءة
 }
