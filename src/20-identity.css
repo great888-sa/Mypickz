@@ -294,6 +294,28 @@
   /* ب-٢-٢-أ٢ (قرار ١٠-١٠): ليلي للتنقل والنوافذ · عاجي للبطاقات والحقول والأوراق */
   .sheet{background:var(--bar); color:var(--ivory-bright); border-color:var(--line-strong); box-shadow:0 -10px 30px rgba(0,0,0,.5);} .sheet .grip{background:var(--line-strong);} .sheet h4{background:var(--bar); color:var(--ivory-bright);} .sheet .sheet-txt{background:var(--bar); color:var(--night-2);} .sheet .btn-ghost{background:var(--surf); color:var(--ivory-bright); border-color:var(--line-strong);} .sheet .sheet-cancel{background:var(--bar); border-color:var(--line-strong); color:var(--night-2);} /* ب-٢-٢-أ٢ · r75d-٢ (قرار المالك ١٢ أكتوبر — تعديل ق١٠-١٠): الورقة السفلية ليلية كالنوافذ؛ الحقل داخلها يبقى عاجيًّا */
 
+
+  /* ═══ r77 (حزمة الرحلات · الدفعة أ): ليلي للمنشئ والورقة والعرض · عاجي للبطاقات والحقول · لا تعبئة زعفرانية إلا للفعّال والفعل الأساسي ═══ */
+  .tb-steps span{background:var(--line-night);} .tb-steps span.on{background:var(--saffron);}
+  .tb-note{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
+  .tb-door{background:var(--surf); border-color:var(--saffron); color:var(--on-night);} .tb-door-n{color:var(--saffron);}
+  .tb-feas{color:var(--night-3);} .tb-feas .ok{color:var(--saffron);} .tb-feas .warn{color:var(--danger-night);} .tb-hint{color:var(--night-4);} .tb-pin-ok{color:var(--saffron);}
+  .tb-feasbar{background:var(--bar); border-color:var(--line-strong); color:var(--on-night);} .tb-feasbar span{color:var(--saffron);}
+  .tb-pick,.modal.night .tb-pick{background:var(--ivory-bright); border-color:var(--sand-line); color:var(--ink);} .modal.night .tb-pick b{color:var(--ink);} .tb-pick-t span{color:var(--copper);} .tb-pick input{accent-color:var(--saffron);} .tb-pick .warn{color:var(--danger);}
+  .tb-card{background:var(--ivory-bright); border-color:var(--sand-line); color:var(--ink);} .tb-card-t span{color:var(--copper);} .tb-card-t .warn{color:var(--danger);} .tb-card .actn{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);} .tb-card.alt{background:var(--ivory);}
+  .trip-num{background:var(--ink); color:var(--ivory-bright);} .pc-chip.trip-num{background:var(--ink); color:var(--ivory-bright); border-color:var(--ink);}
+  .trip-alts-h{color:var(--night-2);} .trip-alts-h .arr{color:var(--saffron);} .trip-alt{background:var(--ivory); border-color:var(--sand-line); color:var(--ink);} .trip-alt .dim{color:var(--copper);} .trip-alt .act{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);} .trip-alt .act.flag{color:var(--danger);}
+  .modal.night .trip-alts-h{color:var(--night-2);}
+  .trip-rest{background:var(--bar); border-color:var(--line-strong); color:var(--night-2);} .trip-rest b{color:var(--on-night);} .trip-rest .dim{color:var(--night-4);}
+  .trip-empty-p{color:var(--night-4);}
+  .trip-tray{background:var(--bar); border-color:var(--saffron); color:var(--on-night);} .trip-tray-h .dim{color:var(--night-3);} .trip-tray-i{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);} .trip-tray-i .dim{color:var(--night-4);} .trip-tray-i .arr{color:var(--saffron);}
+  .trip-warn{background:var(--bar); border-color:var(--danger-night); color:var(--danger-night);}
+  .trip-stay{background:var(--bar); border-color:var(--line-strong); color:var(--on-night);} .trip-stay-t .dim{color:var(--night-4);}
+  .trip-badge{background:var(--ivory); border-color:var(--line-ivory); color:var(--ink-soft);} .trip-badge.soon,.trip-badge.now{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} .trip-badge.draft{background:var(--ivory-bright); border-color:var(--copper); color:var(--copper);} .trip-badge.done{opacity:.7;}
+  .pc-chip.warn{color:var(--danger); border-color:var(--sand-line);}
+  .pc-alert{color:var(--danger);}
+  .tm-h{color:var(--night-4);} .tm-d{color:var(--night-2);} .tm-c{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);} .tm-c.here{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} .tm-c.full{border-color:var(--danger-night); color:var(--danger-night);} .tm-c.off{background:none; border-color:var(--line-night); color:var(--night-4);} .tm-note{color:var(--night-4);}
+  .tmove .mp-empty.mini{color:var(--night-3);}
   .rowacts .act.on,.acts .act.on,.pl-acts .act.on,.headgrid .actn.on,#plPublicBtn.on,#plShareBtn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} /* ر٦٩ث (N-058): الزرّان المضاءان يغلبان قواعد الصف */
 
 </style>
