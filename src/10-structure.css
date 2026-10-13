@@ -74,11 +74,11 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 .footer-note{max-width:760px; margin:40px auto 0; padding:16px 20px; text-align:center; font-size:11.5px; line-height:1.8; border-top:1px solid;}
 .modal-backdrop{position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:20px 20px 68px; z-index:2000;}
 .modal-backdrop.show{display:flex;}
-.modal{border-radius:16px; padding:14px 13px; max-width:340px; width:100%; max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch; text-align:left;}
+.modal{border-radius:16px; padding:12px 12px 10px; max-width:340px; width:100%; max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch; text-align:left;} /* r77 (القرار ١٥): ضغط النوافذ — حشو ١٢ · العنوان ١٤ · ما فوق التسمية ٦ · حشو الحقل ٨ · الفواصل ٨ · الزر ٤٠ والخط ≥ ١٢ */
 .modal > :first-child{margin-top:0;}
 .modal > :last-child{margin-bottom:0;}
-.modal h3{font-family:'Cairo',sans-serif; margin:0 0 12px;}
-.modal-input{width:100%; border:1px solid; border-radius:8px; padding:10px 12px; font-size:14px; margin-top:4px;}
+.modal h3{font-family:'Cairo',sans-serif; margin:0 0 8px;}
+.modal-input{width:100%; border:1px solid; border-radius:8px; padding:8px 12px; font-size:14px; margin-top:2px; min-height:40px; box-sizing:border-box;}
 /* ٢/أ (٢٦ أغسطس ٢٠٢٦) — شارة الهوية بالشريط، نافذة الحساب، تأكيد الهوية، عين الإظهار، الشريط اللاصق للنوافذ الطويلة */
   .mini-av{display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; font-family:'Cairo',sans-serif; font-weight:900; font-size:12px; letter-spacing:.5px;}
 .acc-head{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; margin-bottom:12px; text-align:left;}
@@ -91,7 +91,7 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 .pw-wrap{position:relative;}
 .pw-wrap .modal-input{padding-right:40px;}
 .pw-eye{position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; font-size:15px; cursor:pointer; padding:4px;}
-.modal-topbar{position:sticky; top:-1px; z-index:3; padding:2px 0 8px; margin-bottom:8px; border-bottom:1px dashed; display:flex; gap:8px;}
+.modal-topbar{position:sticky; top:-1px; z-index:3; padding:2px 0 6px; margin-bottom:6px; border-bottom:1px dashed; display:flex; gap:8px;}
 .modal-topbar .btn{margin-top:0; padding:9px 12px; font-size:12.5px;}
 /* ===== خ١ (٢٧ أغسطس ٢٠٢٦) — الإطار: الشريط العلوي · الشريط الخمسي · الوجهات · الدرج (النموذج المعلَّم: المشاهد ٦ و٧) ===== */
   body{padding-top:44px; padding-bottom:58px;}
@@ -179,7 +179,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .addr-chips{display:flex; flex-wrap:wrap; gap:6px;}
 .addr-empty{text-align:center; font-size:12.5px; padding:30px 10px;}
 #qrcode{display:flex; justify-content:center; margin:12px 0;}
-.toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%); padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:9999;}
+.toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%); padding:9px 16px; border-radius:999px; font-size:12.5px; font-family:'Cairo',sans-serif; opacity:0; pointer-events:none; transition:.25s; z-index:9999; max-width:88vw; text-align:center; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;} /* r77: رسالة بأفعال (Undo · Change) بسطر واحد */
 .toast.show{opacity:1;}
 #editModeBanner{max-width:760px; margin:14px auto 0; padding:11px 18px; border:1px dashed; border-radius:10px; font-size:12px; display:none; text-align:center;}
 #editModeBanner.show{display:block;}
@@ -314,11 +314,12 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .soon{border-style:dashed !important;}
   .chipgrid{padding:4px; border-radius:14px;}
   .bmk-btn.on{border-radius:999px; padding:2px 6px;}
-  .modal{padding:16px 16px 14px; border-width:1.5px; border-style:solid;}
-  .modal h3{font-size:15px;}
-  .modal-topbar{border-bottom-style:solid; border-bottom-width:1px; padding:0 0 10px; margin-bottom:10px;}
-  .modal-input{font-size:13px; padding:10px 12px; border-radius:12px;}
-  .modal label,.modal .flabel{font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; letter-spacing:.2px; display:block; margin:10px 0 4px;}
+  .modal{padding:12px 12px 10px; border-width:1.5px; border-style:solid;}
+  .modal h3{font-size:14px;}
+  .modal-topbar{border-bottom-style:solid; border-bottom-width:1px; padding:0 0 8px; margin-bottom:8px;}
+  .modal-input{font-size:13px; padding:8px 12px; border-radius:12px;}
+  .modal label,.modal .flabel{font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; letter-spacing:.2px; display:block; margin:6px 0 3px;}
+  .modal .gsec{margin:6px 0 4px;} .modal .dash-door{padding:7px 12px; margin-top:4px;} .modal .btn{min-height:40px;} .modal .cta{min-height:40px;} .modal .chiprow{margin:0 0 4px;} .modal .pgroup{margin-bottom:8px;} .modal .mp-empty.mini{padding:6px 0;}
   .panel .phead{display:flex; justify-content:space-between; align-items:center; font-family:'Cairo',sans-serif; font-weight:700; font-size:14px; padding:0 0 8px; margin:0 0 8px; border-bottom-width:1px; border-bottom-style:solid;}
   .panel .phead .x,.panel .phead .edit{font-size:12px; border-radius:999px; padding:3px 9px; border-width:1.5px; border-style:solid; cursor:pointer;}
   .panel .search{font-family:'Cairo',sans-serif; font-weight:400; font-size:13px; padding:9px 10px; margin:0 0 8px; border-radius:10px; border-width:1.5px; border-style:solid;}
@@ -402,4 +403,34 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .stickyhead .csel.srcttl{font-size:13px; padding:7px 11px;}
   .stickyhead .chipgrid>.chip,.stickyhead .chipgrid>.pl-src,.stickyhead .sixgrid .pl-src,.stickyhead .headgrid>.csel,.stickyhead .headgrid>.actn{padding:7px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .stickyhead .ctx{margin:2px 0 4px;}
+
+  /* ═══ r77 (حزمة الرحلات · الدفعة أ): المنشئ · المسودة · ورقة النقل · عرض الرحلة · بطاقة الرحلة ═══ */
+  .tbuild{max-width:380px;} .tb-steps{display:flex; gap:6px; margin:0 0 8px;} .tb-steps span{flex:1; height:4px; border-radius:2px;}
+  .tb-note{font-size:12px; line-height:1.45; border-radius:12px; padding:8px 10px; margin:0 0 8px; border:1px solid;}
+  .tb-cities,.tb-days{flex-wrap:wrap; overflow:visible;}
+  .tb-door{display:flex; justify-content:space-between; align-items:center; width:100%; min-height:44px; padding:0 12px; border-radius:12px; border:1.5px solid; font-family:'Cairo',sans-serif; font-weight:800; font-size:13px; cursor:pointer; text-align:start;} .tb-door-n{font-weight:800;}
+  .tb-feas{font-size:11.5px; margin:4px 2px 0;} .tb-feas .ok{font-weight:800;} .tb-feas .warn{font-weight:800;}
+  .tb-grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px;} .tb-dt{display:flex; flex-direction:column; gap:4px; margin-top:2px;} .tb-dt .modal-input{margin:0; font-weight:400;}
+  .tb-stay{display:flex; gap:6px; align-items:center;} .tb-stay .modal-input{flex:1; margin:0; min-width:0;} .tb-pin-ok{font-size:14px;}
+  .tb-hint{font-size:11px; line-height:1.5; margin:6px 0 2px;}
+  .tb-cta{margin-top:10px;} .tb-cta:disabled{opacity:.45; cursor:default;}
+  .tb-feasbar{display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:12px; border:1px solid; margin:0 0 8px; font-size:12.5px;} .tb-feasbar b{font-weight:800;} .tb-feasbar span{font-weight:700;} .pc-alert{font-size:11.5px; font-weight:700; margin:2px 0 4px;}
+  .tb-pick{display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:12px; border:1px solid; margin:0 0 6px; cursor:pointer;} .tb-pick input{width:20px; height:20px; flex:none;} .tb-pick-t{display:flex; flex-direction:column; min-width:0;} .tb-pick-t b{font-size:14px; font-weight:800; line-height:1.2;} .tb-pick-t span{font-size:11.5px;} .tb-pick.nopin{opacity:.72;} .tb-pick .warn{font-style:normal;} .modal .tb-pick{display:flex; margin:0 0 6px; letter-spacing:0; font-size:13px;}
+  .tb-row{margin-top:8px;} .tb-top{flex-wrap:nowrap;}
+  .tb-card{display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:12px; border:1px solid; margin:0 0 6px;} .tb-card-t{flex:1; min-width:0; display:flex; flex-direction:column;} .tb-card-t b{font-size:14px; font-weight:800; line-height:1.25; display:flex; align-items:center; gap:6px;} .tb-card-t span{font-size:11.5px;} .tb-card .actn{flex:none; min-height:30px; padding:4px 10px;} .tb-card.alt{margin:0 0 6px 14px;} .tb-card.alt b{font-size:13px;}
+  .trip-num{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; font-size:11px; font-weight:800; flex:none;} .pc-chip.trip-num{padding:0; width:24px; height:24px;}
+  .trip-alts{margin:-2px 0 8px 10px;} .trip-alts-h{display:flex; justify-content:space-between; align-items:center; width:100%; background:none; border:none; padding:2px 4px; font-family:'Cairo',sans-serif; font-weight:800; font-size:12px; cursor:pointer; text-align:start;} .trip-alt{display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:10px; border:1px dashed; margin:4px 0 0;} .trip-alt-n{flex:1; min-width:0; font-size:13px; font-weight:800;} .trip-alt .act{min-height:28px; padding:3px 8px; font-size:11.5px; text-decoration:none;}
+  .trip-rest{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 12px; border-radius:12px; border:1px dashed; margin:0 0 6px; font-size:13px;} .trip-rest .actn{min-height:30px; padding:4px 10px;}
+  .trip-empty-p{font-size:11.5px; padding:4px 6px 8px;}
+  .trip-tray{border-radius:12px; border:1.5px dashed; padding:8px 12px; margin:4px 0 10px;} .trip-tray.empty{opacity:.75;} .trip-tray-h{display:flex; justify-content:space-between; align-items:center; font-size:12.5px; margin-bottom:4px;} .trip-tray-i{display:flex; justify-content:space-between; align-items:center; width:100%; min-height:36px; padding:0 8px; border-radius:10px; border:1px solid; margin:4px 0 0; background:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; text-align:start;} .trip-tray-i:disabled{cursor:default;}
+  .trip-warn{font-size:11.5px; border-radius:10px; padding:6px 10px; margin:0 0 8px; border:1px dashed;}
+  .trip-ctx{margin:2px 0 6px;}
+  .trip-stay{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 12px; border-radius:12px; border:1px solid; margin:0 0 8px;} .trip-stay-t{display:flex; flex-direction:column; min-width:0;} .trip-stay-t b{font-size:13.5px; font-weight:800;} .trip-stay-t .dim{font-size:11.5px;} .trip-stay .actn{min-height:30px; padding:4px 10px; flex:none;}
+  .trip-foot{display:flex; gap:6px; margin:4px 0 6px;} .trip-foot .btn{flex:1; margin:0; min-height:40px; font-size:12px; padding:6px 4px;}
+  .trip-badge{display:inline-flex; align-items:center; height:22px; padding:0 9px; border-radius:999px; font-size:10.5px; font-weight:800; white-space:nowrap; flex:none; border:1px solid;}
+  .trip-chips{display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 2px;} .pc-chip.warn{font-weight:800;}
+  .pl-src .s{display:block; font-size:10px; font-weight:600; line-height:1.1; margin-top:1px;}
+  .trip-old{opacity:.75;}
+  #screenTrips.trip-open .stickyhead,#screenTrips.trip-open #tripCityPanel{display:none;}
+  .tmove{max-height:80vh;} .tm-grid{display:grid; grid-template-columns:58px repeat(4,1fr); gap:5px; align-items:center; margin:0 0 6px;} .tm-h{text-align:center; font-size:10px; font-weight:700;} .tm-d{font-size:11.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;} .tm-c{height:34px; border-radius:9px; border:1.5px solid; font-family:'Cairo',sans-serif; font-weight:700; font-size:11px; cursor:pointer; padding:0 2px;} .tm-c.off{border-style:dashed; cursor:default;} .tm-note{font-size:11px; line-height:1.45; margin:0 0 8px;} .tm-list{display:flex; flex-direction:column; gap:4px; margin:0 0 8px;} .tm-list .btn{justify-content:space-between; display:flex;}
 </style>
