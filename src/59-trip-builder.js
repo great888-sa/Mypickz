@@ -1,198 +1,208 @@
-/* ═══ r77 (حزمة الرحلات · الدفعة أ — البيان v1.2 · ٦-١) · r77-٢ (الدفعة أ-٢ — ملاحظات التجربة): المنشئ التفاعلي بمرحلتيه على القشرة الليلية
-   الإعداد (المدينة · الأيام بعدّاد · التواريخ تحكم العدّاد · الإقامة · بديل المشي) · اختيار الأماكن من خمسة مصادر بالصناديق وسطر الجدوى ·
-   المسودة: ＋ Places يضيف ويزيل بلا إعادة بناء · Setup · النسخ · Undo · الفترات · البدائل · الصينية · Move · Alert · Remove · الاعتماد.
-   المسودة تُحفظ بعد كل تغيير بتأخير ثانية (التثبيت ٤) · التراجع عشرون خطوة (الاختيار ٦) · رقاقات النسخ تختفي بعد أول نقل يدوي (القرار ١١) · لا يوم ٠ (أ-٢ · القرار ٢) ═══ */
-let TB = null; // حالة المنشئ المفتوح
-const TB_PLACES = {}; // 'cityId|src' → [{ key, ref, name, geo, sec, catId, path, owner }] (ذاكرة الجلسة)
-const TB_SOURCES = [['mine', 'My places'], ['bookmarked', 'My bookmarked'], ['shared', 'Shared with me'], ['curators', 'Curators'], ['public', 'Public lists']]; // أ-٢ · القرار ٤
-function tbTrip(){ return TB && TB.tripId ? (userTrips || []).find(function(t){ return t.id === TB.tripId; }) || null : null; }
-function tbCity(){ return TB.cities[TB.ci] || null; }
-function tbNewCity(c){ return { cityId: c.id, cityName: c.name, days: 2, stay: null, arrival: null, departure: null, fallback: 'transit' }; }
-async function openTripBuilder(o){ // o = { tripId?, stage?, cityId?, preselect?, dayPlan?, addCity? }
-  o = o || {};
-  if (!currentUser){ openAuthModal(); return; }
-  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
-  const t = o.tripId ? (userTrips || []).find(function(x){ return x.id === o.tripId; }) : null;
-  TB = { tripId: t ? t.id : null, stage: 1, ci: 0, cities: t ? JSON.parse(JSON.stringify(t.cities || [])) : [], picked: {}, version: t ? (t.version || 'balanced') : 'balanced', plan: t && tripHasPlan(t) ? tripPlanNormalize(JSON.parse(JSON.stringify(t.plan))) : null, undo: [], moved: false, dayPlan: !!(o.dayPlan || (t && t.dayPlan)), daySel: 0, pick: null, src: 'mine', saveTimer: null, preselect: o.preselect || null, setupSig: '' };
-  if (TB.plan){ tripPlanEntries(TB.plan).concat(TB.plan.tray).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x){ const cid = (x.ref && x.ref.cityId) || t.cityId; TB.picked[cid] = TB.picked[cid] || {}; TB.picked[cid][tbKey(x.ref)] = x; }); }); TB.moved = true; }
-  if (!t && o.cityId){ const c = cityListAllCities().find(function(x){ return x.id === o.cityId; }); if (c){ const nc = tbNewCity(c); if (o.dayPlan) nc.days = 1; TB.cities.push(nc); } }
-  if (o.addCity) TB.addCityOpen = true;
-  if (TB.preselect){ const cid = TB.preselect.cityId; const src = TB.preselect.sourceType === 'community' ? 'public' : 'mine'; const list = await tbLoadPlaces(cid, src); const hit = list.find(function(p){ return p.ref.subcatId === TB.preselect.subcatId && p.ref.placeId === TB.preselect.placeId && (p.ref.sourceUid || null) === (TB.preselect.sourceUid || null); }); if (hit){ TB.picked[cid] = TB.picked[cid] || {}; TB.picked[cid][hit.key] = tbEntryOf(hit); } TB.preselect = null; }
-  TB.setupSig = tbSetupSig();
-  TB.stage = (o.stage === 2 && TB.plan) ? 2 : 1; if (TB.plan) TB.daySel = Math.max(0, TB.plan.days.findIndex(function(d){ return tripDayEntries(d).length; }));
-  document.getElementById('tripBuildBackdrop').classList.add('show');
-  tbRender();
+/* ═══ r77 (حزمة الرحلات · الدفعة أ — البيان v1.2 · التثبيت ١): محرك الرحلات — دوال نقية بلا واجهة وبلا شبكة.
+   الخطة مصدر الحقيقة الوحيد (التثبيت ٢) · جدول الإيقاع واحد مملوك للمالك بقاعدة عامة لما لم يُذكر (التثبيت ٣) ·
+   حتمية كاملة: ترتيب مستقر وكسر التعادل بمعرّف المدخل، لا عشوائية (التثبيت ٤).
+   بنية الخطة: plan = { days:[{ n, kind:'full'|'arrival'|'departure', cityId, date|null, from|null, to|null, periods:{morning:[],midday:[],afternoon:[],evening:[]}, rest:{minutes}|null, excursion:id|null }], tray:[entry] }
+   المدخل: entry = { id, ref:{sourceType,cityId,subcatId,placeId,sourceUid}, name, geo:{lat,lng}|null, sec, alts:[entry], alert:'' } ═══ */
+const TRIP_PERIODS = ['morning', 'midday', 'afternoon', 'evening'];
+const TRIP_PERIOD_LABEL = { morning: 'Morning', midday: 'Midday', afternoon: 'Afternoon', evening: 'Evening' };
+const TRIP_VERSIONS = [['calm', 'Calm'], ['balanced', 'Balanced'], ['dense', 'Dense']];
+const TRIP_ROLE_ORDER = { meal: 0, excursion: 1, light: 2, sight: 3, visit: 4 }; // ترتيب الاعتبار: الأضيق فتراتٍ أولًا
+const TRIP_RHYTHM = { // ═══ جدول الإيقاع (البيان v1.2 · القسم الخامس — معتمد بقيمه) ═══
+  windows: { morning: [480, 690], midday: [690, 870], afternoon: [870, 1110], evening: [1110, 1380] }, // دقائق من منتصف الليل
+  capacity: { calm: { morning: 1, midday: 1, afternoon: 1, evening: 1 }, balanced: { morning: 2, midday: 2, afternoon: 2, evening: 2 }, dense: { morning: 3, midday: 2, afternoon: 3, evening: 3 } },
+  roles: { // بالتصنيف الفرعي أولًا ثم بالقسم؛ ما لم يُذكر يأخذ القاعدة العامة
+    coffee: { role: 'light', periods: ['morning', 'afternoon'], minutes: 45 }, cafe: { role: 'light', periods: ['morning', 'afternoon'], minutes: 45 }, tea: { role: 'light', periods: ['morning', 'afternoon'], minutes: 45 },
+    brunch: { role: 'light', periods: ['morning', 'midday'], minutes: 60 }, bakery: { role: 'light', periods: ['morning'], minutes: 30 },
+    dessert: { role: 'light', periods: ['afternoon', 'evening'], minutes: 30 }, icecream: { role: 'light', periods: ['afternoon', 'evening'], minutes: 30 },
+    cafes_sweets: { role: 'light', periods: ['morning', 'afternoon'], minutes: 45 },
+    restaurants_dish: { role: 'meal', periods: ['midday', 'evening'], minutes: 75 }, restaurants_cuisine: { role: 'meal', periods: ['midday', 'evening'], minutes: 75 },
+    shopping_store: { role: 'visit', periods: ['afternoon', 'evening'], minutes: 120 }, shopping_product: { role: 'visit', periods: ['afternoon', 'evening'], minutes: 60 },
+    parks_gardens: { role: 'sight', periods: ['morning', 'afternoon'], minutes: 75 }, squares_streets: { role: 'sight', periods: ['morning', 'afternoon', 'evening'], minutes: 60 },
+    corniche_marinas: { role: 'sight', periods: ['afternoon', 'evening'], minutes: 60 }, tower_bridge_views: { role: 'sight', periods: ['afternoon', 'evening'], minutes: 60 },
+    nature: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 180 }, beaches: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 180 },
+    landmarks: { role: 'sight', periods: ['morning', 'afternoon'], minutes: 90 }, tours_venues: { role: 'sight', periods: ['morning', 'afternoon'], minutes: 120 },
+    theme_parks: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 240 }, zoos_aquariums: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 180 },
+    stay: { role: 'none', periods: [], minutes: 0 }, transportation: { role: 'none', periods: [], minutes: 0 }
+  },
+  defaultRole: { role: 'visit', periods: ['morning', 'midday', 'afternoon', 'evening'], minutes: 60 },
+  walkKm: 1.2, pocketKm: { transit: 1.5, car: 8 }, detour: { walk: 1.3, transit: 1.3, car: 1.4 },
+  rest: { minutes: 120, maxKm: 3, minStops: 4 }, longLegKm: { walk: 3, car: 25 }
+};
+function tripRoleOf(subcatId, sectionId){ const R = TRIP_RHYTHM.roles; const r = R[subcatId] || R[sectionId] || TRIP_RHYTHM.defaultRole; return { role: r.role, periods: (r.periods || TRIP_PERIODS).slice(), minutes: r.minutes || 60 }; }
+function tripEntryRole(e){ return tripRoleOf(e && e.ref && e.ref.subcatId, e && e.sec); }
+function tripCapacity(version, period){ const c = TRIP_RHYTHM.capacity[version] || TRIP_RHYTHM.capacity.balanced; return c[period] || 0; }
+function tripKm(a, b){ if (!a || !b || typeof a.lat !== 'number' || typeof b.lat !== 'number') return null; const R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180; const s = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2); return 2 * R * Math.asin(Math.min(1, Math.sqrt(s))); }
+function tripRouteKm(a, b, mode){ const d = tripKm(a, b); if (d === null) return null; return d * (TRIP_RHYTHM.detour[mode] || TRIP_RHYTHM.detour.walk); } // المسافة ≈ خط مستقيم × معامل التعرج (البيان ٦-٣ — للدفعة ب والجدوى)
+function tripMinutesOf(hhmm){ const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim()); if (!m) return null; const v = parseInt(m[1], 10) * 60 + parseInt(m[2], 10); return (v >= 0 && v < 1440) ? v : null; }
+function tripDateAdd(ymd, n){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '')); if (!m) return null; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + (n || 0))); return d.toISOString().slice(0, 10); } // نصوص يوم بلا مناطق زمنية (الاختيار ٤)
+function tripDateLabel(ymd){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '')); if (!m) return ''; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); const D = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; return D[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + M[d.getUTCMonth()]; }
+function tripDaysFromDates(arrDate, depDate){ const d = tripDateDiff(arrDate, depDate); return (d === null) ? null : Math.max(1, Math.min(30, d + 1)); } // r77-٢ (القرار ٣): التواريخ تحكم العدّاد
+function tripDateDiff(a, b){ const x = tripDateAdd(a, 0), y = tripDateAdd(b, 0); if (!x || !y) return null; return Math.round((Date.parse(y + 'T00:00:00Z') - Date.parse(x + 'T00:00:00Z')) / 86400000); }
+function tripEmptyPeriods(){ return { morning: [], midday: [], afternoon: [], evening: [] }; }
+/* r78-٢ (الدفعة ب-٢): فترات مرنة — المستخدم يطفئ فترةً من إعداد المدينة فتصير غير متاحة في أيامها كلها (day.off)، وتُضم نافذتها وسعتها وأدوارها إلى الفترة المحفوظة قبلها (أو بعدها إن كانت الأولى). جدول الإيقاع لا يتغير؛ «المتاح» في اليوم هو ما يتغير. */
+function tripCityPeriods(city){ const v = city && Array.isArray(city.periods) ? TRIP_PERIODS.filter(function(p){ return city.periods.indexOf(p) >= 0; }) : TRIP_PERIODS.slice(); return v.length ? v : TRIP_PERIODS.slice(); }
+function tripDayOff(day){ return (day && Array.isArray(day.off)) ? day.off.filter(function(p){ return TRIP_PERIODS.indexOf(p) >= 0; }) : []; }
+function tripDayAbsorb(day){ // الفترة المطفأة → الفترة التي تضمّها
+  const off = tripDayOff(day); const kept = TRIP_PERIODS.filter(function(p){ return off.indexOf(p) < 0; }); if (!kept.length) return {}; const map = {};
+  off.forEach(function(p){ const i = TRIP_PERIODS.indexOf(p); let host = null; for (let k = i - 1; k >= 0 && host === null; k--){ if (kept.indexOf(TRIP_PERIODS[k]) >= 0) host = TRIP_PERIODS[k]; } for (let k = i + 1; k < TRIP_PERIODS.length && host === null; k++){ if (kept.indexOf(TRIP_PERIODS[k]) >= 0) host = TRIP_PERIODS[k]; } map[p] = host; });
+  return map;
 }
-function tbSetupSig(){ return JSON.stringify(TB.cities.map(function(c){ return [c.cityId, c.days]; })); } // ما يستدعي إعادة البناء: الأيام والمدن فقط (أ-٢ · القرار ٧)
-function tbClose(){ if (TB && TB.saveTimer){ clearTimeout(TB.saveTimer); tbSaveNow(); } document.getElementById('tripBuildBackdrop').classList.remove('show'); TB = null; if (currentTab === 'Trips') renderTripsBody(); }
-function tbBack(){ if (!TB) return; if (TB.pick){ TB.pick = null; tbRender(); return; } if (TB.stage === 1 && TB.plan){ TB.stage = 2; tbRender(); return; } if (TB.stage === 2){ tbClose(); return; } tbClose(); }
-function tbKey(ref){ return String(ref.sourceUid || 'me') + '|' + String(ref.subcatId || '') + '|' + String(ref.placeId || ''); }
-function tbEntryOf(p){ return tripNewEntry({ ref: p.ref, name: p.name, geo: p.geo, sec: p.sec }); }
-function tbRowsFromLinks(links, cityId, ownerUid, ownerName){ // صفوف الاختيار من مستند قائمة (قائمتي أو قائمة غيري) بترتيب الشجرة — الدبوس من geo المؤكَّد فقط
-  const out = []; const cats = plCatsAll().concat(ownerUid ? [] : privateCategoryList().map(function(c){ return { id: c.id, name: c.name, section: 'Private', sectionId: 'private' }; }));
-  cats.forEach(function(c){ const arr = ((links[c.id] || {}).places || []).filter(function(p){ return p && (p.name || p.url); }); arr.forEach(function(p){ const ref = { sourceType: ownerUid ? 'community' : 'mylist', cityId: cityId, subcatId: c.id, placeId: p.id || hashUrl(p.url || ''), sourceUid: ownerUid || null }; out.push({ key: tbKey(ref), ref: ref, name: p.name || 'Place', area: p.area || '', geo: (p.geo && typeof p.geo.lat === 'number') ? { lat: p.geo.lat, lng: p.geo.lng } : null, sec: c.sectionId || '', catId: c.id, path: (c.section ? c.section + ' › ' : '') + c.name, owner: ownerName || '' }); }); });
+function tripDayWindow(day, p){ const w = TRIP_RHYTHM.windows[p].slice(); const ab = tripDayAbsorb(day); Object.keys(ab).forEach(function(o){ if (ab[o] === p){ const ow = TRIP_RHYTHM.windows[o]; w[0] = Math.min(w[0], ow[0]); w[1] = Math.max(w[1], ow[1]); } }); return w; } // النافذة مع ما ضُمّ إليها
+function tripDayCapacity(day, p, version){ let c = tripCapacity(version, p); const ab = tripDayAbsorb(day); Object.keys(ab).forEach(function(o){ if (ab[o] === p) c += tripCapacity(version, o); }); return c; } // السعة مع ما ضُمّ إليها
+function tripDayAvailable(day){ // الفترة متاحة في اليوم الجزئي إن بقي منها ساعة ونصف على الأقل بعد الوصول أو قبل المغادرة (البيان ٥-١) — والفترة المطفأة من الإعداد غير متاحة (ب-٢)
+  const off = tripDayOff(day);
+  return TRIP_PERIODS.filter(function(p){ if (off.indexOf(p) >= 0) return false; const w = tripDayWindow(day, p); if (typeof day.from === 'number' && w[1] - 90 < day.from) return false; if (typeof day.to === 'number' && w[0] + 90 > day.to) return false; return true; });
+}
+function tripDayLabel(day){ return 'Day ' + day.n + (typeof day.from === 'number' ? ' · arrival ' + tripHHMM(day.from) : '') + (typeof day.to === 'number' ? ' · departure ' + tripHHMM(day.to) : ''); } // r77-٢ (القرار ٢): لا يوم ٠ — الطرفان يُقصّان لا يُشتقّان
+function tripHHMM(min){ if (typeof min !== 'number' || isNaN(min)) return ''; const m = ((min % 1440) + 1440) % 1440; return (m < 600 ? '0' : '') + Math.floor(m / 60) + ':' + (m % 60 < 10 ? '0' : '') + (m % 60); }
+function tripNewEntry(p){ // p = { id?, ref, name, geo, sec }
+  return { id: p.id || ('e_' + String(p.ref && p.ref.placeId || p.name || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 7)), ref: Object.assign({}, p.ref || {}), name: p.name || 'Place', geo: (p.geo && typeof p.geo.lat === 'number' && typeof p.geo.lng === 'number') ? { lat: p.geo.lat, lng: p.geo.lng } : null, sec: p.sec || '', alts: [], alert: p.alert || '' };
+}
+function tripCityDays(city, startN){ // r77-٢ (القرار ٢): N يومًا بالضبط؛ وقت الوصول يقصّ اليوم الأول ووقت المغادرة يقصّ اليوم الأخير؛ التاريخ من الوصول أو من المغادرة
+  const out = []; let n = startN; const N = Math.max(1, Math.min(30, parseInt(city.days, 10) || 1));
+  const arr = city.arrival || null, dep = city.departure || null; const from = tripMinutesOf(arr && arr.time), to = tripMinutesOf(dep && dep.time);
+  let firstDate = (arr && arr.date) ? tripDateAdd(arr.date, 0) : ((dep && dep.date) ? tripDateAdd(dep.date, -(N - 1)) : null);
+  const kept = tripCityPeriods(city); const off = TRIP_PERIODS.filter(function(p){ return kept.indexOf(p) < 0; });
+  for (let i = 0; i < N; i++){ out.push({ n: n++, kind: 'full', cityId: city.cityId, date: firstDate ? tripDateAdd(firstDate, i) : null, from: (i === 0 && typeof from === 'number') ? from : null, to: (i === N - 1 && typeof to === 'number') ? to : null, periods: tripEmptyPeriods(), rest: null, excursion: null, off: off }); }
+  return { days: out, next: n };
+}
+function tripPlanDays(cities){ let n = 1; const days = []; (cities || []).forEach(function(c){ const r = tripCityDays(c, n); days.push.apply(days, r.days); n = r.next; }); return days; }
+function tripDayEntries(day){ const out = []; TRIP_PERIODS.forEach(function(p){ (day.periods[p] || []).forEach(function(e){ out.push(e); }); }); return out; }
+function tripPeriodCount(day, p){ return (day.periods[p] || []).length + ((day.excursion && TRIP_PERIODS.indexOf(p) > 0 && (day.periods[TRIP_PERIODS[TRIP_PERIODS.indexOf(p) - 1]] || []).some(function(e){ return e.id === day.excursion; })) ? 1 : 0); } // النزهة الطويلة تُحتسب في الفترتين
+function tripPeriodRoom(day, p, version){ return tripDayCapacity(day, p, version) - tripPeriodCount(day, p); }
+function tripDayRoom(day, version){ return tripDayAvailable(day).reduce(function(a, p){ return a + Math.max(0, tripPeriodRoom(day, p, version)); }, 0); }
+function tripPlanEntries(plan){ const out = []; (plan.days || []).forEach(function(d){ tripDayEntries(d).forEach(function(e){ out.push(e); }); }); return out; }
+function tripPlanCount(plan){ let n = 0; tripPlanEntries(plan).forEach(function(e){ n += 1 + (e.alts || []).length; }); (plan.tray || []).forEach(function(e){ n += 1 + (e.alts || []).length; }); return n; }
+function tripFindEntry(plan, id){ for (let d = 0; d < (plan.days || []).length; d++){ const day = plan.days[d]; for (let k = 0; k < TRIP_PERIODS.length; k++){ const p = TRIP_PERIODS[k]; const arr = day.periods[p] || []; for (let i = 0; i < arr.length; i++){ if (arr[i].id === id) return { where: 'day', dayIdx: d, period: p, index: i, entry: arr[i] }; const a = (arr[i].alts || []).findIndex(function(x){ return x.id === id; }); if (a >= 0) return { where: 'alt', dayIdx: d, period: p, index: i, host: arr[i], altIndex: a, entry: arr[i].alts[a] }; } } } const t = (plan.tray || []).findIndex(function(x){ return x.id === id; }); if (t >= 0) return { where: 'tray', index: t, entry: plan.tray[t] }; return null; }
+function tripCentroid(list){ const pts = (list || []).filter(function(e){ return e.geo; }); if (!pts.length) return null; return { lat: pts.reduce(function(a, e){ return a + e.geo.lat; }, 0) / pts.length, lng: pts.reduce(function(a, e){ return a + e.geo.lng; }, 0) / pts.length }; }
+function tripDayCentroid(day){ return tripCentroid(tripDayEntries(day)); }
+function tripById(a, b){ return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }
+function tripPockets(entries, radiusKm){ // الخطوة ٢: الجيوب بالإحداثيات — الأقرب إلى الأقرب، حتمي
+  const pockets = []; entries.slice().sort(tripById).forEach(function(e){ let best = null, bd = Infinity; pockets.forEach(function(p){ const d = tripKm(e.geo, p.c); if (d !== null && d <= radiusKm && d < bd){ best = p; bd = d; } }); if (best){ best.items.push(e); best.c = tripCentroid(best.items); } else pockets.push({ c: { lat: e.geo.lat, lng: e.geo.lng }, items: [e] }); });
+  pockets.forEach(function(p){ p.items.sort(function(a, b){ const ra = TRIP_ROLE_ORDER[tripEntryRole(a).role], rb = TRIP_ROLE_ORDER[tripEntryRole(b).role]; return (ra === rb) ? tripById(a, b) : ((ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb)); }); });
+  return pockets.sort(function(a, b){ return (b.items.length - a.items.length) || tripById(a.items[0], b.items[0]); });
+}
+function tripMealIn(day, p){ return (day.periods[p] || []).some(function(e){ return tripEntryRole(e).role === 'meal'; }); }
+function tripTryPlace(day, e, version, allowAlt){ // يحاول إدخال مدخل في يوم بقواعد الإيقاع؛ يعيد { period, alt } أو null — لا يعدّل
+  const role = tripEntryRole(e); if (role.role === 'none') return null; const avail = tripDayAvailable(day); const ab = tripDayAbsorb(day); const periods = TRIP_PERIODS.filter(function(p){ return avail.indexOf(p) >= 0 && role.periods.some(function(rp){ return rp === p || ab[rp] === p; }); }); if (!periods.length) return null; // ب-٢: دور الفترة المطفأة يجوز في ضامّتها
+  if (allowAlt !== false){ for (let i = 0; i < periods.length; i++){ const host = (day.periods[periods[i]] || []).find(function(x){ return x.ref && e.ref && x.ref.subcatId === e.ref.subcatId; }); if (host) return { period: periods[i], alt: host.id }; } } // الخطوة ٥: التصنيف الفرعي نفسه في الفترة نفسها → بديل
+  if (role.role === 'excursion' && !day.excursion){ for (let i = 0; i < periods.length - 1; i++){ const a = periods[i], b = TRIP_PERIODS[TRIP_PERIODS.indexOf(a) + 1]; if (periods.indexOf(b) >= 0 && tripPeriodCount(day, a) === 0 && tripPeriodCount(day, b) === 0) return { period: a, alt: null, excursion: true }; } }
+  let best = null, br = 0; periods.forEach(function(p){ if (role.role === 'meal' && tripMealIn(day, p)) return; const r = tripPeriodRoom(day, p, version); if (r > br){ best = p; br = r; } }); // الأوسع فراغًا؛ التعادل للأبكر
+  return best ? { period: best, alt: null } : null;
+}
+function tripInsert(plan, dayIdx, period, e, altOf, excursion){ const day = plan.days[dayIdx]; if (!day) return false; if (altOf){ const host = (day.periods[period] || []).find(function(x){ return x.id === altOf; }); if (!host) return false; host.alts = host.alts || []; host.alts.push(e); return true; } day.periods[period] = day.periods[period] || []; day.periods[period].push(e); if (excursion) day.excursion = e.id; return true; }
+function tripDetach(plan, id){ const f = tripFindEntry(plan, id); if (!f) return null; if (f.where === 'day'){ const day = plan.days[f.dayIdx]; day.periods[f.period].splice(f.index, 1); if (day.excursion === id) day.excursion = null; } else if (f.where === 'alt'){ f.host.alts.splice(f.altIndex, 1); } else { plan.tray.splice(f.index, 1); } return f.entry; }
+function tripOrderDay(day, stayGeo){ // الخطوة ٤: الإيقاع ثم القرب — داخل كل فترة سلسلة الأقرب فالأقرب من آخر محطة قبلها (أو الإقامة)
+  let last = stayGeo || null; TRIP_PERIODS.forEach(function(p){ const arr = (day.periods[p] || []).slice(); const out = []; while (arr.length){ let bi = 0, bd = Infinity; arr.forEach(function(e, i){ const d = tripKm(last, e.geo); const dd = (d === null) ? 1e9 : d; if (dd < bd || (dd === bd && tripById(e, arr[bi]) < 0)){ bd = dd; bi = i; } }); const e = arr.splice(bi, 1)[0]; out.push(e); if (e.geo) last = e.geo; } day.periods[p] = out; });
+}
+function tripRestFor(day, stayGeo){ if (!stayGeo) return null; const n = tripDayEntries(day).length; if (n < TRIP_RHYTHM.rest.minStops) return null; const c = tripCentroid(day.periods.midday); const d = tripKm(c, stayGeo); if (d === null || d > TRIP_RHYTHM.rest.maxKm) return null; if (tripDayAvailable(day).indexOf('afternoon') < 0) return null; return { minutes: TRIP_RHYTHM.rest.minutes }; }
+function tripBuildPlan(spec){ // spec = { cities:[{cityId, days, stay:{geo}|null, arrival, departure, fallback}], entries:[entry], version }
+  const version = spec.version || 'balanced'; const plan = { days: tripPlanDays(spec.cities), tray: [] };
+  const fresh = (spec.entries || []).map(function(e){ return Object.assign({}, e, { ref: Object.assign({}, e.ref || {}), geo: e.geo ? { lat: e.geo.lat, lng: e.geo.lng } : null, alts: [], alert: e.alert || '' }); }); // لا يعدّل مدخلات المستدعي — نسخة نظيفة بلا بدائل
+  (spec.cities || []).forEach(function(city, ci){
+    const dayIdx = []; plan.days.forEach(function(d, i){ if (d.cityId === city.cityId) dayIdx.push(i); });
+    const mine = fresh.filter(function(e){ const c = e.ref && e.ref.cityId; return c ? c === city.cityId : ci === 0; });
+    const pinned = mine.filter(function(e){ return !!e.geo && tripEntryRole(e).role !== 'none'; }); mine.filter(function(e){ return !e.geo || tripEntryRole(e).role === 'none'; }).sort(tripById).forEach(function(e){ plan.tray.push(e); });
+    if (!dayIdx.length){ pinned.sort(tripById).forEach(function(e){ plan.tray.push(e); }); return; }
+    const pockets = tripPockets(pinned, TRIP_RHYTHM.pocketKm[city.fallback === 'car' ? 'car' : 'transit']);
+    // الخطوة ٣ (r77-٢ · القرار ٩ — التوازن): هدف لكل يوم ≈ الأماكن ÷ الأيام بسقف سعته؛ الجيب يبدأ باليوم الأوسع هدفًا ويُقسَّم فائضه على اليوم الأقرب جغرافيًّا؛ ما فاض عن الأهداف يذهب لأي يوم فيه فراغ؛ وإلا الصينية
+    const room = {}; dayIdx.forEach(function(i){ room[i] = tripDayRoom(plan.days[i], version); });
+    const subcats = {}; pinned.forEach(function(e){ subcats[(e.ref && e.ref.subcatId) || e.id] = true; }); const nMain = Object.keys(subcats).length; // المحطات الرئيسة ≈ التصنيفات الفرعية المختلفة (ما زاد من التصنيف نفسه يصير بديلًا ولا يُحتسب)
+    const target = {}; const base = Math.floor(nMain / dayIdx.length); dayIdx.forEach(function(i){ target[i] = Math.min(room[i], base); }); // القاعدة ٢ ثم الباقي واحدًا واحدًا على الأيام الأوسع فراغًا (٧ على ٣ أيام = ٣·٢·٢ لا ٣·٣·١)
+    const growOrder = dayIdx.slice().sort(function(a, b){ return (room[b] - room[a]) || (a - b); });
+    let sum = dayIdx.reduce(function(a, i){ return a + target[i]; }, 0); let guard = 0;
+    while (sum < nMain && guard++ < 200){ let grew = false; for (let k = 0; k < growOrder.length && sum < nMain; k++){ const i = growOrder[k]; if (target[i] < room[i]){ target[i]++; sum++; grew = true; } } if (!grew) break; }
+    const left = {}; dayIdx.forEach(function(i){ left[i] = target[i]; });
+    const nearest = function(c, pool){ let best = null, bd = Infinity; pool.forEach(function(i){ const dc = tripDayCentroid(plan.days[i]); const d = tripKm(c, dc); const dd = (d === null) ? 1e9 : d; if (dd < bd || (dd === bd && best !== null && i < best)){ bd = dd; best = i; } }); return best; };
+    const pending = [];
+    pockets.forEach(function(pk){
+      let cur = null; const pool = function(){ return dayIdx.filter(function(i){ return left[i] > 0; }); };
+      pk.items.forEach(function(e){
+        for (let k = 0; k < dayIdx.length; k++){ const ta = tripTryPlace(plan.days[dayIdx[k]], e, version, true); if (ta && ta.alt){ tripInsert(plan, dayIdx[k], ta.period, e, ta.alt, false); return; } } // البديل أولًا: التصنيف الفرعي نفسه في يوم ما لا يُحتسب في التوازن
+        if (cur === null || left[cur] <= 0){ const p = pool(); if (!p.length){ pending.push(e); return; } const byLeft = p.slice().sort(function(a, b){ return (left[b] - left[a]) || (a - b); }); const near = (cur === null) ? null : nearest(pk.c, p); cur = (near !== null && tripDayCentroid(plan.days[near])) ? near : byLeft[0]; }
+        const t = tripTryPlace(plan.days[cur], e, version, true);
+        if (t){ tripInsert(plan, cur, t.period, e, t.alt, !!t.excursion); if (!t.alt) left[cur]--; }
+        else { let done = false; const others = dayIdx.filter(function(i){ return i !== cur; }).sort(function(a, b){ return (left[b] - left[a]) || (a - b); }); for (let k = 0; k < others.length && !done; k++){ const t2 = tripTryPlace(plan.days[others[k]], e, version, true); if (t2){ tripInsert(plan, others[k], t2.period, e, t2.alt, !!t2.excursion); if (!t2.alt) left[others[k]]--; done = true; } } if (!done) pending.push(e); }
+      });
+    });
+    pending.forEach(function(e){ let done = false; const order = dayIdx.slice().sort(function(a, b){ return (tripDayRoom(plan.days[b], version) - tripDayRoom(plan.days[a], version)) || (a - b); }); for (let k = 0; k < order.length && !done; k++){ const t = tripTryPlace(plan.days[order[k]], e, version, true); if (t){ tripInsert(plan, order[k], t.period, e, t.alt, !!t.excursion); done = true; } } if (!done) plan.tray.push(e); });
+    dayIdx.forEach(function(i){ const day = plan.days[i]; const stay = city.stay && city.stay.geo; tripOrderDay(day, stay); day.rest = tripRestFor(day, stay); });
+  });
+  plan.tray.sort(tripById);
+  return plan;
+}
+function tripSuggestSlot(plan, e, spec){ // الإضافة من بطاقة المكان (البيان ٦-٢): الدور → الفترات · الإحداثيات → اليوم الأقرب جيبًا · الجدول → هل تتسع؛ وإلا null = الصينية
+  if (!e.geo) return null; const version = (spec && spec.version) || 'balanced'; const cityId = e.ref && e.ref.cityId; const city = ((spec && spec.cities) || []).find(function(c){ return c.cityId === cityId; }) || ((spec && spec.cities) || [])[0];
+  const cands = []; (plan.days || []).forEach(function(d, i){ if (city && d.cityId !== city.cityId) return; const c = tripDayCentroid(d) || (city && city.stay && city.stay.geo) || null; const dist = tripKm(e.geo, c); cands.push({ i: i, dist: (dist === null) ? 1e9 : dist }); });
+  cands.sort(function(a, b){ return (a.dist - b.dist) || (a.i - b.i); });
+  for (let k = 0; k < cands.length; k++){ const t = tripTryPlace(plan.days[cands[k].i], e, version, true); if (t) return { dayIdx: cands[k].i, period: t.period, alt: t.alt || null, excursion: !!t.excursion }; }
+  return null;
+}
+function tripWarnings(plan, spec){ // الخطوة ٦: الجدوى — تحذير لا منع
+  const out = []; const version = (spec && spec.version) || 'balanced';
+  (plan.days || []).forEach(function(d, i){ const cap = tripDayAvailable(d).reduce(function(a, p){ return a + tripDayCapacity(d, p, version); }, 0); const n = tripDayEntries(d).length; if (n > cap) out.push({ dayIdx: i, kind: 'dense', text: tripDayLabel(d) + ' holds ' + n + ' stops for a ' + version + ' day of ' + cap });
+    const city = ((spec && spec.cities) || []).find(function(c){ return c.cityId === d.cityId; }) || {}; const mode = city.fallback === 'car' ? 'car' : 'transit'; const es = tripDayEntries(d);
+    for (let k = 1; k < es.length; k++){ const km = tripRouteKm(es[k - 1].geo, es[k].geo, mode); const lim = TRIP_RHYTHM.longLegKm[mode === 'car' ? 'car' : 'walk']; if (km !== null && km > lim) out.push({ dayIdx: i, kind: 'longLeg', text: tripDayLabel(d) + ': ' + es[k - 1].name + ' → ' + es[k].name + ' ≈ ' + Math.round(km) + ' km' }); } });
   return out;
 }
-function tbOwnerName(uid){ const hit = ((curators || []).find(function(c){ return c.uid === uid; }) || (communityUsers || []).find(function(c){ return c.uid === uid; })); return (hit && hit.nickname) || 'a member'; }
-async function tbLoadPlaces(cityId, src){ // أ-٢ (القرار ٤): خمسة مصادر لمدينة الرحلة، تُقرأ مرة بالجلسة
-  src = src || 'mine'; const k = cityId + '|' + src; if (TB_PLACES[k]) return TB_PLACES[k];
-  let out = [];
-  try{
-    if (src === 'mine'){ let links = {}; try{ const d = await mpData.cityLists.get(currentUser.uid, cityId); links = Object.assign({}, (d && d.categories) || {}); }catch(e){} try{ Object.assign(links, await mpData.privatePlaces.get(currentUser.uid, cityId)); }catch(e){} out = tbRowsFromLinks(links, cityId, null, ''); }
-    else if (src === 'bookmarked'){ const map = placeBmMap(); const byOwner = {}; Object.keys(map).forEach(function(id){ const b = map[id] || {}; const m = /^oid:([^:]+):([^:]+):(.+)$/.exec(String(b.key || '')); if (m && m[2] === cityId){ byOwner[m[1]] = byOwner[m[1]] || {}; byOwner[m[1]][m[3]] = true; } }); // مفكرة أماكن الآخرين بهذه المدينة؛ أماكني في «My places»
-      for (const uid of Object.keys(byOwner)){ try{ const d = await mpData.cityLists.get(uid, cityId); tbRowsFromLinks((d && d.categories) || {}, cityId, uid, tbOwnerName(uid)).forEach(function(r){ if (byOwner[uid][r.ref.placeId]) out.push(r); }); }catch(e){} } }
-    else if (src === 'shared'){ if (!(sharedCityLists || []).length){ try{ await loadSharedCityLists(); }catch(e){} } (sharedCityLists || []).filter(function(r){ return r.cityId === cityId; }).forEach(function(r){ out = out.concat(tbRowsFromLinks(r.categories || {}, cityId, r.ownerId, r.nickname || tbOwnerName(r.ownerId))); }); }
-    else if (src === 'curators'){ if (curators === null){ try{ curators = await mpData.profiles.curators(200); }catch(e){ curators = []; } } for (const c of (curators || [])){ if (currentUser && c.uid === currentUser.uid) continue; if (Array.isArray(c.publicCityIds) && c.publicCityIds.length && c.publicCityIds.indexOf(cityId) < 0) continue; try{ const d = await mpData.cityLists.get(c.uid, cityId); if (d && d.public) out = out.concat(tbRowsFromLinks(d.categories || {}, cityId, c.uid, c.nickname || 'a curator')); }catch(e){} } }
-    else { const rows = (await mpData.cityLists.publicLists()).filter(function(r){ return r.cityId === cityId && (!currentUser || r.ownerId !== currentUser.uid); }).slice(0, 20); for (const r of rows){ try{ const d = await mpData.cityLists.get(r.ownerId, cityId); out = out.concat(tbRowsFromLinks((d && d.categories) || {}, cityId, r.ownerId, r.nickname || tbOwnerName(r.ownerId))); }catch(e){} } }
-  }catch(e){ out = []; }
-  TB_PLACES[k] = out; return out;
+function tripPlanNormalize(plan){ // قراءة مستند قديم أو ناقص بأمان: الفترات الأربع دائمًا، والمصفوفات موجودة
+  plan = plan || {}; const days = Array.isArray(plan.days) ? plan.days : []; days.forEach(function(d){ d.periods = d.periods || {}; TRIP_PERIODS.forEach(function(p){ if (!Array.isArray(d.periods[p])) d.periods[p] = []; d.periods[p].forEach(function(e){ e.alts = Array.isArray(e.alts) ? e.alts : []; e.alert = e.alert || ''; }); }); if (d.rest && typeof d.rest.minutes !== 'number') d.rest = null; if (!d.excursion) d.excursion = null; d.off = tripDayOff(d); }); days.forEach(function(d, i){ d.n = i + 1; if (d.kind !== 'full') d.kind = 'full'; if (typeof d.from !== 'number') d.from = null; if (typeof d.to !== 'number') d.to = null; }); plan.days = days; plan.tray = Array.isArray(plan.tray) ? plan.tray : []; return plan; // r77-٢: مسودات الدفعة أ (يوم ٠ · أنواع الطرفين) تُرقَّم ١..N عند القراءة
 }
-function tbMeta(cityId, key){ for (const k of Object.keys(TB_PLACES)){ if (k.indexOf(cityId + '|') !== 0) continue; const hit = TB_PLACES[k].find(function(p){ return p.key === key; }); if (hit) return hit; } return null; }
-function tbPickedList(cityId){ const m = TB.picked[cityId] || {}; return Object.keys(m).sort().map(function(k){ return m[k]; }); }
-function tbFeas(n, days){ const per = days ? n / days : n; const w = per <= 0 ? '' : per <= 4 ? 'calm' : per <= 6 ? 'balanced' : per <= 9 ? 'dense' : 'too many'; return { per: Math.round(per * 10) / 10, word: w }; }
-function tbFeasLine(cityId){ const c = TB.cities.find(function(x){ return x.cityId === cityId; }); const n = tbPickedList(cityId).length; if (!n) return '<span class="dim">Pick at least one place</span>'; const f = tbFeas(n, c ? c.days : 1); return n + (n === 1 ? ' place' : ' places') + ' for ' + (c ? c.days : 1) + (c && c.days === 1 ? ' day' : ' days') + ' ≈ ' + f.per + ' a day — <b class="' + (f.word === 'too many' ? 'warn' : 'ok') + '">' + f.word + '</b>'; }
-function tbSetTitle(t, step){ const el = document.getElementById('tbTitle'); if (el) el.textContent = t; const st = document.getElementById('tbSteps'); if (st) st.innerHTML = '<span' + (step >= 1 ? ' class="on"' : '') + '></span><span' + (step >= 2 ? ' class="on"' : '') + '></span>'; const bk = document.getElementById('tbBack'); if (bk) bk.classList.toggle('hidden', step === 1 && !TB.pick && !TB.plan); }
-function tbRender(){ if (!TB) return; const body = document.getElementById('tbBody'); if (!body) return; if (TB.pick){ body.innerHTML = tbPickHtml(); tbSetTitle('Places for ' + (TB.cities.find(function(c){ return c.cityId === TB.pick; }) || {}).cityName, TB.plan ? 2 : 1); return; } if (TB.stage === 2){ body.innerHTML = tbDraftHtml(); tbSetTitle('Draft · 2 of 2', 2); return; } body.innerHTML = tbStage1Html(); tbSetTitle(TB.plan ? 'Setup' : (TB.dayPlan ? 'Plan a day' : 'Build a trip') + ' · 1 of 2', 1); }
-/* ── المرحلة الأولى: الإعداد ── */
-function tbStage1Html(){
-  const c = tbCity(); const cities = TB.cities; const chip = function(on, label, on_){ return '<button type="button" class="chip' + (on ? ' on' : '') + '" onclick="' + on_ + '">' + label + '</button>'; };
-  let h = '';
-  if (TB.dayPlan) h += '<div class="tb-note">Same builder as a trip — the city and one day are already filled from the Places tab. It lands in My trips under Day plans.</div>';
-  h += '<div class="gsec">Required</div><label class="flabel">City' + (cities.length > 1 ? ' <span class="dim">· ' + cities.length + ' cities — one section each</span>' : '') + '</label>';
-  h += '<div class="chiprow tb-cities">' + cities.map(function(x, i){ return chip(i === TB.ci, escapeHtml(x.cityName) + (cities.length > 1 ? ' · ' + x.days + (x.days === 1 ? ' day' : ' days') : ''), 'tbSelCity(' + i + ')'); }).join('') + (TB.dayPlan ? '' : chip(false, '＋ City', 'tbAddCityToggle()')) + '</div>';
-  if (TB.addCityOpen || !cities.length){ const mine = cityListAllCities().filter(function(x){ return !cities.some(function(y){ return y.cityId === x.id; }); }); h += '<div id="tbCityHost">' + pickerRow({ id: 'tbCity', label: 'Choose a city', placeholder: 'Type a city…', onPick: 'tbPickCity', canAdd: true, onAdd: 'tbAddCity()', emptyText: 'No city matches — add it below', items: mine.map(function(x){ return { id: x.id, name: x.name, icon: countryFlag(x.country) || '' }; }) }) + '</div>'; }
-  if (c){
-    if (!TB.dayPlan){ const locked = !!c.daysLocked; h += '<label class="flabel">Days' + (cities.length > 1 ? ' in ' + escapeHtml(c.cityName) : '') + (locked ? ' <span class="dim">· from the dates</span>' : '') + '</label><div class="tb-days"><div class="tb-step' + (locked ? ' locked' : '') + '"><button type="button" class="actn" onclick="tbSetDays(' + (c.days - 1) + ')" aria-label="One day less" ' + (locked || c.days <= 1 ? 'disabled' : '') + '>−</button><input type="number" class="modal-input" id="tbDays" min="1" max="30" inputmode="numeric" value="' + c.days + '" ' + (locked ? 'disabled' : '') + ' onchange="tbSetDays(parseInt(this.value, 10))"><button type="button" class="actn" onclick="tbSetDays(' + (c.days + 1) + ')" aria-label="One day more" ' + (locked || c.days >= 30 ? 'disabled' : '') + '>+</button></div>' + (cities.length > 1 ? chip(false, '✕ Remove city', 'tbRemoveCity()') : '') + '</div>'; } // أ-٢ · القرار ١: عدّاد لا شرائح
-    const n = tbPickedList(c.cityId).length;
-    h += '<label class="flabel">Places for this ' + (TB.dayPlan ? 'day' : 'trip') + '</label><button type="button" class="tb-door" onclick="tbOpenPick(\'' + attrStr(c.cityId) + '\')"><span>Pick places in ' + escapeHtml(c.cityName) + '</span><span class="tb-door-n">' + n + ' picked ›</span></button><div class="tb-feas">' + tbFeasLine(c.cityId) + '</div>';
-    h += '<div class="gsec">Optional</div>';
-    const a = c.arrival || {}, d = c.departure || {};
-    h += '<div class="tb-grid2"><label class="flabel">' + (TB.dayPlan ? 'Start' : 'Arrival') + '<span class="tb-dt">' + (TB.dayPlan ? '' : '<input type="date" class="modal-input" value="' + attrStr(a.date || '') + '" onchange="tbSetDT(\'arrival\', \'date\', this.value)">') + '<input type="time" class="modal-input" value="' + attrStr(a.time || '') + '" onchange="tbSetDT(\'arrival\', \'time\', this.value)"></span></label>'
-      + '<label class="flabel">' + (TB.dayPlan ? 'Back by' : 'Departure') + '<span class="tb-dt">' + (TB.dayPlan ? '' : '<input type="date" class="modal-input" value="' + attrStr(d.date || '') + '" onchange="tbSetDT(\'departure\', \'date\', this.value)">') + '<input type="time" class="modal-input" value="' + attrStr(d.time || '') + '" onchange="tbSetDT(\'departure\', \'time\', this.value)"></span></label></div>';
-    h += '<label class="flabel">' + (TB.dayPlan ? 'Start from' : 'Where you stay') + '</label><div class="tb-stay"><input type="text" class="modal-input" id="tbStayName" placeholder="Hotel, apartment or a friend\'s place" value="' + attrStr(c.stay && c.stay.name || '') + '" onchange="tbSetStayName(this.value)"><button type="button" class="actn" onclick="tbStayFromList()">From list</button>' + (c.stay && c.stay.geo ? '<span class="tb-pin-ok" title="Pinned — rest and day order use it">📍</span>' : '') + '</div>';
-    h += '<label class="flabel">When it is too far to walk</label><div class="chiprow">' + chip(c.fallback !== 'car', 'Metro &amp; transit', "tbSetFallback('transit')") + chip(c.fallback === 'car', 'Car', "tbSetFallback('car')") + '</div>';
-    h += '<div class="tb-hint">Short legs are walked; this is the fallback for longer ones, and you can change any leg later in the day route. Arrival and departure times trim the first and last day; where you stay adds a mid-day rest.</div>';
-  }
-  const can = cities.length && cities.every(function(x){ return tbPickedList(x.cityId).length > 0; });
-  h += '<button type="button" class="cta wide tb-cta" ' + (can ? '' : 'disabled') + ' onclick="' + (TB.plan ? 'tbApplySetup()' : 'tbBuild()') + '">' + (TB.plan ? 'Done' : 'Build the draft →') + '</button>';
-  return h;
+/* ═══ r78 (حزمة الرحلات · الدفعة ب — البيان ٦-٣ · التثبيتان ٢ و٦): مسار اليوم — يُشتق ترتيبه من الخطة دائمًا، ويُخزَّن منه ما كتبه المستخدم فقط:
+   trip.dayRoutes[String(day.n)] = { leave:'HH:MM'|null, backBy:'HH:MM'|null, legs:{ 'fromId>toId': { mode:'walk'|'transit'|'car', minutes:n|null } }, stays:{ entryId: minutes } }
+   المسار: الإقامة → الصباح → الظهيرة → (الاستراحة في الإقامة) → العصر → المساء → الإقامة. الأوقات تُحسب مما أُدخل فقط؛ رِجل بلا دقائق = «غير مكتمل». ═══ */
+const TRIP_MODES = [['walk', 'Walk'], ['transit', 'Metro & transit'], ['car', 'Car']];
+const TRIP_MODE_LABEL = { walk: 'Walk', transit: 'Metro & transit', car: 'Car' };
+const TRIP_NAV_APPS = [['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']];
+function tripLegKey(fromId, toId){ return fromId + '>' + toId; }
+function tripRouteOf(trip, day){ const r = (trip && trip.dayRoutes && day && trip.dayRoutes[String(day.n)]) || {}; return { leave: r.leave || null, backBy: r.backBy || null, legs: r.legs || {}, stays: r.stays || {} }; }
+function tripLegMode(straightKm, fallback){ const fb = fallback === 'car' ? 'car' : 'transit'; if (straightKm === null) return fb; return (straightKm * TRIP_RHYTHM.detour.walk <= TRIP_RHYTHM.walkKm) ? 'walk' : fb; } // الافتراض من المسافة: دون حدّ المشي → مشي، وإلا بديل الرحلة
+function tripDaySequence(day, city){ // ترتيب اليوم من الخطة (الخيار ١ فقط؛ البدائل لا تدخل المسار — الاختيار ٩)
+  const stay = (city && city.stay && city.stay.name) ? { kind: 'stay', id: 'stay', name: city.stay.name, geo: (city.stay.geo && typeof city.stay.geo.lat === 'number') ? city.stay.geo : null } : null;
+  const seq = []; if (stay) seq.push(stay);
+  TRIP_PERIODS.forEach(function(p){ if (p === 'afternoon' && day.rest && stay) seq.push({ kind: 'rest', id: 'stay', name: stay.name, geo: stay.geo, minutes: day.rest.minutes || 0 }); (day.periods[p] || []).forEach(function(e){ seq.push({ kind: 'stop', id: e.id, name: e.name, geo: e.geo || null, entry: e, period: p }); }); });
+  if (stay && seq.length > 1) seq.push({ kind: 'end', id: 'stay', name: stay.name, geo: stay.geo });
+  return seq;
 }
-function tbSelCity(i){ TB.ci = i; TB.addCityOpen = false; tbRender(); }
-function tbAddCityToggle(){ TB.addCityOpen = !TB.addCityOpen; tbRender(); }
-function tbPickCity(id){ const c = cityListAllCities().find(function(x){ return x.id === id; }); if (!c) return; if (!TB.cities.some(function(y){ return y.cityId === id; })) TB.cities.push(tbNewCity(c)); TB.ci = TB.cities.length - 1; TB.addCityOpen = false; try{ pickerRowClose('tbCity'); }catch(_){} tbRender(); }
-async function tbAddCity(){ await addCityListCity(); if (cityListCityId && cityListAllCities().some(function(c){ return c.id === cityListCityId; })) tbPickCity(cityListCityId); }
-function tbRemoveCity(){ if (TB.cities.length <= 1) return; TB.cities.splice(TB.ci, 1); TB.ci = Math.max(0, TB.ci - 1); tbRender(); }
-function tbSetDays(n){ const c = tbCity(); if (!c || c.daysLocked) return; n = parseInt(n, 10); if (!n || isNaN(n)) n = c.days; c.days = Math.max(1, Math.min(30, n)); tbRender(); }
-function tbSetDT(which, field, v){ const c = tbCity(); if (!c) return; c[which] = c[which] || {}; c[which][field] = String(v || ''); if (!c[which].date && !c[which].time) c[which] = null; if (TB.dayPlan && c[which] && c[which].time && !c[which].date && which === 'arrival') c[which].date = tripTodayYmd();
-  const n = (!TB.dayPlan && c.arrival && c.arrival.date && c.departure && c.departure.date) ? tripDaysFromDates(c.arrival.date, c.departure.date) : null; // أ-٢ · القرار ٣: التواريخ تحكم العدّاد
-  if (n){ c.days = n; c.daysLocked = true; } else { delete c.daysLocked; }
-  if (field === 'date') tbRender(); }
-function tbSetStayName(v){ const c = tbCity(); if (!c) return; v = String(v || '').trim(); c.stay = v ? Object.assign({}, c.stay || {}, { name: v, geo: (c.stay && c.stay.name === v) ? c.stay.geo : null }) : null; }
-async function tbStayFromList(){ const c = tbCity(); if (!c) return; const list = (await tbLoadPlaces(c.cityId, 'mine')).filter(function(p){ return p.geo; }); if (!list.length){ showToast('No pinned place in this city yet'); return; } const body = document.getElementById('tbBody'); body.innerHTML = '<p class="mp-empty mini" style="margin-bottom:10px;">Where you stay — from your pinned places</p>' + pickerPanel({ id: 'tbStay', bare: true, onPick: 'tbStayPicked', items: list.map(function(p){ return { id: p.key, name: p.name, sub: p.path }; }) }) + '<button type="button" class="btn btn-ghost wide" onclick="tbRender()">Cancel</button>'; }
-function tbStayPicked(key){ const c = tbCity(); const p = tbMeta(c.cityId, key); if (p) c.stay = { name: p.name, geo: p.geo }; tbRender(); }
-function tbSetFallback(v){ const c = tbCity(); if (c) c.fallback = v; tbRender(); }
-/* ── اختيار الأماكن (خمسة مصادر) ── */
-async function tbOpenPick(cityId){ TB.pick = cityId; TB.srcOpen = false; await tbLoadPlaces(cityId, TB.src); tbRender(); }
-async function tbPickSrc(src){ TB.src = src; TB.srcOpen = false; const body = document.getElementById('tbBody'); if (body) body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; await tbLoadPlaces(TB.pick, src); tbRender(); }
-function tbSrcToggle(){ TB.srcOpen = !TB.srcOpen; tbRender(); if (TB.srcOpen) tbSrcPrefetch(); }
-async function tbSrcPrefetch(){ const cityId = TB.pick; const missing = TB_SOURCES.filter(function(x){ return !TB_PLACES[cityId + '|' + x[0]]; }); if (!missing.length) return; await Promise.all(missing.map(function(x){ return tbLoadPlaces(cityId, x[0]); })); if (TB && TB.srcOpen && TB.pick === cityId) tbRender(); } // أ-٢: عدّاد كل مصدر في اللوحة — القراءة مرة بالجلسة
-function tbPickHtml(){
-  const cityId = TB.pick; const all = TB_PLACES[cityId + '|' + TB.src] || []; const picked = TB.picked[cityId] || {}; const c = TB.cities.find(function(x){ return x.cityId === cityId; }); const n = Object.keys(picked).length; const srcLabel = (TB_SOURCES.find(function(x){ return x[0] === TB.src; }) || TB_SOURCES[0])[1];
-  let h = '<div class="chiprow tb-srcrow"><button type="button" class="csel" onclick="tbSrcToggle()"><b>' + escapeHtml(srcLabel) + '</b> <span class="dim">· ' + all.length + '</span> <span class="arr">' + (TB.srcOpen ? '⌃' : '⌄') + '</span></button><button type="button" class="chip" onclick="tbPickAll(true)">Select all · ' + all.filter(function(p){ return p.geo; }).length + '</button><button type="button" class="chip" onclick="tbPickAll(false)">Clear</button></div>';
-  if (TB.srcOpen) h += pickerPanel({ id: 'tbSrc', bare: true, onPick: 'tbPickSrc', items: TB_SOURCES.map(function(x){ const l = TB_PLACES[cityId + '|' + x[0]]; return { id: x[0], name: x[1], count: l ? l.length : undefined, selected: TB.src === x[0] }; }) });
-  h += '<div class="tb-feasbar"><b>' + n + ' picked · ' + (c ? c.days : 1) + (c && c.days === 1 ? ' day' : ' days') + '</b><span>' + (n ? '≈ ' + tbFeas(n, c ? c.days : 1).per + ' a day — ' + tbFeas(n, c ? c.days : 1).word : 'nothing yet') + '</span></div>';
-  if (!all.length) h += '<div class="mp-empty mini">' + (TB.src === 'mine' ? 'No places in this city yet — add some in Places first.' : 'Nothing from this source in this city.') + '</div>';
-  const groups = {}; const order = []; all.forEach(function(p){ const g = p.path + (p.owner ? ' · ' + p.owner : ''); if (!groups[g]){ groups[g] = []; order.push(g); } groups[g].push(p); });
-  order.forEach(function(k){ const items = groups[k].map(function(p){ const on = !!picked[p.key]; return '<label class="tb-pick' + (p.geo ? '' : ' nopin') + '"><input type="checkbox" ' + (on ? 'checked ' : '') + (p.geo ? '' : 'disabled ') + 'onchange="tbTogglePick(\'' + attrStr(p.key) + '\', this.checked)"><span class="tb-pick-t"><b dir="auto">' + escapeHtml(p.name) + '</b><span dir="auto">' + (p.geo ? escapeHtml(p.area || '') + (p.area ? ' · ' : '') + 'pinned' : '<i class="warn">no pin yet — ' + (p.owner ? 'its owner has not placed it on the map' : 'place it on the map to include it') + '</i>') + '</span></span></label>'; }).join(''); h += placeGroupHtml(k, groups[k].length, '', items); });
-  h += '<div class="sheet-row tb-row"><button type="button" class="btn btn-ghost" onclick="tbPickCancel()">Back</button><button type="button" class="btn btn-brass" onclick="tbPickDone()">Use these ' + n + ' →</button></div>';
-  return h;
+function tripDaySchedule(trip, day, city){ // الجدولة من المدخلات وحدها: الخروج + دقائق كل رِجل + مدة كل محطة؛ أول رِجل بلا دقائق تُطفئ ما بعدها
+  const route = tripRouteOf(trip, day); const seq = tripDaySequence(day, city); const fallback = city && city.fallback;
+  const leave = route.leave || (typeof day.from === 'number' ? tripHHMM(day.from) : null); const backBy = route.backBy || (typeof day.to === 'number' ? tripHHMM(day.to) : null);
+  let t = tripMinutesOf(leave); let known = (t !== null); const steps = []; let legs = 0, missing = 0, km = 0, kmKnown = true;
+  seq.forEach(function(s, i){
+    const step = { kind: s.kind, id: s.id, name: s.name, geo: s.geo, entry: s.entry || null, period: s.period || null, leg: null, arrive: null, depart: null, minutes: 0 };
+    if (i > 0){ const prev = seq[i - 1]; const key = tripLegKey(prev.id, s.id); const saved = route.legs[key] || {}; const d = tripKm(prev.geo, s.geo); const mode = TRIP_MODE_LABEL[saved.mode] ? saved.mode : tripLegMode(d, fallback); const legKm = (d === null) ? null : d * (TRIP_RHYTHM.detour[mode] || 1); const min = (typeof saved.minutes === 'number' && saved.minutes >= 0) ? saved.minutes : null;
+      legs++; if (min === null) missing++; if (legKm === null) kmKnown = false; else km += legKm;
+      step.leg = { key: key, fromId: prev.id, fromName: prev.name, fromGeo: prev.geo, toGeo: s.geo, km: legKm, mode: mode, minutes: min, missing: min === null, saved: !!route.legs[key] };
+      if (known){ if (min === null) known = false; else t += min; } }
+    step.arrive = (known && s.kind !== 'stay') ? t : null;
+    if (s.kind === 'stop'){ const sv = route.stays[s.id]; step.minutes = (typeof sv === 'number' && sv >= 0) ? sv : tripEntryRole(s.entry).minutes; step.minutesDefault = typeof sv !== 'number'; }
+    else if (s.kind === 'rest') step.minutes = s.minutes || 0;
+    if (known) t += step.minutes; step.depart = known ? t : null; if (s.kind === 'end') step.depart = null;
+    steps.push(step);
+  });
+  const endAt = known ? t : null; const back = tripMinutesOf(backBy); const hasLeave = tripMinutesOf(leave) !== null;
+  const stops = steps.filter(function(x){ return x.kind === 'stop'; }).length; const complete = hasLeave && missing === 0 && stops > 0; const late = complete && back !== null && endAt !== null && endAt > back;
+  return { steps: steps, stops: stops, leave: leave, backBy: backBy, hasLeave: hasLeave, legs: legs, missing: missing, km: kmKnown ? km : null, endAt: endAt, complete: complete, late: late, started: !!(trip && trip.dayRoutes && trip.dayRoutes[String(day.n)]) };
 }
-function tbTogglePick(key, on){ const cityId = TB.pick; TB.picked[cityId] = TB.picked[cityId] || {}; const p = tbMeta(cityId, key); if (!p) return; if (on) TB.picked[cityId][key] = TB.picked[cityId][key] || tbEntryOf(p); else delete TB.picked[cityId][key]; const bar = document.querySelector('#tbBody .tb-feasbar'); if (bar){ const c = TB.cities.find(function(x){ return x.cityId === cityId; }); const n = Object.keys(TB.picked[cityId]).length; bar.innerHTML = '<b>' + n + ' picked · ' + (c ? c.days : 1) + (c && c.days === 1 ? ' day' : ' days') + '</b><span>' + (n ? '≈ ' + tbFeas(n, c ? c.days : 1).per + ' a day — ' + tbFeas(n, c ? c.days : 1).word : 'nothing yet') + '</span>'; } const cta = document.querySelector('#tbBody .btn-brass'); if (cta) cta.textContent = 'Use these ' + Object.keys(TB.picked[cityId]).length + ' →'; }
-function tbPickAll(on){ const cityId = TB.pick; const list = TB_PLACES[cityId + '|' + TB.src] || []; TB.picked[cityId] = TB.picked[cityId] || {}; list.forEach(function(p){ if (on){ if (p.geo) TB.picked[cityId][p.key] = TB.picked[cityId][p.key] || tbEntryOf(p); } else delete TB.picked[cityId][p.key]; }); tbRender(); } // على المصدر المعروض فقط
-function tbPickCancel(){ if (TB.plan){ const keep = {}; tripPlanEntries(TB.plan).concat(TB.plan.tray).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x){ if ((x.ref.cityId || '') === TB.pick) keep[tbKey(x.ref)] = x; }); }); TB.picked[TB.pick] = keep; } TB.pick = null; tbRender(); } // الرجوع يعيد المختار إلى ما في الخطة
-function tbPickDone(){ const cityId = TB.pick; TB.pick = null; if (TB.plan) tbApplyPicks(cityId); tbRender(); }
-function tbApplyPicks(cityId){ // أ-٢ (القرار ٥): المضاف يدخل بقاعدة الاقتراح والمُلغى يُزال من خطته — لا إعادة بناء
-  const plan = TB.plan; const picked = TB.picked[cityId] || {}; const inPlan = {}; tripPlanEntries(plan).concat(plan.tray).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x){ if ((x.ref.cityId || '') === cityId) inPlan[tbKey(x.ref)] = x; }); });
-  const removed = Object.keys(inPlan).filter(function(k){ return !picked[k]; }).sort(); const added = Object.keys(picked).filter(function(k){ return !inPlan[k]; }).sort();
-  if (!removed.length && !added.length) return;
-  tbSnapshot();
-  removed.forEach(function(k){ const x = inPlan[k]; const alts = (x.alts || []).slice(); tripDetach(plan, x.id); alts.forEach(function(a){ if (picked[tbKey(a.ref)]){ a.alts = []; plan.tray.push(a); } }); }); // بدائل المُزال المختارة تعود إلى الصينية
-  added.forEach(function(k){ const e = picked[k]; const fresh = tripNewEntry({ id: e.id, ref: e.ref, name: e.name, geo: e.geo, sec: e.sec }); TB.picked[cityId][k] = fresh; const slot = tripSuggestSlot(plan, fresh, tbSpec()); if (slot) tripInsert(plan, slot.dayIdx, slot.period, fresh, slot.alt, slot.excursion); else plan.tray.push(fresh); });
-  plan.tray.sort(tripById); tbSave();
+function tripCityOfDay(trip, day){ return ((trip && trip.cities) || []).find(function(c){ return c.cityId === day.cityId; }) || ((trip && trip.cities) || [])[0] || null; }
+function tripRoutesSummary(trip){ const days = (trip && trip.plan && Array.isArray(trip.plan.days)) ? trip.plan.days : []; let complete = 0, started = 0, total = 0; days.forEach(function(d){ const s = tripDaySchedule(trip, d, tripCityOfDay(trip, d)); if (!s.stops) return; total++; if (s.complete) complete++; if (s.started) started++; }); return { complete: complete, started: started, total: total }; } // الأيام بلا محطات لا تُعدّ
+function tripRoutesPrune(trip){ // عند الحفظ والقراءة: الأرجل التي فقدت طرفًا تُحذف، ومدد محطات زالت، وأيام خارج الخطة؛ الأرجل بين مكانين غير متجاورين تبقى (النقل لا يُفقد ما كُتب)
+  if (!trip || !trip.dayRoutes || !trip.plan || !Array.isArray(trip.plan.days)) return trip;
+  const ids = { stay: true }; tripPlanEntries(trip.plan).concat(trip.plan.tray || []).forEach(function(e){ ids[e.id] = true; (e.alts || []).forEach(function(a){ ids[a.id] = true; }); }); // الطرف = مكان ما زال في الرحلة (يومًا أو بديلًا أو في الصينية)
+  const out = {}; Object.keys(trip.dayRoutes).forEach(function(k){ const n = parseInt(k, 10); if (!(n >= 1 && n <= trip.plan.days.length)) return; const r = trip.dayRoutes[k] || {}; const legs = {}; Object.keys(r.legs || {}).forEach(function(key){ const p = key.split('>'); const L = r.legs[key] || {}; if (p.length === 2 && ids[p[0]] && ids[p[1]] && (TRIP_MODE_LABEL[L.mode] || typeof L.minutes === 'number')) legs[key] = { mode: TRIP_MODE_LABEL[L.mode] ? L.mode : null, minutes: (typeof L.minutes === 'number' && L.minutes >= 0) ? Math.round(L.minutes) : null }; });
+    const stays = {}; Object.keys(r.stays || {}).forEach(function(id){ if (ids[id] && typeof r.stays[id] === 'number' && r.stays[id] >= 0) stays[id] = Math.round(r.stays[id]); });
+    const o = { leave: tripMinutesOf(r.leave) !== null ? r.leave : null, backBy: tripMinutesOf(r.backBy) !== null ? r.backBy : null, legs: legs, stays: stays };
+    if (Object.keys(legs).length || Object.keys(stays).length || o.leave || o.backBy) out[k] = o; });
+  trip.dayRoutes = out; return trip;
 }
-/* ── البناء والإعداد والمسودة ── */
-function tbSpec(){ return { cities: TB.cities, version: TB.version, entries: [] }; }
-async function tbBuild(){
-  tbRebuild(); TB.stage = 2; TB.moved = false; TB.undo = []; TB.setupSig = tbSetupSig(); TB.daySel = Math.max(0, TB.plan.days.findIndex(function(d){ return tripDayEntries(d).length; })); tbEnsureTrip(); tbSave(); tbRender();
+function tripNavUrl(app, from, to, mode){ // روابط عادية بلا مفاتيح (البيان ٦-٣) من دبابيسنا وحدها
+  if (!to || typeof to.lat !== 'number') return null; const ll = function(g){ return g.lat.toFixed(6) + ',' + g.lng.toFixed(6); }; const hasFrom = !!(from && typeof from.lat === 'number');
+  if (app === 'apple'){ const flag = mode === 'walk' ? 'w' : mode === 'car' ? 'd' : 'r'; return 'https://maps.apple.com/?' + (hasFrom ? 'saddr=' + ll(from) + '&' : '') + 'daddr=' + ll(to) + '&dirflg=' + flag; }
+  if (app === 'waze') return 'https://waze.com/ul?ll=' + ll(to) + '&navigate=yes';
+  const tm = mode === 'walk' ? 'walking' : mode === 'car' ? 'driving' : 'transit'; return 'https://www.google.com/maps/dir/?api=1&' + (hasFrom ? 'origin=' + ll(from) + '&' : '') + 'destination=' + ll(to) + '&travelmode=' + tm;
 }
-async function tbApplySetup(){ // أ-٢ (القرار ٧): الإعداد لا يعيد البناء إلا إن تغيّرت الأيام أو المدن
-  if (!TB.plan){ return tbBuild(); }
-  if (tbSetupSig() !== TB.setupSig){ const ok = await mpConfirm('Days or cities changed — the draft is rebuilt and what you moved by hand is lost.', { title: 'Rebuild the draft?', ok: 'Rebuild' }); if (!ok) return; return tbBuild(); }
-  const fresh = tripPlanDays(TB.cities); const plan = TB.plan; // البنية نفسها: تُنسخ الفترات، وما خرج عن نافذة اليوم الجديدة إلى الصينية، وتُعاد الاستراحة
-  fresh.forEach(function(d, i){ const old = plan.days[i]; if (!old) return; const avail = tripDayAvailable(d); TRIP_PERIODS.forEach(function(p){ if (avail.indexOf(p) >= 0) d.periods[p] = old.periods[p] || []; else (old.periods[p] || []).forEach(function(e){ plan.tray.push(e); }); }); d.excursion = old.excursion; const city = TB.cities.find(function(c){ return c.cityId === d.cityId; }) || {}; d.rest = tripRestFor(d, city.stay && city.stay.geo); });
-  plan.days = fresh; plan.tray.sort(tripById); TB.stage = 2; tbSave(); tbRender();
+function tripHHMMx(min){ if (typeof min !== 'number' || isNaN(min)) return ''; return tripHHMM(min) + (min >= 1440 ? ' +1' : ''); } // العودة بعد منتصف الليل (الاختيار ٤)
+function tripKmLabel(km){ if (km === null || typeof km !== 'number') return ''; return '≈ ' + (km < 10 ? (Math.round(km * 10) / 10).toFixed(1) : String(Math.round(km))) + ' km'; }
+function tripDayFold(day){ // ب-٢: ما في فترة مطفأة ينتقل إلى ضامّتها (في آخرها) بلا فقدان — يُستدعى بعد تغيير الفترات من الإعداد
+  const ab = tripDayAbsorb(day); let moved = 0; Object.keys(ab).forEach(function(o){ const host = ab[o]; const arr = day.periods[o] || []; if (!host || !arr.length) return; day.periods[host] = (day.periods[host] || []).concat(arr); day.periods[o] = []; moved += arr.length; }); if (day.excursion && !tripDayEntries(day).some(function(e){ return e.id === day.excursion; })) day.excursion = null; return moved;
 }
-function tbRebuild(){ const entries = []; TB.cities.forEach(function(c){ tbPickedList(c.cityId).forEach(function(e){ entries.push(tripNewEntry({ id: e.id, ref: e.ref, name: e.name, geo: e.geo, sec: e.sec })); }); }); TB.plan = tripBuildPlan({ cities: TB.cities, entries: entries, version: TB.version }); TB.picked = {}; tripPlanEntries(TB.plan).concat(TB.plan.tray).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x){ const cid = x.ref.cityId; TB.picked[cid] = TB.picked[cid] || {}; TB.picked[cid][tbKey(x.ref)] = x; }); }); }
-function tbEnsureTrip(){ let t = tbTrip(); const first = TB.cities[0] || {}; if (!t){ t = { id: generateTripId(), title: '', cityId: first.cityId || null, cityName: first.cityName || '', cities: [], plan: null, version: TB.version, status: 'draft', public: false, sharedWith: [], sharedWithNames: {} }; if (TB.dayPlan) t.dayPlan = true; userTrips.push(t); TB.tripId = t.id; } t.cities = JSON.parse(JSON.stringify(TB.cities)); t.cityId = first.cityId || null; t.cityName = first.cityName || ''; t.plan = JSON.parse(JSON.stringify(TB.plan)); t.version = TB.version; if (!t.status) t.status = 'draft'; delete resolvedTripCache[t.id]; return t; }
-function tbSave(){ if (!TB) return; clearTimeout(TB.saveTimer); TB.saveTimer = setTimeout(tbSaveNow, 1000); }
-async function tbSaveNow(){ if (!TB) return; const t = tbEnsureTrip(); TB.saveTimer = null; await saveTrip(t); } // مؤقّت متأخر بعد إغلاق المنشئ لا يحفظ شيئًا
-function tbSnapshot(){ TB.undo.push(JSON.stringify(TB.plan)); if (TB.undo.length > 20) TB.undo.shift(); TB.moved = true; }
-function tbUndo(){ if (!TB.undo.length) return; TB.plan = tripPlanNormalize(JSON.parse(TB.undo.pop())); TB.picked = {}; tripPlanEntries(TB.plan).concat(TB.plan.tray).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x){ const cid = x.ref.cityId; TB.picked[cid] = TB.picked[cid] || {}; TB.picked[cid][tbKey(x.ref)] = x; }); }); tbSave(); tbRender(); }
-async function tbVersion(v){ if (v === TB.version && !TB.moved) return; if (TB.moved){ const ok = await mpConfirm('A new version rebuilds the draft and drops what you moved by hand.', { title: 'Switch to ' + v + '?', ok: 'Rebuild as ' + v }); if (!ok) return; } TB.version = v; tbRebuild(); TB.moved = false; TB.undo = []; tbSave(); tbRender(); }
-async function tbVersionSheet(){ const v = await mpSheet({ title: 'Version', text: 'Rebuilds the draft and drops what you moved by hand.', ok: 'Calm', alt: 'Balanced', alt2: 'Dense' }); if (v === 'ok') tbVersion('calm'); else if (v === 'alt') tbVersion('balanced'); else if (v === 'alt2') tbVersion('dense'); }
-function tbPickDay(i){ TB.daySel = i; tbRender(); }
-function tbCardHtml(e, opts){ // بطاقة عاجية مضغوطة للمسودة: الاسم · الحي/التصنيف · التنبيه · Move · Alert · Remove · البدائل مطوية بعد الأول
-  const cityId = (e.ref && e.ref.cityId) || (TB.cities[0] || {}).cityId; const meta = tbMeta(cityId, tbKey(e.ref)); const sub = meta ? (meta.area ? meta.area + ' · ' : '') + meta.path.split(' › ').pop() + (meta.owner ? ' · ' + meta.owner : '') : '';
-  const acts = (opts && opts.alt ? '<button type="button" class="actn" onclick="tbPromote(\'' + attrStr(opts.host) + '\', \'' + attrStr(e.id) + '\')" title="Make it option 1">⇄</button>' : '') + '<button type="button" class="actn" onclick="tbMove(\'' + attrStr(e.id) + '\')" title="Move to another day or period">' + mpIcon('move', { size: 13 }) + '</button><button type="button" class="actn" onclick="tbAlert(\'' + attrStr(e.id) + '\')" title="A short alert for this stop">' + mpIcon('edit', { size: 13 }) + '</button><button type="button" class="actn flag" onclick="tbRemove(\'' + attrStr(e.id) + '\')" title="Remove from this trip">✕</button>';
-  let h = '<div class="tb-card' + (opts && opts.alt ? ' alt' : '') + '"><span class="tb-card-t"><b dir="auto">' + (opts && opts.n ? '<span class="trip-num">' + opts.n + '</span>' : '') + escapeHtml(e.name) + '</b>' + (sub ? '<span dir="auto">' + escapeHtml(sub) + '</span>' : '') + (e.alert ? '<span class="warn">⚠ ' + escapeHtml(e.alert) + '</span>' : '') + '</span><span class="tb-card-a">' + acts + '</span></div>';
-  const alts = e.alts || []; if (alts.length && !(opts && opts.alt)){ const open = !!tripAltsOpen[e.id]; h += '<div class="trip-alts' + (open ? ' open' : '') + '"><button type="button" class="trip-alts-h" onclick="tripAltsOpen[\'' + attrStr(e.id) + '\'] = !tripAltsOpen[\'' + attrStr(e.id) + '\']; tbRender()"><span>or · ' + escapeHtml(alts[0].name) + (alts.length > 1 ? ' · +' + (alts.length - 1) : '') + '</span><span class="arr">' + (open ? '⌃' : '⌄') + '</span></button>' + (open ? alts.map(function(a){ return tbCardHtml(a, { alt: true, host: e.id }); }).join('') : '') + '</div>'; }
-  return h;
-}
-function tbDraftHtml(){
-  const plan = TB.plan; const days = plan.days; if (TB.daySel >= days.length) TB.daySel = 0; const day = days[TB.daySel]; const spec = tbSpec(); const warns = tripWarnings(plan, spec);
-  let h = '<div class="chiprow tb-top"><button type="button" class="chip" onclick="tbOpenPick(\'' + attrStr(day ? day.cityId : (TB.cities[0] || {}).cityId) + '\')">＋ Places</button><button type="button" class="chip" onclick="TB.stage = 1; tbRender()">Setup</button>' + (TB.moved ? '<button type="button" class="chip" onclick="tbVersionSheet()">' + TB.version + ' ⌄</button>' : TRIP_VERSIONS.map(function(v){ return '<button type="button" class="chip' + (TB.version === v[0] ? ' on' : '') + '" onclick="tbVersion(\'' + v[0] + '\')">' + v[1] + '</button>'; }).join('')) + '<button type="button" class="chip" ' + (TB.undo.length ? '' : 'disabled') + ' onclick="tbUndo()" title="Undo last change">↶</button></div>';
-  h += '<div class="chipgrid ' + (days.length >= 3 ? 'c3' : 'c2') + '">' + days.map(function(d, i){ return '<button type="button" class="pl-src' + (i === TB.daySel ? ' on' : '') + '" onclick="tbPickDay(' + i + ')">Day ' + d.n + '<span class="s">' + tripDayEntries(d).length + (tripDayEntries(d).length === 1 ? ' stop' : ' stops') + '</span></button>'; }).join('') + '</div>';
-  if (day){
-    const city = TB.cities.find(function(c){ return c.cityId === day.cityId; }) || {}; const es = tripDayEntries(day);
-    h += '<div class="ctx trip-ctx"><span>' + escapeHtml(tripDayLabel(day)) + (day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : '') + (TB.cities.length > 1 ? ' · ' + escapeHtml(city.cityName || '') : '') + ' — ' + es.length + (es.length === 1 ? ' stop' : ' stops') + (day.rest ? ' · 1 rest' : '') + '</span></div>';
-    warns.filter(function(w){ return w.dayIdx === TB.daySel; }).forEach(function(w){ h += '<div class="trip-warn">⚠ ' + escapeHtml(w.text) + '</div>'; });
-    let n = 0; tripDayAvailable(day).forEach(function(p){ const arr = day.periods[p] || []; let inner = '';
-      if (p === 'afternoon' && day.rest) inner += '<div class="trip-rest"><span><b>Rest at ' + escapeHtml((city.stay && city.stay.name) || 'your stay') + '</b> <span class="dim">· about ' + Math.round(day.rest.minutes / 60) + ' h</span></span><button type="button" class="actn" onclick="tbRestRemove()">Remove</button></div>';
-      arr.forEach(function(e){ n++; inner += tbCardHtml(e, { n: n }); });
-      if (!arr.length) inner += '<div class="trip-empty-p">— nothing here · move a place in</div>';
-      h += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', inner, 'stop'); });
-  }
-  h += '<div class="trip-tray' + (plan.tray.length ? '' : ' empty') + '"><div class="trip-tray-h"><b>No day yet · ' + plan.tray.length + '</b><span class="dim">tap a place to give it a day</span></div>' + plan.tray.map(function(e){ return '<button type="button" class="trip-tray-i" onclick="tbMove(\'' + attrStr(e.id) + '\')"><span dir="auto">' + escapeHtml(e.name) + '</span>' + (!e.geo ? '<span class="dim">no pin</span>' : '<span class="arr">›</span>') + '</button>'; }).join('') + '</div>';
-  h += '<button type="button" class="cta wide tb-cta" onclick="tbApprove()">' + ((tbTrip() || {}).status === 'approved' ? 'Done ✓' : 'Approve this trip ✓') + '</button>';
-  return h;
-}
-function tbMove(entryId){ tripMoveSheet(TB.plan, tbSpec(), entryId, function(changed){ if (changed){ tbSave(); } tbRender(); }, function(){ tbSnapshot(); }); }
-function tbPromote(hostId, altId){ const f = tripFindEntry(TB.plan, hostId); if (!f || f.where !== 'day') return; tbSnapshot(); const host = f.entry; const k = host.alts.findIndex(function(a){ return a.id === altId; }); if (k < 0) return; const alt = host.alts[k]; host.alts.splice(k, 1); const rest = host.alts; host.alts = []; alt.alts = [host].concat(rest); TB.plan.days[f.dayIdx].periods[f.period][f.index] = alt; if (TB.plan.days[f.dayIdx].excursion === host.id) TB.plan.days[f.dayIdx].excursion = alt.id; tbSave(); tbRender(); }
-async function tbRemove(entryId){ const f = tripFindEntry(TB.plan, entryId); if (!f) return; const ok = await mpConfirm('Remove ' + (f.entry.name || 'this place') + ' from the trip?', { title: 'Remove from trip', ok: 'Remove', danger: true }); if (!ok) return; tbSnapshot(); const alts = (f.entry.alts || []).slice(); tripDetach(TB.plan, entryId); alts.forEach(function(a){ a.alts = []; TB.plan.tray.push(a); }); const cid = f.entry.ref.cityId; if (TB.picked[cid]) delete TB.picked[cid][tbKey(f.entry.ref)]; TB.plan.tray.sort(tripById); tbSave(); tbRender(); } // أ-٢ · القرار ٦: الإزالة = إلغاء الاختيار؛ بدائله إلى الصينية
-async function tbAlert(entryId){ const f = tripFindEntry(TB.plan, entryId); if (!f) return; const v = await mpSheet({ title: 'Alert for ' + (f.entry.name || 'this stop'), text: 'A short note you want to see on the day — e.g. closes at dusk, book ahead.', ok: 'Save', input: { value: f.entry.alert || '', placeholder: 'e.g. closes at dusk' } }); if (v === null || v === undefined) return; f.entry.alert = String(v || '').trim().slice(0, 80); tbSave(); tbRender(); }
-function tbRestRemove(){ tbSnapshot(); TB.plan.days[TB.daySel].rest = null; tbSave(); tbRender(); }
-async function tbApprove(){ const t = tbEnsureTrip(); t.status = 'approved'; clearTimeout(TB.saveTimer); TB.saveTimer = null; await saveTrip(t); const id = t.id; document.getElementById('tripBuildBackdrop').classList.remove('show'); TB = null; showToast('Trip approved ✓'); switchTab('Trips'); await openMyTripsModal(); await openTripDetail(id); }
-/* ── ورقة النقل (اللوحة ٤) — مشتركة بين المسودة وعرض الرحلة والإضافة التلقائية ── */
-let __tm = null; // { plan, spec, entryId, onDone, before }
-function tripMoveSheet(plan, spec, entryId, onDone, before){
-  const f = tripFindEntry(plan, entryId); if (!f) return;
-  __tm = { plan: plan, spec: spec, entryId: entryId, onDone: onDone, before: before, step: 'grid' };
-  tripMoveRender();
-  document.getElementById('tripMoveBackdrop').classList.add('show'); sheetBarsHide(true);
-}
-function tripMoveRender(){
-  const m = __tm; const f = tripFindEntry(m.plan, m.entryId); const e = f.entry; const version = m.spec.version || 'balanced';
-  document.getElementById('tmTitle').textContent = 'Move ' + (e.name || 'place');
-  document.getElementById('tmText').textContent = f.where === 'tray' ? 'now in No day yet' : f.where === 'alt' ? 'now an alternative of ' + (f.host.name || '') : 'now ' + tripDayLabel(m.plan.days[f.dayIdx]) + ' · ' + TRIP_PERIOD_LABEL[f.period];
-  const body = document.getElementById('tmBody'); let h = '';
-  if (m.step === 'alts'){ const same = tripPlanEntries(m.plan).filter(function(x){ return x.id !== e.id && x.ref && e.ref && x.ref.subcatId === e.ref.subcatId; }); h += '<div class="tm-list">' + (same.length ? same.map(function(x){ const fx = tripFindEntry(m.plan, x.id); return '<button type="button" class="btn btn-ghost wide" onclick="tripMoveAlt(\'' + attrStr(x.id) + '\')"><span dir="auto">' + escapeHtml(x.name) + '</span> <span class="dim">· ' + escapeHtml(tripDayLabel(m.plan.days[fx.dayIdx])) + ' · ' + TRIP_PERIOD_LABEL[fx.period] + '</span></button>'; }).join('') : '<div class="mp-empty mini">No other place of the same category in a day yet.</div>') + '</div><button type="button" class="btn btn-ghost wide" onclick="__tm.step = \'grid\'; tripMoveRender()">← Back</button>'; body.innerHTML = h; return; }
-  h += '<div class="tm-grid"><span></span>' + TRIP_PERIODS.map(function(p){ return '<span class="tm-h">' + TRIP_PERIOD_LABEL[p] + '</span>'; }).join('');
-  m.plan.days.forEach(function(d, i){ const avail = tripDayAvailable(d); h += '<span class="tm-d">' + escapeHtml(tripDayLabel(d).replace(' · arrival', ' · arr').replace(' · departure', ' · dep')) + '</span>' + TRIP_PERIODS.map(function(p){ if (avail.indexOf(p) < 0) return '<button type="button" class="tm-c off" disabled>—</button>'; const here = f.where === 'day' && f.dayIdx === i && f.period === p; const cnt = tripPeriodCount(d, p); const full = tripPeriodRoom(d, p, version) <= 0; return '<button type="button" class="tm-c' + (here ? ' here' : full ? ' full' : '') + '" onclick="tripMoveTo(' + i + ', \'' + p + '\')">' + (here ? 'here' : (cnt + (full ? ' · full' : ''))) + '</button>'; }).join(''); });
-  h += '</div><div class="tm-note">Numbers are the places already in that period. A dash is outside the day’s window. “Full” still lets you move — it only warns.</div>';
-  h += '<div class="sheet-alts">' + (f.where === 'tray' ? '' : '<button type="button" class="btn btn-ghost" onclick="tripMoveTo(null)">To “No day yet”</button>') + '<button type="button" class="btn btn-ghost" onclick="__tm.step = \'alts\'; tripMoveRender()">Make it an alternative of…</button></div>';
-  body.innerHTML = h;
-}
-function tripMoveTo(dayIdx, period){ const m = __tm; if (!m) return; if (m.before) m.before(); const e = tripDetach(m.plan, m.entryId); if (!e) return tripMoveDone(false); if (dayIdx === null){ e.alts = e.alts || []; m.plan.tray.push(e); m.plan.tray.sort(tripById); } else { tripInsert(m.plan, dayIdx, period, e, null, false); } tripMoveDone(true); }
-function tripMoveAlt(hostId){ const m = __tm; if (!m) return; if (m.before) m.before(); const e = tripDetach(m.plan, m.entryId); const f = tripFindEntry(m.plan, hostId); if (!e || !f || f.where !== 'day'){ if (e) m.plan.tray.push(e); return tripMoveDone(true); } const carried = e.alts || []; e.alts = []; f.entry.alts = (f.entry.alts || []).concat([e], carried); tripMoveDone(true); }
-function tripMoveBackdropTap(ev){ if (ev && ev.target && ev.target.id === 'tripMoveBackdrop') tripMoveDone(null); }
-function tripMoveDone(changed){ const m = __tm; __tm = null; document.getElementById('tripMoveBackdrop').classList.remove('show'); sheetBarsHide(false); if (m && typeof m.onDone === 'function') m.onDone(!!changed); }
