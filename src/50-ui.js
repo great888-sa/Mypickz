@@ -376,17 +376,12 @@ async function exportOtherTrip(tripId){
   try{
     const doc = await mpData.trips.getDoc(tripId);
     if (!doc.exists){ showToast('Trip is no longer available'); return; }
-    const t = { id: tripId, ...doc.data() };
-    const days = await resolveTripPlaces(t);
-    let out = '🧳 ' + (t.customLabel ? (t.cityName + ' — ' + t.customLabel) : (t.cityName || 'Trip')) + ' — a MyPickz trip\n';
-    (days || []).forEach(function(day){
-      out += '\nDay ' + day.dayNumber + '\n';
-      Object.keys(day.places || {}).forEach(function(cat){
-        (day.places[cat] || []).forEach(function(pl){
-          out += '• ' + ((pl && pl._available) ? (pl.name || 'Place') : 'Place no longer available') + '\n';
-          if (pl && pl._available && pl.url) out += '  ' + pl.url + '\n';
-        });
-      });
+    const t = { id: tripId, ...doc.data() }; tripNormalize(t);
+    const res = await resolveTripPlaces(t);
+    let out = '🧳 ' + tripTitle(t) + ' — a MyPickz trip\n';
+    (res.days || []).forEach(function(day){
+      out += '\n' + tripDayLabel(day) + '\n';
+      TRIP_PERIODS.forEach(function(p){ (day.periods[p] || []).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x, k){ const pl = x._p; out += (k ? '  or ' : '• ') + (pl ? (pl.name || x.name || 'Place') : 'Place no longer available') + '\n'; if (pl && pl.url) out += '  ' + pl.url + '\n'; }); }); });
     });
     mpSendText(out + '\nSent via MyPickz · mypickz.app'); try{ if (t.ownerId && currentUser && t.ownerId !== currentUser.uid && mpIsVerified(t.ownerId)) mpTrack.statsCurator(t.ownerId, 'export'); }catch(_){} /* ب-٢-١ */
   }catch(e){ showToast('Could not build the message'); }
