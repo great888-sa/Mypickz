@@ -16,20 +16,13 @@ function closeMyTripsModal(){
 function attrStr(s){                       // ترميز آمن داخل سمة onclick: escapeHtml يفكّ &#39; فيكسر الشيفرة
   return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/[\r\n]/g, ' ');
 }
-function tripPlaceCount(t){
-  let n = 0;
-  (t.days || []).forEach(d => TRIP_CATEGORIES.forEach(c => { n += ((d.places && d.places[c.id]) || []).length; }));
-  return n;
-}
-let tripTypeFilter = 'all';               // ر٥٥: «All» مرشِّح لا نوع (ق٣٠-٠٥) — الترشيح فعلي على رحلاتي
-function pickTripType(id){
-  tripTypeFilter = id;
-  document.querySelectorAll('#tripTypeRow .chip').forEach(x => x.classList.toggle('on', x.getAttribute('data-ttype') === id));
-  const m = tripTypeMeta(id);
-  const ctx = document.getElementById('tripCtx'); if (ctx) ctx.innerHTML = '<b>My trips</b> · ' + (m ? escapeHtml(m.label) : 'All');
-  renderTripsBody();
-}
-function tripTitle(t){ return t.customLabel ? (t.cityName + ' — ' + t.customLabel) : t.cityName; }
+let tripStatusFilter = 'all'; // r77 (القرار ١٣): «الكل · قادمة · ماضية» بدل نوع الرحلة
+function pickTripStatus(id){ tripStatusFilter = id; document.querySelectorAll('#tripTypeRow .chip').forEach(x => x.classList.toggle('on', x.getAttribute('data-ttype') === id)); const ctx = document.getElementById('tripCtx'); if (ctx) ctx.innerHTML = '<b>My trips</b> · ' + (id === 'upcoming' ? 'Upcoming' : id === 'past' ? 'Past' : 'All'); renderTripsBody(); }
+function tripLastDate(t){ let last = null; (tripHasPlan(t) ? t.plan.days : []).forEach(function(d){ if (d.date && (!last || d.date > last)) last = d.date; }); return last; }
+function tripFirstDate(t){ let first = null; (tripHasPlan(t) ? t.plan.days : []).forEach(function(d){ if (d.date && (!first || d.date < first)) first = d.date; }); return first; }
+function tripTodayYmd(){ return new Date().toISOString().slice(0, 10); }
+function tripIsPast(t){ const l = tripLastDate(t); return !!(l && l < tripTodayYmd()); }
+function tripBadge(t){ if (t.status !== 'approved') return { cls: 'draft', text: 'draft' }; if (tripIsPast(t)) return { cls: 'done', text: 'done' }; const f = tripFirstDate(t); if (!f) return { cls: '', text: 'no dates' }; const n = tripDateDiff(tripTodayYmd(), f); if (n === null) return { cls: '', text: '' }; if (n < 0) return { cls: 'now', text: 'on the trip' }; if (n === 0) return { cls: 'now', text: 'today' }; return { cls: 'soon', text: 'in ' + n + (n === 1 ? ' day' : ' days') }; }
 /* v1.40 · شريحة «Bookmarked trips» (القرار ٠٩): المتصفح يقرأ سجلاتك ثم يستفتي الأصل الحي —
    المتدهور («لم تعد متاحة») وحده يحمل ✕ · «Saved ✓» يُفَك بضغطه + «تراجع» */
 let tripsSource = 'mine';
@@ -80,9 +73,8 @@ async function renderSavedTrips(){ // ر٦٤ (النموذج المستقر): ش
   const mine = (userTrips || []).filter(t => isSelfTripBookmarked(t.id));
   if (!mine.length){ wrap.innerHTML = '<div class="mp-empty">🔖<br>Trips you bookmarked appear here — tap the bookmark on any of your trips.<br><span class="dim">Bookmarks on other people\'s trips live in Community → Trips → 🔖 Bookmarked.</span></div>'; return; }
   wrap.innerHTML = mine.map(function(t){
-    const pc = tripPlaceCount(t), dc = (t.days || []).length;
     return '<div class="row rowblock"><div class="pn" dir="auto">' + escapeHtml(tripTitle(t)) + '</div>'
-      + '<div class="ps">' + (tripTypeLine(t) ? tripTypeLine(t) + ' · ' : '') + pc + ' ' + (pc === 1 ? 'place' : 'places') + ' · ' + dc + ' ' + (dc === 1 ? 'day' : 'days') + '</div>'
+      + '<div class="ps">' + tripMetaLine(t) + '</div>'
       + '<div class="rowacts"><button type="button" class="act" onclick="openTripDetail(\'' + t.id + '\')">View trip →</button>'
       + '<button type="button" class="bmk-btn on" onclick="toggleTripSelfBookmark(\'' + t.id + '\')" title="Bookmarked — tap to remove">' + bmkSvg(true) + '</button>'
       + '<button type="button" class="act" onclick="openExportPreview(\'trip\', \'' + t.id + '\')" title="Preview and send">📤</button>'
@@ -115,9 +107,9 @@ async function copyOthersTrip(tripId){ // ر٧٢-أ-٢د (ق٠٩-١٥-٠٥): Sav
   let ownerName = (viewingUserData && viewingUserData.uid === src.ownerId && viewingUserData.nickname) || ((curators || []).find(function(c){ return c.uid === src.ownerId; }) || {}).nickname || ((communityUsers || []).find(function(c){ return c.uid === src.ownerId; }) || {}).nickname || '';
   if (!ownerName && src.ownerId){ try{ const pr = await mpData.profiles.get(src.ownerId); ownerName = (pr && pr.nickname) || ''; }catch(e){} } // ر٧٢-أ-٢و · r72u: اسم الحساب فقط (لا displayName القديم ولا الشعار)
   ownerName = ownerName || 'a member';
-  const copy = { id: 'trip_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8), type: src.type || 'city', cityId: src.cityId || null, cityName: src.cityName || '', cities: Array.isArray(src.cities) ? src.cities.slice() : undefined, customLabel: src.customLabel || '', public: false, sharedWith: [], sharedWithNames: {},
-    days: JSON.parse(JSON.stringify(src.days || [])), source: { tripId: src.id, ownerId: src.ownerId, ownerName: ownerName, at: Date.now() } };
-  if (copy.cities === undefined) delete copy.cities;
+  if (!tripHasPlan(src)){ showToast('This trip uses the old format and cannot be saved'); return; }
+  const copy = { id: 'trip_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8), title: src.title || '', cityId: src.cityId || null, cityName: src.cityName || '', cities: JSON.parse(JSON.stringify(src.cities || [])), customLabel: src.customLabel || '', public: false, sharedWith: [], sharedWithNames: {},
+    plan: tripPlanNormalize(JSON.parse(JSON.stringify(src.plan))), version: src.version || 'balanced', status: 'approved', source: { tripId: src.id, ownerId: src.ownerId, ownerName: ownerName, at: Date.now() } }; // r77: النسخة تحمل الخطة والمدن
   userTrips.push(copy); try{ await saveTrip(copy); }catch(e){ userTrips = userTrips.filter(function(t){ return t.id !== copy.id; }); mpSwallow(e, 'trip copy'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
   try{ await mpData.copies.record(currentUser.uid, 'trip', src.id, 'trips'); }catch(e){ mpSwallow(e, 'copy record'); showToast('Could not record · ' + ((e && e.code) || 'error')); } try{ if (src.ownerId && mpIsVerified(src.ownerId)) mpTrack.statsCurator(src.ownerId, 'save'); }catch(_){} /* ب-٢-١: save اليومي للمنتقي (v3.14) */ // r72m (M4.25 ٤) · r72p (١١): الرمز على الشاشة: سجل النسخ + copyCount على المصدر بدفعة واحدة (existsAfter)
   showToast('Saved to my trips ✓ — from ' + ownerName); if (HOSTED.Community && currentTab === 'Community') renderCommunityModal();
@@ -150,9 +142,7 @@ async function renderBookmarkedTripsInto(wrap){ // ر٦١: القالب المش
     const t = live[r.tripId];
     if (t){
       const title = t.customLabel ? (t.cityName + ' — ' + t.customLabel) : (t.cityName || 'Trip');
-      const pc = (typeof tripPlaceCount === 'function') ? tripPlaceCount(t) : 0;
-      const dc = (t.days && t.days.length) || 0;
-      html += othersCard({ title: escapeHtml(title), sub: (tripTypeLine(t) ? tripTypeLine(t) + ' · ' : '') + pc + ' ' + (pc === 1 ? 'place' : 'places') + ' · ' + dc + ' ' + (dc === 1 ? 'day' : 'days'), bmOn: true, cnt: t.saveCount || 0, bmHandler: "toggleTripSave('" + attrStr(r.tripId) + "')", saveHandler: "copyOthersTrip('" + attrStr(r.tripId) + "')", savedOn: !!tripCopyOf(r.tripId), unsaveHandler: "removeMyTripCopy('" + attrStr(r.tripId) + "')", reportKind: 'trip', reportKey: r.tripId, exportHandler: "exportOtherTrip('" + attrStr(r.tripId) + "')", openHandler: "openSavedTripInCommunity('" + attrStr(t.ownerId || '') + "', '" + attrStr(r.tripId) + "')" });
+      html += othersCard({ title: escapeHtml(title), sub: tripMetaLine(t), bmOn: true, cnt: t.saveCount || 0, bmHandler: "toggleTripSave('" + attrStr(r.tripId) + "')", saveHandler: "copyOthersTrip('" + attrStr(r.tripId) + "')", savedOn: !!tripCopyOf(r.tripId), unsaveHandler: "removeMyTripCopy('" + attrStr(r.tripId) + "')", reportKind: 'trip', reportKey: r.tripId, exportHandler: "exportOtherTrip('" + attrStr(r.tripId) + "')", openHandler: "openSavedTripInCommunity('" + attrStr(t.ownerId || '') + "', '" + attrStr(r.tripId) + "')" });
     } else {
       // الصف المتدهور — وحده يحمل ✕ (جولة ٢)
       html += '<div class="row rowblock" style="opacity:.55;"><div class="pn" dir="auto">Bookmarked trip</div>'
@@ -181,102 +171,54 @@ async function removeDegradedTripSave(tripId){
 }
 function renderMyTripsModal(){
   const wrap = document.getElementById('myTripsBody');
+  const sc = document.getElementById('screenTrips'); if (sc) sc.classList.toggle('trip-open', !!currentTripId); // r77: رأس القائمة الثابت يختفي ما دامت رحلة مفتوحة
   if (currentTripId){ renderTripDetail(wrap); return; }
-// ر٦٩ (N-010 · ق٠٩-٠٦-٢٣): المشارك معك ليس مقتنياتك — يسكن شريحة Shared with you بالمجتمع
   let html = '';
-
-  const mineOnly = userTrips.filter(t => !t.source); // ر٧٢-أ-٢هـ (قرار المالك): «My trips» لما أنشأته أنا — النسخ بإسناد لها شريحتاها
-  try{ if (tripsSource === 'mine') tripSetSrcTitle(mineOnly.length); else if (tripSourceFilter) tripSetSrcTitle(userTrips.filter(tripSourceFilter).length); }catch(_){} // r72v: العنوان بعدده
-  const byType0 = (tripTypeFilter === 'all') ? mineOnly : mineOnly.filter(t => t.type === tripTypeFilter); const byType = tripSourceFilter ? userTrips.filter(tripSourceFilter) : byType0; // ر٧٢-أ-٢د
-  const shownTrips = tripCityFilter ? byType.filter(t => t.cityId === tripCityFilter) : byType; // ر٦٦: المحدد
+  const mineOnly = userTrips.filter(t => !t.source); // ر٧٢-أ-٢هـ: «My trips» لما أنشأته أنا
+  try{ if (tripsSource === 'mine') tripSetSrcTitle(mineOnly.filter(function(t){ return !tripIsOld(t); }).length); else if (tripSourceFilter) tripSetSrcTitle(userTrips.filter(tripSourceFilter).length); }catch(_){}
+  const byStatus0 = (tripStatusFilter === 'all') ? mineOnly : mineOnly.filter(function(t){ return tripIsOld(t) ? false : (tripStatusFilter === 'past' ? tripIsPast(t) : !tripIsPast(t)); }); const byType = tripSourceFilter ? userTrips.filter(tripSourceFilter) : byStatus0;
+  const shownTrips = tripCityFilter ? byType.filter(t => tripHasCity(t, tripCityFilter)) : byType; // ر٦٦ · r77: الرحلة متعددة المدن تظهر تحت كل مدينة من مدنها (الاختيار ١٦)
   if (tripSourceFilter && !shownTrips.length){
     html += '<div class="mp-empty">🔖<br>' + (tripsSource === 'savedCur' ? 'Trips you save from curators appear here.' : 'Trips you save from other members appear here.') + '</div>';
-  } else if (!mineOnly.length){
-    html += tripsEmptyGuideHtml(); // أ-١٢-٣ (قرار المالك): لوحة الحالة الفارغة بالرحلات — أربعة أبواب بكل دخول حتى أول رحلة (النسخ لا تُعدّ)
+  } else if (!mineOnly.filter(function(t){ return !tripIsOld(t); }).length && !tripSourceFilter){
+    html += tripsEmptyGuideHtml();
+    mineOnly.filter(tripIsOld).forEach(function(t){ html += tripOldRowHtml(t); });
   } else if (!shownTrips.length){
-    html += '<div class="mp-empty mini">No ' + (tripTypeMeta(tripTypeFilter) ? tripTypeMeta(tripTypeFilter).label : '') + ' trips yet — All shows everything.</div>';
+    html += '<div class="mp-empty mini">No ' + (tripStatusFilter === 'past' ? 'past' : tripStatusFilter === 'upcoming' ? 'upcoming' : '') + ' trips here — All shows everything.</div>';
   } else {
-    const byCityT = {}; const orderT = []; shownTrips.forEach(function(t){ const k = t.cityName || 'Trips'; if (!byCityT[k]){ byCityT[k] = []; orderT.push(k); } byCityT[k].push(t); }); // r72v: مجموعة عاجية لكل مدينة
-    orderT.forEach(function(cityNm){ const cards = byCityT[cityNm].map(function(t){
-      const acts = [
-        { html: 'Open →', on: "openTripDetail('" + t.id + "')", title: 'View trip' },
-        { cls: 'bmk' + (isSelfTripBookmarked(t.id) ? ' on' : ''), html: bmkSvg(isSelfTripBookmarked(t.id)), on: "toggleTripSelfBookmark('" + t.id + "')", title: isSelfTripBookmarked(t.id) ? 'Bookmarked — tap to remove' : 'Bookmark' },
-        { html: '📤', on: "openExportPreview('trip', '" + t.id + "')", title: 'Preview and send' },
-        { cls: (t.public ? 'on' : ''), html: '🌐', on: "toggleTripPublicFor('" + t.id + "')", title: t.public ? 'Public — tap to make private' : 'Private — tap to make public' },
-        { cls: (((t.sharedWith || []).length) ? 'on' : ''), html: shareSvg(), on: "shareTripFor('" + t.id + "')", title: ((t.sharedWith || []).length) ? 'Shared with ' + t.sharedWith.length + ' — tap to manage' : 'Share with someone by name' },
-        { html: '✏️', on: "openTripDetail('" + t.id + "', 'edit')", title: 'Edit — days, places, delete' }
-      ];
-      const btn = function(a){ return '<button type="button" class="pc-a' + (a.cls ? ' ' + a.cls : '') + '" onclick="' + a.on + '" title="' + attrStr(a.title || '') + '">' + a.html + '</button>'; };
-      return '<div class="pcard open"><div class="pc-data"><div class="pc-name" dir="auto">' + escapeHtml(tripTitle(t)) + '</div>'
-        + (tripTypeLine(t) ? '<div class="pc-lab">Type</div><div class="pc-val pc-area">' + tripTypeLine(t) + '</div>' : '')
-        + '<div class="pc-lab">Places</div><div class="pc-val pc-area">· ' + tripPlaceCount(t) + (tripPlaceCount(t) === 1 ? ' place' : ' places') + '</div><div class="pc-lab">Days</div><div class="pc-val pc-area">· ' + t.days.length + (t.days.length === 1 ? ' day' : ' days') + '</div>' + (t.public ? '<div class="pc-lab">Saved by users</div><div class="pc-val pc-area">· ' + (t.copyCount || 0) + ((t.copyCount || 0) === 1 ? ' save' : ' saves') + '</div>' : '')
-        + (t.source ? '<div class="pc-lab">From</div><div class="pc-val pc-area" dir="auto">' + escapeHtml(tripSourceName(t)) + '</div>' : '')
-        + '</div><div class="pc-acts"><div class="pc-grid">' + acts.map(btn).join('') + '</div></div></div>'; }).join('');
-      html += placeGroupHtml(cityNm, byCityT[cityNm].length, '', cards, 'trip'); });
+    const groups = {}; const order = []; const single = function(t){ return (t.cities || []).length <= 1; };
+    shownTrips.forEach(function(t){ const k = tripIsOld(t) ? 'Old format' : (single(t) ? ((t.cities[0] && t.cities[0].cityName) || t.cityName || 'Trips') : 'Several cities'); if (!groups[k]){ groups[k] = []; order.push(k); } groups[k].push(t); });
+    order.forEach(function(k){ const cards = groups[k].map(function(t){ return tripIsOld(t) ? tripOldRowHtml(t) : tripCardHtml(t); }).join(''); html += placeGroupHtml(k, groups[k].length, '', cards, 'trip'); });
   }
   if (currentUserSuspended){
     html += '<div class="warnline">🚫 <span><b>Account Suspended</b><br>Your account has been suspended and can no longer create trips or add places.</span></div>';
-  } else {
-    // ر٦٦: Create trip صعد لصف الأفعال بالرأس (البند ٣)
   }
   wrap.innerHTML = html;
 }
-
-async function openCreateTripFlow(){
-  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } // نفس حاجز My List
-  newTripType = 'city'; tcPickType('city'); // ر٥٥: إعادة الافتراضي بكل فتح
-  const f = document.getElementById('tcCity'); if (f) f.value = '';
-  tcCityId = tcPresetCityId || null; tcPresetCityId = null; delete __pk.tcCity; tcRenderCityPanel(); // ر٧٠د (N-075) · ر٧٠و: المدينة محددة عند الإضافة من مكان
-  if (tcCityId){ const pc = cityListAllCities().find(c => c.id === tcCityId); if (f && pc) f.value = pc.name; }
-  const d = document.getElementById('tcDays'); if (d) d.value = '3';
-  const l = document.getElementById('tcLabel'); if (l) l.value = '';
-  document.getElementById('tcError').textContent = '';
-  openModalById('tripCreateBackdrop');
+function tripOldRowHtml(t){ return '<div class="pcard open trip-old"><div class="pc-data"><div class="pc-name" dir="auto">' + escapeHtml(t.cityName || 'Trip') + (t.customLabel ? ' — ' + escapeHtml(t.customLabel) : '') + '</div><div class="pc-lab">Old format</div><div class="pc-val pc-area">Made before the trip builder — it can only be deleted</div></div><div class="pc-acts"><div class="pc-grid"><button type="button" class="pc-a flag" onclick="deleteTripById(\'' + attrStr(t.id) + '\')" title="Delete">🗑 Delete</button></div></div></div>'; } // القرار ١٤ · الاختيار ١٢: حارس التنسيق القديم
+function tripCardHtml(t){ // r77 (اللوحة ٧): بطاقة الرحلة — الشارة · التواريخ · رقاقات المدن بأيامها · الأماكن · الصينية
+  const b = tripBadge(t); const f = tripFirstDate(t), l = tripLastDate(t); const nd = tripDayCount(t), np = tripPlaceCount(t), nc = (t.cities || []).length;
+  const acts = t.status === 'draft' ? [
+      { html: 'Continue →', on: "openTripBuilder({ tripId: '" + attrStr(t.id) + "', stage: 2 })", title: 'Continue the draft' },
+      { cls: 'flag', html: '🗑', on: "deleteTripById('" + attrStr(t.id) + "')", title: 'Delete this draft' }
+    ] : [
+      { html: 'Open →', on: "openTripDetail('" + attrStr(t.id) + "')", title: 'View trip' },
+      { cls: 'bmk' + (isSelfTripBookmarked(t.id) ? ' on' : ''), html: bmkSvg(isSelfTripBookmarked(t.id)), on: "toggleTripSelfBookmark('" + attrStr(t.id) + "')", title: isSelfTripBookmarked(t.id) ? 'Bookmarked — tap to remove' : 'Bookmark' },
+      { html: '📤', on: "openExportPreview('trip', '" + attrStr(t.id) + "')", title: 'Preview and send' },
+      { cls: (t.public ? 'on' : ''), html: '🌐', on: "toggleTripPublicFor('" + attrStr(t.id) + "')", title: t.public ? 'Public — tap to make private' : 'Private — tap to make public' },
+      { cls: (((t.sharedWith || []).length) ? 'on' : ''), html: shareSvg(), on: "shareTripFor('" + attrStr(t.id) + "')", title: ((t.sharedWith || []).length) ? 'Shared with ' + t.sharedWith.length + ' — tap to manage' : 'Share with someone by name' },
+      { html: '✏️', on: "openTripBuilder({ tripId: '" + attrStr(t.id) + "', stage: 2 })", title: 'Reopen the draft — move places, change the version' }
+    ];
+  const btn = function(a){ return '<button type="button" class="pc-a' + (a.cls ? ' ' + a.cls : '') + '" onclick="' + a.on + '" title="' + attrStr(a.title || '') + '">' + a.html + '</button>'; };
+  const chips = (t.cities || []).map(function(c){ return '<span class="pc-chip">' + escapeHtml(c.cityName || c.cityId) + ' · ' + (c.days || 1) + (c.days === 1 ? ' day' : ' days') + '</span>'; }).join('') + '<span class="pc-chip">· ' + np + (np === 1 ? ' place' : ' places') + '</span>' + ((t.plan && t.plan.tray && t.plan.tray.length) ? '<span class="pc-chip warn">No day yet · ' + t.plan.tray.length + '</span>' : '');
+  return '<div class="pcard open"><div class="pc-data"><div class="pc-head"><div class="pc-name" dir="auto">' + escapeHtml(tripTitle(t)) + '</div>' + (b.text ? '<span class="trip-badge ' + b.cls + '">' + escapeHtml(b.text) + '</span>' : '') + '</div>'
+    + '<div class="pc-area">' + (f ? escapeHtml(tripDateLabel(f)) + (l && l !== f ? ' → ' + escapeHtml(tripDateLabel(l)) : '') + ' · ' : 'No dates yet · ') + nd + (nd === 1 ? ' day' : ' days') + ' · ' + nc + (nc === 1 ? ' city' : ' cities') + '</div>'
+    + '<div class="pc-fromrow trip-chips">' + chips + '</div>'
+    + (t.public ? '<div class="pc-lab">Saved by users</div><div class="pc-val pc-area">· ' + (t.copyCount || 0) + ((t.copyCount || 0) === 1 ? ' save' : ' saves') + '</div>' : '')
+    + (t.source ? '<div class="pc-lab">From</div><div class="pc-val pc-area" dir="auto">' + escapeHtml(tripSourceName(t)) + '</div>' : '')
+    + '</div><div class="pc-acts"><div class="pc-grid">' + acts.map(btn).join('') + '</div></div></div>';
 }
-// ر٧٠د (N-075): مدينة الرحلة بلوحة الاختيار المشتركة — مدني كلها (القاموس المنشور + الخاصة) بعلم دولتها · المختارة بنقطة · ＋ Add city للغائب بمسار الإضافة نفسه (الدولة ← المعجم ← تخليد فوري)
-let tcCityId = null;
-function tcRenderCityPanel(){
-  const host = document.getElementById('tcCityHost'); if (!host) return;
-  const cur = cityListAllCities().find(c => c.id === tcCityId);
-  host.innerHTML = pickerRow({ id: 'tcCity', label: cur ? cur.name : 'Choose a city', placeholder: 'Type a city…', onPick: 'tcPickCity', canAdd: true, onAdd: 'tcAddCity()', emptyText: 'No city matches — add it below',
-    items: cityListAllCities().map(c => ({ id: c.id, name: c.name, icon: countryFlag(c.country) || '', selected: c.id === tcCityId })) });
-}
-function tcPickCity(id){
-  const c = cityListAllCities().find(x => x.id === id); if (!c) return;
-  tcCityId = c.id;
-  document.getElementById('tcCity').value = c.name;
-  document.getElementById('tcError').textContent = '';
-  pickerRowClose('tcCity'); tcRenderCityPanel();
-}
-async function tcAddCity(){
-  await addCityListCity();
-  if (cityListCityId && cityListAllCities().some(c => c.id === cityListCityId)) tcPickCity(cityListCityId);
-}
-let newTripType = 'city'; // ر٥٥: النوع المختار بنافذة الإنشاء — الافتراضي Single city (بنية النموذج الحالية)
-function tcPickType(id){
-  newTripType = id;
-  document.querySelectorAll('#tcTypeRow .chip[data-ttype]').forEach(b => b.classList.toggle('on', b.getAttribute('data-ttype') === id));
-}
-let freshTripId = null;   // ٦/ب٢ + قرار المالك: الإلغاء يتخلص من الرحلة الفارغة المنشأة توًّا
-async function tcCreate(){
-  const cities = cityListAllCities(); // ر٧٠ج: الرحلة تشير لأي مدينة من مدني (ق٠٩-٠٧-٠٣)
-  const name = String(document.getElementById('tcCity').value || '').trim().toLowerCase();
-  const cityObj = (tcCityId && cities.find(c => c.id === tcCityId)) || cities.find(c => c.name.toLowerCase() === name); // ر٧٠د: بالمعرّف من اللوحة
-  if (!cityObj){ document.getElementById('tcError').textContent = 'Pick a city from the list'; return; }
-  let numDays = parseInt(document.getElementById('tcDays').value, 10);
-  if (!numDays || numDays < 1) numDays = 1;
-  if (numDays > 30) numDays = 30;
-  const label = String(document.getElementById('tcLabel').value || '');
-  const days = [];
-  for (let i = 1; i <= numDays; i++) days.push(emptyDay(i));
-  const trip = { id: generateTripId(), type: newTripType, cityId: cityObj.id, cityName: cityObj.name, customLabel: label.trim(), public:false, sharedWith:[], sharedWithNames:{}, days };
-  userTrips.push(trip);
-  closeModalById('tripCreateBackdrop');
-  await saveTrip(trip);
-  freshTripId = trip.id;
-  if (tcAfterCreate === 'addPending'){ tcAfterCreate = null; tripAddContinue(trip.id); return; } // ر٧٠و: الحالة الأولى — إنشاء ثم متابعة الإضافة
-  startAddingToTrip(trip.id);
-}
+async function deleteTripById(id){ if (!(await mpConfirm('This cannot be undone.', { title: '🗑 Delete this trip?', ok: 'Delete trip', danger: true }))) return; try{ await mpData.trips.remove(id); }catch(e){} userTrips = userTrips.filter(t => t.id !== id); delete resolvedTripCache[id]; if (currentTripId === id) currentTripId = null; if (activeTripId === id){ activeTripId = null; updateActiveTripBanner(); } renderTripsBody(); showToast('Trip deleted'); }
 // ر٦٩هـ: ضابطا الرحلة من بطاقتها (المبدأ: الأفعال على الصف)
 async function toggleTripPublicFor(id){ currentTripId = id; await toggleTripPublic(); currentTripId = null; tripViewMode = true; renderMyTripsModal(); } // ر٦٩و (N-030): تبديل الحالة بلا فتح العرض
 
@@ -404,10 +346,9 @@ function mpQR(text){
 
 // ر٧٠ح (N-076 v2 — تصميم المالك): بطاقة المكان/القائمة/الرحلة بلغة تُختار عند التصدير، QR لرابط الموقع، الاختيارات والملاحظات، الأقسام الفارغة لا تظهر، الطويلة بطاقات متعددة
 let exportLang = 'en';
-const XC_T = { en: { place: 'Place card', list: 'List card', trip: 'Trip card', picks: 'Picks', notes: 'Notes', places: 'places', place1: 'place', day: 'Day', days: 'days', day1: 'day', from: 'from the list of', list: 'list', cont: '(cont.)' },
-               ar: { place: 'بطاقة مكان', list: 'بطاقة قائمة', trip: 'بطاقة رحلة', picks: 'الاختيارات', notes: 'ملاحظات', places: 'أماكن', place1: 'مكان', day: 'اليوم', days: 'أيام', day1: 'يوم', from: 'من قائمة', list: 'قائمة', cont: '(تتمة)' } };
+const XC_T = { en: { place: 'Place card', list: 'List card', trip: 'Trip card', picks: 'Picks', notes: 'Notes', places: 'places', place1: 'place', day: 'Day', days: 'days', day1: 'day', from: 'from the list of', list: 'list', cont: '(cont.)', morning: 'Morning', midday: 'Midday', afternoon: 'Afternoon', evening: 'Evening' },
+               ar: { place: 'بطاقة مكان', list: 'بطاقة قائمة', trip: 'بطاقة رحلة', picks: 'الاختيارات', notes: 'ملاحظات', places: 'أماكن', place1: 'مكان', day: 'اليوم', days: 'أيام', day1: 'يوم', from: 'من قائمة', list: 'قائمة', cont: '(تتمة)', morning: 'صباح', midday: 'ظهيرة', afternoon: 'عصر', evening: 'مساء' } };
 function catPathOf(catId){ const c = plCatsAll().find(function(x){ return x.id === catId; }); if (c) return (c.section ? c.section + ' › ' : '') + c.name; const pc = privateCategoryList().find(function(x){ return x.id === catId; }); return pc ? pc.name : (catId || ''); }
-function slotLabelOf(catId){ const m = (typeof categoryMeta === 'function') ? categoryMeta(catId) : null; return m ? m.label : catId; }
 function xcEntry(p, extra){ return Object.assign({ name: p.name || p.placeName || 'Place', fine: (p.flags || []).indexOf('fine_dining') >= 0, area: p.area || '', url: p.url || '', picks: (p.picks || []).map(function(x){ return x && x.name ? x.name : ''; }).filter(Boolean), note: p.note || '' }, extra || {}); }
 function exportCardModel2(kind, id){
   const me = (userListData && userListData.nickname) || ''; const m = { type: 'list', title: '', city: '', area: '', count: '', owner: me, groups: [] };
@@ -415,12 +356,12 @@ function exportCardModel2(kind, id){
   if (kind === 'oplace'){ const p = cmCache.places[id] || {}; m.type = 'place'; m.title = ''; m.city = p.city || ''; m.area = p.area || ''; m.owner = p.owner || me; // ر٧٠ح-٢ (قرار المالك): الرأس المدينة – المنطقة فقط؛ الاسم بالصندوق مرة واحدة
     m.groups = [{ label: p.category ? catPathOf(p.category) : '', entries: [xcEntry(Object.assign({}, p, { area: '' }))] }]; return m; }
   if (kind === 'trip' || kind === 'otrip'){ const t = kind === 'trip' ? userTrips.find(function(x){ return x.id === id; }) : cmCache.trips[id]; if (!t) return m; m.type = 'trip';
-    m.title = t.customLabel ? (t.cityName || '') + ' — ' + t.customLabel : (t.cityName || 'Trip'); m.city = t.cityName || ''; m.owner = kind === 'trip' ? me : (t.nickname || t.ownerNick || 'a user');
-    const days = t.days || []; const nd = days.length; let np = 0; days.forEach(function(d){ Object.keys(d.places || {}).forEach(function(c){ np += (d.places[c] || []).length; }); });
+    m.title = tripTitle(t); m.city = (t.cities || []).map(function(c){ return c.cityName; }).filter(Boolean).join(' · ') || t.cityName || ''; m.owner = kind === 'trip' ? me : (t.nickname || t.ownerNick || 'a user');
+    const nd = tripDayCount(t), np = tripPlaceCount(t);
     m.count = nd + ' ' + (nd === 1 ? XC_T[lang].day1 : XC_T[lang].days) + ' · ' + np + ' ' + (np === 1 ? XC_T[lang].place1 : XC_T[lang].places);
-    const res = resolvedTripCache[kind === 'trip' ? t.id : ('community_' + t.id)] || null;
-    days.forEach(function(d, i){ const rd = res && res[i]; Object.keys(d.places || {}).forEach(function(cat){ const arr = d.places[cat] || []; if (!arr.length) return;
-      m.groups.push({ label: XC_T[lang].day + ' ' + (i + 1) + ' · ' + slotLabelOf(cat), entries: arr.map(function(p, j){ const rp = rd && rd.places && rd.places[cat] && rd.places[cat][j]; const src = rp && rp._available !== false ? Object.assign({}, rp, { note: (rp._ref && rp._ref.tripNote) || rp.note || '' }) : p; return xcEntry(src); }) }); }); }); return m; }
+    const res = resolvedTripCache[kind === 'trip' ? t.id : ('community_' + t.id)] || null; const days = res ? res.days : (tripHasPlan(t) ? t.plan.days : []);
+    days.forEach(function(d){ TRIP_PERIODS.forEach(function(p){ const arr = d.periods[p] || []; if (!arr.length) return; const entries = []; arr.forEach(function(e){ entries.push(xcEntry(tripXcSrc(e))); (e.alts || []).forEach(function(a){ entries.push(xcEntry(Object.assign(tripXcSrc(a), { name: (lang === 'ar' ? 'أو ' : 'or ') + (a._p && a._p.name || a.name || 'Place') }))); }); });
+      m.groups.push({ label: XC_T[lang].day + ' ' + d.n + ' · ' + (XC_T[lang][p] || TRIP_PERIOD_LABEL[p]), entries: entries }); }); }); return m; } // الصينية لا تُصدَّر (الاختيار ١٣)
   // القائمة: مكاني (افتراضي) أو قائمة الآخرين
   m.type = 'list'; let cats, r;
   if (kind === 'olist'){ r = cmCache.lists[id] || {}; m.owner = r.nickname || 'a user'; m.city = r.cityName || r.cityId || ''; cats = r.categories || {}; }
@@ -429,6 +370,7 @@ function exportCardModel2(kind, id){
   plCatsAll().forEach(function(c){ const live = ((cats[c.id] || {}).places || []).filter(function(p){ return p && (p.name || p.url); }); if (!live.length) return; n += live.length; m.groups.push({ label: catPathOf(c.id), entries: live.map(function(p){ return xcEntry(p); }) }); });
   m.count = n + ' ' + (n === 1 ? XC_T[lang].place1 : XC_T[lang].places); return m;
 }
+function tripXcSrc(e){ const p = (e && e._p) || {}; return { name: p.name || e.name || 'Place', area: p.area || '', url: p.url || '', picks: p.picks || [], note: e.alert || p.note || '', flags: p.flags || [] }; } // مدخل الخطة → مصدر بطاقة التصدير (التنبيه يحل محل الملاحظة)
 function xcWrap(g, text, maxW, maxLines){ const words = String(text || '').split(/\s+/); const lines = []; let cur = ''; words.forEach(function(w){ const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > maxW && cur){ lines.push(cur); cur = w; } else cur = t; }); if (cur) lines.push(cur); if (lines.length > maxLines){ lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/.{3}$/, '…'); } return lines; }
 function xcIsRtl(t){ return /[\u0600-\u06FF]/.test(String(t || '')); }
 function exportCardCanvases(kind, id){
@@ -519,14 +461,9 @@ function openTripShareModal(id){ openShareModal('trip', id); }
 function closeTripShareModal(){ const bd = document.getElementById('tripShareBackdrop'); if (bd) bd.classList.remove('show'); if (shareModalKind === 'trip'){ currentTripId = null; tripViewMode = true; renderMyTripsModal(); } else { renderPlacesMine(); } }
 async function addShareFromModal(){ if (shareModalKind === 'trip'){ const id = currentTripId; await shareTripWithSomeone(); openShareModal('trip', id); } else { await plShareWith(); openShareModal('list'); } }
 async function removeShareFromModal(uid){ if (shareModalKind === 'trip'){ const id = currentTripId; await removeTripShare(uid); openShareModal('trip', id); } else { await plRemoveShare(uid); openShareModal('list'); } }
-function tripDayJump(i, btn){ // ر٦٩و (N-032): المبدل يعرض يومًا واحدًا
-  const g = document.getElementById('tripDayGrid'); if (g) g.querySelectorAll('.pl-src').forEach(function(b, k){ b.classList.toggle('on', btn ? b === btn : k === i); });
-  const heads = Array.from(document.querySelectorAll('.dayhead[id^="tripday-"]'));
-  heads.forEach(function(h, k){ const show = (k === i); let el = h; while (el){ el.style.display = show ? '' : 'none'; el = el.nextElementSibling; if (!el || el.classList.contains('dayhead')) break; } });
-}
 function shareTripFor(id){ openTripShareModal(id); }
 async function openTripDetail(tripId, mode){ // ر٦٤: الافتراض عرضٌ (يظهر ✏️ Edit)؛ mode='edit' من الإنشاء
-  tripSrcOpen = false; // ر٧٠س-٢: البطاقة مطوية عند فتح رحلة
+  tripTab = 'plan'; tripCitySel = null; tripDaySel = 0; const __t = userTrips.find(t => t.id === tripId); if (__t && tripHasPlan(__t)) tripDaySel = Math.max(0, __t.plan.days.findIndex(function(d){ return tripDayEntries(d).length; })); // r77: أول يوم فيه محطات
   currentTripId = tripId;
   viewingSharedTrip = false;
   tripViewMode = (mode !== 'edit');
@@ -547,7 +484,6 @@ async function openSharedTripDetail(tripId){
   renderMyTripsModal();
 }
 function backToTripsList(){ currentTripId = null; viewingSharedTrip = false; renderMyTripsModal(); if (tripAddOrigin){ const o = tripAddOrigin; tripAddOrigin = null; if (o.tab && o.tab !== 'Trips') switchTab(o.tab); } } // ر٧٠و: الرجوع للشاشة الأصل بعد الإضافة
-function toggleTripViewMode(){ tripViewMode = !tripViewMode; renderMyTripsModal(); }
 
 async function toggleTripPublic(){
   const trip = userTrips.find(t => t.id === currentTripId);
@@ -601,165 +537,85 @@ const SOURCE_LABELS = { owner: '📖 App guide', mylist: '📋 My List', communi
 function exportTripText(){
   const sourceList = viewingSharedTrip ? sharedTrips : userTrips;
   const trip = sourceList.find(t => t.id === currentTripId); if (!trip) return;
-  const resolved = resolvedTripCache[currentTripId] || [];
-  const title = trip.customLabel ? (trip.cityName + ' — ' + trip.customLabel) : trip.cityName;
-  let out = '🧳 ' + title + '\n';
-  resolved.forEach(d => {
-    out += '\nDay ' + d.dayNumber + '\n';
-    (d.categoryOrder || defaultCategoryOrder()).forEach(cid => {
-      const arr = (d.places || {})[cid] || []; if (!arr.length) return;
-      const meta = categoryMeta(cid);
-      out += meta.label + '\n'; // r72r-1
-      arr.forEach(p => { out += '• ' + ((p && p.name) || 'Place') + ((p && p.url) ? '\n  ' + p.url : '') + '\n'; });
-    });
+  const resolved = resolvedTripCache[currentTripId] || { days: [] };
+  let out = '🧳 ' + tripTitle(trip) + '\n';
+  (resolved.days || []).forEach(function(d){
+    out += '\n' + tripDayLabel(d) + (d.date ? ' · ' + tripDateLabel(d.date) : '') + '\n';
+    TRIP_PERIODS.forEach(function(p){ const arr = d.periods[p] || []; if (!arr.length) return; out += TRIP_PERIOD_LABEL[p] + '\n';
+      arr.forEach(function(e){ const pl = e._p || {}; out += '• ' + (pl.name || e.name || 'Place') + (pl.url ? '\n  ' + pl.url : '') + '\n'; (e.alts || []).forEach(function(a){ const ap = a._p || {}; out += '  or ' + (ap.name || a.name || 'Place') + (ap.url ? '\n  ' + ap.url : '') + '\n'; }); }); });
   });
   out += '\nSent via MyPickz · mypickz.app';
   mpSendText(out);
 }
+let tripDaySel = 0, tripTab = 'plan', tripCitySel = null; // r77: اليوم المختار · التبويب (خطة · مسار اليوم · خريطة) · المدينة المختارة بالمبدّل
+const tripAltsOpen = {}; // معرّف المدخل → مفتوح (ذاكرة الجلسة)
+function tripAltsToggle(id){ tripAltsOpen[id] = !tripAltsOpen[id]; renderMyTripsModal(); }
+function tripPickCity(cityId){ tripCitySel = cityId; const r = resolvedTripCache[currentTripId]; if (r){ const i = r.days.findIndex(function(d){ return d.cityId === cityId; }); if (i >= 0) tripDaySel = i; } renderMyTripsModal(); }
+function tripPickDay(i){ tripDaySel = i; renderMyTripsModal(); }
+function tripPickTab(t){ if (t === 'route'){ showSoon('Day routes arrive with the next trips batch'); return; } tripTab = t; renderMyTripsModal(); }
+function tripEntryCardHtml(e, n, readOnly, tripId, ctxCity){ // بطاقة مدخل الخطة: الرقم شريحةً · الاسم · الحي · التنبيه · بلاطات: Maps · Move · Alert · Remove
+  const pl = e._p || {}; const name = pl.name || e.name || 'Place';
+  if (!e._available) return '<div class="row triprow dim">⚠️ ' + escapeHtml(name) + ' — no longer available</div>';
+  const acts = [ pl.url ? { icon: 'maps', label: 'Google Maps', href: pl.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="trip"' } : { icon: 'maps', label: 'Google Maps', disabled: true, title: 'No Maps link for this place' } ];
+  if (!readOnly){ acts.push({ icon: 'move', label: 'Move', on: "tripOpenMoveSheet('" + attrStr(tripId) + "', '" + attrStr(e.id) + "')", title: 'Move to another day or period' }); acts.push({ icon: 'edit', label: 'Alert', on: "tripViewAlert('" + attrStr(e.id) + "')", title: 'A short alert for this stop' }); acts.push({ cls: 'flag', icon: 'trash', label: 'Remove', on: "tripViewRemove('" + attrStr(e.id) + "')", title: 'Remove from this trip' }); }
+  const status = (typeof n === 'number') ? '<span class="pc-chip trip-num">' + n + '</span>' : '';
+  const alertLine = e.alert ? '<div class="pc-alert" dir="auto">⚠ ' + escapeHtml(e.alert) + '</div>' : '';
+  let html = placeCardHtml({ id: e.id, name: name, url: pl.url, area: pl.area, picks: pl.picks, note: pl.note }, 'trip', { actions: acts, status: status, extraLines: alertLine, open: !!e.alert }); // التنبيه سطرًا داخل البطاقة
+  const alts = e.alts || [];
+  if (alts.length){ const open = !!tripAltsOpen[e.id]; html += '<div class="trip-alts' + (open ? ' open' : '') + '"><button type="button" class="trip-alts-h" onclick="tripAltsToggle(\'' + attrStr(e.id) + '\')"><span>or · ' + escapeHtml((alts[0]._p && alts[0]._p.name) || alts[0].name || 'Place') + (alts.length > 1 ? ' · +' + (alts.length - 1) : '') + '</span><span class="arr">' + (open ? '⌃' : '⌄') + '</span></button>'
+    + (open ? alts.map(function(a){ const ap = a._p || {}; return '<div class="trip-alt"><span class="trip-alt-n" dir="auto">' + escapeHtml(ap.name || a.name || 'Place') + (ap.area ? ' <span class="dim">· ' + escapeHtml(ap.area) + '</span>' : '') + '</span>' + (ap.url ? '<a class="act" href="' + attrStr(ap.url) + '" target="_blank" rel="noopener" data-mpsrc="trip">Maps ↗</a>' : '') + (readOnly ? '' : '<button type="button" class="act" onclick="tripViewPromote(\'' + attrStr(e.id) + '\', \'' + attrStr(a.id) + '\')" title="Make it option 1">⇄ Option 1</button><button type="button" class="act flag" onclick="tripViewRemove(\'' + attrStr(a.id) + '\')" title="Remove">✕</button>') + '</div>'; }).join('') : '') + '</div>'; }
+  return html;
+}
+function tripStayCardHtml(trip, city, readOnly){ const c = city || {}; const stay = c.stay && c.stay.name ? escapeHtml(c.stay.name) : 'No stay set'; const when = (c.arrival && c.arrival.date ? tripDateLabel(c.arrival.date) + (c.arrival.time ? ' ' + c.arrival.time : '') : '') + (c.departure && c.departure.date ? ' → ' + tripDateLabel(c.departure.date) + (c.departure.time ? ' ' + c.departure.time : '') : ''); const mode = c.fallback === 'car' ? 'car' : 'walk & metro';
+  return '<div class="trip-stay"><span class="trip-stay-t"><b dir="auto">' + stay + '</b><span class="dim">' + escapeHtml([when, mode].filter(Boolean).join(' · ')) + '</span></span>' + (readOnly ? '' : '<button type="button" class="actn" onclick="openTripBuilder({ tripId: \'' + attrStr(trip.id) + '\', stage: 1 })">Edit</button>') + '</div>'; }
 function renderTripDetail(wrap){
   const sourceList = viewingSharedTrip ? sharedTrips : userTrips;
   const trip = sourceList.find(t => t.id === currentTripId);
-  if (!trip){ currentTripId = null; renderMyTripsModal(); return; }
-  const resolved = resolvedTripCache[currentTripId] || [];
-  const title = trip.customLabel ? `${escapeHtml(trip.cityName)} — ${escapeHtml(trip.customLabel)}` : escapeHtml(trip.cityName || '');
-  const readOnly = viewingSharedTrip || tripViewMode || currentUserSuspended; // المُوقَف يُجبَر على View — يخفي كل أزرار التعديل/الحذف/الترتيب دفعة واحدة
-
-  const totalPlaces = resolved.reduce((a, d) => a + Object.values(d.places || {}).reduce((x, arr) => x + (arr ? arr.length : 0), 0), 0);
-  let html = `<div class="headrow">
-    <button type="button" class="backchip" onclick="backToTripsList()">← Back</button>
-    <button type="button" class="actn" onclick="tripToggleView()">${tripView === 'map' ? 'View: <b>Map</b> · Days' : 'View: <b>Days</b> · Map'}</button>
-    ${(!viewingSharedTrip && !currentUserSuspended && !tripViewMode) ? `<button type="button" class="actn" onclick="toggleTripViewMode()">✓ Done</button>` : ''}
-    <button type="button" class="actn" onclick="openExportPreview('trip', '${currentTripId}')" title="Preview and send">📤</button>
-  </div>
-  <div class="pn" style="font-size:15px; margin:2px 0 1px;">${title} — ${resolved.length} ${resolved.length === 1 ? 'day' : 'days'}</div>
-  <div class="ctx" style="margin:0 0 6px;">${tripTypeLine(trip) ? tripTypeLine(trip) + ' · ' : ''}${totalPlaces} ${totalPlaces === 1 ? 'place' : 'places'}</div>
-  <div class="chipgrid ${resolved.length > 2 ? 'c3' : 'c2'}" id="tripDayGrid" style="margin:0 0 8px;">${resolved.map((d, i) => `<button type="button" class="pl-src${i === 0 ? ' on' : ''}" onclick="tripDayJump(${i}, this)">Day ${d.dayNumber}</button>`).join('')}</div>`; // ر٦٩هـ (N-025): الأيام بمبدل شبكي والمحدد زعفراني
-
-  if (currentUserSuspended){
-    html += `<div style="border:1.5px dashed var(--danger); background:var(--ivory-bright); border-radius:10px; padding:10px 12px; margin-bottom:10px; text-align:center; font-size:11.5px; color:var(--danger); font-weight:700;">🚫 Suspended — can't add or edit places</div>`;
+  if (!trip || !tripHasPlan(trip)){ currentTripId = null; renderMyTripsModal(); return; }
+  const resolved = resolvedTripCache[currentTripId] || { days: [], tray: [] };
+  const readOnly = viewingSharedTrip || currentUserSuspended; // المُوقَف يُجبَر على القراءة
+  const cities = trip.cities || []; if (!tripCitySel || !cities.some(function(c){ return c.cityId === tripCitySel; })) tripCitySel = cities.length ? cities[0].cityId : null;
+  const days = resolved.days || []; const cityDays = []; days.forEach(function(d, i){ if (!tripCitySel || d.cityId === tripCitySel) cityDays.push(i); });
+  if (cityDays.indexOf(tripDaySel) < 0) tripDaySel = cityDays.length ? cityDays[0] : 0;
+  const np = tripPlaceCount(trip); const spec = tripSpec(trip); const warns = tripWarnings(trip.plan, spec);
+  let html = '<div class="headrow"><button type="button" class="backchip" onclick="backToTripsList()">← Trips</button><span class="csel label grow"><b dir="auto">' + escapeHtml(tripTitle(trip)) + '</b></span><button type="button" class="actn ico" onclick="openExportPreview(\'' + (viewingSharedTrip ? 'otrip' : 'trip') + '\', \'' + attrStr(currentTripId) + '\')" title="Preview and send">📤</button></div>';
+  if (viewingSharedTrip) cmCache.trips[trip.id] = trip;
+  if (cities.length > 1 || !readOnly) html += '<div class="chipgrid ' + (cities.length >= 3 ? 'c3' : 'c2') + '">' + cities.map(function(c){ return '<button type="button" class="chip' + (c.cityId === tripCitySel ? ' on' : '') + '" onclick="tripPickCity(\'' + attrStr(c.cityId) + '\')">' + escapeHtml(c.cityName || c.cityId) + ' · ' + (c.days || 1) + (c.days === 1 ? ' day' : ' days') + '</button>'; }).join('') + (readOnly ? '' : '<button type="button" class="chip" onclick="openTripBuilder({ tripId: \'' + attrStr(trip.id) + '\', stage: 1, addCity: true })">＋ City</button>') + '</div>'; // رقاقات المدن مبدّل مصدر (القرار ٤)
+  html += '<div class="chipgrid c3"><button type="button" class="pl-src' + (tripTab === 'plan' ? ' on' : '') + '" onclick="tripPickTab(\'plan\')">Plan</button>' + soonChip('Day route', 'Soon', 'Day routes — times, legs and navigation — arrive with the next trips batch', 'pl-src') + '<button type="button" class="pl-src' + (tripTab === 'map' ? ' on' : '') + '" onclick="tripPickTab(\'map\')">Map</button></div>';
+  const city = cities.find(function(c){ return c.cityId === tripCitySel; }) || cities[0];
+  if (city) html += tripStayCardHtml(trip, city, readOnly);
+  if (currentUserSuspended) html += '<div style="border:1.5px dashed var(--danger); background:var(--ivory-bright); border-radius:10px; padding:10px 12px; margin-bottom:10px; text-align:center; font-size:11.5px; color:var(--danger); font-weight:700;">🚫 Suspended — can\'t add or edit places</div>';
+  if (tripTab === 'map'){ const pts = []; days.forEach(function(d){ tripDayEntries(d).forEach(function(e){ const g = (e._p && e._p.geo) || e.geo; if (e._available !== false && g && typeof g.lat === 'number') pts.push(Object.assign({}, e._p || {}, { name: (e._p && e._p.name) || e.name, geo: g, _day: d.n })); }); });
+    html += '<div class="ctx" style="text-align:center;">' + pts.length + ' of ' + np + ' places have a pin · numbers = day</div><div id="tripMapInline" class="geo-map"></div>'; wrap.innerHTML = html; renderInlineMap('tripMapInline', pts, function(p){ return p._day; }); return; }
+  html += '<div class="chipgrid ' + (cityDays.length >= 3 ? 'c3' : 'c2') + '" id="tripDayGrid">' + cityDays.map(function(i){ const d = days[i]; return '<button type="button" class="pl-src' + (i === tripDaySel ? ' on' : '') + '" onclick="tripPickDay(' + i + ')">' + escapeHtml(tripDayLabel(d).replace(' · ', ' · ')) + (d.date ? '<span class="s">' + escapeHtml(tripDateLabel(d.date)) + '</span>' : '') + '</button>'; }).join('') + '</div>';
+  const day = days[tripDaySel];
+  if (day){
+    const es = tripDayEntries(day); const dw = warns.filter(function(w){ return w.dayIdx === tripDaySel; });
+    html += '<div class="ctx trip-ctx"><span>' + escapeHtml(tripDayLabel(day)) + (day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : '') + ' — ' + es.length + (es.length === 1 ? ' stop' : ' stops') + (day.rest ? ' · 1 rest' : '') + '</span></div>';
+    dw.forEach(function(w){ html += '<div class="trip-warn">⚠ ' + escapeHtml(w.text) + '</div>'; });
+    let n = 0; const avail = tripDayAvailable(day);
+    avail.forEach(function(p){ const arr = day.periods[p] || []; if (!arr.length && readOnly) return; let inner = '';
+      if (p === 'afternoon' && day.rest && city){ inner += '<div class="trip-rest"><span><b>Rest at ' + escapeHtml((city.stay && city.stay.name) || 'your stay') + '</b> <span class="dim">· about ' + Math.round(day.rest.minutes / 60) + ' h</span></span>' + (readOnly ? '' : '<button type="button" class="actn" onclick="tripViewRestRemove()">Remove</button>') + '</div>'; }
+      arr.forEach(function(e){ n++; inner += tripEntryCardHtml(e, n, readOnly, trip.id, city); });
+      if (!arr.length) inner += '<div class="trip-empty-p">— nothing here' + (readOnly ? '' : ' · move a place in') + '</div>';
+      html += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', inner, 'stop'); });
+    if (!es.length && readOnly) html += '<div class="mp-empty mini">No places this day.</div>';
   }
-  if (!readOnly){ // ر٧٠س-٢ (قرار المالك): البطاقة الستة هي واجهة الإضافة بكل الحالات — الزر يفتحها ويطويها؛ اليوم الفارغ يعرضها مفتوحة
-    const anyPlace = resolved.some(function(d){ return Object.keys(d.places || {}).some(function(k){ return (d.places[k] || []).length > 0; }); });
-    html += `<button type="button" class="cta wide" onclick="tripSrcOpen = !tripSrcOpen; renderMyTripsModal()"><b>＋</b> Add places to this trip ${tripSrcOpen ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>'}</button>`;
-    if (tripSrcOpen && anyPlace) html += tripSourcesCardHtml(trip, -1);
-  }
-
-  if (tripView === 'map'){ const __pts = []; resolved.forEach(function(day, dIdx){ Object.keys(day.places || {}).forEach(function(catId){ (day.places[catId] || []).forEach(function(p){ if (p && p._available !== false && p.geo && typeof p.geo.lat === 'number') __pts.push(Object.assign({}, p, { _day: day.dayNumber || (dIdx + 1) })); }); }); }); const __all = resolved.reduce(function(a, day){ return a + Object.keys(day.places || {}).reduce(function(b, c){ return b + (day.places[c] || []).length; }, 0); }, 0);
-    html += '<div class="ctx" style="text-align:center;">' + __pts.length + ' of ' + __all + ' places have a pin · numbers = day</div><div id="tripMapInline" class="geo-map"></div>'; wrap.innerHTML = html; renderInlineMap('tripMapInline', __pts, function(p){ return p._day; }); return; } // ز-١-ب: عرض الخريطة للرحلة بأرقام الأيام
-  resolved.forEach((day, dIdx) => {
-    html += `<div class="dayhead" id="tripday-${dIdx}">
-      <span class="daynum">${day.dayNumber}</span>
-      <span class="daytitle">DAY ${day.dayNumber}</span>
-      <span class="dayline"></span>
-      ${!readOnly ? `<button type="button" class="actn danger" onclick="removeTripDay(${dIdx})" title="Delete this day">🗑</button>` : ''}
-    </div>`;
-    const order = day.categoryOrder || defaultCategoryOrder();
-    const visibleCats = order.filter(catId => (day.places[catId]||[]).length > 0);
-    if (!visibleCats.length){
-      html += readOnly ? `<div class="mp-empty mini">No places yet.</div>` : tripSourcesCardHtml(trip, dIdx); // أ-١٢-٣ (Walk ٣-٤): بطاقة المصادر الستة باليوم الفارغ — تزول بأول مكان
-    }
-    visibleCats.forEach((catId, catIdx) => {
-      const meta = categoryMeta(catId);
-      const places = day.places[catId];
-      const __right = !readOnly ? `<span class="pg-tools"><button type="button" class="reorder-btn" ${catIdx===0?'disabled':''} onclick="moveCategoryOrder(${dIdx}, '${catId}', -1)">▲</button><button type="button" class="reorder-btn" ${catIdx===visibleCats.length-1?'disabled':''} onclick="moveCategoryOrder(${dIdx}, '${catId}', 1)">▼</button></span>` : ''; let __tcards = ''; // r72r-1: المجموعة العاجية بيوم الرحلة
-      places.forEach((p, pIdx) => {
-        if (!p._available){
-          __tcards += `<div class="row triprow dim">⚠️ This place is no longer available</div>`;
-          return;
-        }
-        const sourceLine = (!readOnly) ? '<div class="pc-lab">Source</div><div class="pc-val dim">' + escapeHtml(SOURCE_LABELS[p._ref.sourceType] || '') + '</div>' : ''; // r72q-2 (وضع trip)
-        const tripNoteLine = p._ref.tripNote ? '<div class="pc-lab">Trip note</div><div class="pc-val" dir="auto">' + escapeHtml(p._ref.tripNote) + '</div>' : '';
-        const tActions = readOnly ? [ p.url ? { html: 'Maps ↗', href: p.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="trip"' } : null ] : [
-          p.url ? { html: 'Maps ↗', href: p.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="trip"' } : null,
-          { html: '▲', on: "movePlaceInCategory(" + dIdx + ", '" + catId + "', " + pIdx + ", -1)", title: 'Move up', disabled: pIdx === 0 },
-          { html: '▼', on: "movePlaceInCategory(" + dIdx + ", '" + catId + "', " + pIdx + ", 1)", title: 'Move down', disabled: pIdx === places.length - 1 },
-          { html: '🏷', on: "editTripPlaceNote(" + dIdx + ", '" + catId + "', " + pIdx + ")", title: 'Note for this trip' },
-          { cls: 'flag', html: '🗑', on: "removeTripPlace(" + dIdx + ", '" + catId + "', " + pIdx + ")", title: 'Remove from this day' }
-        ];
-        __tcards += placeCardHtml({ id: p.id || p.url, name: p.name || 'Place', url: p.url, area: p.area, picks: p.picks, note: p.note }, 'trip', { actions: tActions, extraLines: sourceLine + tripNoteLine, open: !!(p._ref.tripNote) });
-      });
-      html += placeGroupHtml(meta.label, places.length, __right, __tcards);
-    });
-  });
-
+  const tray = resolved.tray || [];
+  if (tray.length || !readOnly) html += '<div class="trip-tray' + (tray.length ? '' : ' empty') + '"><div class="trip-tray-h"><b>No day yet · ' + tray.length + '</b>' + (readOnly ? '' : '<span class="dim">tap a place to give it a day</span>') + '</div>' + tray.map(function(e){ const pl = e._p || {}; return '<button type="button" class="trip-tray-i" ' + (readOnly ? 'disabled' : 'onclick="tripOpenMoveSheet(\'' + attrStr(trip.id) + '\', \'' + attrStr(e.id) + '\')"') + '><span dir="auto">' + escapeHtml(pl.name || e.name || 'Place') + '</span>' + (!e.geo ? '<span class="dim">no pin</span>' : '<span class="arr">›</span>') + '</button>'; }).join('') + '</div>';
   if (!readOnly){
-    html += `<button type="button" class="btn btn-ghost wide" onclick="addTripDay()"><b>＋</b> Add day</button>
-    <button type="button" class="actn danger wide" onclick="deleteTrip()">🗑️ Delete this trip</button>`;
+    html += '<div class="trip-foot"><button type="button" class="btn btn-ghost" onclick="openTripBuilder({ tripId: \'' + attrStr(trip.id) + '\', stage: 2 })">Reopen draft</button><button type="button" class="btn btn-ghost" onclick="openTripBuilder({ tripId: \'' + attrStr(trip.id) + '\', stage: 1 })">Edit setup</button><button type="button" class="btn btn-ghost" onclick="startAddingToTrip(\'' + attrStr(trip.id) + '\')">＋ Add places</button></div>'
+      + '<button type="button" class="actn danger wide" onclick="deleteTrip()">🗑️ Delete this trip</button>';
   }
   wrap.innerHTML = html;
-  if (document.getElementById('tripDayGrid')) tripDayJump(0, null); // ر٦٩و: يوم واحد افتراضيًّا
 }
-
-async function moveCategoryOrder(dayIdx, catId, dir){
-  const trip = userTrips.find(t => t.id === currentTripId);
-  if (!trip) return;
-  const day = trip.days[dayIdx];
-  const order = day.categoryOrder || defaultCategoryOrder();
-  const visible = order.filter(c => (day.places[c]||[]).length > 0);
-  const i = visible.indexOf(catId);
-  const j = i + dir;
-  if (j < 0 || j >= visible.length) return;
-  const otherCat = visible[j];
-  const iFull = order.indexOf(catId), jFull = order.indexOf(otherCat);
-  [order[iFull], order[jFull]] = [order[jFull], order[iFull]];
-  day.categoryOrder = order;
-  await saveTrip(trip);
-  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
-  renderMyTripsModal();
-}
-async function movePlaceInCategory(dayIdx, catId, placeIdx, dir){
-  const trip = userTrips.find(t => t.id === currentTripId);
-  if (!trip) return;
-  const arr = trip.days[dayIdx].places[catId];
-  const j = placeIdx + dir;
-  if (j < 0 || j >= arr.length) return;
-  [arr[placeIdx], arr[j]] = [arr[j], arr[placeIdx]];
-  await saveTrip(trip);
-  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
-  renderMyTripsModal();
-}
-async function editTripPlaceNote(dayIdx, catId, placeIdx){
-  const trip = userTrips.find(t => t.id === currentTripId);
-  if (!trip) return;
-  const ref = trip.days[dayIdx].places[catId][placeIdx];
-  const current = ref.tripNote || '';
-  const val = await openInputModal("Note for this trip", "e.g. First choice — closest to hotel", current);
-  if (val === null) return;
-  ref.tripNote = val.trim();
-  await saveTrip(trip);
-  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
-  renderMyTripsModal();
-}
-async function removeTripPlace(dayIdx, catId, placeIdx){
-  const trip = userTrips.find(t => t.id === currentTripId);
-  if (!trip) return;
-  trip.days[dayIdx].places[catId].splice(placeIdx, 1);
-  await saveTrip(trip);
-  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
-  renderMyTripsModal();
-}
-async function removeTripDay(dayIdx){
-  const trip = userTrips.find(t => t.id === currentTripId);
-  if (!trip || !trip.days[dayIdx]) return;
-  const day = trip.days[dayIdx];
-  const n = TRIP_CATEGORIES.reduce((a, c) => a + ((day.places && day.places[c.id]) || []).length, 0);
-  if (!(await mpConfirm((n ? 'Its ' + n + ' place' + (n === 1 ? '' : 's') + ' will be removed from the trip. ' : '') + 'This cannot be undone.', { title: '🗑 Delete Day ' + day.dayNumber + '?', ok: 'Delete day', danger: true }))) return; /* ب-٢-٢-أ٢: ورقة بدل confirm */
-  trip.days.splice(dayIdx, 1);
-  trip.days.forEach((d, i) => { d.dayNumber = i + 1; });      // إعادة الترقيم فلا تبقى فجوة
-  await saveTrip(trip);
-  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
-  renderMyTripsModal();
-  showToast('Day deleted');
-}
-async function addTripDay(){
-  const trip = userTrips.find(t => t.id === currentTripId);
-  if (!trip) return;
-  const nextNum = trip.days.length ? Math.max(...trip.days.map(d=>d.dayNumber)) + 1 : 1;
-  trip.days.push(emptyDay(nextNum));
-  await saveTrip(trip);
-  resolvedTripCache[currentTripId] = await resolveTripPlaces(trip);
-  renderMyTripsModal();
-}
+function tripCurrent(){ return userTrips.find(t => t.id === currentTripId) || null; }
+async function tripViewSave(trip){ await saveTrip(trip); resolvedTripCache[trip.id] = await resolveTripPlaces(trip); renderMyTripsModal(); }
+async function tripViewRemove(entryId){ const trip = tripCurrent(); if (!trip) return; const f = tripFindEntry(trip.plan, entryId); if (!f) return; if (!(await mpConfirm('Remove ' + ((f.entry && f.entry.name) || 'this place') + ' from the trip?', { title: 'Remove from trip', ok: 'Remove', danger: true }))) return; tripDetach(trip.plan, entryId); await tripViewSave(trip); }
+async function tripViewPromote(hostId, altId){ const trip = tripCurrent(); if (!trip) return; const f = tripFindEntry(trip.plan, hostId); if (!f || f.where !== 'day') return; const host = f.entry; const k = (host.alts || []).findIndex(function(a){ return a.id === altId; }); if (k < 0) return; const alt = host.alts[k]; host.alts.splice(k, 1); const hostAlts = host.alts; host.alts = []; alt.alts = [host].concat(hostAlts); trip.plan.days[f.dayIdx].periods[f.period][f.index] = alt; if (trip.plan.days[f.dayIdx].excursion === host.id) trip.plan.days[f.dayIdx].excursion = alt.id; await tripViewSave(trip); } // التبديل: البديل يصير الخيار ١ والأول يعود إلى القائمة
+async function tripViewAlert(entryId){ const trip = tripCurrent(); if (!trip) return; const f = tripFindEntry(trip.plan, entryId); if (!f) return; const v = await mpSheet({ title: 'Alert for ' + (f.entry.name || 'this stop'), text: 'A short note you want to see on the day — e.g. closes at dusk, book ahead.', ok: 'Save', input: { value: f.entry.alert || '', placeholder: 'e.g. closes at dusk' } }); if (v === null || v === undefined) return; f.entry.alert = String(v || '').trim().slice(0, 80); await tripViewSave(trip); }
+async function tripViewRestRemove(){ const trip = tripCurrent(); if (!trip || !trip.plan.days[tripDaySel]) return; trip.plan.days[tripDaySel].rest = null; await tripViewSave(trip); }
+function tripOpenMoveSheet(tripId, entryId){ const trip = userTrips.find(t => t.id === tripId); if (!trip || !tripHasPlan(trip)) return; tripMoveSheet(trip.plan, tripSpec(trip), entryId, async function(changed){ if (!changed) return; await saveTrip(trip); delete resolvedTripCache[trip.id]; if (currentTab === 'Trips' && currentTripId === trip.id){ resolvedTripCache[trip.id] = await resolveTripPlaces(trip); renderMyTripsModal(); } }); }
 async function deleteTrip(){
   if (!(await mpConfirm('This cannot be undone.', { title: '🗑 Delete this trip?', ok: 'Delete trip', danger: true }))) return; /* ب-٢-٢-أ٢ */
   try{ await mpData.trips.remove(currentTripId); }catch(e){}
@@ -768,4 +624,3 @@ async function deleteTrip(){
   currentTripId = null;
   renderMyTripsModal();
 }
-
