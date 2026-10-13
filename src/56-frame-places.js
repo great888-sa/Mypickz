@@ -805,7 +805,7 @@ async function savePlPlace(){
   const place = plEdit ? ((userGetEntry(plEdit.catId).places || [])[plEdit.index] || {}) : {};
   place.id = place.id || ('place_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
   place.name = name; place.url = url;
-  place.area = mpStripBidi(document.getElementById('plArea').value).trim();
+  place.area = mpFixAreaDot(mpStripBidi(document.getElementById('plArea').value).trim()); // ب-٦
   if (!plGeoConfirmed){ plGeoConfirmed = false; await openGeoStep(place); return; } // ز-١-ب: خطوة الخريطة بملء الشاشة — تعود إلى الحفظ بعد التأكيد/التخطي
   plGeoConfirmed = false; if (plGeoResult){ if (plGeoResult.geo) place.geo = plGeoResult.geo; else delete place.geo; if (plGeoResult.openId) place.openId = plGeoResult.openId; else delete place.openId; plGeoResult = null; }
   place.updatedAt = Date.now(); /* ر٧٣-أب (٢) — قرار المالك: «Latest update places» بختم زمني لكل مكان من الآن */
