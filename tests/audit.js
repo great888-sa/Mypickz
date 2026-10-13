@@ -313,7 +313,7 @@ const CAP_COLORS_OUTSIDE_IDENTITY = { [TEST]: 139, [PROD]: 149 }; // ر42 = ١٤
 const CONTROL_CLASSES = ['btn', 'chip', 'act', 'actn', 'cta', 'csel', 'pl-src', 'mp-tab', 'dr-item', 'acc-item', 'switch-btn', 'pl-actbtn', 'addr-chip', 'pl-catpick', 'city-tab', 'area-chip', 'hcard', 'remove-btn', 'bmk-btn', 'reorder-btn', 'add-place-btn', 'quick-nav-btn', 'action-btn', 'status-toggle', 'mp-burger', 'mp-idchip', 'pw-eye', 'show-more-btn', 'pclose', 'prow', 'addmini'];
 const LIFE_PATHS = [ // مسارات الحياة العشرة — دالة مدخل مسمّاة لكل مسار: معرَّفة ومستدعاة
   ['signup', ['doSignUp']], ['signin', ['doSignIn']], ['save place', ['savePlPlace', 'saveMyCityList']],
-  ['publish & share', ['plTogglePublic', 'shareCityListWithSomeone']], ['trip', ['openCreateTripFlow', 'saveTrip']],
+  ['publish & share', ['plTogglePublic', 'shareCityListWithSomeone']], ['trip', ['openTripBuilder', 'saveTrip']],
   ['private address', ['saveAddr']], ['bookmark', ['togglePlaceBookmark']], ['suspend', ['toggleSuspendUser']],
   ['delete', ['deleteTrip', 'plDeleteRow', 'deleteAddr', 'openDeletePreview']], ['sign out', ['doSignOut', 'confirmLogout']]
 ];
@@ -654,6 +654,7 @@ function finish(){
   slashCommentGuard(TEST, test);
   buildGuard();
   manifestGuard();
+  tripModelGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
@@ -667,16 +668,16 @@ function referenceConformanceGuard(label, s){
   const C = [
     ['٦/أ صف المصدر بالرأس الثابت: My places · ＋ Add place · Search a place (r74m — بلا وسم stage 3)', has(/class="chipgrid c3 headgrid" id="plSrcRow"/, /Search a place/, /id="plAddBtn"/) && none(/Saved from Curators <span class="dim">stage 3/)],
     ['٦/أ المحدد بالمنسدلتين + ＋ City', has(/plToggle\w*Country|plPickCountry|plCountryBtn/, /＋<\/b> City|＋ City/)],
-    ['٦/أ الصف الرابع: Day plan موسوم · Export · العلنية · المشاركة (r74m)', has(/class="plrow4"/, /Day plan', 'Soon'/, /Export places list/, /id="plPublicBtn"/, /id="plShareBtn"/)],
+    ['٦/أ الصف الرابع: Day plan حي (r77) · Export · العلنية · المشاركة', has(/class="plrow4"/, /dayPlan: true/, /Export places list/, /id="plPublicBtn"/, /id="plShareBtn"/)],
     ['٦/أ سطر السياق بعد الصف الرابع (r74m)', s.indexOf('class="plrow4"') > 0 && s.indexOf('id="plCtx"') > s.indexOf('class="plrow4"')],
     ['٦/أ المشاركة الصادرة «Share my list with…»', has(/Share my list with/)],
     ['٦/أ لا قسم Shared with you بالوجهتين', none(/Shared with you \(' \+ shared/, /moves into/)],
     ['٦/أ نافذة مفكرتي مجمَّعة بالمدينة', has(/bmCity|groupByCity|Bookmarked places[^\n]{0,400}cityName/)],
     ['٦/أ نافذة المخططات بنوعيها', has(/City Route/, /Outside city trip/)],
     ['٦/ب المبدل الرباعي شبكة ٢×٢', has(/data-tsrc="saved"/, /Saved from Community <span class="dim">stage 3<\/span><\/button>/)],
-    ['٦/ب صف واحد: Create trip أولًا يسارًا ثم All cities', s.indexOf('openCreateTripFlow()">＋ Create trip') > 0 && s.indexOf('openCreateTripFlow()">＋ Create trip') < s.indexOf('id="tripCityPick"')],
-    ['٦/ب أنواع الرحلات اثنان', none(/One day trip/, /data-ttype="day"/)],
-    ['٦/ب عرض الرحلة: غلاف ومحطات وأرجل', has(/tcover|stopcard|legrow/)],
+    ['٦/ب صف واحد: Build a trip أولًا يسارًا ثم All trips (r77)', s.indexOf('openTripBuilder()">＋ Build a trip') > 0 && s.indexOf('openTripBuilder()">＋ Build a trip') < s.indexOf('id="tripCityPick"')],
+    ['٦/ب لا نوع للرحلة: شرائح الحالة الثلاث بدل مدينة واحدة/متعددة (r77 · القرار ١٣)', none(/One day trip/, /data-ttype="day"/, /data-ttype="city"/, /data-ttype="multi"/) && has(/data-ttype="upcoming"/, /data-ttype="past"/)],
+    ['٦/ب عرض الرحلة بالخطة: الفترات والبدائل والصينية وورقة النقل (r77)', has(/trip-tray/, /trip-alts/, /tm-grid/)],
     ['٦/د الجذر: مبدل + بحث الاسم + محدد المدينة', has(/communityScreen = 'root'/, /Search by username|cmSearch/) && has(/rootCity|cmRootCity/)],
     ['٦/د شاشة المصدر على القالب المشترك', has(/sourceScreen\(\{[^\n]*backHandler: 'cmBackToRoot/)],
     ['٦/د الشرائح الست ٣+٣', has(/Most bookmarked<\/button><\/div>'\n?\s*\+ '<div class="chipgrid c3"><button[^\n]*Shared with you/)],
@@ -790,3 +791,16 @@ function manifestGuard(){
   check(!paper || String(m.background_color || '').toUpperCase() === paper.toUpperCase(), T + 'splash background_color equals --paper (' + paper + ')', 'found ' + m.background_color);
 }
 
+// ---------- §27 (r77 · حزمة الرحلات · الدفعة أ — التثبيت ٥): لا عودة للنموذج القديم (جدول الخانات السبع ونوع الرحلة) · المحرك وجدول الإيقاع حاضران ----------
+function tripModelGuard(){
+  const T = '§27 trip model: ';
+  const code = stripComments(test.replace(/<script\b[^>]*>|<\/script>/g, ''));
+  const banned = ['TRIP_CATEGORIES', 'categoryOrder', 'defaultCategoryOrder(', 'emptyDay(', 'openCreateTripFlow', 'tripTypeLine', 'TRIP_TYPES', 'newTripType', 'Single city', 'Multi-city', 'openCategoryPicker', 'openDayPicker', 'tripSourcesCardHtml'];
+  const found = banned.filter(n => code.includes(n));
+  check(found.length === 0, T + 'no consumer of the old day-slot model or the trip type remains', found.join(', '));
+  check(/const TRIP_RHYTHM = \{/.test(code) && /function tripBuildPlan\(/.test(code) && /function tripSuggestSlot\(/.test(code) && /function tripWarnings\(/.test(code), T + 'engine present: TRIP_RHYTHM · tripBuildPlan · tripSuggestSlot · tripWarnings');
+  const engine = fs.readFileSync(path.join(ROOT, 'src', '59-trip-engine.js'), 'utf8');
+  check(!/document\.|window\.|mpData\.|fetch\(|localStorage/.test(stripComments(engine)), T + 'engine part is pure — no DOM, no data layer, no network (التثبيت ١)');
+  check(/Math\.random/.test(stripComments(engine).replace(/function tripNewEntry[\s\S]*?\n\}/, '')) === false, T + 'engine is deterministic — no Math.random outside id generation (التثبيت ٤)');
+  check(/tripPlanNormalize\(/.test(code) && /Old format/.test(test), T + 'old-format trips are guarded (normalize + delete-only row)');
+}
