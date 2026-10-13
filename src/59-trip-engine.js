@@ -26,7 +26,9 @@ const TRIP_RHYTHM = { // ═══ جدول الإيقاع (البيان v1.2 ·
   },
   defaultRole: { role: 'visit', periods: ['morning', 'midday', 'afternoon', 'evening'], minutes: 60 },
   walkKm: 1.2, pocketKm: { transit: 1.5, car: 8 }, detour: { walk: 1.3, transit: 1.3, car: 1.4 },
-  rest: { minutes: 120, maxKm: 3, minStops: 4 }, longLegKm: { walk: 3, car: 25 }
+  rest: { minutes: 120, maxKm: 3, minStops: 4 }, longLegKm: { walk: 3, car: 25 },
+  altCap: 2, // ب-٣: البناء التلقائي يضع بديلين على الأكثر لكل محطة؛ ما زاد إلى الصينية (يدويًّا بلا حد)
+  orderTiers: { morning: { light: 0 }, midday: { meal: 0, light: 1 }, afternoon: { light: 1 }, evening: { meal: 1, light: 2 } } // ب-٣: ترتيب داخل الفترة بالدور ثم القرب — ما لم يُذكر رتبته ٠ (أو ١ حيث يُذكر غيره قبله)
 };
 function tripRoleOf(subcatId, sectionId){ const R = TRIP_RHYTHM.roles; const r = R[subcatId] || R[sectionId] || TRIP_RHYTHM.defaultRole; return { role: r.role, periods: (r.periods || TRIP_PERIODS).slice(), minutes: r.minutes || 60 }; }
 function tripEntryRole(e){ return tripRoleOf(e && e.ref && e.ref.subcatId, e && e.sec); }
@@ -85,15 +87,19 @@ function tripPockets(entries, radiusKm){ // الخطوة ٢: الجيوب بال
 function tripMealIn(day, p){ return (day.periods[p] || []).some(function(e){ return tripEntryRole(e).role === 'meal'; }); }
 function tripTryPlace(day, e, version, allowAlt){ // يحاول إدخال مدخل في يوم بقواعد الإيقاع؛ يعيد { period, alt } أو null — لا يعدّل
   const role = tripEntryRole(e); if (role.role === 'none') return null; const avail = tripDayAvailable(day); const ab = tripDayAbsorb(day); const periods = TRIP_PERIODS.filter(function(p){ return avail.indexOf(p) >= 0 && role.periods.some(function(rp){ return rp === p || ab[rp] === p; }); }); if (!periods.length) return null; // ب-٢: دور الفترة المطفأة يجوز في ضامّتها
-  if (allowAlt !== false){ for (let i = 0; i < periods.length; i++){ const host = (day.periods[periods[i]] || []).find(function(x){ return x.ref && e.ref && x.ref.subcatId === e.ref.subcatId; }); if (host) return { period: periods[i], alt: host.id }; } } // الخطوة ٥: التصنيف الفرعي نفسه في الفترة نفسها → بديل
+  if (tripDayHasSubcat(day, e)){ if (allowAlt === false) return null; let best = null; TRIP_PERIODS.forEach(function(p){ (day.periods[p] || []).forEach(function(x){ if (x.ref && e.ref && x.ref.subcatId === e.ref.subcatId && (x.alts || []).length < TRIP_RHYTHM.altCap && (!best || (x.alts || []).length < (best.alts || []).length)) best = x; }); }); if (!best) return null; const f = tripFindEntry({ days: [day], tray: [] }, best.id); return { period: f.period, alt: best.id }; } // ب-٣: الصنف موجود في اليوم → بديل للمضيف الأقل بدائل بسقف بديلين، وإلا لا شيء (يومٌ بلا الصنف يأخذه محطةً)
   if (role.role === 'excursion' && !day.excursion){ for (let i = 0; i < periods.length - 1; i++){ const a = periods[i], b = TRIP_PERIODS[TRIP_PERIODS.indexOf(a) + 1]; if (periods.indexOf(b) >= 0 && tripPeriodCount(day, a) === 0 && tripPeriodCount(day, b) === 0) return { period: a, alt: null, excursion: true }; } }
   let best = null, br = 0; periods.forEach(function(p){ if (role.role === 'meal' && tripMealIn(day, p)) return; const r = tripPeriodRoom(day, p, version); if (r > br){ best = p; br = r; } }); // الأوسع فراغًا؛ التعادل للأبكر
   return best ? { period: best, alt: null } : null;
 }
+function tripDayHasSubcat(day, e){ const sc = e && e.ref && e.ref.subcatId; if (!sc) return false; return TRIP_PERIODS.some(function(p){ return (day.periods[p] || []).some(function(x){ return x.ref && x.ref.subcatId === sc; }); }); }
+function tripAltSlot(plan, dayIdx, e){ // ب-٣: بديل للمضيف الأقل بدائل بين الأيام كلها، بسقف بديلين؛ التعادل للأبكر
+  let best = null; dayIdx.forEach(function(i){ const t = tripTryPlace(plan.days[i], e, 'balanced', true); if (!t || !t.alt) return; const host = (plan.days[i].periods[t.period] || []).find(function(x){ return x.id === t.alt; }); const n = host ? (host.alts || []).length : 0; const dn = tripDayEntries(plan.days[i]).reduce(function(a, x){ return a + (x.alts || []).length; }, 0); if (!best || n < best.n || (n === best.n && dn < best.dn)) best = { dayIdx: i, period: t.period, alt: t.alt, n: n, dn: dn }; }); return best; // التعادل: اليوم الأقل بدائل إجمالًا ثم الأبكر
+}
 function tripInsert(plan, dayIdx, period, e, altOf, excursion){ const day = plan.days[dayIdx]; if (!day) return false; if (altOf){ const host = (day.periods[period] || []).find(function(x){ return x.id === altOf; }); if (!host) return false; host.alts = host.alts || []; host.alts.push(e); return true; } day.periods[period] = day.periods[period] || []; day.periods[period].push(e); if (excursion) day.excursion = e.id; return true; }
 function tripDetach(plan, id){ const f = tripFindEntry(plan, id); if (!f) return null; if (f.where === 'day'){ const day = plan.days[f.dayIdx]; day.periods[f.period].splice(f.index, 1); if (day.excursion === id) day.excursion = null; } else if (f.where === 'alt'){ f.host.alts.splice(f.altIndex, 1); } else { plan.tray.splice(f.index, 1); } return f.entry; }
 function tripOrderDay(day, stayGeo){ // الخطوة ٤: الإيقاع ثم القرب — داخل كل فترة سلسلة الأقرب فالأقرب من آخر محطة قبلها (أو الإقامة)
-  let last = stayGeo || null; TRIP_PERIODS.forEach(function(p){ const arr = (day.periods[p] || []).slice(); const out = []; while (arr.length){ let bi = 0, bd = Infinity; arr.forEach(function(e, i){ const d = tripKm(last, e.geo); const dd = (d === null) ? 1e9 : d; if (dd < bd || (dd === bd && tripById(e, arr[bi]) < 0)){ bd = dd; bi = i; } }); const e = arr.splice(bi, 1)[0]; out.push(e); if (e.geo) last = e.geo; } day.periods[p] = out; });
+  let last = stayGeo || null; TRIP_PERIODS.forEach(function(p){ const tier = function(e){ const t = TRIP_RHYTHM.orderTiers[p] || {}; const r = tripEntryRole(e).role; if (t[r] !== undefined) return t[r]; const vals = Object.keys(t).map(function(k){ return t[k]; }); return vals.indexOf(0) >= 0 ? 1 : 0; }; const arr = (day.periods[p] || []).slice(); const out = []; while (arr.length){ let bi = 0, bd = Infinity, bt = Infinity; arr.forEach(function(e, i){ const tr = tier(e); const d = tripKm(last, e.geo); const dd = (d === null) ? 1e9 : d; if (tr < bt || (tr === bt && (dd < bd || (dd === bd && tripById(e, arr[bi]) < 0)))){ bt = tr; bd = dd; bi = i; } }); const e = arr.splice(bi, 1)[0]; out.push(e); if (e.geo) last = e.geo; } day.periods[p] = out; }); // ب-٣: الدور أولًا (الصباح: الخفيف قبل المشاهدة · الظهيرة: الوجبة ثم القهوة · العصر: القهوة بعد الزيارة · المساء: المشاهدة ثم الوجبة ثم الحلو) ثم القرب
 }
 function tripRestFor(day, stayGeo){ if (!stayGeo) return null; const n = tripDayEntries(day).length; if (n < TRIP_RHYTHM.rest.minStops) return null; const c = tripCentroid(day.periods.midday); const d = tripKm(c, stayGeo); if (d === null || d > TRIP_RHYTHM.rest.maxKm) return null; if (tripDayAvailable(day).indexOf('afternoon') < 0) return null; return { minutes: TRIP_RHYTHM.rest.minutes }; }
 function tripBuildPlan(spec){ // spec = { cities:[{cityId, days, stay:{geo}|null, arrival, departure, fallback}], entries:[entry], version }
@@ -107,7 +113,7 @@ function tripBuildPlan(spec){ // spec = { cities:[{cityId, days, stay:{geo}|null
     const pockets = tripPockets(pinned, TRIP_RHYTHM.pocketKm[city.fallback === 'car' ? 'car' : 'transit']);
     // الخطوة ٣ (r77-٢ · القرار ٩ — التوازن): هدف لكل يوم ≈ الأماكن ÷ الأيام بسقف سعته؛ الجيب يبدأ باليوم الأوسع هدفًا ويُقسَّم فائضه على اليوم الأقرب جغرافيًّا؛ ما فاض عن الأهداف يذهب لأي يوم فيه فراغ؛ وإلا الصينية
     const room = {}; dayIdx.forEach(function(i){ room[i] = tripDayRoom(plan.days[i], version); });
-    const subcats = {}; pinned.forEach(function(e){ subcats[(e.ref && e.ref.subcatId) || e.id] = true; }); const nMain = Object.keys(subcats).length; // المحطات الرئيسة ≈ التصنيفات الفرعية المختلفة (ما زاد من التصنيف نفسه يصير بديلًا ولا يُحتسب)
+    const subcats = {}; pinned.forEach(function(e){ const k = (e.ref && e.ref.subcatId) || e.id; subcats[k] = (subcats[k] || 0) + 1; }); const nMain = Object.keys(subcats).reduce(function(a, k){ return a + Math.min(subcats[k], dayIdx.length); }, 0); // المحطات الرئيسة ≈ لكل صنف محطة في كل يوم على الأكثر (الباقي بدائل بسقف ثم الصينية — ب-٣)
     const target = {}; const base = Math.floor(nMain / dayIdx.length); dayIdx.forEach(function(i){ target[i] = Math.min(room[i], base); }); // القاعدة ٢ ثم الباقي واحدًا واحدًا على الأيام الأوسع فراغًا (٧ على ٣ أيام = ٣·٢·٢ لا ٣·٣·١)
     const growOrder = dayIdx.slice().sort(function(a, b){ return (room[b] - room[a]) || (a - b); });
     let sum = dayIdx.reduce(function(a, i){ return a + target[i]; }, 0); let guard = 0;
@@ -118,14 +124,15 @@ function tripBuildPlan(spec){ // spec = { cities:[{cityId, days, stay:{geo}|null
     pockets.forEach(function(pk){
       let cur = null; const pool = function(){ return dayIdx.filter(function(i){ return left[i] > 0; }); };
       pk.items.forEach(function(e){
-        for (let k = 0; k < dayIdx.length; k++){ const ta = tripTryPlace(plan.days[dayIdx[k]], e, version, true); if (ta && ta.alt){ tripInsert(plan, dayIdx[k], ta.period, e, ta.alt, false); return; } } // البديل أولًا: التصنيف الفرعي نفسه في يوم ما لا يُحتسب في التوازن
         if (cur === null || left[cur] <= 0){ const p = pool(); if (!p.length){ pending.push(e); return; } const byLeft = p.slice().sort(function(a, b){ return (left[b] - left[a]) || (a - b); }); const near = (cur === null) ? null : nearest(pk.c, p); cur = (near !== null && tripDayCentroid(plan.days[near])) ? near : byLeft[0]; }
-        const t = tripTryPlace(plan.days[cur], e, version, true);
+        const t = tripTryPlace(plan.days[cur], e, version, false); // ب-٣: محطةً أولًا في يوم بلا الصنف (اليوم الحالي ثم الأوسع فراغًا)، ثم بديلًا بسقف، ثم الصينية
         if (t){ tripInsert(plan, cur, t.period, e, t.alt, !!t.excursion); if (!t.alt) left[cur]--; }
-        else { let done = false; const others = dayIdx.filter(function(i){ return i !== cur; }).sort(function(a, b){ return (left[b] - left[a]) || (a - b); }); for (let k = 0; k < others.length && !done; k++){ const t2 = tripTryPlace(plan.days[others[k]], e, version, true); if (t2){ tripInsert(plan, others[k], t2.period, e, t2.alt, !!t2.excursion); if (!t2.alt) left[others[k]]--; done = true; } } if (!done) pending.push(e); }
+        else { let done = false; const others = dayIdx.filter(function(i){ return i !== cur; }).sort(function(a, b){ return (left[b] - left[a]) || (a - b); }); for (let k = 0; k < others.length && !done; k++){ const t2 = tripTryPlace(plan.days[others[k]], e, version, false); if (t2){ tripInsert(plan, others[k], t2.period, e, t2.alt, !!t2.excursion); if (!t2.alt) left[others[k]]--; done = true; } }
+          if (!done){ const ta = tripAltSlot(plan, dayIdx, e); if (ta){ tripInsert(plan, ta.dayIdx, ta.period, e, ta.alt, false); done = true; } }
+          if (!done) pending.push(e); }
       });
     });
-    pending.forEach(function(e){ let done = false; const order = dayIdx.slice().sort(function(a, b){ return (tripDayRoom(plan.days[b], version) - tripDayRoom(plan.days[a], version)) || (a - b); }); for (let k = 0; k < order.length && !done; k++){ const t = tripTryPlace(plan.days[order[k]], e, version, true); if (t){ tripInsert(plan, order[k], t.period, e, t.alt, !!t.excursion); done = true; } } if (!done) plan.tray.push(e); });
+    pending.forEach(function(e){ let done = false; const order = dayIdx.slice().sort(function(a, b){ return (tripDayRoom(plan.days[b], version) - tripDayRoom(plan.days[a], version)) || (a - b); }); for (let k = 0; k < order.length && !done; k++){ const t = tripTryPlace(plan.days[order[k]], e, version, false); if (t){ tripInsert(plan, order[k], t.period, e, t.alt, !!t.excursion); done = true; } } if (!done){ const ta = tripAltSlot(plan, dayIdx, e); if (ta){ tripInsert(plan, ta.dayIdx, ta.period, e, ta.alt, false); done = true; } } if (!done) plan.tray.push(e); });
     dayIdx.forEach(function(i){ const day = plan.days[i]; const stay = city.stay && city.stay.geo; tripOrderDay(day, stay); day.rest = tripRestFor(day, stay); });
   });
   plan.tray.sort(tripById);
@@ -135,7 +142,8 @@ function tripSuggestSlot(plan, e, spec){ // الإضافة من بطاقة ال�
   if (!e.geo) return null; const version = (spec && spec.version) || 'balanced'; const cityId = e.ref && e.ref.cityId; const city = ((spec && spec.cities) || []).find(function(c){ return c.cityId === cityId; }) || ((spec && spec.cities) || [])[0];
   const cands = []; (plan.days || []).forEach(function(d, i){ if (city && d.cityId !== city.cityId) return; const c = tripDayCentroid(d) || (city && city.stay && city.stay.geo) || null; const dist = tripKm(e.geo, c); cands.push({ i: i, dist: (dist === null) ? 1e9 : dist }); });
   cands.sort(function(a, b){ return (a.dist - b.dist) || (a.i - b.i); });
-  for (let k = 0; k < cands.length; k++){ const t = tripTryPlace(plan.days[cands[k].i], e, version, true); if (t) return { dayIdx: cands[k].i, period: t.period, alt: t.alt || null, excursion: !!t.excursion }; }
+  for (let k = 0; k < cands.length; k++){ const t = tripTryPlace(plan.days[cands[k].i], e, version, false); if (t) return { dayIdx: cands[k].i, period: t.period, alt: null, excursion: !!t.excursion }; } // ب-٣: محطةً في يوم بلا الصنف أولًا
+  for (let k = 0; k < cands.length; k++){ const t = tripTryPlace(plan.days[cands[k].i], e, version, true); if (t && t.alt) return { dayIdx: cands[k].i, period: t.period, alt: t.alt, excursion: false }; } // ثم بديلًا بسقف بديلين
   return null;
 }
 function tripWarnings(plan, spec){ // الخطوة ٦: الجدوى — تحذير لا منع
