@@ -811,4 +811,5 @@ function tripModelGuard(){
   check(!/Day route <span class="dim">Soon/.test(test) && /tripPickTab\(\\'route\\'\)/.test(code) && /tripRoutesPrune\(trip\)/.test(code), T + 'Day route tab is real and routes are pruned on save (r78)');
   check(!/dayRoutes\[[^\]]*\]\.(stops|order|arrive|complete)\s*=/.test(code), T + 'no stored order, times or completeness flag in dayRoutes — derived from the plan (التثبيت ٢)');
   check(/function tripCityPeriods\(/.test(engine) && /function tripDayAbsorb\(/.test(engine) && /function tripDayFold\(/.test(engine) && /tbTogglePeriod\(/.test(code), T + 'flexible periods: city periods · absorption · fold · setup toggles (r78-2)');
+  check(/altCap: 2/.test(engine) && /function tripAltSlot\(/.test(engine) && /orderTiers: \{/.test(engine) && /removing an alternative sends it back here/.test(test), T + 'alternatives capped at two in the automatic build · tiered order within a period · tray note (r78-3)');
 }
