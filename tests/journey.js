@@ -59,6 +59,7 @@ const CAPS = [
   'trip.route.schedule', 'trip.route.prune', 'trip.route.view', 'trip.route.navApp', /* r78 */
   'trip.periods.flex', /* r78-٢ */
   'trip.altCap', /* r78-٣ */
+  'trip.legWarn.inline', /* r78-٥ */
 ];
 const covered = new Set();
 function cap(id){ if (!CAPS.includes(id)) throw new Error('قدرة غير معلنة: ' + id); covered.add(id); }
@@ -1908,6 +1909,14 @@ function citiesSeed(){
     }
   }, ['trip.altCap']);
 
+  await must('r78-٥ · تحذير الرِّجل الطويلة بحدّ وسيلتها وفي موضعها · علامات الاتجاه الخفية تُحذف', async () => {
+    const w = B.x("(function(){ var mk = function(id, lat, lng, sc, sec){ return tripNewEntry({ id: id, ref: { sourceType: 'mylist', cityId: 'cw', subcatId: sc || 'landmarks', placeId: id, sourceUid: null }, name: id, geo: { lat: lat, lng: lng }, sec: sec || 'landmarks' }); }; var day = { n: 1, kind: 'full', cityId: 'cw', date: null, from: null, to: null, off: [], periods: { morning: [mk('a', 48.86, 2.35)], midday: [mk('b', 48.86, 2.39, 'burger', 'restaurants_dish')], afternoon: [mk('c', 48.93, 2.39)], evening: [] }, rest: null, excursion: null }; var plan = { days: [day], tray: [] }; var t = tripWarnings(plan, { cities: [{ cityId: 'cw', fallback: 'transit' }], version: 'balanced' }); var c = tripWarnings(plan, { cities: [{ cityId: 'cw', fallback: 'car' }], version: 'balanced' }); return JSON.stringify({ transit: t.map(function(x){ return x.kind + ':' + (x.toId || '') + ':' + x.mode + ':' + Math.round(x.km); }), car: c.map(function(x){ return x.kind + ':' + (x.toId || ''); }), html: tripLegWarnHtml(t[0]) }); })()");
+    ok('r78-٥ · مترو: رِجل ≈ ٤ كم لا تُنذر (الحدّ ٨) · رِجل ≈ ١٠ كم تُنذر بمعرّف محطتها ووسيلتها · سيارة: لا إنذار (الحدّ ٢٥) · السطر «↓ ≈ 10 km · metro — a long leg»', JSON.parse(w).transit.join() === 'longLeg:c:transit:10' && JSON.parse(w).car.length === 0 && JSON.parse(w).html === '<div class="trip-legwarn">↓ ≈ 10 km · metro — a long leg</div>', w);
+    const bidi = B.x("JSON.stringify([escapeHtml('\u200F7th arr.'), mpStripBidi('\u202Bx\u202C'), escapeHtml('<b>')])");
+    ok('r78-٥ · escapeHtml يحذف علامات الاتجاه الخفية (U+200F وأخواتها) ويبقي الترميز', bidi === '["7th arr.","x","&lt;b&gt;"]', bidi);
+    cap('trip.legWarn.inline');
+  }, ['trip.legWarn.inline']);
+
   // ═══ رحلة الشاشة (ر٦٥) — كل محطة تسمّي مشهد المرجع الذي تحرسه ═══
   await must('ش١ · ٦/أ الأماكن: صف الأفعال الخمسة بلا سلة (الشاشة)', async () => {
     B.set('cityListCityId', 'paris'); B.x('renderPlacesMine()');
@@ -2194,7 +2203,7 @@ function citiesSeed(){
       s4:  { deferred: 'نبذة تعريفية — تُبنى بالخطوة الأولى المتممة' }, s11: ['userLists.default'], s12: ['screen.static.backChip'],
       dA:  ['cityLists.create', 'bookmark.place.on', 'place.identityByUrl', 'bookmark.place.urlLessIsolated', 'screen.places.rowActions', 'screen.static.placesChips', 'edge.doubleToggleStable', 'edge.disabledChipsInert'],
       dB:  ['trip.build.plan', 'trip.filter.byStatus', 'trip.card', 'bookmark.trip.self', 'screen.trip.bookmarkedChip', 'screen.static.tripChips', 'screen.trips.cityPick'],
-      dB2: ['trip.builder.stages', 'trip.moveSheet', 'trip.alternatives', 'trip.engine.deterministic', 'trip.periods.flex', 'trip.altCap'], dC: ['trip.addPlaces.refs', 'trip.autoPlace', 'trip.view.plan', 'trip.route.view', 'trip.route.schedule', 'trip.route.prune', 'trip.route.navApp', 'trip.resolve.available', 'screen.trip.defaultView', 'screen.trip.reopenStable'],
+      dB2: ['trip.builder.stages', 'trip.moveSheet', 'trip.alternatives', 'trip.engine.deterministic', 'trip.periods.flex', 'trip.altCap', 'trip.legWarn.inline'], dC: ['trip.addPlaces.refs', 'trip.autoPlace', 'trip.view.plan', 'trip.route.view', 'trip.route.schedule', 'trip.route.prune', 'trip.route.navApp', 'trip.resolve.available', 'screen.trip.defaultView', 'screen.trip.reopenStable'],
       dD:  ['bookmark.list.on.batch3', 'bookmark.list.browser', 'sort.people.byViews', 'screen.market.header', 'screen.market.card', 'screen.community.stateKept', 'edge.emptyCityMarket'],
       dD2: ['view.bump.other', 'trip.save.other.batch3', 'screen.person.layer', 'seq.browseMarkBackReload', 'click.engine.reachesHandler'],
       dE:  ['curators.twoPages', 'screen.static.curatorPage'], dE2: { deferred: 'القشرة الساكنة مطابقة للنموذج (تُفحص بش٩) — الصفحة الحية بالخطوة الرابعة على قالب طبقة الشخص نفسه (ق٠٩-٠٤-١٠)' },
