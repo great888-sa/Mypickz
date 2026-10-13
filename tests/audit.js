@@ -307,7 +307,7 @@ const NIGHT_FAMILY = ['on-night', 'night-2', 'night-3', 'night-4', 'saffron', 'd
 const KNOWN_UNSTYLED = [];                     // ر43: أُغلق (قاعدة flabel أُضيفت بدفعة تصحيحات الهوية) — القائمة تبقى فارغة
 const KNOWN_STRUCT_IN_IDENTITY = [];          // ر43: أُغلق (الحدّان نُقلا إلى كتلة البنية)
 const KNOWN_EMPTY_RULES = [];                  // ر43: أُغلق (القاعدتان الفارغتان حُذفتا)
-const KNOWN_DEAD = ['requestReauth'];          // ر42: مبنية عمدًا قبل موعدها (تأكيد الهوية — تُستدعى بدفعتي كلمة المرور والحذف المتتالي)
+const KNOWN_DEAD = ['requestReauth', 'soonChip'];          // ر42: مبنية عمدًا قبل موعدها (تأكيد الهوية — تُستدعى بدفعتي كلمة المرور والحذف المتتالي) · r78: باني شريحة «قريبًا» يبقى بلا مستهلك بعد أن صار مسار اليوم حقيقيًّا (الحارس §10 يشترط وجوده؛ القريب مني في الدفعة ج قد يستعمله)
 const KNOWN_NO_OUTLET = ['stats_cards']; // ز-١-ج-٢ (الوثيقة الثامنة v1.17): الباقي بلا مخرج stats_cards وحده — ما فُتح مخرجه خرج من القائمة // r72p: مخارجها فُتحت بنسخة الاختبار (تحذير «opened» متوقع) — تُحذف من القائمة عند ترقية الإنتاج، لأن الفحص يشمل index.html القديم // M4.25 (١٧ سبتمبر): الخمس الجديدة مسجَّلة بوثيقة القدرات v1.14 قبل مخرجها (r72m · ر٧٢-ب · لوحة الإدارة) · نشرة التنظيف (٤ سبتمبر): كتلة favorites حُذفت من القواعد — خرجت من القائمة (الثامنة ج-١-ج أُغلق) // ر٥٢ (٣ سبتمبر): قدرات ٣٫٨ الأربع (listBookmarks · tripSaves · bookmarkCount · saveCount) فُتح مخرجها بدفعة كود الأفعال — أزيلت بمرآة الثامنة v1.4 // الوثيقة الدائمة الثامنة — قدرات بُنيت قبل موعدها
 const CAP_COLORS_OUTSIDE_IDENTITY = { [TEST]: 139, [PROD]: 149 }; // ر42 = ١٤٩ (١٤ صريحًا · ١٣٥ متغيرًا) · ر43 = ١٤٠ · ر50 = ١٣٩ (سطر الخطأ صار صنفًا بالهوية) · سقف الإنتاج يُخفَّض عند ترقيته · يُخفَّض ولا يُرفع
 const CONTROL_CLASSES = ['btn', 'chip', 'act', 'actn', 'cta', 'csel', 'pl-src', 'mp-tab', 'dr-item', 'acc-item', 'switch-btn', 'pl-actbtn', 'addr-chip', 'pl-catpick', 'city-tab', 'area-chip', 'hcard', 'remove-btn', 'bmk-btn', 'reorder-btn', 'add-place-btn', 'quick-nav-btn', 'action-btn', 'status-toggle', 'mp-burger', 'mp-idchip', 'pw-eye', 'show-more-btn', 'pclose', 'prow', 'addmini'];
@@ -804,4 +804,11 @@ function tripModelGuard(){
   check(/Math\.random/.test(stripComments(engine).replace(/function tripNewEntry[\s\S]*?\n\}/, '')) === false, T + 'engine is deterministic — no Math.random outside id generation (التثبيت ٤)');
   check(/tripPlanNormalize\(/.test(code) && /Old format/.test(test), T + 'old-format trips are guarded (normalize + delete-only row)');
   check(!/Day 0/.test(test) && !/kind: 'arrival'/.test(code) && /function tripDaysFromDates\(/.test(code), T + 'no Day 0 and no derived partial days — arrival and departure trim the first and last day (أ-٢ · القرار ٢ · ٣)');
+  // r78 (الدفعة ب — التثبيتان ٢ و٦): مسار اليوم يُشتق ولا يُخزَّن ترتيبًا؛ الروابط بلا مفاتيح؛ التبويب حقيقي
+  check(/function tripDaySchedule\(/.test(engine) && /function tripRoutesPrune\(/.test(engine) && /function tripNavUrl\(/.test(engine) && /function tripDaySequence\(/.test(engine), T + 'day-route engine present: tripDaySequence · tripDaySchedule · tripRoutesPrune · tripNavUrl (r78)');
+  const nav = (stripComments(engine).match(/function tripNavUrl\([\s\S]*?\n\}/) || [''])[0];
+  check(nav.includes('maps/dir/?api=1') && nav.includes('maps.apple.com/?') && nav.includes('waze.com/ul?') && !/key=|apiKey|token/.test(nav), T + 'navigation links are plain Google, Apple and Waze directions without keys (البيان ٦-٣)');
+  check(!/Day route <span class="dim">Soon/.test(test) && /tripPickTab\(\\'route\\'\)/.test(code) && /tripRoutesPrune\(trip\)/.test(code), T + 'Day route tab is real and routes are pruned on save (r78)');
+  check(!/dayRoutes\[[^\]]*\]\.(stops|order|arrive|complete)\s*=/.test(code), T + 'no stored order, times or completeness flag in dayRoutes — derived from the plan (التثبيت ٢)');
+  check(/function tripCityPeriods\(/.test(engine) && /function tripDayAbsorb\(/.test(engine) && /function tripDayFold\(/.test(engine) && /tbTogglePeriod\(/.test(code), T + 'flexible periods: city periods · absorption · fold · setup toggles (r78-2)');
 }
