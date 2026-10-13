@@ -803,4 +803,5 @@ function tripModelGuard(){
   check(!/document\.|window\.|mpData\.|fetch\(|localStorage/.test(stripComments(engine)), T + 'engine part is pure — no DOM, no data layer, no network (التثبيت ١)');
   check(/Math\.random/.test(stripComments(engine).replace(/function tripNewEntry[\s\S]*?\n\}/, '')) === false, T + 'engine is deterministic — no Math.random outside id generation (التثبيت ٤)');
   check(/tripPlanNormalize\(/.test(code) && /Old format/.test(test), T + 'old-format trips are guarded (normalize + delete-only row)');
+  check(!/Day 0/.test(test) && !/kind: 'arrival'/.test(code) && /function tripDaysFromDates\(/.test(code), T + 'no Day 0 and no derived partial days — arrival and departure trim the first and last day (أ-٢ · القرار ٢ · ٣)');
 }
