@@ -10,7 +10,7 @@ async function openMyTripsModal(){
 }
 function closeMyTripsModal(){
   document.getElementById('myTripsBackdrop').classList.remove('show');
-  currentTripId = null;
+  tripRouteFlush(); currentTripId = null; // r78: ما كُتب في المسار يُحفظ قبل المغادرة
   if (HOSTED.Trips && currentTab === 'Trips') renderMyTripsModal(); // خ١: بالوجهة "الإغلاق" = العودة لقائمة الرحلات
 }
 function attrStr(s){                       // ترميز آمن داخل سمة onclick: escapeHtml يفكّ &#39; فيكسر الشيفرة
@@ -210,7 +210,7 @@ function tripCardHtml(t){ // r77 (اللوحة ٧): بطاقة الرحلة — 
       { html: '✏️', on: "openTripBuilder({ tripId: '" + attrStr(t.id) + "', stage: 2 })", title: 'Reopen the draft — move places, change the version' }
     ];
   const btn = function(a){ return '<button type="button" class="pc-a' + (a.cls ? ' ' + a.cls : '') + '" onclick="' + a.on + '" title="' + attrStr(a.title || '') + '">' + a.html + '</button>'; };
-  const chips = (t.cities || []).map(function(c){ return '<span class="pc-chip">' + escapeHtml(c.cityName || c.cityId) + ' · ' + (c.days || 1) + (c.days === 1 ? ' day' : ' days') + '</span>'; }).join('') + '<span class="pc-chip">' + np + (np === 1 ? ' place' : ' places') + '</span>' + ((t.plan && t.plan.tray && t.plan.tray.length) ? '<span class="pc-chip warn">No day yet · ' + t.plan.tray.length + '</span>' : '');
+  const chips = (t.cities || []).map(function(c){ return '<span class="pc-chip">' + escapeHtml(c.cityName || c.cityId) + ' · ' + (c.days || 1) + (c.days === 1 ? ' day' : ' days') + '</span>'; }).join('') + '<span class="pc-chip">' + np + (np === 1 ? ' place' : ' places') + '</span>' + ((t.plan && t.plan.tray && t.plan.tray.length) ? '<span class="pc-chip warn">No day yet · ' + t.plan.tray.length + '</span>' : '') + tripRouteChipHtml(t); // r78 (البيان ٦-٤)
   return '<div class="pcard open"><div class="pc-data"><div class="pc-head"><div class="pc-name" dir="auto">' + escapeHtml(tripTitle(t)) + '</div>' + (b.text ? '<span class="trip-badge ' + b.cls + '">' + escapeHtml(b.text) + '</span>' : '') + '</div>'
     + '<div class="pc-area">' + (f ? escapeHtml(tripDateLabel(f)) + (l && l !== f ? ' → ' + escapeHtml(tripDateLabel(l)) : '') + ' · ' : 'No dates yet · ') + nd + (nd === 1 ? ' day' : ' days') + ' · ' + nc + (nc === 1 ? ' city' : ' cities') + '</div>'
     + '<div class="pc-fromrow trip-chips">' + chips + '</div>'
@@ -483,7 +483,7 @@ async function openSharedTripDetail(tripId){
   resolvedTripCache[tripId] = await resolveTripPlaces(trip);
   renderMyTripsModal();
 }
-function backToTripsList(){ currentTripId = null; viewingSharedTrip = false; renderMyTripsModal(); if (tripAddOrigin){ const o = tripAddOrigin; tripAddOrigin = null; if (o.tab && o.tab !== 'Trips') switchTab(o.tab); } } // ر٧٠و: الرجوع للشاشة الأصل بعد الإضافة
+function backToTripsList(){ tripRouteFlush(); currentTripId = null; viewingSharedTrip = false; renderMyTripsModal(); if (tripAddOrigin){ const o = tripAddOrigin; tripAddOrigin = null; if (o.tab && o.tab !== 'Trips') switchTab(o.tab); } } // ر٧٠و: الرجوع للشاشة الأصل بعد الإضافة
 
 async function toggleTripPublic(){
   const trip = userTrips.find(t => t.id === currentTripId);
@@ -552,7 +552,7 @@ const tripAltsOpen = {}; // معرّف المدخل → مفتوح (ذاكرة �
 function tripAltsToggle(id){ tripAltsOpen[id] = !tripAltsOpen[id]; renderMyTripsModal(); }
 function tripPickCity(cityId){ tripCitySel = cityId; const r = resolvedTripCache[currentTripId]; if (r){ const i = r.days.findIndex(function(d){ return d.cityId === cityId; }); if (i >= 0) tripDaySel = i; } renderMyTripsModal(); }
 function tripPickDay(i){ tripDaySel = i; renderMyTripsModal(); }
-function tripPickTab(t){ if (t === 'route'){ showSoon('Day routes arrive with the next trips batch'); return; } tripTab = t; renderMyTripsModal(); }
+function tripPickTab(t){ tripTab = t; renderMyTripsModal(); } // r78: التبويبات الثلاثة حقيقية (خطة · مسار اليوم · خريطة)
 function tripEntryCardHtml(e, n, readOnly, tripId, ctxCity){ // بطاقة مدخل الخطة: الرقم شريحةً · الاسم · الحي · التنبيه · بلاطات: Maps · Move · Alert · Remove
   const pl = e._p || {}; const name = pl.name || e.name || 'Place';
   if (!e._available) return '<div class="row triprow dim">⚠️ ' + escapeHtml(name) + ' — no longer available</div>';
@@ -581,28 +581,29 @@ function renderTripDetail(wrap){
   let html = '<div class="headrow"><button type="button" class="backchip" onclick="backToTripsList()">← Trips</button><span class="csel label grow"><b dir="auto">' + escapeHtml(tripTitle(trip)) + '</b></span><button type="button" class="actn ico" onclick="openExportPreview(\'' + (viewingSharedTrip ? 'otrip' : 'trip') + '\', \'' + attrStr(currentTripId) + '\')" title="Preview and send">📤</button></div>';
   if (viewingSharedTrip) cmCache.trips[trip.id] = trip;
   if (cities.length > 1 || !readOnly) html += '<div class="chipgrid ' + (cities.length >= 3 ? 'c3' : 'c2') + '">' + cities.map(function(c){ return '<button type="button" class="chip' + (c.cityId === tripCitySel ? ' on' : '') + '" onclick="tripPickCity(\'' + attrStr(c.cityId) + '\')">' + escapeHtml(c.cityName || c.cityId) + ' · ' + (c.days || 1) + (c.days === 1 ? ' day' : ' days') + '</button>'; }).join('') + (readOnly ? '' : '<button type="button" class="chip" onclick="openTripBuilder({ tripId: \'' + attrStr(trip.id) + '\', stage: 1, addCity: true })">＋ City</button>') + '</div>'; // رقاقات المدن مبدّل مصدر (القرار ٤)
-  html += '<div class="chipgrid c3"><button type="button" class="pl-src' + (tripTab === 'plan' ? ' on' : '') + '" onclick="tripPickTab(\'plan\')">Plan</button>' + soonChip('Day route', 'Soon', 'Day routes — times, legs and navigation — arrive with the next trips batch', 'pl-src') + '<button type="button" class="pl-src' + (tripTab === 'map' ? ' on' : '') + '" onclick="tripPickTab(\'map\')">Map</button></div>';
+  html += '<div class="chipgrid c3"><button type="button" class="pl-src' + (tripTab === 'plan' ? ' on' : '') + '" onclick="tripPickTab(\'plan\')">Plan</button><button type="button" class="pl-src' + (tripTab === 'route' ? ' on' : '') + '" onclick="tripPickTab(\'route\')">Day route</button><button type="button" class="pl-src' + (tripTab === 'map' ? ' on' : '') + '" onclick="tripPickTab(\'map\')">Map</button></div>'; // r78: مسار اليوم (اللوحة ٦)
   const city = cities.find(function(c){ return c.cityId === tripCitySel; }) || cities[0];
   if (city) html += tripStayCardHtml(trip, city, readOnly);
   if (currentUserSuspended) html += '<div style="border:1.5px dashed var(--danger); background:var(--ivory-bright); border-radius:10px; padding:10px 12px; margin-bottom:10px; text-align:center; font-size:11.5px; color:var(--danger); font-weight:700;">🚫 Suspended — can\'t add or edit places</div>';
   if (tripTab === 'map'){ const pts = []; days.forEach(function(d){ tripDayEntries(d).forEach(function(e){ const g = (e._p && e._p.geo) || e.geo; if (e._available !== false && g && typeof g.lat === 'number') pts.push(Object.assign({}, e._p || {}, { name: (e._p && e._p.name) || e.name, geo: g, _day: d.n })); }); });
     html += '<div class="ctx" style="text-align:center;">' + pts.length + ' of ' + np + ' places have a pin · numbers = day</div><div id="tripMapInline" class="geo-map"></div>'; wrap.innerHTML = html; renderInlineMap('tripMapInline', pts, function(p){ return p._day; }); return; }
-  html += '<div class="chipgrid ' + (cityDays.length >= 3 ? 'c3' : 'c2') + '" id="tripDayGrid">' + cityDays.map(function(i){ const d = days[i]; return '<button type="button" class="pl-src' + (i === tripDaySel ? ' on' : '') + '" onclick="tripPickDay(' + i + ')">Day ' + d.n + '<span class="s">' + escapeHtml(d.date ? tripDateLabel(d.date) : (typeof d.from === 'number' ? 'arrival' : typeof d.to === 'number' ? 'departure' : '')) + '</span></button>'; }).join('') + '</div>';
+  html += '<div class="chipgrid ' + (cityDays.length >= 3 ? 'c3' : 'c2') + '" id="tripDayGrid">' + cityDays.map(function(i){ const d = days[i]; const rs = tripDaySchedule(trip, d, tripCityOfDay(trip, d)); return '<button type="button" class="pl-src' + (i === tripDaySel ? ' on' : '') + '" onclick="tripPickDay(' + i + ')">Day ' + d.n + (rs.complete ? ' <span class="tr-tick' + (rs.late ? ' late' : '') + '">' + (rs.late ? '!' : '✓') + '</span>' : '') + '<span class="s">' + escapeHtml(d.date ? tripDateLabel(d.date) : (typeof d.from === 'number' ? 'arrival' : typeof d.to === 'number' ? 'departure' : '')) + '</span></button>'; }).join('') + '</div>'; // r78: علامة اليوم المكتمل مساره (أو المتأخر)
   const day = days[tripDaySel];
   if (day){
     const es = tripDayEntries(day); const dw = warns.filter(function(w){ return w.dayIdx === tripDaySel; });
     html += '<div class="ctx trip-ctx"><span>' + escapeHtml(tripDayLabel(day)) + (day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : '') + ' — ' + es.length + (es.length === 1 ? ' stop' : ' stops') + (day.rest ? ' · 1 rest' : '') + '</span></div>';
     dw.forEach(function(w){ html += '<div class="trip-warn">⚠ ' + escapeHtml(w.text) + '</div>'; });
-    let n = 0; const avail = tripDayAvailable(day);
+    if (tripTab === 'route'){ html += tripRouteTabHtml(trip, day, city, readOnly); }
+    let n = 0; const avail = tripTab === 'route' ? [] : tripDayAvailable(day); // r78: في تبويب المسار لا تُعرض الفترات
     avail.forEach(function(p){ const arr = day.periods[p] || []; if (!arr.length && readOnly) return; let inner = '';
       if (p === 'afternoon' && day.rest && city){ inner += '<div class="trip-rest"><span><b>Rest at ' + escapeHtml((city.stay && city.stay.name) || 'your stay') + '</b> <span class="dim">· about ' + Math.round(day.rest.minutes / 60) + ' h</span></span>' + (readOnly ? '' : '<button type="button" class="actn" onclick="tripViewRestRemove()">Remove</button>') + '</div>'; }
       arr.forEach(function(e){ n++; inner += tripEntryCardHtml(e, n, readOnly, trip.id, city); });
       if (!arr.length) inner += '<div class="trip-empty-p">— nothing here' + (readOnly ? '' : ' · move a place in') + '</div>';
       html += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', inner, 'stop'); });
-    if (!es.length && readOnly) html += '<div class="mp-empty mini">No places this day.</div>';
+    if (!es.length && readOnly && tripTab !== 'route') html += '<div class="mp-empty mini">No places this day.</div>';
   }
   const tray = resolved.tray || [];
-  if (tray.length || !readOnly) html += '<div class="trip-tray' + (tray.length ? '' : ' empty') + '"><div class="trip-tray-h"><b>No day yet · ' + tray.length + '</b>' + (readOnly ? '' : '<span class="dim">tap a place to give it a day</span>') + '</div>' + tray.map(function(e){ const pl = e._p || {}; return '<button type="button" class="trip-tray-i" ' + (readOnly ? 'disabled' : 'onclick="tripOpenMoveSheet(\'' + attrStr(trip.id) + '\', \'' + attrStr(e.id) + '\')"') + '><span dir="auto">' + escapeHtml(pl.name || e.name || 'Place') + '</span>' + (!e.geo ? '<span class="dim">no pin</span>' : '<span class="arr">›</span>') + '</button>'; }).join('') + '</div>';
+  if (tripTab !== 'route' && (tray.length || !readOnly)) html += '<div class="trip-tray' + (tray.length ? '' : ' empty') + '"><div class="trip-tray-h"><b>No day yet · ' + tray.length + '</b>' + (readOnly ? '' : '<span class="dim">tap a place to give it a day</span>') + '</div>' + tray.map(function(e){ const pl = e._p || {}; return '<button type="button" class="trip-tray-i" ' + (readOnly ? 'disabled' : 'onclick="tripOpenMoveSheet(\'' + attrStr(trip.id) + '\', \'' + attrStr(e.id) + '\')"') + '><span dir="auto">' + escapeHtml(pl.name || e.name || 'Place') + '</span>' + (!e.geo ? '<span class="dim">no pin</span>' : '<span class="arr">›</span>') + '</button>'; }).join('') + '</div>';
   if (!readOnly){
     html += '<div class="trip-foot"><button type="button" class="btn btn-ghost" onclick="openTripBuilder({ tripId: \'' + attrStr(trip.id) + '\', stage: 2 })">✏️ Edit</button><button type="button" class="btn btn-ghost" onclick="startAddingToTrip(\'' + attrStr(trip.id) + '\')">＋ Add places</button></div>' // أ-٢ · القرار ٨: زر Edit واحد يفتح المسودة
       + '<button type="button" class="actn danger wide" onclick="deleteTrip()">🗑️ Delete this trip</button>';
