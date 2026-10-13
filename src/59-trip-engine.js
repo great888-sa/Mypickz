@@ -4,11 +4,11 @@
    بنية الخطة: plan = { days:[{ n, kind:'full'|'arrival'|'departure', cityId, date|null, from|null, to|null, periods:{morning:[],midday:[],afternoon:[],evening:[]}, rest:{minutes}|null, excursion:id|null }], tray:[entry] }
    المدخل: entry = { id, ref:{sourceType,cityId,subcatId,placeId,sourceUid}, name, geo:{lat,lng}|null, sec, alts:[entry], alert:'' } ═══ */
 const TRIP_PERIODS = ['morning', 'midday', 'afternoon', 'evening'];
-const TRIP_PERIOD_LABEL = { morning: 'Morning', midday: 'Midday', afternoon: 'Afternoon', evening: 'Evening' };
+const TRIP_PERIOD_LABEL = { morning: 'Morning', midday: 'Noon', afternoon: 'Afternoon', evening: 'Evening' }; // ب-٦: «Noon» للظهر (المعرّف midday ثابت)
 const TRIP_VERSIONS = [['calm', 'Calm'], ['balanced', 'Balanced'], ['dense', 'Dense']];
 const TRIP_ROLE_ORDER = { meal: 0, excursion: 1, light: 2, sight: 3, visit: 4 }; // ترتيب الاعتبار: الأضيق فتراتٍ أولًا
 const TRIP_RHYTHM = { // ═══ جدول الإيقاع (البيان v1.2 · القسم الخامس — معتمد بقيمه) ═══
-  windows: { morning: [480, 690], midday: [690, 870], afternoon: [870, 1110], evening: [1110, 1380] }, // دقائق من منتصف الليل
+  windows: { morning: [420, 720], midday: [720, 960], afternoon: [960, 1200], evening: [1200, 1410] }, // دقائق من منتصف الليل — ب-٦ (قرار المالك ١٣ أكتوبر): ٠٧–١٢ · ١٢–١٦ · ١٦–٢٠ · ٢٠–٢٣:٣٠
   capacity: { calm: { morning: 1, midday: 1, afternoon: 1, evening: 1 }, balanced: { morning: 2, midday: 2, afternoon: 2, evening: 2 }, dense: { morning: 3, midday: 2, afternoon: 3, evening: 3 } },
   roles: { // بالتصنيف الفرعي أولًا ثم بالقسم؛ ما لم يُذكر يأخذ القاعدة العامة
     coffee: { role: 'light', periods: ['morning', 'afternoon'], minutes: 45 }, cafe: { role: 'light', periods: ['morning', 'afternoon'], minutes: 45 }, tea: { role: 'light', periods: ['morning', 'afternoon'], minutes: 45 },
