@@ -70,7 +70,7 @@
   </div><!-- /screenPlaces -->
 
   <!-- خ١: الوجهة ٢ — الرحلات: جسم نافذة "رحلاتي" يُنقل إلى هنا عند أول فتح (الاستضافة بنقل العنصر) -->
-  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="chipgrid c1full" id="tripSrcRow"><button type="button" class="csel srcttl" id="tripSrcTitle" onclick="tripToggleShowPanel()"><b>My trips</b> <span class="arr">⌄</span></button></div><div id="tripShowPanel"></div><div class="headrow" id="tripPickRow"><button type="button" class="actn primary hact" onclick="openCreateTripFlow()">＋ Create trip</button><button type="button" class="csel grow" id="tripCityPick" onclick="tripToggleCityPanel()"><b>All trips</b> <span class="arr">⌄</span></button></div><div class="chipgrid c3" id="tripTypeRow"><button type="button" class="chip on" data-ttype="all" onclick="pickTripType('all')">All</button><button type="button" class="chip" data-ttype="city" onclick="pickTripType('city')">🏙 Single city</button><button type="button" class="chip" data-ttype="multi" onclick="pickTripType('multi')">🌍 Multi-city</button></div><div class="ctx" id="tripCtx"><b>My trips</b> · All</div></div><div id="tripCityPanel"></div><div id="tripsHost"></div></div></div>
+  <div class="mp-screen" id="screenTrips"><div class="wrap destbody"><div class="stickyhead"><div class="chipgrid c1full" id="tripSrcRow"><button type="button" class="csel srcttl" id="tripSrcTitle" onclick="tripToggleShowPanel()"><b>My trips</b> <span class="arr">⌄</span></button></div><div id="tripShowPanel"></div><div class="headrow" id="tripPickRow"><button type="button" class="actn primary hact" onclick="openTripBuilder()">＋ Build a trip</button><button type="button" class="csel grow" id="tripCityPick" onclick="tripToggleCityPanel()"><b>All trips</b> <span class="arr">⌄</span></button></div><div class="chipgrid c3" id="tripTypeRow"><button type="button" class="chip on" data-ttype="all" onclick="pickTripStatus('all')">All</button><button type="button" class="chip" data-ttype="upcoming" onclick="pickTripStatus('upcoming')">Upcoming</button><button type="button" class="chip" data-ttype="past" onclick="pickTripStatus('past')">Past</button></div><div class="ctx" id="tripCtx"><b>My trips</b> · All</div></div><div id="tripCityPanel"></div><div id="tripsHost"></div></div></div>
   <!-- خ١: الوجهة ٣ — المنتقون: مكان محجوز حتى خ٤ -->
   <div class="mp-screen" id="screenCurators"><div class="wrap destbody" id="curatorsBody"><div class="mp-empty mini">Loading…</div></div></div>
   <div class="mp-screen" id="screenCommunity"><div class="wrap destbody"><div id="communityHost"></div></div></div>
@@ -93,26 +93,27 @@
   </div>
 
   <div id="activeTripBar">
-    <div class="atb-head"><span id="activeTripLabel">Adding to: —</span><span class="acts"><button type="button" class="actn" onclick="openActiveTripSources()">← Back</button><button type="button" class="actn" onclick="openActiveTrip()">View trip</button><button type="button" class="actn" onclick="stopAddingToTrip(true)">Cancel</button><button type="button" class="cta atb-done" onclick="stopAddingToTrip()">Done</button></span></div>
+    <div class="atb-head"><span id="activeTripLabel">Adding to: —</span><span class="acts"><button type="button" class="actn" onclick="openActiveTrip()">View trip</button><button type="button" class="actn" onclick="stopAddingToTrip(true)">Cancel</button><button type="button" class="cta atb-done" onclick="stopAddingToTrip()">Done</button></span></div>
     <div id="activeTripAddedRow" class="chiprow"></div>
   </div>
 
-  <!-- v1.38 · ٦/ب٢ — إنشاء رحلة بنافذة واحدة: الأنواع عرضًا بموعدها، والمدينة بحقل تصفية، والأيام رقمًا -->
+  <!-- r77 (حزمة الرحلات · الدفعة أ): المنشئ التفاعلي بمرحلتيه على القشرة الليلية — المدخلات (١ من ٢) · اختيار الأماكن · المسودة (٢ من ٢) -->
   <div class="modal-backdrop" id="tripShareBackdrop"></div>
-    <div class="modal-backdrop" id="tripCreateBackdrop">
-    <div class="modal">
-      <h3>New Trip 🧳</h3>
-      <label class="flabel">Trip type</label>
-      <div class="chiprow" id="tcTypeRow" style="margin-bottom:9px;"><button type="button" class="chip on" data-ttype="city" onclick="tcPickType('city')">🏙 Single city</button><button type="button" class="chip soon" onclick="showSoon('Multi-city fields arrive with the trips batch')">🌍 Multi-city <span class="dim">Step 6</span></button></div>
-      <label class="flabel">City</label>
-      <input type="hidden" id="tcCity">
-      <div id="tcCityHost" class="tcpanel"></div><!-- ر٧٠د (N-075): مدينة الرحلة بلوحة الاختيار المشتركة -->
-      <label class="flabel">Days</label>
-      <input type="number" id="tcDays" class="modal-input" min="1" max="30" value="3" inputmode="numeric">
-      <label class="flabel">Trip label <span class="dim">(optional)</span></label>
-      <input type="text" id="tcLabel" class="modal-input" placeholder="e.g. August 2026" autocomplete="off">
-      <div id="tcError" class="errline"></div>
-      <div style="display:flex; gap:8px;"><button type="button" class="btn wide" onclick="tcCreate()">Create</button><button type="button" class="btn btn-ghost wide" onclick="closeModalById('tripCreateBackdrop')">Cancel</button></div>
+  <div class="modal-backdrop" id="tripBuildBackdrop">
+    <div class="modal night tbuild">
+      <div class="hdr"><button type="button" class="bk" id="tbBack" onclick="tbBack()">← Back</button><span class="ttl" id="tbTitle">Build a trip · 1 of 2</span><button type="button" class="x" onclick="tbClose()" aria-label="Close">✕</button></div>
+      <div class="tb-steps" id="tbSteps"><span class="on"></span><span></span></div>
+      <div id="tbBody"></div>
+    </div>
+  </div>
+  <!-- r77 (اللوحة ٤): ورقة النقل — شبكة الأيام × الفترات بعدد ما فيها · إلى بلا يوم بعد · اجعله بديلًا لـ… -->
+  <div class="modal-backdrop sheetbd" id="tripMoveBackdrop" onclick="tripMoveBackdropTap(event)">
+    <div class="sheet tmove" role="dialog" aria-modal="true">
+      <div class="grip"></div>
+      <h4 id="tmTitle">Move</h4>
+      <p class="sheet-txt" id="tmText"></p>
+      <div id="tmBody"></div>
+      <div class="sheet-row"><button type="button" class="btn btn-ghost sheet-cancel" onclick="tripMoveDone(null)">Cancel</button></div>
     </div>
   </div>
 
