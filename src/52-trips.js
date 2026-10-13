@@ -592,12 +592,12 @@ function renderTripDetail(wrap){
   if (day){
     const es = tripDayEntries(day); const dw = warns.filter(function(w){ return w.dayIdx === tripDaySel; });
     html += '<div class="ctx trip-ctx"><span>' + escapeHtml(tripDayLabel(day)) + (day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : '') + ' — ' + es.length + (es.length === 1 ? ' stop' : ' stops') + (day.rest ? ' · 1 rest' : '') + '</span></div>';
-    dw.forEach(function(w){ html += '<div class="trip-warn">⚠ ' + escapeHtml(w.text) + '</div>'; });
+    dw.filter(function(w){ return w.kind !== 'longLeg'; }).forEach(function(w){ html += '<div class="trip-warn">⚠ ' + escapeHtml(w.text) + '</div>'; }); const legWarnOf = function(id){ return dw.find(function(w){ return w.kind === 'longLeg' && w.toId === id; }); }; // ب-٥
     if (tripTab === 'route'){ html += tripRouteTabHtml(trip, day, city, readOnly); }
     let n = 0; const avail = tripTab === 'route' ? [] : tripDayAvailable(day); // r78: في تبويب المسار لا تُعرض الفترات
     avail.forEach(function(p){ const arr = day.periods[p] || []; if (!arr.length && readOnly) return; let inner = '';
       if (p === 'afternoon' && day.rest && city){ inner += '<div class="trip-rest"><span><b>Rest at ' + escapeHtml((city.stay && city.stay.name) || 'your stay') + '</b> <span class="dim">· about ' + Math.round(day.rest.minutes / 60) + ' h</span></span>' + (readOnly ? '' : '<button type="button" class="actn" onclick="tripViewRestRemove()">Remove</button>') + '</div>'; }
-      arr.forEach(function(e){ n++; inner += tripEntryCardHtml(e, n, readOnly, trip.id, city); });
+      arr.forEach(function(e){ n++; const lw = legWarnOf(e.id); if (lw) inner += tripLegWarnHtml(lw); inner += tripEntryCardHtml(e, n, readOnly, trip.id, city); });
       if (!arr.length) inner += '<div class="trip-empty-p">— nothing here' + (readOnly ? '' : ' · move a place in') + '</div>';
       html += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', inner, 'stop'); });
     if (!es.length && readOnly && tripTab !== 'route') html += '<div class="mp-empty mini">No places this day.</div>';
