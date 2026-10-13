@@ -797,7 +797,7 @@ function geoBack(all){ /* r75c (البند ١٠): Back يغلق خطوة الخ�
 async function geoSkip(){ if (plView === 'map'){ const c = geoPick || null; if (c) plMapFocus = { lat: c.lat, lng: c.lng }; else if (geoMap && geoMap.map && geoMap.map.getCenter){ try{ const ce = geoMap.map.getCenter(); plMapFocus = { lat: ce.lat, lng: ce.lng }; }catch(_){} } } /* خ-٤: Skip يبقي الخريطة على موضع الدبوس كما ✓ */ plGeoResult = { geo: null, openId: null }; plGeoConfirmed = true; closeModalById('geoBackdrop'); await savePlPlace(); }
 async function savePlPlace(){
   if (currentUserSuspended){ showToast("Your account is suspended — you can't save changes"); return; }
-  const name = document.getElementById('plName').value.trim();
+  const name = mpStripBidi(document.getElementById('plName').value).trim(); // ب-٥
   const url = document.getElementById('plUrl').value.trim();
   if (!plModalCat){ showToast('Pick a category first'); return; }
   if (!name || !url){ showToast('Name and Google Maps link are required'); return; }
@@ -805,7 +805,7 @@ async function savePlPlace(){
   const place = plEdit ? ((userGetEntry(plEdit.catId).places || [])[plEdit.index] || {}) : {};
   place.id = place.id || ('place_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
   place.name = name; place.url = url;
-  place.area = document.getElementById('plArea').value.trim();
+  place.area = mpStripBidi(document.getElementById('plArea').value).trim();
   if (!plGeoConfirmed){ plGeoConfirmed = false; await openGeoStep(place); return; } // ز-١-ب: خطوة الخريطة بملء الشاشة — تعود إلى الحفظ بعد التأكيد/التخطي
   plGeoConfirmed = false; if (plGeoResult){ if (plGeoResult.geo) place.geo = plGeoResult.geo; else delete place.geo; if (plGeoResult.openId) place.openId = plGeoResult.openId; else delete place.openId; plGeoResult = null; }
   place.updatedAt = Date.now(); /* ر٧٣-أب (٢) — قرار المالك: «Latest update places» بختم زمني لكل مكان من الآن */
