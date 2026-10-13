@@ -309,7 +309,7 @@
   .trip-rest{background:var(--bar); border-color:var(--line-strong); color:var(--night-2);} .trip-rest b{color:var(--on-night);} .trip-rest .dim{color:var(--night-4);}
   .trip-empty-p{color:var(--night-4);}
   .trip-tray{background:var(--bar); border-color:var(--saffron); color:var(--on-night);} .trip-tray-h .dim{color:var(--night-3);} .trip-tray-n{color:var(--night-4);} .trip-tray-i{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);} .trip-tray-i .dim{color:var(--night-4);} .trip-tray-i .arr{color:var(--saffron);}
-  .trip-warn{background:var(--bar); border-color:var(--danger-night); color:var(--danger-night);}
+  .trip-warn{background:var(--bar); border-color:var(--danger-night); color:var(--danger-night);} .trip-legwarn{border-color:var(--danger-night); color:var(--danger-night);}
   .trip-stay{background:var(--bar); border-color:var(--line-strong); color:var(--on-night);} .trip-stay-t .dim{color:var(--night-4);}
   .tr-status{background:var(--bar); border-color:var(--line-strong); color:var(--night-2);} .tr-status.warn{border-color:var(--saffron); color:var(--saffron);} .tr-status.ok{border-color:var(--saffron); color:var(--on-night);} .tr-status.late{border-color:var(--danger-night); color:var(--danger-night);}
   .tr-lab{color:var(--night-2);} .tr-fields.ro{color:var(--night-3);} .tr-fields.ro b{color:var(--on-night);}
