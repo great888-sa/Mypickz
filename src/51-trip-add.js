@@ -45,7 +45,7 @@ async function loadUserTrips(){
   userTrips.forEach(tripNormalize); sharedTrips.forEach(tripNormalize);
   tripsLoaded = true;
 }
-function tripNormalize(t){ if (!t) return t; if (t.plan) tripPlanNormalize(t.plan); if (!Array.isArray(t.cities)) t.cities = t.cityId ? [{ cityId: t.cityId, cityName: t.cityName || '', days: tripHasPlan(t) ? Math.max(1, t.plan.days.filter(function(d){ return d.kind === 'full'; }).length) : 1, stay: null, arrival: null, departure: null, fallback: 'transit' }] : []; t.cities = t.cities.map(function(c){ return (typeof c === 'string') ? { cityId: c, cityName: c, days: 1, stay: null, arrival: null, departure: null, fallback: 'transit' } : c; }); if (!t.version) t.version = 'balanced'; if (!t.status) t.status = tripHasPlan(t) ? 'approved' : 'draft'; return t; }
+function tripNormalize(t){ if (!t) return t; if (t.plan) tripPlanNormalize(t.plan); if (!Array.isArray(t.cities)) t.cities = t.cityId ? [{ cityId: t.cityId, cityName: t.cityName || '', days: tripHasPlan(t) ? Math.max(1, t.plan.days.filter(function(d){ return d.kind === 'full'; }).length) : 1, stay: null, arrival: null, departure: null, fallback: 'transit' }] : []; t.cities = t.cities.map(function(c){ return (typeof c === 'string') ? { cityId: c, cityName: c, days: 1, stay: null, arrival: null, departure: null, fallback: 'transit' } : c; }); if (!t.version) t.version = 'balanced'; if (!t.status) t.status = tripHasPlan(t) ? 'approved' : 'draft'; if (t.dayRoutes && (typeof t.dayRoutes !== 'object' || Array.isArray(t.dayRoutes))) t.dayRoutes = {}; if (t.dayRoutes) tripRoutesPrune(t); return t; } // r78: مسار اليوم يُقرأ مقلَّمًا (أرجل فقدت طرفًا تسقط)
 function tripHasPlan(t){ return !!(t && t.plan && Array.isArray(t.plan.days)); }
 function tripIsOld(t){ return !!(t && !tripHasPlan(t) && Array.isArray(t.days)); } // القديم: days[] بالخانات
 function tripCityIds(t){ return (t && Array.isArray(t.cities) ? t.cities : []).map(function(c){ return typeof c === 'string' ? c : c.cityId; }).filter(Boolean).concat(t && t.cityId && !(t.cities || []).length ? [t.cityId] : []); }
@@ -61,6 +61,7 @@ async function saveTrip(trip){
   try{
     trip.ownerId = trip.ownerId || currentUser.uid; // صيد المحاكاة (ر٦٠+): الحل يقرأ المالك من الكائن المحلي
     const __isNew = !trip.__saved; trip.__saved = true; // r72p (٧): trip_built مرة عند أول حفظ
+    if (trip.dayRoutes) tripRoutesPrune(trip); // r78 (البيان ٣-١): الأرجل التي فقدت طرفًا تُحذف عند الحفظ
     const __hasLegs = !!(trip.dayRoutes && Object.keys(trip.dayRoutes).some(function(k){ return trip.dayRoutes[k] && trip.dayRoutes[k].legs && Object.keys(trip.dayRoutes[k].legs).length; }));
     await mpData.trips.save(trip, Object.assign({ ownerId: currentUser.uid }, __hasLegs ? { legSources: ['user'] } : {})); // الدفعة ب: الأرجل من المستخدم وحده (legSourcesOk)
     if (__isNew && !trip.source) try{ mpTrack.statsCity(trip.cityId, 'trip_built'); }catch(_){}
@@ -211,7 +212,7 @@ async function tripAutoPlace(trip, ref){
   const slot = tripSuggestSlot(trip.plan, e, tripSpec(trip)); let where;
   if (slot){ tripInsert(trip.plan, slot.dayIdx, slot.period, e, slot.alt, slot.excursion); const d = trip.plan.days[slot.dayIdx]; where = tripDayLabel(d) + ' · ' + TRIP_PERIOD_LABEL[slot.period] + (slot.alt ? ' · alternative' : ''); }
   else { trip.plan.tray.push(e); where = e.geo ? 'Program full · in the tray · ' + trip.plan.tray.length : 'No pin · in the tray'; }
-  if (trip.status === 'approved' && slot && trip.dayRoutes && trip.dayRoutes[String(slot.dayIdx)]) trip.dayRoutes[String(slot.dayIdx)].complete = false; // اليوم المعتمد يعود «غير مكتمل» (الدفعة ب تقرأه)
+  // r78: لا علم مخزَّن للاكتمال — الرِّجل الجديدة بلا دقائق تجعل مسار اليوم «غير مكتمل» اشتقاقًا (التثبيت ٢)
   activeTripAdded.push(e.name); activeTripAddedRefs.push(e.id);
   await saveTrip(trip); delete resolvedTripCache[trip.id];
   updateActiveTripBanner();
