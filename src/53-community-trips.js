@@ -30,35 +30,23 @@ async function openCommunityTrip(tripId){
 }
 function backFromCommunityTrip(){ viewingCommunityTripId = null; if (cmDirect){ cmDirect = false; viewingUserUid = null; communityUserLayer = null; } renderCommunityModal(); } // ر٦٩غ: الرجوع إلى حيث فُتحت
 
-function renderCommunityTripDetail(wrap){
+function renderCommunityTripDetail(wrap){ // r77: رحلة الآخرين بالخطة — قراءة فقط (الأيام · الفترات · البدائل)
   const trip = communityUserTrips.find(t => t.id === viewingCommunityTripId);
   if (!trip){ viewingCommunityTripId = null; renderCommunityModal(); return; }
-  const resolved = resolvedTripCache['community_'+trip.id] || [];
-  const title = trip.customLabel ? `${escapeHtml(trip.cityName)} — ${escapeHtml(trip.customLabel)}` : escapeHtml(trip.cityName || '');
-
+  const resolved = resolvedTripCache['community_'+trip.id] || { days: [], tray: [] };
   let html = `<button type="button" class="backchip" onclick="backFromCommunityTrip()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back</button>
-  <h4 style="text-align:center; margin:4px 0 12px; font-family:'Cairo',sans-serif;">${title}</h4>`;
-
-  resolved.forEach(day => {
-    html += `<div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
-      <span style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:var(--ink); color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">${day.dayNumber}</span>
-      <span style="font-weight:700; font-size:15px; letter-spacing:.5px;">DAY ${day.dayNumber}</span>
-      <span style="flex:1; height:2px; background:linear-gradient(to left, var(--line), transparent);"></span>
-    </div>`;
-    const order = day.categoryOrder || defaultCategoryOrder();
-    const visibleCats = order.filter(catId => (day.places[catId]||[]).length > 0);
-    visibleCats.forEach(catId => {
-      const meta = categoryMeta(catId); let __tcards = ''; // r72w: المجموعة العاجية + بطاقة الآخرين الموحَّدة
-      day.places[catId].forEach(p => {
-        if (!p._available){
-          __tcards += `<div class="row triprow dim">⚠️ This place is no longer available</div>`;
-          return;
-        }
-        const ref = p._ref || {}; const ouid = ref.sourceUid || viewingUserUid || ''; const sCat = String(ref.subcatId || '');
-        __tcards += othersPlaceRowHtml({ id: ref.placeId || p.id || hashUrl(p.url || ''), name: p.name || 'Place', url: p.url, area: p.area, picks: p.picks, note: p.note }, { uid: ouid, nickname: (viewingUserData && viewingUserData.nickname) || 'a user' }, { id: ref.cityId || trip.cityId || '', name: trip.cityName || '' }, sCat, ref.cityId || trip.cityId || '') + (p._ref.tripNote ? '<div class="pc-lab" style="margin:-2px 0 8px 6px;">Trip note · <span class="pc-val">' + escapeHtml(p._ref.tripNote) + '</span></div>' : '');
-      });
-      html += placeGroupHtml(meta.label, day.places[catId].length, '', __tcards);
-    });
+  <h4 style="text-align:center; margin:4px 0 4px; font-family:'Cairo',sans-serif;" dir="auto">${escapeHtml(tripTitle(trip))}</h4><div class="ctx" style="text-align:center; margin-bottom:8px;">${escapeHtml(tripMetaLine(trip))}</div>`;
+  if (!tripHasPlan(trip)){ wrap.innerHTML = html + '<div class="mp-empty mini">This trip uses the old format.</div>'; return; }
+  (resolved.days || []).forEach(function(day){
+    const es = tripDayEntries(day); if (!es.length) return;
+    html += `<div class="dayhead"><span class="daynum">${day.n}</span><span class="daytitle">${escapeHtml(tripDayLabel(day).toUpperCase())}${day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : ''}</span><span class="dayline"></span></div>`;
+    TRIP_PERIODS.forEach(function(p){ const arr = day.periods[p] || []; if (!arr.length) return; let __tcards = '';
+      arr.forEach(function(e){ [e].concat(e.alts || []).forEach(function(x, k){
+        if (!x._available){ __tcards += `<div class="row triprow dim">⚠️ This place is no longer available</div>`; return; }
+        const ref = x._ref || x.ref || {}; const pl = x._p || {}; const ouid = ref.sourceUid || viewingUserUid || ''; const sCat = String(ref.subcatId || ''); const cityNm = ((trip.cities || []).find(function(c){ return c.cityId === (ref.cityId || trip.cityId); }) || {}).cityName || trip.cityName || '';
+        __tcards += (k ? '<div class="pc-lab" style="margin:0 0 2px 6px;">or</div>' : '') + othersPlaceRowHtml({ id: ref.placeId || pl.id || hashUrl(pl.url || ''), name: pl.name || x.name || 'Place', url: pl.url, area: pl.area, picks: pl.picks, note: pl.note, geo: pl.geo }, { uid: ouid, nickname: (viewingUserData && viewingUserData.nickname) || 'a user' }, { id: ref.cityId || trip.cityId || '', name: cityNm }, sCat, ref.cityId || trip.cityId || '') + (x.alert ? '<div class="pc-lab" style="margin:-2px 0 8px 6px;">Alert · <span class="pc-val">' + escapeHtml(x.alert) + '</span></div>' : '');
+      }); });
+      html += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', __tcards, 'stop'); });
   });
   wrap.innerHTML = html;
 }
