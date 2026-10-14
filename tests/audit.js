@@ -307,7 +307,7 @@ const NIGHT_FAMILY = ['on-night', 'night-2', 'night-3', 'night-4', 'saffron', 'd
 const KNOWN_UNSTYLED = [];                     // ر43: أُغلق (قاعدة flabel أُضيفت بدفعة تصحيحات الهوية) — القائمة تبقى فارغة
 const KNOWN_STRUCT_IN_IDENTITY = [];          // ر43: أُغلق (الحدّان نُقلا إلى كتلة البنية)
 const KNOWN_EMPTY_RULES = [];                  // ر43: أُغلق (القاعدتان الفارغتان حُذفتا)
-const KNOWN_DEAD = ['requestReauth', 'soonChip'];          // ر42: مبنية عمدًا قبل موعدها (تأكيد الهوية — تُستدعى بدفعتي كلمة المرور والحذف المتتالي) · r78: باني شريحة «قريبًا» يبقى بلا مستهلك بعد أن صار مسار اليوم حقيقيًّا (الحارس §10 يشترط وجوده؛ القريب مني في الدفعة ج قد يستعمله)
+const KNOWN_DEAD = ['requestReauth'];          // ر42: مبنية عمدًا قبل موعدها (تأكيد الهوية — تُستدعى بدفعتي كلمة المرور والحذف المتتالي) · r78: باني شريحة «قريبًا» يبقى بلا مستهلك بعد أن صار مسار اليوم حقيقيًّا (الحارس §10 يشترط وجوده؛ القريب مني في الدفعة ج قد يستعمله)
 const KNOWN_NO_OUTLET = ['stats_cards']; // ز-١-ج-٢ (الوثيقة الثامنة v1.17): الباقي بلا مخرج stats_cards وحده — ما فُتح مخرجه خرج من القائمة // r72p: مخارجها فُتحت بنسخة الاختبار (تحذير «opened» متوقع) — تُحذف من القائمة عند ترقية الإنتاج، لأن الفحص يشمل index.html القديم // M4.25 (١٧ سبتمبر): الخمس الجديدة مسجَّلة بوثيقة القدرات v1.14 قبل مخرجها (r72m · ر٧٢-ب · لوحة الإدارة) · نشرة التنظيف (٤ سبتمبر): كتلة favorites حُذفت من القواعد — خرجت من القائمة (الثامنة ج-١-ج أُغلق) // ر٥٢ (٣ سبتمبر): قدرات ٣٫٨ الأربع (listBookmarks · tripSaves · bookmarkCount · saveCount) فُتح مخرجها بدفعة كود الأفعال — أزيلت بمرآة الثامنة v1.4 // الوثيقة الدائمة الثامنة — قدرات بُنيت قبل موعدها
 const CAP_COLORS_OUTSIDE_IDENTITY = { [TEST]: 139, [PROD]: 149 }; // ر42 = ١٤٩ (١٤ صريحًا · ١٣٥ متغيرًا) · ر43 = ١٤٠ · ر50 = ١٣٩ (سطر الخطأ صار صنفًا بالهوية) · سقف الإنتاج يُخفَّض عند ترقيته · يُخفَّض ولا يُرفع
 const CONTROL_CLASSES = ['btn', 'chip', 'act', 'actn', 'cta', 'csel', 'pl-src', 'mp-tab', 'dr-item', 'acc-item', 'switch-btn', 'pl-actbtn', 'addr-chip', 'pl-catpick', 'city-tab', 'area-chip', 'hcard', 'remove-btn', 'bmk-btn', 'reorder-btn', 'add-place-btn', 'quick-nav-btn', 'action-btn', 'status-toggle', 'mp-burger', 'mp-idchip', 'pw-eye', 'show-more-btn', 'pclose', 'prow', 'addmini'];
@@ -458,7 +458,7 @@ function idGuard(label, s){
   for (const m of code.matchAll(/classList\.(?:add|toggle|remove)\(\s*'([A-Za-z_][\w-]*)'/g)) used.add(m[1]);
   for (const m of code.matchAll(/className\s*=\s*'([^']+)'/g)) m[1].split(/\s+/).forEach(c => { if (c) used.add(c); });
   // أصناف الأنماط بهذا الملف كلها بحروف صغيرة وشرطات؛ ما عداه (متغيرات القوالب والمعاملات) يُستبعد
-  const usedClean = [...used].filter(c => /^[a-z][a-z0-9-]*$/.test(c) && !/^(true|false|null)$/.test(c) && !/^fa(-|$)|^mk|^st$/.test(c) && !/^(pinkey|geo-pin)-?$/.test(c)); // خ-٥: بادئتا الأصناف الديناميكية (pinkey-<fam> · geo-pin-<fam>) تُبنيان من المتغيّر؛ قواعدهما الكاملة بالهوية
+  const usedClean = [...used].filter(c => /^[a-z][a-z0-9-]*$/.test(c) && !/^(true|false|null)$/.test(c) && !/^fa(-|$)|^mk|^st$/.test(c) && !/^(pinkey|geo-pin)-?$/.test(c) && !/^it-/.test(c)); /* ج: أصناف it-* تعيش في ملف البرنامج المولَّد (52-trip-itinerary) بورقة أنماطه الخاصة داخل الملف */ // خ-٥: بادئتا الأصناف الديناميكية (pinkey-<fam> · geo-pin-<fam>) تُبنيان من المتغيّر؛ قواعدهما الكاملة بالهوية
   const noRule = usedClean.filter(c => !sClasses.has(c) && !iClasses.has(c));
   const newNoRule = noRule.filter(c => !KNOWN_UNSTYLED.includes(c));
   const knownNoRule = noRule.filter(c => KNOWN_UNSTYLED.includes(c));
