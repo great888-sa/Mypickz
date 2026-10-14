@@ -60,6 +60,7 @@ const CAPS = [
   'trip.periods.flex', /* r78-٢ */
   'trip.altCap', /* r78-٣ */
   'trip.legWarn.inline', /* r78-٥ */
+  'trip.rests.user', /* r78-٧ */
 ];
 const covered = new Set();
 function cap(id){ if (!CAPS.includes(id)) throw new Error('قدرة غير معلنة: ' + id); covered.add(id); }
@@ -1921,6 +1922,29 @@ function citiesSeed(){
     cap('trip.legWarn.inline');
   }, ['trip.legWarn.inline']);
 
+  await must('r78-٧ · الراحة قرار المستخدم: لا راحة تلقائية · «＋ Add rest» بين كل فترتين متاحتين (بتلميح بلا إقامة) · إضافة وإزالة في المسودة والعرض · مدتها تُكتب في مسار اليوم · القديم يُقرأ راحة بعد الظهر', async () => {
+    const prev = B.x("JSON.stringify({ ut: userTrips, ct: currentTripId, tab: currentTab })");
+    try {
+    const uid = B.x('currentUser.uid');
+    const en = B.x("(function(){ var mk = function(id, sc, sec, lat, lng){ return tripNewEntry({ id: id, ref: { sourceType: 'mylist', cityId: 'cr', subcatId: sc, placeId: id, sourceUid: null }, name: id, geo: { lat: lat, lng: lng }, sec: sec }); }; var c = [{ cityId: 'cr', cityName: 'Cr', days: 1, stay: { name: 'Inn', geo: { lat: 48.858, lng: 2.35 } }, arrival: null, departure: null, fallback: 'transit' }]; var es = [mk('a', 'coffee', 'cafes_sweets', 48.859, 2.35), mk('b', 'burger', 'restaurants_dish', 48.86, 2.351), mk('c', 'museums', 'landmarks', 48.861, 2.352), mk('d', 'malls', 'shopping_store', 48.862, 2.353), mk('e', 'french', 'restaurants_cuisine', 48.863, 2.354)]; var p = tripBuildPlan({ cities: c, entries: es, version: 'balanced' }); var old = tripPlanNormalize({ days: [{ n: 1, periods: {}, rest: { minutes: 90 } }] }).days[0]; var cut = { n: 1, cityId: 'cr', from: 15 * 60, to: null, off: [], periods: { morning: [], midday: [], afternoon: [], evening: [] }, rests: {}, excursion: null }; return JSON.stringify({ rests: p.days[0].rests, cnt: tripRestCount(p.days[0]), old: old.rests, oldRest: 'rest' in old, next: [tripRestSlotNext(p.days[0], 'morning'), tripRestSlotNext(p.days[0], 'afternoon'), tripRestSlotNext(p.days[0], 'evening'), tripRestSlotNext(cut, 'midday'), tripRestSlotNext(cut, 'afternoon')] }); })()");
+    ok('r78-٧ · المحرك: خمس محطات وإقامة بدبوس → لا راحة تلقائية · القديم rest:{90} → rests.midday وحذف الحقل القديم · الموضع التالي: بعد الصباح الظهر · بعد العصر المساء · بعد المساء لا شيء · يوم وصول ١٥:٠٠ (الظهر مقصوص) بعد الظهر لا شيء وبعد العصر المساء', en === '{"rests":{},"cnt":0,"old":{"midday":{"minutes":90}},"oldRest":false,"next":["midday","evening",null,null,"evening"]}', en);
+    await store.set('userCityLists/' + uid + '_cr', { ownerId: uid, cityId: 'cr', cityName: 'Cr', public: false, catsV: 2, categories: { coffee: { places: [{ id: 'a', name: 'Kava', url: 'https://maps.app.goo.gl/a', geo: { lat: 48.859, lng: 2.35 } }] }, burger: { places: [{ id: 'b', name: 'Bun', url: 'https://maps.app.goo.gl/b', geo: { lat: 48.86, lng: 2.351 } }] } } });
+    B.x("(function(){ var mk = function(id, sc, sec, lat, lng, name){ return tripNewEntry({ id: id, ref: { sourceType: 'mylist', cityId: 'cr', subcatId: sc, placeId: id, sourceUid: null }, name: name, geo: { lat: lat, lng: lng }, sec: sec }); }; var c = [{ cityId: 'cr', cityName: 'Cr', days: 1, stay: { name: 'Inn', geo: { lat: 48.858, lng: 2.35 } }, arrival: null, departure: null, fallback: 'transit' }]; var p = tripBuildPlan({ cities: c, entries: [mk('a', 'coffee', 'cafes_sweets', 48.859, 2.35, 'Kava'), mk('b', 'burger', 'restaurants_dish', 48.86, 2.351, 'Bun')], version: 'balanced' }); userTrips = [{ id: 'trip_r78g', title: '', cityId: 'cr', cityName: 'Cr', customLabel: 'Rests', cities: c, plan: p, version: 'balanced', status: 'approved', public: false, sharedWith: [], sharedWithNames: {}, ownerId: currentUser.uid }]; currentTripId = null; })()");
+    B.x("switchTab('Trips')"); await B.x("openTripDetail('trip_r78g')"); const v0 = screen('myTripsBody');
+    await B.x("tripViewRestAdd('midday')"); const v1 = screen('myTripsBody'); const r1 = B.x("JSON.stringify(userTrips[0].plan.days[0].rests)");
+    ok('r78-٧ · العرض: ثلاثة أسطر «＋ Add rest» (بين الفترات الأربع) · إضافة بعد الظهر → سطر «Rest at Inn · about 2 h» بزر Remove وسطران للإضافة · سطر اليوم «· 1 rest» · الخطة تحمل rests.midday', (v0.match(/class="trip-rest-add"/g) || []).length === 3 && !v0.includes('class="trip-rest"') && (v1.match(/class="trip-rest-add"/g) || []).length === 2 && v1.includes('<b>Rest at Inn</b>') && v1.includes("onclick=\"tripViewRestRemove('midday')\"") && v1.includes('· 1 rest') && r1 === '{"midday":{"minutes":120}}', v0.slice(0, 120) + ' ' + r1);
+    B.x("tripPickTab('route')"); const rt = screen('myTripsBody');
+    await B.x("tripRestSetMinutes('midday', '45')"); const rt2 = screen('myTripsBody'); const r2 = B.x("JSON.stringify({ m: userTrips[0].plan.days[0].rests.midday.minutes, steps: tripDaySchedule(userTrips[0], userTrips[0].plan.days[0], userTrips[0].cities[0]).steps.map(function(s){ return s.kind + (s.leg ? '(' + s.leg.key + ')' : ''); }) })");
+    ok('r78-٧ · مسار اليوم: سطر الراحة بأوقاته وخانة دقائق (١٢٠) · الرِّجل قبله إلى الإقامة · راحة في آخر اليوم = العودة نفسها بلا رِجل stay>stay · كتابة ٤٥ تُحفظ في الخطة', rt.includes('class="tr-rest"') && rt.includes("onchange=\"tripRestSetMinutes('midday', this.value)\"") && rt.includes('value="120"') && rt2.includes('value="45"') && JSON.parse(r2).m === 45 && JSON.parse(r2).steps.join() === 'stay,stop(stay>a),stop(a>b),rest(b>stay)', rt.slice(0, 100) + ' ' + r2);
+    B.x("tripPickTab('plan')"); await B.x("tripViewRestRemove('midday')"); const v2 = screen('myTripsBody');
+    B.x("userTrips[0].cities[0].stay = null; renderMyTripsModal()"); const v3 = screen('myTripsBody');
+    ok('r78-٧ · Remove يزيل الراحة · بلا إقامة: الأسطر الثلاثة تلميحٌ «set where you stay in Setup» لا أزرار', !v2.includes('class="trip-rest"') && (v2.match(/class="trip-rest-add"/g) || []).length === 3 && (v3.match(/class="trip-rest-add off"/g) || []).length === 3 && v3.includes('set where you stay in Setup') && !v3.includes("tripViewRestAdd("), v3.slice(0, 120));
+    cap('trip.rests.user');
+    } finally {
+    B.x("(function(){ var s = " + prev + "; userTrips = s.ut; currentTripId = s.ct; tripTab = 'plan'; })()"); store.delete('trips/trip_r78g'); store.delete('userCityLists/' + B.x('currentUser.uid') + '_cr'); B.x("switchTab(" + JSON.stringify(JSON.parse(prev).tab) + ")");
+    }
+  }, ['trip.rests.user']);
+
   // ═══ رحلة الشاشة (ر٦٥) — كل محطة تسمّي مشهد المرجع الذي تحرسه ═══
   await must('ش١ · ٦/أ الأماكن: صف الأفعال الخمسة بلا سلة (الشاشة)', async () => {
     B.set('cityListCityId', 'paris'); B.x('renderPlacesMine()');
@@ -2207,7 +2231,7 @@ function citiesSeed(){
       s4:  { deferred: 'نبذة تعريفية — تُبنى بالخطوة الأولى المتممة' }, s11: ['userLists.default'], s12: ['screen.static.backChip'],
       dA:  ['cityLists.create', 'bookmark.place.on', 'place.identityByUrl', 'bookmark.place.urlLessIsolated', 'screen.places.rowActions', 'screen.static.placesChips', 'edge.doubleToggleStable', 'edge.disabledChipsInert'],
       dB:  ['trip.build.plan', 'trip.filter.byStatus', 'trip.card', 'bookmark.trip.self', 'screen.trip.bookmarkedChip', 'screen.static.tripChips', 'screen.trips.cityPick'],
-      dB2: ['trip.builder.stages', 'trip.moveSheet', 'trip.alternatives', 'trip.engine.deterministic', 'trip.periods.flex', 'trip.altCap', 'trip.legWarn.inline'], dC: ['trip.addPlaces.refs', 'trip.autoPlace', 'trip.view.plan', 'trip.route.view', 'trip.route.schedule', 'trip.route.prune', 'trip.route.navApp', 'trip.resolve.available', 'screen.trip.defaultView', 'screen.trip.reopenStable'],
+      dB2: ['trip.builder.stages', 'trip.moveSheet', 'trip.alternatives', 'trip.engine.deterministic', 'trip.periods.flex', 'trip.altCap', 'trip.legWarn.inline', 'trip.rests.user'], dC: ['trip.addPlaces.refs', 'trip.autoPlace', 'trip.view.plan', 'trip.route.view', 'trip.route.schedule', 'trip.route.prune', 'trip.route.navApp', 'trip.resolve.available', 'screen.trip.defaultView', 'screen.trip.reopenStable'],
       dD:  ['bookmark.list.on.batch3', 'bookmark.list.browser', 'sort.people.byViews', 'screen.market.header', 'screen.market.card', 'screen.community.stateKept', 'edge.emptyCityMarket'],
       dD2: ['view.bump.other', 'trip.save.other.batch3', 'screen.person.layer', 'seq.browseMarkBackReload', 'click.engine.reachesHandler'],
       dE:  ['curators.twoPages', 'screen.static.curatorPage'], dE2: { deferred: 'القشرة الساكنة مطابقة للنموذج (تُفحص بش٩) — الصفحة الحية بالخطوة الرابعة على قالب طبقة الشخص نفسه (ق٠٩-٠٤-١٠)' },
