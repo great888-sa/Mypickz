@@ -65,6 +65,7 @@ const CAPS = [
   'trip.itinerary.page', 'places.nearby', 'trip.counters.local', /* r79 (ج) */
   'trip.manual.arrange', /* r79-٣ */
   'share.groups.saved', /* r80 (د) */
+  'list.shared.openFromPlaces', /* r80-2 (د-٢) */
 ];
 const covered = new Set();
 function cap(id){ if (!CAPS.includes(id)) throw new Error('قدرة غير معلنة: ' + id); covered.add(id); }
@@ -1342,7 +1343,7 @@ function citiesSeed(){
     B.x("cmFilterMain = ''; cmFilterSub = ''; cmSecCollapsed = {}");
     ok('١٦هـ · خ-٦ (٥): فتح مدينة الشخص يعرض Loading ثم يركّبها · القسمان (ذوا المحتوى) مطويان افتراضيًّا بلا صفوف · ضغط رأس القسم يفتحه وحده (Delta ظاهر · الآخر مطوي) · التصفية بفرعي تفتح قسمه وحده (Epsilon ظاهر · Delta غائب) · الطيّ بالجلسة يُصفَّر بالخروج', lzLoading && lzHeads === 2 && lzRows === 0 && lzOpenRows >= 1 && lzStillClosed === 1 && lzFiltOpen >= 1 && !lzFiltOther && tplCount('cmSecCollapsed = {}; /* خ-٦ */', 1).ok && tplCount('function secHeadHtml(', 1).ok && tplCount('secHeadHtml(', 3).ok, JSON.stringify({ lzLoading, lzHeads, lzRows, lzOpenRows, lzStillClosed, lzFiltOpen, lzFiltOther }));
     B.x("viewingUserUid = null; communityUserLayer = null; viewingUserCities = []; delete curData['" + LZ + "']"); ['communityProfiles/' + LZ, 'userCityLists/' + LZ + '_lz1', 'userCityLists/' + LZ + '_lz2', 'userCityListCats/' + LZ + '_lz1_coffee', 'userCityListCats/' + LZ + '_lz1_pizza', 'userCityListCats/' + LZ + '_lz2_bakery', 'userCityListCats/' + LZ + '_lz2_hotels'].forEach(function(k){ store.delete(k); });
-    ok('١٦هـ · r72u: الإسناد باسم الحساب فقط · حفظ الملف يحذف displayName القديم · cmOpenList يثبّت مصدر الأماكن', tplCount("patch.displayName = mpData.fieldDelete();", 1).ok && tplCount("communityTab = 'places'; personLayerOnly = null; await viewCommunityUser(owner); openCommunityCityList(cityId, origin);", 1).ok && tplCount("viewingUserData.displayName", 0).ok, '');
+    ok('١٦هـ · r72u: الإسناد باسم الحساب فقط · حفظ الملف يحذف displayName القديم · cmOpenList يثبّت مصدر الأماكن', tplCount("patch.displayName = mpData.fieldDelete();", 1).ok && tplCount("communityTab = 'places'; personLayerOnly = null; await viewCommunityUser(owner); await cmEnsureSharedCity(owner, cityId); if (currentTab !== 'Community') switchTab('Community');", 1).ok /* د-٢ */ && tplCount("viewingUserData.displayName", 0).ok, '');
     cap('lists.split');
     // r72t: الأسطر الثمانية بالكود
     ok('١٦هـ · r72t: العدّاد اللحظي (unrecord بحذف السجل و−١) · حذف الحساب يمسح نسخي وطلباتي وبلاغاتي · مشاهدات الرحلة (bumpView عند فتح رحلة الغير) · التواصل بنوعه (٧ أنواع · mailto/tel/wa) · مدن المواسم (cityOpenNow) · البلاغ notes/app · فحص إصدار القواعد (EXPECTED_RULES v3.12) · إخفاء المدينة القياسية (hiddenCities)', tplCount("unrecord: function(uid, docKey, coll){", 1).ok && tplCount("await mpData.copies.unrecord(currentUser.uid, srcTripId, 'trips')", 1).ok && tplCount("await mpData.copies.removeMine(uid)", 1).ok && tplCount("await mpData.requests.removeMine(uid)", 1).ok && tplCount("await mpData.reports.removeMine(uid)", 1).ok && tplCount("mpData.trips.bumpView(tripId)", 1).ok && tplCount("['email', 'Email'], ['phone', 'Phone'], ['whatsapp', 'WhatsApp']", 1).ok && tplCount("if (c.type === 'email') return 'mailto:' + v;", 1).ok && tplCount("openReport('app', '')", 0).ok && tplCount("function reportAppProblem(){", 1).ok && tplCount("mpData.reports.create(currentUser.uid, 'app', '', reason.slice(0, 260))", 1).ok /* ب-٢-٢-أ٢ (v3 · ١٥): بلاغ التطبيق نافذة مسماة */ && tplCount("openReport(\\'notes\\', ", 1).ok && tplCount("const EXPECTED_RULES = 'v3.14';", 1).ok, '');
@@ -2178,6 +2179,8 @@ function citiesSeed(){
     const toasts = [];
     const sh1 = await B.x("(async function(){ var st = showToast; var ts = []; showToast = function(m){ ts.push(m); }; try{ await sgShareWith('g_fam'); } finally { showToast = st; } var t = userTrips[0]; return JSON.stringify({ sw: t.sharedWith, names: t.sharedWithNames, ts: ts }); })()");
     const s1 = screen('tripShareBackdrop');
+    const prof = store.get('communityProfiles/' + uid) || {};
+    ok('د-٢ · أول مشاركة تكتب اسم المرسل في ملفه بالمجتمع (بلا hasAnyPublicContent) ليراه المستلِم', prof.nickname === B.x('userListData.nickname') && prof.hasAnyPublicContent !== true && tpl(["await saveTrip(trip); ensureCommunityNick();", "await saveMyCityList(); ensureCommunityNick();", "await sgSaveTarget(target); ensureCommunityNick();"]).ok, JSON.stringify(prof));
     ok('r80 · النقر: maya وomar في sharedWith بأسمائهما · «Shared with Family · 2 added» · الرقاقة مضاءة · «Save these 2 as a group» يظهر · الرحلة محفوظة بهما', sh1 === '{"sw":["uMAYA000000000000000000000000","uOMAR000000000000000000000000"],"names":{"uMAYA000000000000000000000000":"maya","uOMAR000000000000000000000000":"omar"},"ts":["Shared with Family · 2 added"]}' && s1.includes("class=\"chip on\" onclick=\"sgShareWith('g_fam')\"") && s1.includes('onclick="sgSaveCurrent()">Save these 2 as a group</button>') && (store.get('trips/trip_r80') || {}).sharedWith.length === 2, sh1);
     // ٤) عضو جديد في المجموعة لا يرى ما شُورك قبله
     const add1 = await B.x("(async function(){ var o = openInputModal; openInputModal = async function(){ return 'lina'; }; try{ await sgAddMember('g_fam'); } finally { openInputModal = o; } return JSON.stringify({ m: mpShareGroups[0].members.map(function(x){ return x.nickname; }), sw: userTrips[0].sharedWith.length, saved: (" + JSON.stringify(uid) + " && (store_users_shareGroups_len = null, true)) }); })()".replace("(store_users_shareGroups_len = null, true)", "true"));
@@ -2210,6 +2213,26 @@ function citiesSeed(){
     store.delete('trips/trip_r80'); store.delete('nicknames/maya'); store.delete('nicknames/omar'); store.delete('nicknames/lina'); store.delete('nicknames/selfy'); const ud = store.get('users/' + uid); if (ud){ delete ud.shareGroups; store.set('users/' + uid, ud); } B.x("switchTab(" + JSON.stringify(JSON.parse(prev).tab) + ")");
     }
   }, ['share.groups.saved']);
+
+  await must('د-٢ · فتح قائمة مشارَكة معي بالاسم من وجهة الأماكن (Show → Shared with me → Open) يفتحها فعلًا: الانتقال إلى المجتمع · طبقة الشخص · القائمة غير العامة تُقرأ وتُعرض بأماكنها', async () => {
+    const prev = B.x("JSON.stringify({ tab: currentTab, src: placesSource, vu: viewingUserUid, cv: communityViewingCityId, cd: cmDirect })");
+    const me = B.x('currentUser.uid'); const OW = 'uSHAREOWNER00000000000000000';
+    try {
+    await store.set('communityProfiles/' + OW, { nickname: 'sharer', publicCityIds: [], updatedAt: Date.now() });
+    await store.set('userCityLists/' + OW + '_paris', { ownerId: OW, cityId: 'paris', cityName: 'Paris', public: false, sharedWith: [me], sharedWithNames: {}, catsV: 2, categories: { coffee: { places: [{ id: 'sp1', name: 'Secret Beans', url: 'https://maps.app.goo.gl/sp1', area: 'Marais' }] } } });
+    B.x("sharedCityLists = []; placesSource = 'shared'; switchTab('Places')"); await B.x('renderPlacesBody()'); await new Promise(r => setTimeout(r, 50));
+    const card = screen('plBody');
+    ok('د-٢ · بطاقة «Paris — sharer · Shared with you by name» بزر Open يستدعي plOpenSharedList', card.includes('Shared with you by name') && card.includes("plOpenSharedList('" + OW + "', 'paris')"), card.slice(0, 300));
+    await B.x("plOpenSharedList('" + OW + "', 'paris')"); await new Promise(r => setTimeout(r, 80));
+    const after = B.x("JSON.stringify({ tab: currentTab, vu: viewingUserUid, cv: communityViewingCityId, cities: viewingUserCities.map(function(c){ return c.id + (c._shared ? ':shared' : ''); }), direct: cmDirect })");
+    const body = String(documentStub.getElementById('communityBody').innerHTML || '');
+    ok('د-٢ · بعد Open: التبويب Community · الشخص sharer · المدينة paris مركَّبة من مستندها (shared) · الجسم يعرض «sharer · Paris» وقسم «Cafes & Sweets · 1 place» (مطويًّا كالمعتاد)', after === '{"tab":"Community","vu":"' + OW + '","cv":"paris","cities":["paris:shared"],"direct":true}' && body.includes('<b>sharer</b> · Paris') && body.includes('Cafes &amp; Sweets</span><span class="seccnt">· 1 place') && !body.includes('No active places'), after + ' ' + body.slice(0, 200));
+    cap('list.shared.openFromPlaces');
+    } finally {
+    store.delete('userCityLists/' + OW + '_paris'); store.delete('communityProfiles/' + OW);
+    B.x("(function(){ var s = " + prev + "; viewingUserUid = s.vu; communityViewingCityId = s.cv; cmDirect = s.cd; communityUserLayer = null; viewingUserCities = []; sharedCityLists = []; placesSource = s.src; })()"); B.x("switchTab(" + JSON.stringify(JSON.parse(prev).tab) + ")");
+    }
+  }, ['list.shared.openFromPlaces']);
 
   // ═══ رحلة الشاشة (ر٦٥) — كل محطة تسمّي مشهد المرجع الذي تحرسه ═══
   await must('ش١ · ٦/أ الأماكن: صف الأفعال الخمسة بلا سلة (الشاشة)', async () => {
@@ -2496,7 +2519,7 @@ function citiesSeed(){
       g0:  ['auth.session'], s3: ['users.register', 'nicknames.claim', 'security.nicknameEscaped'], g2: ['nicknames.claim'],
       s4:  { deferred: 'نبذة تعريفية — تُبنى بالخطوة الأولى المتممة' }, s11: ['userLists.default'], s12: ['screen.static.backChip'],
       dA:  ['cityLists.create', 'bookmark.place.on', 'place.identityByUrl', 'bookmark.place.urlLessIsolated', 'screen.places.rowActions', 'places.nearby', 'screen.static.placesChips', 'edge.doubleToggleStable', 'edge.disabledChipsInert'],
-      dB:  ['trip.build.plan', 'trip.filter.byStatus', 'trip.card', 'bookmark.trip.self', 'share.groups.saved', 'screen.trip.bookmarkedChip', 'screen.static.tripChips', 'screen.trips.cityPick'],
+      dB:  ['trip.build.plan', 'trip.filter.byStatus', 'trip.card', 'bookmark.trip.self', 'share.groups.saved', 'list.shared.openFromPlaces', 'screen.trip.bookmarkedChip', 'screen.static.tripChips', 'screen.trips.cityPick'],
       dB2: ['trip.builder.stages', 'trip.moveSheet', 'trip.alternatives', 'trip.engine.deterministic', 'trip.periods.flex', 'trip.altCap', 'trip.legWarn.inline', 'trip.rests.user', 'trip.stay.notStop', 'trip.manual.arrange'], dC: ['trip.itinerary.page', 'trip.counters.local', 'trip.addPlaces.refs', 'trip.autoPlace', 'trip.view.plan', 'trip.route.view', 'trip.route.schedule', 'trip.route.prune', 'trip.route.navApp', 'trip.resolve.available', 'screen.trip.defaultView', 'screen.trip.reopenStable'],
       dD:  ['bookmark.list.on.batch3', 'bookmark.list.browser', 'sort.people.byViews', 'screen.market.header', 'screen.market.card', 'screen.community.stateKept', 'edge.emptyCityMarket'],
       dD2: ['view.bump.other', 'trip.save.other.batch3', 'screen.person.layer', 'seq.browseMarkBackReload', 'click.engine.reachesHandler'],
