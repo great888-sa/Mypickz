@@ -143,7 +143,7 @@ const MP_EXPECTED = [
   ["mpTrack.statsTrip(tripId, 'view_total')", { prod: 0, test: 2 }],
   ["mpTrack.captureSource();", 1],
   ["mpTrack.trapError(mpTrack.classify", 1],
-  ["window.addEventListener('unhandledrejection'", 1],
+  ["window.addEventListener('unhandledrejection'", { prod: 1, test: 2 }], // د-٤: نسخة الاختبار تسجّل الرفض غير الملتقَط في لوحة TIMING
   // خ٢ (٢٧ أغسطس): وجهة العناوين الشخصية تعرض روابطها بسماتها (data-mpsrc="app" · data-mppersonal="1") — إبرة إضافية بنسخة الاختبار
   //   حتى ترقية الإطار للإنتاج (حينها يصير العدد ٨/٣ بالملفين وتُوحَّد القيمة). القيمة إما رقم واحد للملفين أو {prod, test}.
   ['data-mpsrc=', { prod: 7, test: 4 }], // r74b-٢: نافذة My List القديمة زالت برابطيها // ر٧٣-أب (١): زالت سمة الدليل الموروث // r72w: رحلة الآخرين تمرّ بالبطاقة الموحَّدة (community) // ر٥٢: رابط نافذة My Favorites المتقاعدة كان يحمل السمة — زال معها
