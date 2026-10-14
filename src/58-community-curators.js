@@ -71,7 +71,10 @@ function cmPickTab(src){ communityTab = src; communityScreen = 'source'; renderC
 // ر٦٩ب (ميداني): Open يفتح أماكن القائمة مباشرة — طبقة الشخص بابٌ من الاسم لا ممرًّا إجباريًّا (N-008)
 let cmDirect = false; // ر٦٩ذ: فُتحت القائمة من السوق مباشرة فالرجوع إليه
 function cmLayerBack(){ communityUserTripsCity = ''; if (cmDirect){ cmDirect = false; viewingUserUid = null; communityUserLayer = null; } else { communityUserLayer = null; } renderCommunityModal(); }
-async function cmOpenList(owner, cityId, origin){ cmDirect = true; communityTab = 'places'; personLayerOnly = null; await viewCommunityUser(owner); openCommunityCityList(cityId, origin); } // r72u: مصدر الأماكن دائمًا · ب-٢-١: المنشأ يُمرَّر إلى نقطة العدّ الواحدة
+async function cmOpenList(owner, cityId, origin){ cmDirect = true; communityTab = 'places'; personLayerOnly = null; await viewCommunityUser(owner); await cmEnsureSharedCity(owner, cityId); if (currentTab !== 'Community') switchTab('Community'); /* د-٢: الفتح من وجهة الأماكن كان يرسم في جسم المجتمع المخفي — الانتقال بعد تحميل الشخص */ openCommunityCityList(cityId, origin); }
+async function cmEnsureSharedCity(uid, cityId){ /* د-٢ (ملاحظة المالك ١٤ أكتوبر): القائمة المشارَكة معي بالاسم ليست عامة فلا تأتي مع مدن الشخص العامة — تُقرأ مستندها (القواعد تسمح لمن في sharedWith) وتُضاف إلى مدنه للجلسة */
+  if ((viewingUserCities || []).find(function(c){ return c.id === cityId; })) return;
+  try{ const d = await mpData.cityLists.get(uid, cityId); if (!d) return; const meta = allCities().find(function(c){ return c.id === cityId; }); viewingUserCities.push({ id: cityId, name: (meta && meta.name) || d.cityName || cityId, categories: (function(){ const out = {}; Object.keys((d.categories && typeof d.categories === 'object') ? d.categories : {}).forEach(function(k){ const c = d.categories[k] || {}; out[k] = Object.assign({}, c, { active: c.active !== false }); }); return out; })(), _full: true, _shared: true, /* active غير المكتوب = فعّال (كما تركّبه الطبقة) */ favoriteCount: d.favoriteCount || 0, bookmarkCount: d.bookmarkCount || 0, viewCount: d.viewCount || 0 }); }catch(e){ mpSwallow(e, 'shared list'); } } // r72u: مصدر الأماكن دائمًا · ب-٢-١: المنشأ يُمرَّر إلى نقطة العدّ الواحدة
 let cmSortOpen = false; // r72r-2
 let cmSearchOpen = false; // r72s
 let cmLastRows = []; // r72w: الصفوف المحمَّلة (بعد مرشِّح المدينة) — للأعداد بقائمة الترتيب
@@ -722,7 +725,7 @@ async function renderBookmarkedLists(wrap, cityName){ // r72s (قرار الما
 function renderCommunityUserList(wrap){
   if (viewingCommunityTripId){ renderCommunityTripDetail(wrap); return; }
   const __arch = curArchiveBannerHtml(); if (__arch){ wrap.innerHTML = __arch; const inner = document.createElement('div'); wrap.appendChild(inner); wrap = inner; } // ر٧٢-أ-١
-  const u = viewingUserData;
+  const u = viewingUserData; if (!u){ wrap.innerHTML = '<div class="mp-empty mini">Loading…</div>'; return; } /* د-٢: الملف لم يصل بعد (سباق فتح التبويب) */
   const cities = viewingUserCities;
 
   if (!communityViewingCityId || !cities.find(c => c.id === communityViewingCityId)){
