@@ -61,6 +61,7 @@ const CAPS = [
   'trip.altCap', /* r78-٣ */
   'trip.legWarn.inline', /* r78-٥ */
   'trip.rests.user', /* r78-٧ */
+  'trip.stay.notStop', /* r78-٨ */
 ];
 const covered = new Set();
 function cap(id){ if (!CAPS.includes(id)) throw new Error('قدرة غير معلنة: ' + id); covered.add(id); }
@@ -1945,6 +1946,39 @@ function citiesSeed(){
     }
   }, ['trip.rests.user']);
 
+  await must('r78-٨ · نسخة المنشئ تُبطَل مع حفظ قائمتي · Stay ليس محطة (خارج الاختيار · أولًا في From list · «أضف إلى رحلة» يضبط الإقامة) · Remove from trip في ورقة النقل · فترة أُعيدت بعد البناء تُسأل Rebuild أو Keep', async () => {
+    const prev = B.x("JSON.stringify({ ut: userTrips, ct: currentTripId, tab: currentTab, city: cityListCityId, lf: myCityListLoadedFor, at: activeTripId })");
+    try {
+    const uid = B.x('currentUser.uid');
+    await store.set('userCityLists/' + uid + '_r78h', { ownerId: uid, cityId: 'r78h', cityName: 'Stayton', public: false, catsV: 2, categories: { coffee: { places: [{ id: 'k1', name: 'Kava', url: 'https://maps.app.goo.gl/k1', geo: { lat: 48.86, lng: 2.35 } }] }, hotels: { places: [{ id: 'h1', name: 'Grand Inn', url: 'https://maps.app.goo.gl/h1', geo: { lat: 48.858, lng: 2.351 } }] }, airports: { places: [{ id: 'ap', name: 'CDG', url: 'https://maps.app.goo.gl/ap', geo: { lat: 49.0, lng: 2.55 } }] } } });
+    B.x("userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'r78h'; }).concat([{ id: 'r78h', name: 'Stayton', country: 'Testland' }]); userTrips = []; currentTripId = null; activeTripId = null; cityListCityId = 'paris'; tbForgetCity('r78h')");
+    const lists = await B.x("(async function(){ var mine = await tbLoadPlaces('r78h', 'mine'); var stay = await tbLoadPlaces('r78h', 'stay'); return JSON.stringify({ mine: mine.map(function(p){ return p.name; }), stay: stay.map(function(p){ return p.name + ':' + p.sec; }) }); })()");
+    ok('r78-٨ · الاختيار بلا Stay وبلا Transportation (Kava فقط) · مصدر الإقامة: الفندق أولًا ثم المثبَّتة الأخرى بلا المطار', lists === '{"mine":["Kava"],"stay":["Grand Inn:stay","Kava:cafes_sweets"]}', lists);
+    await store.set('userCityLists/' + uid + '_r78h', Object.assign(store.get('userCityLists/' + uid + '_r78h'), { categories: Object.assign({}, store.get('userCityLists/' + uid + '_r78h').categories, { burger: { places: [{ id: 'b1', name: 'Bun', url: 'https://maps.app.goo.gl/b1', geo: { lat: 48.861, lng: 2.352 } }] } }) }));
+    const stale = await B.x("(async function(){ var a = (await tbLoadPlaces('r78h', 'mine')).length; tbForgetCity('r78h'); var b = (await tbLoadPlaces('r78h', 'mine')).length; return a + '|' + b; })()");
+    ok('r78-٨ · النسخة المحفوظة لا ترى المكان الجديد (١) · tbForgetCity يعيد القراءة (٢) · saveMyCityList يستدعيها', stale === '1|2' && tpl(["if (typeof tbForgetCity === 'function') tbForgetCity(cityListCityId);"]).ok, stale);
+    // «أضف إلى رحلة» لفندق → الإقامة لا الصينية
+    B.x("(function(){ var c = [{ cityId: 'r78h', cityName: 'Stayton', days: 1, stay: null, arrival: null, departure: null, fallback: 'transit' }]; userTrips = [{ id: 'trip_r78h', title: '', cityId: 'r78h', cityName: 'Stayton', customLabel: 'Stay', cities: c, plan: tripBuildPlan({ cities: c, entries: [], version: 'balanced' }), version: 'balanced', status: 'approved', public: false, sharedWith: [], sharedWithNames: {}, ownerId: currentUser.uid }]; activeTripId = 'trip_r78h'; })()");
+    await B.x("addPlaceToTrip('mylist', 'r78h', 'hotels', 'h1', null, 'Grand Inn')"); await new Promise(r => setTimeout(r, 30));
+    const st = B.x("JSON.stringify({ stay: userTrips[0].cities[0].stay, tray: userTrips[0].plan.tray.length, placed: tripPlanEntries(userTrips[0].plan).length })");
+    ok('r78-٨ · فندق من البطاقة → إقامة الرحلة بالاسم والدبوس · لا شيء في الصينية ولا في الأيام', st === '{"stay":{"name":"Grand Inn","geo":{"lat":48.858,"lng":2.351}},"tray":0,"placed":0}', st);
+    // Remove from trip في ورقة النقل (العرض)
+    B.x("(function(){ var e = tripNewEntry({ id: 'e_rm', ref: { sourceType: 'mylist', cityId: 'r78h', subcatId: 'coffee', placeId: 'k1', sourceUid: null }, name: 'Kava', geo: { lat: 48.86, lng: 2.35 }, sec: 'cafes_sweets' }); userTrips[0].plan.tray.push(e); })()");
+    B.x("switchTab('Trips')"); await B.x("openTripDetail('trip_r78h')"); B.x("tripOpenMoveSheet('trip_r78h', 'e_rm')"); const sheet = String(documentStub.getElementById('tmBody').innerHTML || '');
+    await B.x("(async function(){ var a = window.__mpSheetAuto; window.__mpSheetAuto = function(){ return 'ok'; }; try{ tripMoveRemove(); await new Promise(function(r){ setTimeout(r, 30); }); } finally { window.__mpSheetAuto = a; } })()");
+    const after = B.x("JSON.stringify({ tray: userTrips[0].plan.tray.length, open: document.getElementById('tripMoveBackdrop').classList.contains('show') })");
+    ok('r78-٨ · ورقة النقل لمكان في الصينية تعرض «Remove from trip» · تنفيذه يغلق الورقة ويزيله بالتأكيد', sheet.includes('onclick="tripMoveRemove()">Remove from trip</button>') && after === '{"tray":0,"open":false}', sheet.slice(-200) + ' ' + after);
+    // فترة أُعيدت بعد البناء
+    await B.x("openTripBuilder({ tripId: 'trip_r78h', stage: 1 })"); B.x("tbTogglePeriod('afternoon')"); const off1 = B.x("JSON.stringify({ back: TB.periodsBack || [], kept: tripCityPeriods(TB.cities[0]) })"); B.x("tbTogglePeriod('afternoon')"); const on1 = B.x("JSON.stringify(TB.periodsBack)");
+    const asked = await B.x("(async function(){ var a = window.__mpSheetAuto; var seen = null; window.__mpSheetAuto = function(o){ seen = o.title + '|' + o.ok + '|' + o.alt; return 'alt'; }; try{ await tbApplySetup(); } finally { window.__mpSheetAuto = a; } return JSON.stringify({ seen: seen, stage: TB.stage, back: TB.periodsBack }); })()");
+    ok('r78-٨ · إطفاء العصر لا يسجّل عودة · إعادته بعد البناء تسجّلها · Done يعرض «Afternoon is back · Rebuild · Keep as is» · Keep يبقي المسودة ويصفّر السجل', off1 === '{"back":[],"kept":["morning","midday","evening"]}' && on1 === '["afternoon"]' && asked === '{"seen":"Afternoon is back|Rebuild|Keep as is","stage":2,"back":[]}', off1 + ' ' + on1 + ' ' + asked);
+    cap('trip.stay.notStop');
+    } finally {
+    B.x("(function(){ var s = " + prev + "; TB = null; document.getElementById('tripBuildBackdrop').classList.remove('show'); document.getElementById('tripMoveBackdrop').classList.remove('show'); sheetBarsHide(false); userTrips = s.ut; currentTripId = s.ct; cityListCityId = s.city; myCityListLoadedFor = s.lf; activeTripId = s.at; activeTripAdded = []; activeTripAddedRefs = []; updateActiveTripBanner(); userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'r78h'; }); tbForgetCity('r78h'); })()");
+    store.delete('trips/trip_r78h'); store.delete('userCityLists/' + B.x('currentUser.uid') + '_r78h'); B.x("switchTab(" + JSON.stringify(JSON.parse(prev).tab) + ")");
+    }
+  }, ['trip.stay.notStop']);
+
   // ═══ رحلة الشاشة (ر٦٥) — كل محطة تسمّي مشهد المرجع الذي تحرسه ═══
   await must('ش١ · ٦/أ الأماكن: صف الأفعال الخمسة بلا سلة (الشاشة)', async () => {
     B.set('cityListCityId', 'paris'); B.x('renderPlacesMine()');
@@ -2231,7 +2265,7 @@ function citiesSeed(){
       s4:  { deferred: 'نبذة تعريفية — تُبنى بالخطوة الأولى المتممة' }, s11: ['userLists.default'], s12: ['screen.static.backChip'],
       dA:  ['cityLists.create', 'bookmark.place.on', 'place.identityByUrl', 'bookmark.place.urlLessIsolated', 'screen.places.rowActions', 'screen.static.placesChips', 'edge.doubleToggleStable', 'edge.disabledChipsInert'],
       dB:  ['trip.build.plan', 'trip.filter.byStatus', 'trip.card', 'bookmark.trip.self', 'screen.trip.bookmarkedChip', 'screen.static.tripChips', 'screen.trips.cityPick'],
-      dB2: ['trip.builder.stages', 'trip.moveSheet', 'trip.alternatives', 'trip.engine.deterministic', 'trip.periods.flex', 'trip.altCap', 'trip.legWarn.inline', 'trip.rests.user'], dC: ['trip.addPlaces.refs', 'trip.autoPlace', 'trip.view.plan', 'trip.route.view', 'trip.route.schedule', 'trip.route.prune', 'trip.route.navApp', 'trip.resolve.available', 'screen.trip.defaultView', 'screen.trip.reopenStable'],
+      dB2: ['trip.builder.stages', 'trip.moveSheet', 'trip.alternatives', 'trip.engine.deterministic', 'trip.periods.flex', 'trip.altCap', 'trip.legWarn.inline', 'trip.rests.user', 'trip.stay.notStop'], dC: ['trip.addPlaces.refs', 'trip.autoPlace', 'trip.view.plan', 'trip.route.view', 'trip.route.schedule', 'trip.route.prune', 'trip.route.navApp', 'trip.resolve.available', 'screen.trip.defaultView', 'screen.trip.reopenStable'],
       dD:  ['bookmark.list.on.batch3', 'bookmark.list.browser', 'sort.people.byViews', 'screen.market.header', 'screen.market.card', 'screen.community.stateKept', 'edge.emptyCityMarket'],
       dD2: ['view.bump.other', 'trip.save.other.batch3', 'screen.person.layer', 'seq.browseMarkBackReload', 'click.engine.reachesHandler'],
       dE:  ['curators.twoPages', 'screen.static.curatorPage'], dE2: { deferred: 'القشرة الساكنة مطابقة للنموذج (تُفحص بش٩) — الصفحة الحية بالخطوة الرابعة على قالب طبقة الشخص نفسه (ق٠٩-٠٤-١٠)' },
