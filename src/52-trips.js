@@ -451,7 +451,7 @@ function closeExportPreview(){ const bd = document.getElementById('tripShareBack
 /* ═══ r80 (الدفعة د · القرار ١١ في أ-٢): المجموعات المحفوظة للمشاركة — اسم + أعضاء (uid · اسم المستخدم) ملكٌ لصاحبها وحده في users/{uid}.shareGroups؛ لا يراها أعضاؤها ولا تُنشئ صلة بينهم.
    المشاركة مع مجموعة = لقطة: إضافة أعضائها الحاليين إلى sharedWith كما لو أُضيفوا واحدًا واحدًا؛ ما يُخزَّن في القائمة والرحلة لا يتغير. لا قراءة إضافية: تُلتقط من مستند المستخدم المقروء عند الدخول. الحدود: ١٠ مجموعات · ٣٠ عضوًا · اسم ≤ ٢٤ حرفًا ═══ */
 const SG_MAX_GROUPS = 10, SG_MAX_MEMBERS = 30, SG_NAME_MAX = 24;
-let mpShareGroups = []; let mpShareGroupsLoaded = false; let sgView = null; // sgView = معرّف المجموعة المفتوحة داخل نافذة Shared with
+let mpShareGroups = []; let mpShareGroupsLoaded = false; let sgView = null; let __sgEnsureTried = false; /* د-٣: محاولة احتياط واحدة بالجلسة — لا إعادة فتح متكررة */ // sgView = معرّف المجموعة المفتوحة داخل نافذة Shared with
 function sgNorm(list){ return (Array.isArray(list) ? list : []).filter(function(g){ return g && typeof g === 'object' && g.id && g.name; }).slice(0, SG_MAX_GROUPS).map(function(g){ const seen = {}; return { id: String(g.id), name: String(g.name).slice(0, SG_NAME_MAX), members: (Array.isArray(g.members) ? g.members : []).filter(function(m){ return m && m.uid && !seen[m.uid] && (seen[m.uid] = true); }).slice(0, SG_MAX_MEMBERS).map(function(m){ return { uid: String(m.uid), nickname: String(m.nickname || 'user').slice(0, 40) }; }) }; }); }
 function sgLoadFrom(data){ mpShareGroups = sgNorm(data && data.shareGroups); mpShareGroupsLoaded = true; } // تُستدعى بعد قراءة users/{uid} عند الدخول
 async function sgEnsureLoaded(){ if (mpShareGroupsLoaded || !currentUser) return; try{ const d = await mpData.users.get(currentUser.uid); sgLoadFrom(d.exists ? d.data() : {}); }catch(e){ mpShareGroupsLoaded = false; } }
@@ -496,8 +496,8 @@ function openShareModal(kind, id){ // ر٦٩ز: نافذة «Shared with» وا�
   const bd = document.getElementById('tripShareBackdrop'); shareModalKind = kind;
   const names = (target.sharedWith || []).map(function(uid){ return { uid: uid, name: (target.sharedWithNames || {})[uid] || 'user' }; });
   const title = isTrip ? tripTitle(target) : ((allCities().find(function(x){ return x.id === cityListCityId; }) || {}).name || 'My list');
-  if (!mpShareGroupsLoaded) sgEnsureLoaded().then(function(){ if (shareModalKind === kind && bd.classList.contains('show')) openShareModal(kind, id); }); /* r80: تُلتقط عند الدخول؛ هذا احتياط إن تعذّرت */
-  const gv = sgView ? sgById(sgView) : null; if (sgView && !gv) sgView = null;
+  if (!mpShareGroupsLoaded && !__sgEnsureTried){ __sgEnsureTried = true; sgEnsureLoaded().then(function(){ if (mpShareGroupsLoaded && shareModalKind === kind && bd.classList.contains('show')) openShareModal(kind, id); }); } /* r80: تُلتقط عند الدخول؛ د-٣: احتياط مرة واحدة فقط، وإعادة الفتح عند النجاح وحده (كان يدور إن تعذّرت القراءة) */
+  const gv = sgView ? sgById(sgView) : null; if (sgView && !gv) sgView = null; try{ ensureCommunityNick(); }catch(_){} /* د-٤: الاسم يُكتب عند فتح النافذة لا عند أول مشاركة فقط */
   bd.innerHTML = '<div class="modal night"><div class="hdr"><button type="button" class="bk' + (gv ? '' : ' hidden') + '" onclick="sgView = null; sgReopen()">← Back</button><span class="ttl">' + (gv ? '👥 Group' : '🔗 Shared with') + '</span><button type="button" class="x" onclick="closeTripShareModal()" aria-label="Close">✕</button></div>' /* أ-٢ · القرار ١٠: نافذة «Shared with» على القشرة الليلية */
     + (gv ? sgGroupHtml(gv) + '</div>' : '')
     + (gv ? '' : '<label class="flabel">' + escapeHtml(title) + ' — ' + (names.length ? names.length + ' ' + (names.length === 1 ? 'person' : 'people') : 'nobody yet') + '</label>'
