@@ -341,6 +341,7 @@ function addrModalDelete(){ if (!addrEditRef) return; const r = addrEditRef; clo
 function mpSwallow(e, ctx){ // ر٦٤: بديل الابتلاع الصامت — يعدّ بعدّاد الأخطاء القائم (Other) ويطبع بوضع التصحيح
   try{ if (typeof mpTrack !== 'undefined' && mpTrack.trapError) mpTrack.trapError('Other'); }catch(_){}
   try{ console.warn('[MyPickz][swallowed]', ctx || '', (e && e.code) || (e && e.message) || e); }catch(_){}
+  try{ if (typeof logTiming === 'function') logTiming('[SWALLOWED] ' + (ctx || '') + ': ' + ((e && (e.code || e.message)) || String(e)).slice(0, 160)); }catch(_){} /* د-٤ */
 }
 async function toggleTripSelfBookmark(tripId){
   if (!currentUser){ openAuthModal(); return; }
