@@ -437,8 +437,10 @@ async function sendExportCard(kind, id){
 function openExportPreview(kind, id){
   const bd = document.getElementById('tripShareBackdrop'); shareModalKind = 'export'; __xcLast = { kind: kind, id: id }; // ر٧٠ح
   bd.innerHTML = '<div class="modal night"><div class="hdr"><button type="button" class="bk hidden">← Back</button><span class="ttl">📤 Send</span><button type="button" class="x" onclick="closeExportPreview()" aria-label="Close">✕</button></div>' + exportCardHtml(kind, id) /* r75c (البند ١٠): معاينة الإرسال على القشرة الليلية */
-    + '<button type="button" class="cta wide" style="margin-top:12px" onclick="sendExportCard(\'' + kind + '\', \'' + attrStr(id || '') + '\')">Send as image</button>'
-    + ((kind === 'trip' || kind === 'otrip') ? '<button type="button" class="btn btn-ghost wide" onclick="sendTripItinerary(\'' + kind + '\', \'' + attrStr(id || '') + '\')">Send as itinerary</button><div class="xc-hint">a page that opens offline, with a QR code for every stop</div>' : '') /* r79 (ج · القرار ١) */
+    + ((kind === 'trip' || kind === 'otrip') /* r79 (ج · القرار ١) · r79-٢ (قرار المالك): للرحلة المخطط أولًا ممتلئًا ثم الصورة؛ لغيرها الصورة أولًا */
+        ? '<button type="button" class="cta wide" style="margin-top:12px" onclick="sendTripItinerary(\'' + kind + '\', \'' + attrStr(id || '') + '\')">Send as itinerary</button><div class="xc-hint">a page that opens offline, with a map sketch and a QR code for every stop</div>'
+          + '<button type="button" class="btn btn-ghost wide" onclick="sendExportCard(\'' + kind + '\', \'' + attrStr(id || '') + '\')">Send as image</button>'
+        : '<button type="button" class="cta wide" style="margin-top:12px" onclick="sendExportCard(\'' + kind + '\', \'' + attrStr(id || '') + '\')">Send as image</button>')
     + '<button type="button" class="btn btn-ghost" onclick="closeExportPreview(); ' + (kind === 'trip' ? "exportOwnTripRow('" + attrStr(id) + "')" : kind === 'olist' ? "exportOtherList('" + attrStr(String(id).split('_')[0]) + "', '" + attrStr(String(id).split('_').slice(1).join('_')) + "')" : kind === 'otrip' ? "exportOtherTrip('" + attrStr(id) + "')" : kind === 'oplace' ? "cmSendCachedPlace('" + attrStr(id) + "')" : 'plExportCityList()') + '">Send as text</button>'
     + '<button type="button" class="btn btn-ghost" onclick="closeExportPreview()">Cancel</button></div>';
   bd.classList.add('show');
