@@ -63,6 +63,7 @@ const CAPS = [
   'trip.rests.user', /* r78-٧ */
   'trip.stay.notStop', /* r78-٨ */
   'trip.itinerary.page', 'places.nearby', 'trip.counters.local', /* r79 (ج) */
+  'trip.manual.arrange', /* r79-٣ */
 ];
 const covered = new Set();
 function cap(id){ if (!CAPS.includes(id)) throw new Error('قدرة غير معلنة: ' + id); covered.add(id); }
@@ -2084,6 +2085,81 @@ function citiesSeed(){
     }
   }, ['trip.counters.local']);
 
+  await must('r79-٣ · «Arrange it myself»: الزرّان في النافذة الثانية · المسودة اليدوية بأيام فارغة وصينية ممتلئة · الشبكة المتتالية (Skip · Done) بلا خطوة الموضع · Auto-fill the rest · «Where in <الفترة>?» · خلية «here · order» · Repeat on… نسخة مستقلة · الإزالة والعلامة مع المكرَّر', async () => {
+    const prev = B.x("JSON.stringify({ ut: userTrips, ct: currentTripId, tab: currentTab, city: cityListCityId, lf: myCityListLoadedFor })");
+    try {
+    const uid = B.x('currentUser.uid');
+    await store.set('userCityLists/' + uid + '_r79m', { ownerId: uid, cityId: 'r79m', cityName: 'Manualton', public: false, catsV: 2, categories: { coffee: { places: [{ id: 'k1', name: 'Kava', url: 'https://maps.app.goo.gl/k1', geo: { lat: 48.86, lng: 2.35 } }] }, burger: { places: [{ id: 'b1', name: 'Bun', url: 'https://maps.app.goo.gl/b1', geo: { lat: 48.861, lng: 2.351 } }] }, museums: { places: [{ id: 'm1', name: 'Museo', url: 'https://maps.app.goo.gl/m1', geo: { lat: 48.862, lng: 2.352 } }] }, malls: { places: [{ id: 's1', name: 'Shoppe', url: 'https://maps.app.goo.gl/s1', geo: { lat: 48.863, lng: 2.353 } }] }, french: { places: [{ id: 'f1', name: 'Bistro', url: 'https://maps.app.goo.gl/f1', geo: { lat: 48.864, lng: 2.354 } }] } } });
+    B.x("userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'r79m'; }).concat([{ id: 'r79m', name: 'Manualton', country: 'Testland' }]); userTrips = []; currentTripId = null; tbForgetCity('r79m')");
+    await B.x("openTripBuilder({ cityId: 'r79m' })"); await B.x("(async function(){ var list = await tbLoadPlaces('r79m', 'mine'); TB.pick = 'r79m'; list.forEach(function(p){ tbTogglePick(p.key, true); }); TB.pick = null; TB.cities[0].days = 2; tbRender(); })()");
+    const s1 = String(documentStub.getElementById('tbBody').innerHTML || '');
+    ok('r79-٣ · النافذة الثانية: «Build the draft →» ممتلئًا ثم «Arrange it myself» ثانويًّا بتلميحه', s1.includes('onclick="tbBuild()">Build the draft →</button>') && s1.includes('tb-manual"') && s1.includes('onclick="tbBuildManual()">Arrange it myself</button><div class="xc-hint">every picked place waits in the tray') && s1.indexOf('Build the draft') < s1.indexOf('Arrange it myself'), s1.slice(-300));
+    B.x('tbBuildManual()'); await new Promise(r => setTimeout(r, 30));
+    const m0 = B.x("JSON.stringify({ manual: TB.manual, stage: TB.stage, days: TB.plan.days.length, placed: tripPlanEntries(TB.plan).length, tray: TB.plan.tray.map(function(e){ return e.name; }), open: document.getElementById('tripMoveBackdrop').classList.contains('show'), title: document.getElementById('tmTitle').textContent, text: document.getElementById('tmText').textContent, arr: TB.arrange && TB.arrange.n })");
+    const sheet0 = String(documentStub.getElementById('tmBody').innerHTML || '');
+    ok('r79-٣ · اليدوي: يومان فارغان · الخمسة في الصينية · الورقة المتتالية مفتوحة «1 of 5 · Bun» بنصها (الصينية بترتيب ثابت) وزرَي Skip وDone for now بلا Remove وبلا Repeat', m0 === '{"manual":true,"stage":2,"days":2,"placed":0,"tray":["Bun","Bistro","Kava","Museo","Shoppe"],"open":true,"title":"1 of 5 · Bun","text":"Tap a cell to place it · Skip keeps it in the tray","arr":5}' && sheet0.includes('onclick="tbArrangeSkip()">Skip</button>') && sheet0.includes('onclick="tbArrangeStop()">Done for now</button>') && !sheet0.includes('Remove from trip') && !sheet0.includes('Repeat on'), m0);
+    B.x("tripMoveTo(0, 'morning')"); await new Promise(r => setTimeout(r, 30)); const t1 = B.x("document.getElementById('tmTitle').textContent");
+    B.x('tbArrangeSkip()'); await new Promise(r => setTimeout(r, 30)); const t2 = B.x("document.getElementById('tmTitle').textContent");
+    B.x("tripMoveTo(0, 'morning')"); await new Promise(r => setTimeout(r, 30)); const t3 = B.x("document.getElementById('tmTitle').textContent");
+    const m1 = B.x("JSON.stringify({ morning: TB.plan.days[0].periods.morning.map(function(e){ return e.name; }), tray: TB.plan.tray.map(function(e){ return e.name; }) })");
+    B.x('tbArrangeStop()'); await new Promise(r => setTimeout(r, 30));
+    const m2 = B.x("JSON.stringify({ open: document.getElementById('tripMoveBackdrop').classList.contains('show'), arr: TB.arrange, tray: TB.plan.tray.length })");
+    ok('r79-٣ · المتتالية: وضع Bun في صباح ١ → «2 of 5 · Bistro» · Skip → «3 of 5 · Kava» · Kava إلى صباح ١ بلا سؤال الموضع (تُلحق آخرها) → «4 of 5 · Museo» · Done for now يغلق ويبقي ثلاثة في الصينية', t1 === '2 of 5 · Bistro' && t2 === '3 of 5 · Kava' && t3 === '4 of 5 · Museo' && m1 === '{"morning":["Bun","Kava"],"tray":["Bistro","Museo","Shoppe"]}' && m2 === '{"open":false,"arr":null,"tray":3}', t1 + ' | ' + t2 + ' | ' + t3 + ' | ' + m1 + ' ' + m2);
+    const d1 = String(documentStub.getElementById('tbBody').innerHTML || '');
+    ok('r79-٣ · المسودة اليدوية: ملاحظة الصينية اليدوية · زرّا «Place them one by one» و«Auto-fill the rest»', d1.includes('Your places wait here — tap one to give it a day, or let the engine place what is left.') && d1.includes('onclick="tbArrangeStart()">Place them one by one</button>') && d1.includes('onclick="tbAutoFill()">Auto-fill the rest</button>'), d1.slice(d1.indexOf('trip-tray-n'), d1.indexOf('trip-tray-n') + 300));
+    const af = await B.x("(async function(){ var toasts = []; var st = showToast; showToast = function(m){ toasts.push(m); }; var before = TB.plan.days[0].periods.morning.map(function(e){ return e.id; }).join(); try{ tbAutoFill(); } finally { showToast = st; } return JSON.stringify({ toasts: toasts, tray: TB.plan.tray.length, placed: tripPlanEntries(TB.plan).length, morningKept: TB.plan.days[0].periods.morning.map(function(e){ return e.id; }).join() === before, hidden: document.getElementById('tbBody').innerHTML.indexOf('Auto-fill the rest') === -1 }); })()");
+    ok('r79-٣ · Auto-fill the rest: الثلاثة الباقية تُوضع بقاعدة الاقتراح · ما وُضع يدويًّا لا يُمس · رسالة «3 placed» · الزر يختفي حين تفرغ الصينية', af === '{"toasts":["3 placed"],"tray":0,"placed":5,"morningKept":true,"hidden":true}', af);
+    // خطوة الموضع من ورقة النقل العادية
+    const ids = JSON.parse(B.x("JSON.stringify(TB.plan.days[0].periods.morning.map(function(e){ return e.id; }))"));
+    B.x("tbMove('" + ids[0] + "')"); const g1 = String(documentStub.getElementById('tmBody').innerHTML || '');
+    B.x("tripMoveTo(0, 'morning')"); const p1 = String(documentStub.getElementById('tmBody').innerHTML || ''); const pt = B.x("document.getElementById('tmTitle').textContent + '|' + __tm.step");
+    B.x('tripMoveToAt(1)'); await new Promise(r => setTimeout(r, 30)); const o1 = B.x("JSON.stringify(TB.plan.days[0].periods.morning.map(function(e){ return e.name; }))");
+    ok('r79-٣ · ورقة النقل العادية: خلية الفترة الحالية «here» معطَّلة (ج-٤) · فترة فيها محطات → خطوة «Where in Morning?» بخيارَي First و«after Kava · last» المضاء · after Kava → الترتيب Kava ثم Bun', g1.includes('class="tm-c here" disabled') && !g1.includes('here · order') && g1.includes('Repeat on…') && pt === 'Where in Morning?|pos' && p1.includes('onclick="tripMoveToAt(0)">First</button>') && p1.includes('class="btn btn-ghost wide on" onclick="tripMoveToAt(1)">after <span dir="auto">Kava</span> <span class="dim">· last</span></button>') && o1 === '["Kava","Bun"]', pt + ' ' + o1 + ' ' + p1.slice(0, 200));
+    const dr = String(documentStub.getElementById('tbBody').innerHTML || ''); const ids0 = JSON.parse(B.x("JSON.stringify(TB.plan.days[0].periods.morning.map(function(e){ return e.id; }))"));
+    const arrows = dr.includes('<span class="ord"><button type="button" class="ordb" disabled="" onclick="tbNudge(\'' + ids0[0] + '\', -1)" title="Earlier in this period">▲</button><button type="button" class="ordb" onclick="tbNudge(\'' + ids0[0] + '\', 1)" title="Later in this period">▼</button></span>') && dr.includes('<button type="button" class="ordb" disabled="" onclick="tbNudge(\'' + ids0[1] + '\', 1)"');
+    const u0 = B.x('TB.undo.length'); B.x("tbNudge('" + ids0[1] + "', -1)"); const o2 = B.x("JSON.stringify(TB.plan.days[0].periods.morning.map(function(e){ return e.name; }))"); const undoN = B.x('TB.undo.length') - u0;
+    B.x("tbNudge('" + ids0[1] + "', -1)"); const o3 = B.x("JSON.stringify(TB.plan.days[0].periods.morning.map(function(e){ return e.name; })) + '|' + (TB.undo.length - " + u0 + ")"); B.x("tbNudge('" + ids0[1] + "', 1)"); const o4 = B.x("JSON.stringify(TB.plan.days[0].periods.morning.map(function(e){ return e.name; }))");
+    const single = (function(){ const md = dr.slice(dr.indexOf('Noon'), dr.indexOf('Afternoon')); return md; })();
+    ok('r79-٤ · ▲ ▼ على بطاقة المسودة عند الرقم: الأول بلا ▲ والأخير بلا ▼ · ▼/▲ يبدّل مع الجار ويسجّل تراجعًا · في الطرف لا شيء ولا تراجع · لا سهمين حين تكون المحطة وحدها', arrows && o2 === '["Bun","Kava"]' && undoN === 1 && o3 === '["Bun","Kava"]|1' && o4 === '["Kava","Bun"]' && (single.match(/class="ord"/g) || []).length === 0, JSON.stringify({ arrows: arrows, o2: o2, undoN: undoN, o3: o3, o4: o4 }) + ' ' + dr.slice(dr.indexOf('class="ord"') - 40, dr.indexOf('class="ord"') + 260));
+    const ids2 = JSON.parse(B.x("JSON.stringify(TB.plan.days[0].periods.morning.map(function(e){ return e.id; }))"));
+    B.x("tbMove('" + ids2[0] + "')"); B.x("tripMoveTo(1, 'evening')"); const only = B.x("JSON.stringify({ step: __tm ? __tm.step : 'closed', ev: TB.plan.days[1].periods.evening.map(function(e){ return e.name; }) })");
+    ok('r79-٣ · فترة فارغة → بلا سؤال: النقل مباشرة', only === '{"step":"closed","ev":["Kava"]}', only);
+    // Repeat on…
+    const kavaId = B.x("TB.plan.days[1].periods.evening[0].id"); B.x("TB.plan.days[1].periods.evening[0].alert = 'Book ahead'; tbMove('" + kavaId + "'); __tm.step = 'repeat'; tripMoveRender()");
+    const r1 = B.x("document.getElementById('tmTitle').textContent + '|' + document.getElementById('tmText').textContent"); const rb = String(documentStub.getElementById('tmBody').innerHTML || '');
+    B.x("tripMoveCopyTo(0, 'midday')"); await new Promise(r => setTimeout(r, 30));
+    const r2 = B.x("(function(){ var md = TB.plan.days[0].periods.midday; var c = md[md.length - 1]; var o = TB.plan.days[1].periods.evening[0]; return JSON.stringify({ copyName: c.name, sameRef: JSON.stringify(c.ref) === JSON.stringify(o.ref), newId: c.id !== o.id, alert: c.alert, alts: c.alts.length, origStill: o.name, picks: Object.keys(TB.picked.r79m).length, count: tripPlanEntries(TB.plan).length }); })()");
+    ok('r79-٣ · Repeat on…: العنوان «Repeat Kava on…» ونصه · الخلايا تستدعي tripMoveCopyTo · النسخة باسمه ومرجعه وتنبيهه بهوية جديدة بلا بدائل · الأصل باقٍ · العلامات ٥ كما هي · المحطات ٦', r1 === 'Repeat Kava on…|A second visit — its own stop with its own times. Alternatives are not copied.' && rb.includes("onclick=\"tripMoveCopyTo(0, 'midday')\"") && !rb.includes('Remove from trip') && r2 === '{"copyName":"Kava","sameRef":true,"newId":true,"alert":"Book ahead","alts":0,"origStill":"Kava","picks":5,"count":6}', r1 + ' ' + r2);
+    const copyId = B.x("(function(){ var md = TB.plan.days[0].periods.midday; return md[md.length - 1].id; })()"); B.x("tbMove('" + copyId + "')"); const hint = String(documentStub.getElementById('tmBody').innerHTML || ''); B.x('tripMoveDone(null)');
+    const rm = await B.x("(async function(){ var a = window.__mpSheetAuto; window.__mpSheetAuto = function(){ return 'ok'; }; try{ await tbRemove('" + copyId + "'); var afterOne = !!(TB.picked.r79m && Object.keys(TB.picked.r79m).length === 5); await tbRemove('" + kavaId + "'); var afterTwo = Object.keys(TB.picked.r79m).length; return JSON.stringify({ afterOne: afterOne, afterTwo: afterTwo, count: tripPlanEntries(TB.plan).length }); } finally { window.__mpSheetAuto = a; } })()");
+    ok('r79-٣ · المكرَّر والعلامة: الورقة تلمّح «Removes this stop only — the same place on another day stays» · إزالة نسخة تبقي العلامة (٥) · إزالة الأخيرة تُلغيها (٤)', hint.includes('Removes this stop only — the same place on another day stays.') && rm === '{"afterOne":true,"afterTwo":4,"count":4}', hint.slice(-200) + ' ' + rm);
+    // إلغاء العلامة من شاشة الاختيار يحذف كل النسخ
+    const dup = B.x("(function(){ var b = TB.plan.days[0].periods.morning[0]; tbMove(b.id); __tm.step = 'repeat'; tripMoveCopyTo(1, 'midday'); var key = tbKey(b.ref); TB.pick = 'r79m'; tbTogglePick(key, false); tbPickDone(); return JSON.stringify({ left: tripPlanEntries(TB.plan).concat(TB.plan.tray).filter(function(x){ return tbKey(x.ref) === key; }).length, count: tripPlanEntries(TB.plan).length }); })()");
+    ok('r79-٣ · إلغاء علامة مكان مكرَّر من شاشة الاختيار يحذف كل نسخه', dup === '{"left":0,"count":3}', dup);
+    cap('trip.manual.arrange');
+    } finally {
+    B.x("(function(){ var s = " + prev + "; TB = null; __tm = null; document.getElementById('tripBuildBackdrop').classList.remove('show'); document.getElementById('tripMoveBackdrop').classList.remove('show'); sheetBarsHide(false); userTrips = s.ut; currentTripId = s.ct; cityListCityId = s.city; myCityListLoadedFor = s.lf; userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'r79m'; }); tbForgetCity('r79m'); })()");
+    for (const k of Array.from(store.keys())) if (/^trips\//.test(k) && /r79m/.test(JSON.stringify(store.get(k) || {}))) store.delete(k);
+    store.delete('userCityLists/' + B.x('currentUser.uid') + '_r79m'); B.x("switchTab(" + JSON.stringify(JSON.parse(prev).tab) + ")");
+    }
+  }, ['trip.manual.arrange']);
+
+  await must('r79-٤ · عرض الرحلة المعتمدة: ▲ ▼ عند رقم المحطة حين تتعدد في الفترة · النقر يبدّل ويحفظ · للقراءة فقط بلا سهمين', async () => {
+    const prev = B.x("JSON.stringify({ ut: userTrips, ct: currentTripId, tab: currentTab })");
+    try {
+    await store.set('userCityLists/' + B.x('currentUser.uid') + '_cv', { ownerId: B.x('currentUser.uid'), cityId: 'cv', cityName: 'Cv', public: false, catsV: 2, categories: { coffee: { places: [{ id: 'va', name: 'Alpha', url: 'https://maps.app.goo.gl/va', geo: { lat: 48.86, lng: 2.35 } }, { id: 'vb', name: 'Beta', url: 'https://maps.app.goo.gl/vb', geo: { lat: 48.861, lng: 2.35 } }, { id: 'vc', name: 'Gamma', url: 'https://maps.app.goo.gl/vc', geo: { lat: 48.862, lng: 2.35 } }] } } });
+    B.x("(function(){ var mk = function(id, name){ return tripNewEntry({ id: id, ref: { sourceType: 'mylist', cityId: 'cv', subcatId: 'coffee', placeId: id, sourceUid: null }, name: name, geo: { lat: 48.86, lng: 2.35 }, sec: 'cafes_sweets' }); }; var c = [{ cityId: 'cv', cityName: 'Cv', days: 1, stay: null, arrival: null, departure: null, fallback: 'transit' }]; var p = tripBuildPlan({ cities: c, entries: [], version: 'balanced' }); p.days[0].periods.morning = [mk('va', 'Alpha'), mk('vb', 'Beta')]; p.days[0].periods.midday = [mk('vc', 'Gamma')]; userTrips = [{ id: 'trip_r79v', title: '', cityId: 'cv', cityName: 'Cv', cities: c, plan: p, version: 'balanced', status: 'approved', public: false, sharedWith: [], sharedWithNames: {}, ownerId: currentUser.uid }]; currentTripId = null; })()");
+    B.x("switchTab('Trips')"); await B.x("openTripDetail('trip_r79v')"); const v0 = screen('myTripsBody');
+    const two = v0.includes("class=\"ordb\" disabled=\"\" onclick=\"tripViewNudge('va', -1)\"") && v0.includes("class=\"ordb\" onclick=\"tripViewNudge('va', 1)\"") && v0.includes("class=\"ordb\" disabled=\"\" onclick=\"tripViewNudge('vb', 1)\"") && !v0.includes("tripViewNudge('vc'");
+    await B.x("tripViewNudge('vb', -1)"); const o = B.x("JSON.stringify(userTrips[0].plan.days[0].periods.morning.map(function(e){ return e.name; }))"); const v1 = screen('myTripsBody');
+    B.x("viewingSharedTrip = true; renderMyTripsModal()"); const ro = screen('myTripsBody'); B.x("viewingSharedTrip = false");
+    ok('r79-٤ · العرض: Alpha بلا ▲ وBeta بلا ▼ وGamma وحده بلا سهمين · ▲ على Beta → Beta ثم Alpha ويُحفظ ويُعاد الرسم · للقراءة فقط لا سهمين', two && o === '["Beta","Alpha"]' && v1.indexOf('Beta') < v1.indexOf('Alpha') && !ro.includes('class="ord"'), JSON.stringify({ two: two, o: o }) + ' ' + v0.slice(v0.indexOf('class="ord"') - 20, v0.indexOf('class="ord"') + 200));
+    cap('trip.manual.arrange');
+    } finally {
+    B.x("(function(){ var s = " + prev + "; userTrips = s.ut; currentTripId = s.ct; viewingSharedTrip = false; tripTab = 'plan'; })()"); store.delete('trips/trip_r79v'); store.delete('userCityLists/' + B.x('currentUser.uid') + '_cv'); B.x("switchTab(" + JSON.stringify(JSON.parse(prev).tab) + ")");
+    }
+  }, ['trip.manual.arrange']);
+
   // ═══ رحلة الشاشة (ر٦٥) — كل محطة تسمّي مشهد المرجع الذي تحرسه ═══
   await must('ش١ · ٦/أ الأماكن: صف الأفعال الخمسة بلا سلة (الشاشة)', async () => {
     B.set('cityListCityId', 'paris'); B.x('renderPlacesMine()');
@@ -2370,7 +2446,7 @@ function citiesSeed(){
       s4:  { deferred: 'نبذة تعريفية — تُبنى بالخطوة الأولى المتممة' }, s11: ['userLists.default'], s12: ['screen.static.backChip'],
       dA:  ['cityLists.create', 'bookmark.place.on', 'place.identityByUrl', 'bookmark.place.urlLessIsolated', 'screen.places.rowActions', 'places.nearby', 'screen.static.placesChips', 'edge.doubleToggleStable', 'edge.disabledChipsInert'],
       dB:  ['trip.build.plan', 'trip.filter.byStatus', 'trip.card', 'bookmark.trip.self', 'screen.trip.bookmarkedChip', 'screen.static.tripChips', 'screen.trips.cityPick'],
-      dB2: ['trip.builder.stages', 'trip.moveSheet', 'trip.alternatives', 'trip.engine.deterministic', 'trip.periods.flex', 'trip.altCap', 'trip.legWarn.inline', 'trip.rests.user', 'trip.stay.notStop'], dC: ['trip.itinerary.page', 'trip.counters.local', 'trip.addPlaces.refs', 'trip.autoPlace', 'trip.view.plan', 'trip.route.view', 'trip.route.schedule', 'trip.route.prune', 'trip.route.navApp', 'trip.resolve.available', 'screen.trip.defaultView', 'screen.trip.reopenStable'],
+      dB2: ['trip.builder.stages', 'trip.moveSheet', 'trip.alternatives', 'trip.engine.deterministic', 'trip.periods.flex', 'trip.altCap', 'trip.legWarn.inline', 'trip.rests.user', 'trip.stay.notStop', 'trip.manual.arrange'], dC: ['trip.itinerary.page', 'trip.counters.local', 'trip.addPlaces.refs', 'trip.autoPlace', 'trip.view.plan', 'trip.route.view', 'trip.route.schedule', 'trip.route.prune', 'trip.route.navApp', 'trip.resolve.available', 'screen.trip.defaultView', 'screen.trip.reopenStable'],
       dD:  ['bookmark.list.on.batch3', 'bookmark.list.browser', 'sort.people.byViews', 'screen.market.header', 'screen.market.card', 'screen.community.stateKept', 'edge.emptyCityMarket'],
       dD2: ['view.bump.other', 'trip.save.other.batch3', 'screen.person.layer', 'seq.browseMarkBackReload', 'click.engine.reachesHandler'],
       dE:  ['curators.twoPages', 'screen.static.curatorPage'], dE2: { deferred: 'القشرة الساكنة مطابقة للنموذج (تُفحص بش٩) — الصفحة الحية بالخطوة الرابعة على قالب طبقة الشخص نفسه (ق٠٩-٠٤-١٠)' },
