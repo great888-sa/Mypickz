@@ -211,7 +211,9 @@ async function tripPlaceDataFor(ref){ // بيانات المكان للمدخل 
   }catch(e){ return null; }
 }
 async function tripAutoPlace(trip, ref){
-  const place = await tripPlaceDataFor(ref); const e = tripEntryFromPlace(Object.assign({}, ref, { name: ref.name }), place);
+  const place = await tripPlaceDataFor(ref);
+  if (ref.sourceType === 'mylist' && tripSectionOf(ref.subcatId) === 'stay'){ const city = (trip.cities || []).find(function(c){ return c.cityId === ref.cityId; }); if (city){ city.stay = { name: (place && place.name) || ref.name || 'Stay', geo: (place && place.geo && typeof place.geo.lat === 'number') ? { lat: place.geo.lat, lng: place.geo.lng } : null }; await saveTrip(trip); delete resolvedTripCache[trip.id]; updateActiveTripBanner(); showActionToast('Set as where you stay · ' + (city.cityName || ''), [['Setup', "openTripBuilder({ tripId: '" + attrStr(trip.id) + "', stage: 1 })"]]); if (currentTab === 'Trips' && currentTripId === trip.id) openTripDetail(trip.id); return; } } /* ب-٨: الفندق إقامة لا محطة */
+  const e = tripEntryFromPlace(Object.assign({}, ref, { name: ref.name }), place);
   const slot = tripSuggestSlot(trip.plan, e, tripSpec(trip)); let where;
   if (slot){ tripInsert(trip.plan, slot.dayIdx, slot.period, e, slot.alt, slot.excursion); const d = trip.plan.days[slot.dayIdx]; where = tripDayLabel(d) + ' · ' + TRIP_PERIOD_LABEL[slot.period] + (slot.alt ? ' · alternative' : ''); }
   else { trip.plan.tray.push(e); where = e.geo ? 'Program full · in the tray · ' + trip.plan.tray.length : 'No pin · in the tray'; }
