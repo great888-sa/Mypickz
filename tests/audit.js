@@ -129,7 +129,7 @@ const MP_EXPECTED = [
   ["mpTrack.hit('trip_save')", { prod: 1, test: 2 }], // ر٥٢: + حفظ رحلة الآخرين (toggleTripSave) بجانب حدث saveTrip القائم
   ["mpTrack.hit('favorites_open'", { prod: 1, test: 0 }], // ر٥٢: تقاعد بنسخة الاختبار — يُصفَّر بالإنتاج عند ترقيته
   ["mpTrack.hit('community_open'", 1],
-  ["mpTrack.hit('share_link')", { prod: 4, test: 6 }], // ر٥٢: + المركّب الموقَّع الموحَّد mpSendText (تصدير المكان والقائمة والرحلة نصًّا)
+  ["mpTrack.hit('share_link')", { prod: 5, test: 7 }], // r80: + المشاركة مع مجموعة محفوظة (sgShareWith) · ر٥٢: + المركّب الموقَّع الموحَّد mpSendText (تصدير المكان والقائمة والرحلة نصًّا)
   ["mpTrack.hit('favorite_add')", { prod: 1, test: 0 }], // ر٥٢: تقاعد
   ["mpTrack.hit('bookmark_add')", { prod: 0, test: 3 }], // ر٥٢: مفكرة المكان والقائمة · ر٦١: + مفكرة رحلتك الذاتية
   ["mpTrack.hit('signup_start')", 1],
