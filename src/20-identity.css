@@ -322,7 +322,7 @@
   .pc-chip.warn{color:var(--danger); border-color:var(--sand-line);}
   .pc-alert{color:var(--danger);}
   .tm-h{color:var(--night-4);} .tm-d{color:var(--night-2);} .tm-c{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);} .tm-c.here{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} .tm-c.full{border-color:var(--danger-night); color:var(--danger-night);} .tm-c.off{background:none; border-color:var(--line-night); color:var(--night-4);} .tm-note{color:var(--night-4);}
-  .tmove .mp-empty.mini{color:var(--night-3);}
+  .tmove .mp-empty.mini{color:var(--night-3);} .tmove .sheet-danger{color:var(--danger-night); border-color:var(--danger-night); background:var(--bar);} /* ب-٨ */
   .rowacts .act.on,.acts .act.on,.pl-acts .act.on,.headgrid .actn.on,#plPublicBtn.on,#plShareBtn.on{background:var(--saffron); border-color:var(--saffron); color:var(--ink);} /* ر٦٩ث (N-058): الزرّان المضاءان يغلبان قواعد الصف */
 
 </style>
