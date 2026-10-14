@@ -419,6 +419,8 @@ async function syncCommunityProfileFor(uid, nickname){
     await mpData.communityProfiles.set(uid, payload);
   }catch(e){}
 }
+let __cmNickSynced = false; /* د-٢ (ملاحظة المالك): المستلِم يقرأ اسم المرسل من ملفه بالمجتمع — ومن لم ينشر شيئًا عامًّا لا ملف له فيظهر «user»؛ يُكتب الاسم وحده مرة بالجلسة عند أول مشاركة (الملف بلا محتوى عام لا يظهر في الاكتشاف: hasAnyPublicContent) */
+async function ensureCommunityNick(){ if (__cmNickSynced || !currentUser || !userListData || !userListData.nickname) return; try{ await mpData.communityProfiles.set(currentUser.uid, { nickname: userListData.nickname }); __cmNickSynced = true; }catch(e){} }
 async function syncCommunityProfile(){
   if (!currentUser) return;
   await syncCommunityProfileFor(currentUser.uid, userListData.nickname || null);
@@ -442,7 +444,7 @@ async function shareCityListWithSomeone(){
     if (myCityListData.sharedWith.includes(targetUid)){ showToast('Already shared with this user'); return; }
     myCityListData.sharedWith.push(targetUid);
     myCityListData.sharedWithNames[targetUid] = data.nickname || name.trim();
-    await saveMyCityList();
+    await saveMyCityList(); ensureCommunityNick(); /* د-٢ */
     showToast('Shared ✓');
   }catch(e){ showToast('Could not verify username'); }
 }
