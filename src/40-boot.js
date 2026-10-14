@@ -70,16 +70,21 @@ async function initFirebase(){
 
     // ===== أ-٣ الطبقة ٤: App Check — وضع مراقبة (الإنفاذ من لوحة Firebase بشرطين: verified≈١٠٠٪ + Blaze) =====
     // TTL = يوم واحد وApp risk = 0.5 يُضبطان باللوحة لا هنا. الفشل صامت دائمًا ولا يُسجَّل بمصيدة الأخطاء.
+    /* هـ (r81 · قرار المالك ١٥ أكتوبر): App Check موقوفة مؤقتًا — كانت في وضع المراقبة (لا تحمي شيئًا بعد) وجلب شهادتها عبر reCAPTCHA يقف أمام كل قراءة حين يتعثر على iOS؛ تُعاد عند الإنفاذ بقياس. ?withcheck=1 يعيد تفعيلها لهذه الجلسة للمقارنة */
+    const __withCheck = /[?&]withcheck=1/.test(location.search) || (function(){ try{ return sessionStorage.getItem('mp_withcheck') === '1'; }catch(_){ return false; } })();
+    try{ if (/[?&]withcheck=1/.test(location.search)) sessionStorage.setItem('mp_withcheck', '1'); }catch(_){}
     try{
-      if (firebase.appCheck){
+      if (firebase.appCheck && __withCheck){
         firebase.appCheck().activate(
           new firebase.appCheck.ReCaptchaEnterpriseProvider(MP_APPCHECK_KEY),
           true /* تجديد تلقائي للشهادة */
         );
         if (typeof logTiming === 'function') logTiming('App Check activated (Enterprise, monitor mode)');
-      }
+        try{ const __t0 = performance.now(); firebase.appCheck().getToken(false).then(function(){ if (typeof logTiming === 'function') logTiming('[NET] App Check token in ' + Math.round(performance.now() - __t0) + 'ms'); }, function(e){ if (typeof logTiming === 'function') logTiming('[NET] App Check token FAILED after ' + Math.round(performance.now() - __t0) + 'ms · ' + ((e && (e.code || e.message)) || e)); }); }catch(_){} /* د-٥ */
+      } else if (typeof logTiming === 'function') logTiming('[NET] App Check OFF (paused until enforcement · ?withcheck=1 to compare)');
     }catch(_){ /* صامت */ }
     db = firebase.firestore();
+    try{ db.settings({ experimentalForceLongPolling: true, merge: true }); if (typeof logTiming === 'function') logTiming('[NET] Firestore transport: long polling'); }catch(e){ if (typeof logTiming === 'function') logTiming('[NET] long polling not applied · ' + (e && e.message)); } /* هـ: قناة Firestore بالنقل الطويل — العلاج القياسي لتوقف WebChannel على Safari/iOS (قراءات تتأخر ٣٠ ثانية) */
     auth = firebase.auth();
   }catch(e){
     const dbg = document.getElementById('debugBanner');
