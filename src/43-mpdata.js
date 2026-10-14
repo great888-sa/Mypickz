@@ -402,7 +402,7 @@ function backfillPlaceIds(linksObj){
 
 async function loadOwnerUid(){
   try{
-    const __app = await mpData.settings.app();
+    const __t0 = performance.now(); const __app = await mpData.settings.app(); if (typeof logTiming === 'function') logTiming('[NET] first Firestore read (settings/app) in ' + Math.round(performance.now() - __t0) + 'ms'); /* د-٥ */
     ownerUid = __app ? (__app.ownerUid || null) : null;
   }catch(e){ ownerUid = null; }
 }
