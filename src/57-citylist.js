@@ -134,6 +134,7 @@ async function loadMyCityList(cityId){
 async function saveMyCityList(){
   await commitPendingCityIfNeeded(cityListCityId); // r18: تخليد المدينة المعلقة مع أول حفظ فعلي
   if (!currentUser || !cityListCityId || !myCityListData) return;
+  if (typeof tbForgetCity === 'function') tbForgetCity(cityListCityId); /* ب-٨: نسخة المنشئ من هذه المدينة تُبطَل مع كل حفظ */
   // حارس التطابق: لا يُكتب محتوى مدينة فوق مستند مدينة أخرى — ولا يُكتب قبل اكتمال التحميل
   if (myCityListLoadedFor !== cityListCityId){
     console.warn('[MyPickz] save skipped — loaded:', myCityListLoadedFor, 'target:', cityListCityId);
