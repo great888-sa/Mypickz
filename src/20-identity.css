@@ -307,7 +307,7 @@
   .trip-alts-h{color:var(--night-2);} .trip-alts-h .arr{color:var(--saffron);} .trip-alt{background:var(--ivory); border-color:var(--sand-line); color:var(--ink);} .trip-alt .dim{color:var(--copper);} .trip-alt .act{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);} .trip-alt .act.flag{color:var(--danger);}
   .modal.night .trip-alts-h{color:var(--night-2);}
   .trip-rest{background:var(--bar); border-color:var(--line-strong); color:var(--night-2);} .trip-rest b{color:var(--on-night);} .trip-rest .dim{color:var(--night-4);}
-  .trip-empty-p{color:var(--night-4);}
+  .trip-empty-p{color:var(--night-4);} .trip-rest-add{border-color:var(--line-strong); color:var(--night-3);} .trip-rest-add.off{color:var(--night-4);} .trip-rest-add .dim{color:var(--night-4);} .tr-rest .tr-times{color:var(--saffron);} .tr-rest .tr-min{color:var(--night-2);}
   .trip-tray{background:var(--bar); border-color:var(--saffron); color:var(--on-night);} .trip-tray-h .dim{color:var(--night-3);} .trip-tray-n{color:var(--night-4);} .trip-tray-i{background:var(--surf); border-color:var(--line-strong); color:var(--on-night);} .trip-tray-i .dim{color:var(--night-4);} .trip-tray-i .arr{color:var(--saffron);}
   .trip-warn{background:var(--bar); border-color:var(--danger-night); color:var(--danger-night);} .trip-legwarn{border-color:var(--danger-night); color:var(--danger-night);}
   .trip-stay{background:var(--bar); border-color:var(--line-strong); color:var(--on-night);} .trip-stay-t .dim{color:var(--night-4);}
