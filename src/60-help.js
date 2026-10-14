@@ -9,7 +9,7 @@ const HELP_CONTENT = { // أ-١٢-٢ (نص المالك v2 المعتمد ١٦ �
     title: 'MyPickz — one place for your places.', closeLabel: 'Close', readMore: 'Read more', readLess: 'Read less', gotIt: 'Got it — sign in',
     intro: {
       def: "One platform for four things: reaching your favorite places anywhere in the world, planning your trips, keeping your personal addresses, and exploring — and saving — other users' places and trips.",
-      feats: 'Categorized on two levels · Nearby, sorted by distance from where you are · A day route with your own minutes · Export as a card with QR · Share with one person by name · Import your Google Maps lists <span class="soon-tag">Soon</span> · Follow curators · Your addresses, private.', /* r76 (دراسة التوافق · ت٢): ما لم يُبنَ بعد موسوم */
+      feats: 'Categorized on two levels · Nearby, sorted by distance from where you are · A day route with your own minutes · Export as a card with QR · Share with one person by name or a saved group · Import your Google Maps lists <span class="soon-tag">Soon</span> · Follow curators · Your addresses, private.', /* r76 (دراسة التوافق · ت٢): ما لم يُبنَ بعد موسوم */
       dests: [
         ['Places', 'your favorite places, city by city, in categories. Paste a Maps link and the place fills itself in.'],
         ['Trips', 'a plan drafted for you by day and period, then a day route with the minutes you enter.'],
@@ -36,7 +36,7 @@ const HELP_CONTENT = { // أ-١٢-٢ (نص المالك v2 المعتمد ١٦ �
     title: 'MyPickz — مكان واحد لأماكنك.', closeLabel: 'إغلاق', readMore: 'المزيد', readLess: 'أقل', gotIt: 'فهمت — دخول',
     intro: {
       def: 'منصة واحدة لأربعة أشياء: الوصول إلى أماكنك المفضلة بأي مكان في العالم، تخطيط رحلاتك، حفظ عناوينك الخاصة، واستكشاف — وحفظ — أماكن المستخدمين الآخرين ورحلاتهم.',
-      feats: 'مصنَّفة بمستويين · القريب مني مرتَّبًا بالبعد عن موضعك · مسار يوم بدقائقك أنت · تصدير بطاقةً بـQR · مشاركة مع شخص بعينه بالاسم · استيراد قوائمك من خرائط جوجل <span class="soon-tag">قريبًا</span> · متابعة المنتقين · عناوينك خاصة.',
+      feats: 'مصنَّفة بمستويين · القريب مني مرتَّبًا بالبعد عن موضعك · مسار يوم بدقائقك أنت · تصدير بطاقةً بـQR · مشاركة مع شخص بعينه بالاسم أو مع مجموعة محفوظة · استيراد قوائمك من خرائط جوجل <span class="soon-tag">قريبًا</span> · متابعة المنتقين · عناوينك خاصة.',
       dests: [
         ['الأماكن', 'أماكنك المفضلة مدينةً مدينة بالتصنيفات؛ الصق رابط الخرائط فيُملأ المكان بنفسه.'],
         ['الرحلات', 'خطة تُرسم لك بالأيام والفترات، ثم مسار يوم بالدقائق التي تكتبها أنت.'],
@@ -146,7 +146,7 @@ function iconsGuideHtml(){
     + row(mpIcon('top', { size: 18, fill: true }), 'Top', 'Mark it among your top places — shown on your curator page', 'on')
     + sec('Sharing a whole list')
     + row(mpIcon('globe', { size: 18 }), 'Public', 'Your city list is open to everyone in Community')
-    + row(mpIcon('personPlus', { size: 18 }), 'Share with', 'Give one person access — appears in their “Shared with you”')
+    + row(mpIcon('personPlus', { size: 18 }), 'Share with', 'Give one person access — appears in their “Shared with you”. Saved groups share with the same people in one tap; a group is yours alone and sharing with it is a snapshot of its members at that moment')
     + sec('Pins on the map')
     + '<div class="ig-pins">' + fams.map(function(f){ return '<span class="ig-pk"><span class="pinkey-' + f + '"><span class="pinkey-dot"></span></span>' + escapeHtml(PIN_FAMILY_LABEL[f] || f) + '</span>'; }).join('')
     + '<span class="ig-pk"><span class="pinkey-dot ig-sugg"></span>Suggested — one match, not confirmed</span><span class="ig-pk"><span class="pinkey-dot ig-prob"></span>Probable — several matches, numbered</span></div>'
