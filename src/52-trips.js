@@ -541,8 +541,9 @@ function exportTripText(){
   let out = '🧳 ' + tripTitle(trip) + '\n';
   (resolved.days || []).forEach(function(d){
     out += '\n' + tripDayLabel(d) + (d.date ? ' · ' + tripDateLabel(d.date) : '') + '\n';
-    TRIP_PERIODS.forEach(function(p){ const arr = d.periods[p] || []; if (!arr.length) return; out += TRIP_PERIOD_LABEL[p] + '\n';
-      arr.forEach(function(e){ const pl = e._p || {}; out += '• ' + (pl.name || e.name || 'Place') + (pl.url ? '\n  ' + pl.url : '') + '\n'; (e.alts || []).forEach(function(a){ const ap = a._p || {}; out += '  or ' + (ap.name || a.name || 'Place') + (ap.url ? '\n  ' + ap.url : '') + '\n'; }); }); });
+    const rests = tripRestsOf(d); TRIP_PERIODS.forEach(function(p){ const arr = d.periods[p] || []; if (arr.length){ out += TRIP_PERIOD_LABEL[p] + '\n';
+      arr.forEach(function(e){ const pl = e._p || {}; out += '• ' + (pl.name || e.name || 'Place') + (pl.url ? '\n  ' + pl.url : '') + '\n'; (e.alts || []).forEach(function(a){ const ap = a._p || {}; out += '  or ' + (ap.name || a.name || 'Place') + (ap.url ? '\n  ' + ap.url : '') + '\n'; }); }); }
+      if (rests[p] && tripRestSlotNext(d, p)) out += '— Rest · about ' + Math.round(rests[p].minutes / 60) + ' h\n'; }); // ب-٧
   });
   out += '\nSent via MyPickz · mypickz.app';
   mpSendText(out);
@@ -591,15 +592,14 @@ function renderTripDetail(wrap){
   const day = days[tripDaySel];
   if (day){
     const es = tripDayEntries(day); const dw = warns.filter(function(w){ return w.dayIdx === tripDaySel; });
-    html += '<div class="ctx trip-ctx"><span>' + escapeHtml(tripDayLabel(day)) + (day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : '') + ' — ' + es.length + (es.length === 1 ? ' stop' : ' stops') + (day.rest ? ' · 1 rest' : '') + '</span></div>';
+    html += '<div class="ctx trip-ctx"><span>' + escapeHtml(tripDayLabel(day)) + (day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : '') + ' — ' + es.length + (es.length === 1 ? ' stop' : ' stops') + (tripRestCount(day) ? ' · ' + tripRestCount(day) + (tripRestCount(day) === 1 ? ' rest' : ' rests') : '') + '</span></div>';
     dw.filter(function(w){ return w.kind !== 'longLeg'; }).forEach(function(w){ html += '<div class="trip-warn">⚠ ' + escapeHtml(w.text) + '</div>'; }); const legWarnOf = function(id){ return dw.find(function(w){ return w.kind === 'longLeg' && w.toId === id; }); }; // ب-٥
     if (tripTab === 'route'){ html += tripRouteTabHtml(trip, day, city, readOnly); }
-    let n = 0; const avail = tripTab === 'route' ? [] : tripDayAvailable(day); // r78: في تبويب المسار لا تُعرض الفترات
-    avail.forEach(function(p){ const arr = day.periods[p] || []; if (!arr.length && readOnly) return; let inner = '';
-      if (p === 'afternoon' && day.rest && city){ inner += '<div class="trip-rest"><span><b>Rest at ' + escapeHtml((city.stay && city.stay.name) || 'your stay') + '</b> <span class="dim">· about ' + Math.round(day.rest.minutes / 60) + ' h</span></span>' + (readOnly ? '' : '<button type="button" class="actn" onclick="tripViewRestRemove()">Remove</button>') + '</div>'; }
+    let n = 0; const avail = tripTab === 'route' ? [] : tripDayAvailable(day); const rests = tripRestsOf(day); const hasStay = !!(city && city.stay && city.stay.name); // r78: في تبويب المسار لا تُعرض الفترات
+    avail.forEach(function(p){ const arr = day.periods[p] || []; if (!arr.length && readOnly && !rests[p]) return; let inner = '';
       arr.forEach(function(e){ n++; const lw = legWarnOf(e.id); if (lw) inner += tripLegWarnHtml(lw); inner += tripEntryCardHtml(e, n, readOnly, trip.id, city); });
       if (!arr.length) inner += '<div class="trip-empty-p">— nothing here' + (readOnly ? '' : ' · move a place in') + '</div>';
-      html += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', inner, 'stop'); });
+      html += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', inner, 'stop'); if (tripRestSlotNext(day, p)){ if (rests[p]) html += tripRestRowHtml(city && city.stay && city.stay.name, rests[p].minutes, readOnly ? '' : "tripViewRestRemove('" + p + "')"); else if (!readOnly) html += tripRestAddHtml(hasStay, "tripViewRestAdd('" + p + "')"); } }); // ب-٧
     if (!es.length && readOnly && tripTab !== 'route') html += '<div class="mp-empty mini">No places this day.</div>';
   }
   const tray = resolved.tray || [];
@@ -615,7 +615,9 @@ async function tripViewSave(trip){ await saveTrip(trip); resolvedTripCache[trip.
 async function tripViewRemove(entryId){ const trip = tripCurrent(); if (!trip) return; const f = tripFindEntry(trip.plan, entryId); if (!f) return; if (f.where === 'alt'){ if (!(await mpConfirm('Send ' + ((f.entry && f.entry.name) || 'this place') + ' back to the tray? You can give it a day or make it an alternative again.', { title: 'Back to the tray', ok: 'To tray' }))) return; const a = tripDetach(trip.plan, entryId); a.alts = []; trip.plan.tray.push(a); trip.plan.tray.sort(tripById); await tripViewSave(trip); return; } if (!(await mpConfirm('Remove ' + ((f.entry && f.entry.name) || 'this place') + ' from the trip?', { title: 'Remove from trip', ok: 'Remove', danger: true }))) return; tripDetach(trip.plan, entryId); await tripViewSave(trip); }
 async function tripViewPromote(hostId, altId){ const trip = tripCurrent(); if (!trip) return; const f = tripFindEntry(trip.plan, hostId); if (!f || f.where !== 'day') return; const host = f.entry; const k = (host.alts || []).findIndex(function(a){ return a.id === altId; }); if (k < 0) return; const alt = host.alts[k]; host.alts.splice(k, 1); const hostAlts = host.alts; host.alts = []; alt.alts = [host].concat(hostAlts); trip.plan.days[f.dayIdx].periods[f.period][f.index] = alt; if (trip.plan.days[f.dayIdx].excursion === host.id) trip.plan.days[f.dayIdx].excursion = alt.id; await tripViewSave(trip); } // التبديل: البديل يصير الخيار ١ والأول يعود إلى القائمة
 async function tripViewAlert(entryId){ const trip = tripCurrent(); if (!trip) return; const f = tripFindEntry(trip.plan, entryId); if (!f) return; const v = await mpSheet({ title: 'Alert for ' + (f.entry.name || 'this stop'), text: 'A short note you want to see on the day — e.g. closes at dusk, book ahead.', ok: 'Save', input: { value: f.entry.alert || '', placeholder: 'e.g. closes at dusk' } }); if (v === null || v === undefined) return; f.entry.alert = String(v || '').trim().slice(0, 80); await tripViewSave(trip); }
-async function tripViewRestRemove(){ const trip = tripCurrent(); if (!trip || !trip.plan.days[tripDaySel]) return; trip.plan.days[tripDaySel].rest = null; await tripViewSave(trip); }
+async function tripViewRestRemove(p){ const trip = tripCurrent(); const d = trip && trip.plan.days[tripDaySel]; if (!d) return; d.rests = tripRestsOf(d); delete d.rests[p]; await tripViewSave(trip); } // ب-٧
+async function tripViewRestAdd(p){ const trip = tripCurrent(); const d = trip && trip.plan.days[tripDaySel]; if (!d || TRIP_REST_SLOTS.indexOf(p) < 0 || !tripRestSlotNext(d, p)) return; d.rests = tripRestsOf(d); d.rests[p] = { minutes: TRIP_RHYTHM.rest.minutes }; await tripViewSave(trip); }
+async function tripRestSetMinutes(p, v){ const trip = tripCurrent(); const d = trip && trip.plan.days[tripDaySel]; if (!d) return; d.rests = tripRestsOf(d); if (!d.rests[p]) return; const n = parseInt(v, 10); d.rests[p].minutes = (!isNaN(n) && n >= 0 && n <= 1440) ? n : TRIP_RHYTHM.rest.minutes; await tripViewSave(trip); } // ب-٧: مدة الراحة تُكتب من مسار اليوم وتُحفظ في الخطة
 function tripOpenMoveSheet(tripId, entryId){ const trip = userTrips.find(t => t.id === tripId); if (!trip || !tripHasPlan(trip)) return; tripMoveSheet(trip.plan, tripSpec(trip), entryId, async function(changed){ if (!changed) return; await saveTrip(trip); delete resolvedTripCache[trip.id]; if (currentTab === 'Trips' && currentTripId === trip.id){ resolvedTripCache[trip.id] = await resolveTripPlaces(trip); renderMyTripsModal(); } }); }
 async function deleteTrip(){
   if (!(await mpConfirm('This cannot be undone.', { title: '🗑 Delete this trip?', ok: 'Delete trip', danger: true }))) return; /* ب-٢-٢-أ٢ */
