@@ -217,6 +217,7 @@ async function tripAutoPlace(trip, ref){
   const slot = tripSuggestSlot(trip.plan, e, tripSpec(trip)); let where;
   if (slot){ tripInsert(trip.plan, slot.dayIdx, slot.period, e, slot.alt, slot.excursion); const d = trip.plan.days[slot.dayIdx]; where = tripDayLabel(d) + ' · ' + TRIP_PERIOD_LABEL[slot.period] + (slot.alt ? ' · alternative' : ''); }
   else { trip.plan.tray.push(e); where = e.geo ? 'Program full · in the tray · ' + trip.plan.tray.length : 'No pin · in the tray'; }
+  try{ mpTripCount('placesAdded', 1); if (!slot) mpTripCount('placesTrayed', 1); }catch(_){} /* r79 (ج · القرار ١٠) */
   // r78: لا علم مخزَّن للاكتمال — الرِّجل الجديدة بلا دقائق تجعل مسار اليوم «غير مكتمل» اشتقاقًا (التثبيت ٢)
   activeTripAdded.push(e.name); activeTripAddedRefs.push(e.id);
   await saveTrip(trip); delete resolvedTripCache[trip.id];
