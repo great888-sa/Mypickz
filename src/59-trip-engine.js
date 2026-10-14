@@ -1,7 +1,7 @@
 /* ═══ r77 (حزمة الرحلات · الدفعة أ — البيان v1.2 · التثبيت ١): محرك الرحلات — دوال نقية بلا واجهة وبلا شبكة.
    الخطة مصدر الحقيقة الوحيد (التثبيت ٢) · جدول الإيقاع واحد مملوك للمالك بقاعدة عامة لما لم يُذكر (التثبيت ٣) ·
    حتمية كاملة: ترتيب مستقر وكسر التعادل بمعرّف المدخل، لا عشوائية (التثبيت ٤).
-   بنية الخطة: plan = { days:[{ n, kind:'full'|'arrival'|'departure', cityId, date|null, from|null, to|null, periods:{morning:[],midday:[],afternoon:[],evening:[]}, rest:{minutes}|null, excursion:id|null }], tray:[entry] }
+   بنية الخطة: plan = { days:[{ n, kind:'full'|'arrival'|'departure', cityId, date|null, from|null, to|null, periods:{morning:[],midday:[],afternoon:[],evening:[]}, rests:{ morning|midday|afternoon: {minutes} }, excursion:id|null }], tray:[entry] }
    المدخل: entry = { id, ref:{sourceType,cityId,subcatId,placeId,sourceUid}, name, geo:{lat,lng}|null, sec, alts:[entry], alert:'' } ═══ */
 const TRIP_PERIODS = ['morning', 'midday', 'afternoon', 'evening'];
 const TRIP_PERIOD_LABEL = { morning: 'Morning', midday: 'Noon', afternoon: 'Afternoon', evening: 'Evening' }; // ب-٦: «Noon» للظهر (المعرّف midday ثابت)
@@ -26,7 +26,7 @@ const TRIP_RHYTHM = { // ═══ جدول الإيقاع (البيان v1.2 ·
   },
   defaultRole: { role: 'visit', periods: ['morning', 'midday', 'afternoon', 'evening'], minutes: 60 },
   walkKm: 1.2, pocketKm: { transit: 1.5, car: 8 }, detour: { walk: 1.3, transit: 1.3, car: 1.4 },
-  rest: { minutes: 120, maxKm: 3, minStops: 4 }, longLegKm: { walk: 3, transit: 8, car: 25 }, // ب-٥: الحدّ بحسب وسيلة الرِّجل (مشي · مترو ومواصلات · سيارة)
+  rest: { minutes: 120 }, longLegKm: { walk: 3, transit: 8, car: 25 }, // ب-٥: الحدّ بحسب وسيلة الرِّجل (مشي · مترو ومواصلات · سيارة)
   altCap: 2, // ب-٣: البناء التلقائي يضع بديلين على الأكثر لكل محطة؛ ما زاد إلى الصينية (يدويًّا بلا حد)
   orderTiers: { morning: { light: 0 }, midday: { meal: 0, light: 1 }, afternoon: { light: 1 }, evening: { meal: 1, light: 2 } } // ب-٣: ترتيب داخل الفترة بالدور ثم القرب — ما لم يُذكر رتبته ٠ (أو ١ حيث يُذكر غيره قبله)
 };
@@ -65,7 +65,7 @@ function tripCityDays(city, startN){ // r77-٢ (القرار ٢): N يومًا �
   const arr = city.arrival || null, dep = city.departure || null; const from = tripMinutesOf(arr && arr.time), to = tripMinutesOf(dep && dep.time);
   let firstDate = (arr && arr.date) ? tripDateAdd(arr.date, 0) : ((dep && dep.date) ? tripDateAdd(dep.date, -(N - 1)) : null);
   const kept = tripCityPeriods(city); const off = TRIP_PERIODS.filter(function(p){ return kept.indexOf(p) < 0; });
-  for (let i = 0; i < N; i++){ out.push({ n: n++, kind: 'full', cityId: city.cityId, date: firstDate ? tripDateAdd(firstDate, i) : null, from: (i === 0 && typeof from === 'number') ? from : null, to: (i === N - 1 && typeof to === 'number') ? to : null, periods: tripEmptyPeriods(), rest: null, excursion: null, off: off }); }
+  for (let i = 0; i < N; i++){ out.push({ n: n++, kind: 'full', cityId: city.cityId, date: firstDate ? tripDateAdd(firstDate, i) : null, from: (i === 0 && typeof from === 'number') ? from : null, to: (i === N - 1 && typeof to === 'number') ? to : null, periods: tripEmptyPeriods(), rests: {}, excursion: null, off: off }); } // ب-٧: rests بمفتاح الفترة التي تسبق الراحة
   return { days: out, next: n };
 }
 function tripPlanDays(cities){ let n = 1; const days = []; (cities || []).forEach(function(c){ const r = tripCityDays(c, n); days.push.apply(days, r.days); n = r.next; }); return days; }
@@ -101,7 +101,10 @@ function tripDetach(plan, id){ const f = tripFindEntry(plan, id); if (!f) return
 function tripOrderDay(day, stayGeo){ // الخطوة ٤: الإيقاع ثم القرب — داخل كل فترة سلسلة الأقرب فالأقرب من آخر محطة قبلها (أو الإقامة)
   let last = stayGeo || null; TRIP_PERIODS.forEach(function(p){ const tier = function(e){ const t = TRIP_RHYTHM.orderTiers[p] || {}; const r = tripEntryRole(e).role; if (t[r] !== undefined) return t[r]; const vals = Object.keys(t).map(function(k){ return t[k]; }); return vals.indexOf(0) >= 0 ? 1 : 0; }; const arr = (day.periods[p] || []).slice(); const out = []; while (arr.length){ let bi = 0, bd = Infinity, bt = Infinity; arr.forEach(function(e, i){ const tr = tier(e); const d = tripKm(last, e.geo); const dd = (d === null) ? 1e9 : d; if (tr < bt || (tr === bt && (dd < bd || (dd === bd && tripById(e, arr[bi]) < 0)))){ bt = tr; bd = dd; bi = i; } }); const e = arr.splice(bi, 1)[0]; out.push(e); if (e.geo) last = e.geo; } day.periods[p] = out; }); // ب-٣: الدور أولًا (الصباح: الخفيف قبل المشاهدة · الظهيرة: الوجبة ثم القهوة · العصر: القهوة بعد الزيارة · المساء: المشاهدة ثم الوجبة ثم الحلو) ثم القرب
 }
-function tripRestFor(day, stayGeo){ if (!stayGeo) return null; const n = tripDayEntries(day).length; if (n < TRIP_RHYTHM.rest.minStops) return null; const c = tripCentroid(day.periods.midday); const d = tripKm(c, stayGeo); if (d === null || d > TRIP_RHYTHM.rest.maxKm) return null; if (tripDayAvailable(day).indexOf('afternoon') < 0) return null; return { minutes: TRIP_RHYTHM.rest.minutes }; }
+const TRIP_REST_SLOTS = ['morning', 'midday', 'afternoon']; // ب-٧: مواضع الراحة الثلاثة — بعد الفترة
+function tripRestsOf(day){ const out = {}; const r = (day && day.rests && typeof day.rests === 'object') ? day.rests : {}; TRIP_REST_SLOTS.forEach(function(p){ if (r[p] && typeof r[p].minutes === 'number' && r[p].minutes >= 0) out[p] = { minutes: Math.round(r[p].minutes) }; }); return out; }
+function tripRestCount(day){ return Object.keys(tripRestsOf(day)).length; }
+function tripRestSlotNext(day, p){ const avail = tripDayAvailable(day); const i = avail.indexOf(p); return (i >= 0 && i < avail.length - 1) ? avail[i + 1] : null; } // الفترة المتاحة التالية — الراحة بين فترتين متاحتين
 function tripBuildPlan(spec){ // spec = { cities:[{cityId, days, stay:{geo}|null, arrival, departure, fallback}], entries:[entry], version }
   const version = spec.version || 'balanced'; const plan = { days: tripPlanDays(spec.cities), tray: [] };
   const fresh = (spec.entries || []).map(function(e){ return Object.assign({}, e, { ref: Object.assign({}, e.ref || {}), geo: e.geo ? { lat: e.geo.lat, lng: e.geo.lng } : null, alts: [], alert: e.alert || '' }); }); // لا يعدّل مدخلات المستدعي — نسخة نظيفة بلا بدائل
@@ -133,7 +136,7 @@ function tripBuildPlan(spec){ // spec = { cities:[{cityId, days, stay:{geo}|null
       });
     });
     pending.forEach(function(e){ let done = false; const order = dayIdx.slice().sort(function(a, b){ return (tripDayRoom(plan.days[b], version) - tripDayRoom(plan.days[a], version)) || (a - b); }); for (let k = 0; k < order.length && !done; k++){ const t = tripTryPlace(plan.days[order[k]], e, version, false); if (t){ tripInsert(plan, order[k], t.period, e, t.alt, !!t.excursion); done = true; } } if (!done){ const ta = tripAltSlot(plan, dayIdx, e); if (ta){ tripInsert(plan, ta.dayIdx, ta.period, e, ta.alt, false); done = true; } } if (!done) plan.tray.push(e); });
-    dayIdx.forEach(function(i){ const day = plan.days[i]; const stay = city.stay && city.stay.geo; tripOrderDay(day, stay); day.rest = tripRestFor(day, stay); });
+    dayIdx.forEach(function(i){ const day = plan.days[i]; const stay = city.stay && city.stay.geo; tripOrderDay(day, stay); }); // ب-٧: لا راحة تلقائية
   });
   plan.tray.sort(tripById);
   return plan;
@@ -154,7 +157,7 @@ function tripWarnings(plan, spec){ // الخطوة ٦: الجدوى — تحذي
   return out;
 }
 function tripPlanNormalize(plan){ // قراءة مستند قديم أو ناقص بأمان: الفترات الأربع دائمًا، والمصفوفات موجودة
-  plan = plan || {}; const days = Array.isArray(plan.days) ? plan.days : []; days.forEach(function(d){ d.periods = d.periods || {}; TRIP_PERIODS.forEach(function(p){ if (!Array.isArray(d.periods[p])) d.periods[p] = []; d.periods[p].forEach(function(e){ e.alts = Array.isArray(e.alts) ? e.alts : []; e.alert = e.alert || ''; }); }); if (d.rest && typeof d.rest.minutes !== 'number') d.rest = null; if (!d.excursion) d.excursion = null; d.off = tripDayOff(d); }); days.forEach(function(d, i){ d.n = i + 1; if (d.kind !== 'full') d.kind = 'full'; if (typeof d.from !== 'number') d.from = null; if (typeof d.to !== 'number') d.to = null; }); plan.days = days; plan.tray = Array.isArray(plan.tray) ? plan.tray : []; return plan; // r77-٢: مسودات الدفعة أ (يوم ٠ · أنواع الطرفين) تُرقَّم ١..N عند القراءة
+  plan = plan || {}; const days = Array.isArray(plan.days) ? plan.days : []; days.forEach(function(d){ d.periods = d.periods || {}; TRIP_PERIODS.forEach(function(p){ if (!Array.isArray(d.periods[p])) d.periods[p] = []; d.periods[p].forEach(function(e){ e.alts = Array.isArray(e.alts) ? e.alts : []; e.alert = e.alert || ''; }); }); if (d.rest && typeof d.rest.minutes === 'number'){ d.rests = d.rests || {}; if (!d.rests.midday) d.rests.midday = { minutes: d.rest.minutes }; } delete d.rest; d.rests = tripRestsOf(d); if (!d.excursion) d.excursion = null; d.off = tripDayOff(d); }); /* ب-٧: الراحة القديمة الواحدة = راحة بعد الظهر */ days.forEach(function(d, i){ d.n = i + 1; if (d.kind !== 'full') d.kind = 'full'; if (typeof d.from !== 'number') d.from = null; if (typeof d.to !== 'number') d.to = null; }); plan.days = days; plan.tray = Array.isArray(plan.tray) ? plan.tray : []; return plan; // r77-٢: مسودات الدفعة أ (يوم ٠ · أنواع الطرفين) تُرقَّم ١..N عند القراءة
 }
 /* ═══ r78 (حزمة الرحلات · الدفعة ب — البيان ٦-٣ · التثبيتان ٢ و٦): مسار اليوم — يُشتق ترتيبه من الخطة دائمًا، ويُخزَّن منه ما كتبه المستخدم فقط:
    trip.dayRoutes[String(day.n)] = { leave:'HH:MM'|null, backBy:'HH:MM'|null, legs:{ 'fromId>toId': { mode:'walk'|'transit'|'car', minutes:n|null } }, stays:{ entryId: minutes } }
@@ -168,8 +171,8 @@ function tripLegMode(straightKm, fallback){ const fb = fallback === 'car' ? 'car
 function tripDaySequence(day, city){ // ترتيب اليوم من الخطة (الخيار ١ فقط؛ البدائل لا تدخل المسار — الاختيار ٩)
   const stay = (city && city.stay && city.stay.name) ? { kind: 'stay', id: 'stay', name: city.stay.name, geo: (city.stay.geo && typeof city.stay.geo.lat === 'number') ? city.stay.geo : null } : null;
   const seq = []; if (stay) seq.push(stay);
-  TRIP_PERIODS.forEach(function(p){ if (p === 'afternoon' && day.rest && stay) seq.push({ kind: 'rest', id: 'stay', name: stay.name, geo: stay.geo, minutes: day.rest.minutes || 0 }); (day.periods[p] || []).forEach(function(e){ seq.push({ kind: 'stop', id: e.id, name: e.name, geo: e.geo || null, entry: e, period: p }); }); });
-  if (stay && seq.length > 1) seq.push({ kind: 'end', id: 'stay', name: stay.name, geo: stay.geo });
+  const rests = tripRestsOf(day); TRIP_PERIODS.forEach(function(p){ (day.periods[p] || []).forEach(function(e){ seq.push({ kind: 'stop', id: e.id, name: e.name, geo: e.geo || null, entry: e, period: p }); }); if (rests[p] && stay && tripRestSlotNext(day, p)) seq.push({ kind: 'rest', id: 'stay', name: stay.name, geo: stay.geo, minutes: rests[p].minutes, after: p }); }); // ب-٧: الراحة بعد الفترة التي اختارها المستخدم
+  if (stay && seq.length > 1 && seq[seq.length - 1].kind === 'stop') seq.push({ kind: 'end', id: 'stay', name: stay.name, geo: stay.geo }); /* ب-٧: راحة في آخر اليوم = العودة نفسها */
   return seq;
 }
 function tripDaySchedule(trip, day, city){ // الجدولة من المدخلات وحدها: الخروج + دقائق كل رِجل + مدة كل محطة؛ أول رِجل بلا دقائق تُطفئ ما بعدها
@@ -177,7 +180,7 @@ function tripDaySchedule(trip, day, city){ // الجدولة من المدخلا
   const leave = route.leave || (typeof day.from === 'number' ? tripHHMM(day.from) : null); const backBy = route.backBy || (typeof day.to === 'number' ? tripHHMM(day.to) : null);
   let t = tripMinutesOf(leave); let known = (t !== null); const steps = []; let legs = 0, missing = 0, km = 0, kmKnown = true;
   seq.forEach(function(s, i){
-    const step = { kind: s.kind, id: s.id, name: s.name, geo: s.geo, entry: s.entry || null, period: s.period || null, leg: null, arrive: null, depart: null, minutes: 0 };
+    const step = { kind: s.kind, id: s.id, name: s.name, geo: s.geo, entry: s.entry || null, period: s.period || null, after: s.after || null, leg: null, arrive: null, depart: null, minutes: 0 };
     if (i > 0){ const prev = seq[i - 1]; const key = tripLegKey(prev.id, s.id); const saved = route.legs[key] || {}; const d = tripKm(prev.geo, s.geo); const mode = TRIP_MODE_LABEL[saved.mode] ? saved.mode : tripLegMode(d, fallback); const legKm = (d === null) ? null : d * (TRIP_RHYTHM.detour[mode] || 1); const min = (typeof saved.minutes === 'number' && saved.minutes >= 0) ? saved.minutes : null;
       legs++; if (min === null) missing++; if (legKm === null) kmKnown = false; else km += legKm;
       step.leg = { key: key, fromId: prev.id, fromName: prev.name, fromGeo: prev.geo, toGeo: s.geo, km: legKm, mode: mode, minutes: min, missing: min === null, saved: !!route.legs[key] };
