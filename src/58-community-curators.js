@@ -32,9 +32,9 @@ async function loadCommunityLists(){
 
 async function openCommunityModal(){
   mpTrack.hit('community_open', { depth: 1 });
-  document.getElementById('communityBody').innerHTML = `<div class="mp-empty mini">Loading…</div>`;
+  if (!viewingUserUid) document.getElementById('communityBody').innerHTML = `<div class="mp-empty mini">Loading…</div>`; /* د-٥: لا تمحُ طبقة الشخص المرسومة توًّا (الفتح من قائمة مشارَكة) */
   showBackdropUnlessHosted('communityBackdrop', 'Community'); // خ١
-  await loadCommunityLists();
+  const __tl = performance.now(); await loadCommunityLists(); logTiming('[CM] community lists in ' + Math.round(performance.now() - __tl) + 'ms'); /* د-٥ */
   // ر٦٩ي (N-043): ذاكرة آخر وضع — الجذر والتبويب والشاشة تبقى بين الزيارات (تُعاد عند الخروج فقط)
   if (typeof communityTab === 'undefined' || !communityTab) communityTab = 'places';
   renderCommunityModal();
@@ -592,7 +592,7 @@ let vcuStep = ''; // ر٧٢-أ-٢ز: آخر مرحلة بلغها فتح طبق�
 async function viewCommunityUser(uid){
   vcuStep = 'profile'; communityUserLayer = null;
   viewingUserUid = uid;
-  viewingUserData = null; try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ mpSwallow(e, 'profile'); } // r72r-1: الملف طازج بكل فتح (المدن الجديدة تظهر) — لا من ذاكرة المجتمع
+  viewingUserData = null; const __tp = performance.now(); try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ mpSwallow(e, 'profile'); } logTiming('[CM] person: profile in ' + Math.round(performance.now() - __tp) + 'ms'); /* د-٥ */ // r72r-1: الملف طازج بكل فتح (المدن الجديدة تظهر) — لا من ذاكرة المجتمع
   if (!viewingUserData) viewingUserData = communityUsers.find(u => u.uid === uid);
   if (!viewingUserData){ // ر٦٥: صاحب بطاقة لم يصل ملفه للقائمة (تحميل ناقص أو ملف حديث) — يُقرأ مفردًا بدل الانهيار
     try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ mpSwallow(e, 'profile'); }
@@ -629,9 +629,9 @@ async function viewCommunityUser(uid){
       });
     });
   }catch(e){}
-  vcuStep = 'trips'; await loadCommunityUserTrips(uid);
+  logTiming('[CM] person: cities in ' + Math.round(performance.now() - __tp) + 'ms'); vcuStep = 'trips'; await loadCommunityUserTrips(uid); logTiming('[CM] person: trips in ' + Math.round(performance.now() - __tp) + 'ms');
   vcuStep = 'bookmarks'; await ensureListBookmarks();
-  vcuStep = 'saves'; await ensureTripSaves();
+  vcuStep = 'saves'; await ensureTripSaves(); logTiming('[CM] person: bookmarks+saves in ' + Math.round(performance.now() - __tp) + 'ms'); /* د-٥ */
   vcuStep = 'render'; renderCommunityModal(); vcuStep = 'done';
 }
 let communityUserLayer = null;
