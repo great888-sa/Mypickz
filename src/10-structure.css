@@ -415,7 +415,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .tb-grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px;} .tb-dt{display:flex; flex-direction:column; gap:4px; margin-top:2px;} .tb-dt .modal-input{margin:0; font-weight:400;}
   .tb-stay{display:flex; gap:6px; align-items:center;} .tb-stay .modal-input{flex:1; margin:0; min-width:0;} .tb-pin-ok{font-size:14px;}
   .tb-hint{font-size:11px; line-height:1.5; margin:6px 0 2px;}
-  .tb-cta{margin-top:10px;} .tb-cta:disabled{opacity:.45; cursor:default;}
+  .tb-cta{margin-top:10px;} .tb-cta:disabled{opacity:.45; cursor:default;} .tb-manual{margin-top:8px;} .tb-manual:disabled{opacity:.45; cursor:default;} .tb-tray-acts{margin:6px 0 8px;} /* ج-٣ */
   .tb-feasbar{display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:12px; border:1px solid; margin:0 0 8px; font-size:12.5px;} .tb-feasbar b{font-weight:800;} .tb-feasbar span{font-weight:700;} .pc-alert{font-size:11.5px; font-weight:700; margin:2px 0 4px;}
   .tb-pick{display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:12px; border:1px solid; margin:0 0 6px; cursor:pointer;} .tb-pick input{width:20px; height:20px; flex:none;} .tb-pick-t{display:flex; flex-direction:column; min-width:0;} .tb-pick-t b{font-size:14px; font-weight:800; line-height:1.2;} .tb-pick-t span{font-size:11.5px;} .tb-pick.nopin{opacity:.72;} .tb-pick .warn{font-style:normal;} .modal .tb-pick{display:flex; margin:0 0 6px; letter-spacing:0; font-size:13px;}
   .tb-row{margin-top:8px;} .tb-top{flex-wrap:nowrap;}
