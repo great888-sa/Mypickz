@@ -490,7 +490,7 @@ async function sgShareWith(id){ const g = sgById(id); const target = sgTarget();
   target.sharedWith = target.sharedWith || []; target.sharedWithNames = target.sharedWithNames || {};
   const missing = g.members.filter(function(m){ return m.uid !== currentUser.uid && target.sharedWith.indexOf(m.uid) < 0; });
   if (!missing.length){ if (!(await mpConfirm('Stop sharing with ' + g.name + ' (' + g.members.length + ')? They lose access to this ' + (shareModalKind === 'trip' ? 'trip' : 'list') + '.', { title: 'Stop sharing', ok: 'Stop sharing', danger: true }))) return; const ids = g.members.map(function(m){ return m.uid; }); target.sharedWith = target.sharedWith.filter(function(uid){ return ids.indexOf(uid) < 0; }); await sgSaveTarget(target); showToast('No longer shared with ' + g.name); sgReopen(); return; }
-  missing.forEach(function(m){ target.sharedWith.push(m.uid); target.sharedWithNames[m.uid] = m.nickname; }); mpTrack.hit('share_link'); await sgSaveTarget(target); showToast('Shared with ' + g.name + ' · ' + missing.length + ' added'); sgReopen(); } // لقطة: من يُضاف إلى المجموعة لاحقًا لا يرى هذا
+  missing.forEach(function(m){ target.sharedWith.push(m.uid); target.sharedWithNames[m.uid] = m.nickname; }); mpTrack.hit('share_link'); await sgSaveTarget(target); ensureCommunityNick(); /* د-٢ */ showToast('Shared with ' + g.name + ' · ' + missing.length + ' added'); sgReopen(); } // لقطة: من يُضاف إلى المجموعة لاحقًا لا يرى هذا
 function openShareModal(kind, id){ // ر٦٩ز: نافذة «Shared with» واحدة للقائمة والرحلة (N-031 · N-034) · r80: المجموعات المحفوظة داخلها
   const isTrip = kind === 'trip'; const target = isTrip ? userTrips.find(t => t.id === id) : myCityListData; if (!target) return; if (isTrip) currentTripId = id;
   const bd = document.getElementById('tripShareBackdrop'); shareModalKind = kind;
@@ -568,7 +568,7 @@ async function shareTripWithSomeone(){
     if (trip.sharedWith.includes(targetUid)){ showToast('Already shared with this user'); return; }
     trip.sharedWith.push(targetUid);
     trip.sharedWithNames[targetUid] = data.nickname || name.trim();
-    await saveTrip(trip);
+    await saveTrip(trip); ensureCommunityNick(); /* د-٢ */
     showToast('Shared ✓');
     renderMyTripsModal();
   }catch(e){ showToast('Could not verify username'); }
