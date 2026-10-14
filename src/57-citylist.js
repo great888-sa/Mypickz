@@ -66,6 +66,7 @@ async function loadUserList(){
     else {
       const uDoc = await withAuthRetry(() => mpData.users.get(currentUser.uid));
       currentUserSuspended = uDoc.exists && uDoc.data().suspended === true;
+      try{ sgLoadFrom(uDoc.exists ? uDoc.data() : {}); }catch(_){} /* r80: المجموعات المحفوظة من القراءة نفسها — لا قراءة إضافية */
     }
   }catch(e){ currentUserSuspended = false; }
   refreshSuspendedBadge();
