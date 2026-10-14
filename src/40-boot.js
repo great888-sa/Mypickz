@@ -83,8 +83,9 @@ async function initFirebase(){
         try{ const __t0 = performance.now(); firebase.appCheck().getToken(false).then(function(){ if (typeof logTiming === 'function') logTiming('[NET] App Check token in ' + Math.round(performance.now() - __t0) + 'ms'); }, function(e){ if (typeof logTiming === 'function') logTiming('[NET] App Check token FAILED after ' + Math.round(performance.now() - __t0) + 'ms · ' + ((e && (e.code || e.message)) || e)); }); }catch(_){} /* د-٥ */
       } else if (typeof logTiming === 'function') logTiming('[NET] App Check OFF (paused until enforcement · ?withcheck=1 to compare)');
     }catch(_){ /* صامت */ }
+    try{ if (typeof __mpFsDebug === 'function') __mpFsDebug(firebase); }catch(_){} /* هـ-٢: نسخة الاختبار (91-timing) تفعّل سجل Firestore الداخلي وتلتقط أسطره المهمة في لوحة TIMING */
     db = firebase.firestore();
-    try{ db.settings({ experimentalForceLongPolling: true, merge: true }); if (typeof logTiming === 'function') logTiming('[NET] Firestore transport: long polling'); }catch(e){ if (typeof logTiming === 'function') logTiming('[NET] long polling not applied · ' + (e && e.message)); } /* هـ: قناة Firestore بالنقل الطويل — العلاج القياسي لتوقف WebChannel على Safari/iOS (قراءات تتأخر ٣٠ ثانية) */
+    try{ db.settings({ experimentalForceLongPolling: true, experimentalLongPollingOptions: { timeoutSeconds: 5 }, merge: true }); if (typeof logTiming === 'function') logTiming('[NET] Firestore transport: long polling · request timeout 5s'); }catch(e){ if (typeof logTiming === 'function') logTiming('[NET] long polling not applied · ' + (e && e.message)); } /* هـ: قناة Firestore بالنقل الطويل — العلاج القياسي لتوقف WebChannel على Safari/iOS (قراءات تتأخر ٣٠ ثانية) */
     auth = firebase.auth();
   }catch(e){
     const dbg = document.getElementById('debugBanner');
