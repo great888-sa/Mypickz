@@ -55,6 +55,8 @@ function tripPlaceCount(t){ return tripHasPlan(t) ? tripPlanCount(t.plan) : 0; }
 function tripMetaLine(t){ const d = tripDayCount(t), p = tripPlaceCount(t); return d + (d === 1 ? ' day' : ' days') + ' · ' + p + (p === 1 ? ' place' : ' places'); } // بدل سطر النوع (القرار ١٣)
 function tripTitle(t){ if (!t) return ''; if (t.title) return t.title; const names = (t.cities || []).map(function(c){ return c.cityName; }).filter(Boolean); const base = names.length ? names.join(' & ') : (t.cityName || 'Trip'); return t.customLabel ? (base + ' — ' + t.customLabel) : base; }
 function tripSpec(t){ return { cities: t.cities || [], version: t.version || 'balanced' }; }
+function tripRestRowHtml(stayName, minutes, removeOn){ return '<div class="trip-rest"><span><b>Rest at ' + escapeHtml(stayName || 'your stay') + '</b> <span class="dim">· about ' + (minutes >= 90 ? (Math.round(minutes / 30) / 2) + ' h' : minutes + ' min') + '</span></span>' + (removeOn ? '<button type="button" class="actn" onclick="' + removeOn + '">Remove</button>' : '') + '</div>'; } // ب-٧: سطر الراحة بين فترتين (المسودة والعرض)
+function tripRestAddHtml(hasStay, addOn){ return hasStay ? '<button type="button" class="trip-rest-add" onclick="' + addOn + '">＋ Add rest</button>' : '<div class="trip-rest-add off">＋ Add rest <span class="dim">· set where you stay in Setup</span></div>'; } // ب-٧: الزر بين الفترتين؛ بلا إقامة تلميح
 function tripLegWarnHtml(w){ return '<div class="trip-legwarn">↓ ' + tripKmLabel(w.km) + ' · ' + (w.mode === 'walk' ? 'walk' : w.mode === 'car' ? 'car' : 'metro') + ' — a long leg</div>'; } // ب-٥: الرِّجل الطويلة سطرًا رفيعًا قبل محطتها (المسودة والعرض)
 async function saveTrip(trip){
   mpTrack.hit('trip_save');
