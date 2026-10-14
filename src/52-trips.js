@@ -448,20 +448,67 @@ function openExportPreview(kind, id){
 // ر٦٩ث (N-057): البطاقة صورةً — تُرسم على لوحة رسم بهوية التطبيق وتُرسل عبر ورقة مشاركة النظام (أو تُنزَّل)
 const cmCache = { lists: {}, trips: {}, places: {} }; // ر٦٩ذ (N-057): ما حُمِّل بالسوق يخدم بطاقة التصدير
 function closeExportPreview(){ const bd = document.getElementById('tripShareBackdrop'); if (bd) bd.classList.remove('show'); }
-function openShareModal(kind, id){ // ر٦٩ز: نافذة «Shared with» واحدة للقائمة والرحلة (N-031 · N-034)
+/* ═══ r80 (الدفعة د · القرار ١١ في أ-٢): المجموعات المحفوظة للمشاركة — اسم + أعضاء (uid · اسم المستخدم) ملكٌ لصاحبها وحده في users/{uid}.shareGroups؛ لا يراها أعضاؤها ولا تُنشئ صلة بينهم.
+   المشاركة مع مجموعة = لقطة: إضافة أعضائها الحاليين إلى sharedWith كما لو أُضيفوا واحدًا واحدًا؛ ما يُخزَّن في القائمة والرحلة لا يتغير. لا قراءة إضافية: تُلتقط من مستند المستخدم المقروء عند الدخول. الحدود: ١٠ مجموعات · ٣٠ عضوًا · اسم ≤ ٢٤ حرفًا ═══ */
+const SG_MAX_GROUPS = 10, SG_MAX_MEMBERS = 30, SG_NAME_MAX = 24;
+let mpShareGroups = []; let mpShareGroupsLoaded = false; let sgView = null; // sgView = معرّف المجموعة المفتوحة داخل نافذة Shared with
+function sgNorm(list){ return (Array.isArray(list) ? list : []).filter(function(g){ return g && typeof g === 'object' && g.id && g.name; }).slice(0, SG_MAX_GROUPS).map(function(g){ const seen = {}; return { id: String(g.id), name: String(g.name).slice(0, SG_NAME_MAX), members: (Array.isArray(g.members) ? g.members : []).filter(function(m){ return m && m.uid && !seen[m.uid] && (seen[m.uid] = true); }).slice(0, SG_MAX_MEMBERS).map(function(m){ return { uid: String(m.uid), nickname: String(m.nickname || 'user').slice(0, 40) }; }) }; }); }
+function sgLoadFrom(data){ mpShareGroups = sgNorm(data && data.shareGroups); mpShareGroupsLoaded = true; } // تُستدعى بعد قراءة users/{uid} عند الدخول
+async function sgEnsureLoaded(){ if (mpShareGroupsLoaded || !currentUser) return; try{ const d = await mpData.users.get(currentUser.uid); sgLoadFrom(d.exists ? d.data() : {}); }catch(e){ mpShareGroupsLoaded = false; } }
+async function sgSave(){ if (!currentUser) return false; try{ await mpData.users.merge(currentUser.uid, { shareGroups: mpShareGroups }); return true; }catch(e){ showToast('Could not save the group'); return false; } }
+function sgById(id){ return mpShareGroups.find(function(g){ return g.id === id; }) || null; }
+function sgTarget(){ if (shareModalKind === 'trip') return userTrips.find(function(t){ return t.id === currentTripId; }) || null; return myCityListData || null; }
+async function sgSaveTarget(target){ if (shareModalKind === 'trip') await saveTrip(target); else await saveMyCityList(); }
+function sgPresent(target, g){ const sw = (target && target.sharedWith) || []; return g.members.filter(function(m){ return sw.indexOf(m.uid) >= 0; }).length; }
+function sgReopen(){ if (shareModalKind === 'trip') openShareModal('trip', currentTripId); else openShareModal('list'); }
+function sgRowsHtml(target){
+  const names = (target.sharedWith || []).length;
+  let h = '<label class="flabel sg-lab">Groups <span class="dim">· share with several people in one tap</span></label><div class="chiprow sg-row">';
+  mpShareGroups.forEach(function(g){ const all = g.members.length > 0 && sgPresent(target, g) === g.members.length; h += '<span class="sg-chip"><button type="button" class="chip' + (all ? ' on' : '') + '" onclick="sgShareWith(\'' + attrStr(g.id) + '\')" title="' + (all ? 'Everyone in this group already has access — tap to stop sharing with them' : 'Share with everyone in this group') + '">👥 ' + escapeHtml(g.name) + ' · ' + g.members.length + '</button><button type="button" class="chip ico sg-more" onclick="sgOpen(\'' + attrStr(g.id) + '\')" title="Members · rename · delete">⋯</button></span>'; });
+  h += (mpShareGroups.length < SG_MAX_GROUPS ? '<button type="button" class="chip" onclick="sgNew()">＋ New group</button>' : '') + '</div>';
+  if (names >= 2 && mpShareGroups.length < SG_MAX_GROUPS) h += '<button type="button" class="btn btn-ghost wide sg-savecur" onclick="sgSaveCurrent()">Save these ' + names + ' as a group</button>';
+  return h;
+}
+function sgGroupHtml(g){
+  let h = '<label class="flabel">👥 ' + escapeHtml(g.name) + ' — ' + g.members.length + (g.members.length === 1 ? ' member' : ' members') + ' <span class="dim">· only you see this group</span></label>';
+  h += g.members.length ? g.members.map(function(m){ return '<div class="sharerow"><span>👤 ' + escapeHtml(m.nickname) + '</span><button type="button" class="btn btn-ghost" style="width:auto;margin:0;padding:5px 10px" onclick="sgRemoveMember(\'' + attrStr(g.id) + '\', \'' + attrStr(m.uid) + '\')" title="Remove from the group">✕</button></div>'; }).join('') : '<div class="mp-empty mini">No members yet — add people by their username.</div>';
+  h += '<button type="button" class="cta wide" style="margin-top:12px"' + (g.members.length < SG_MAX_MEMBERS ? '' : ' disabled') + ' onclick="sgAddMember(\'' + attrStr(g.id) + '\')"><b>＋</b> Add by username</button>';
+  h += '<div class="sheet-alts sg-acts"><button type="button" class="btn btn-ghost" onclick="sgRename(\'' + attrStr(g.id) + '\')">Rename</button><button type="button" class="btn btn-ghost sheet-danger" onclick="sgDelete(\'' + attrStr(g.id) + '\')">Delete group</button></div>';
+  h += '<button type="button" class="btn btn-ghost wide" onclick="sgView = null; sgReopen()">← Back</button>';
+  return h;
+}
+function sgOpen(id){ if (!sgById(id)) return; sgView = id; sgReopen(); }
+async function sgNameAsk(initial){ const v = await openInputModal(initial ? 'Rename the group' : 'Name the group', 'e.g. Family, Trip crew', initial || ''); if (v === null) return null; const name = String(v || '').trim().slice(0, SG_NAME_MAX); if (!name){ showToast('Give the group a name'); return null; } if (mpShareGroups.some(function(g){ return g.name.toLowerCase() === name.toLowerCase() && g.name !== initial; })){ showToast('You already have a group with this name'); return null; } return name; }
+async function sgNew(){ await sgEnsureLoaded(); if (mpShareGroups.length >= SG_MAX_GROUPS){ showToast('Groups are limited to ' + SG_MAX_GROUPS); return; } const name = await sgNameAsk(''); if (!name) return; const g = { id: 'g_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name, members: [] }; mpShareGroups.push(g); if (await sgSave()){ sgView = g.id; } sgReopen(); }
+async function sgSaveCurrent(){ await sgEnsureLoaded(); const target = sgTarget(); if (!target) return; if (mpShareGroups.length >= SG_MAX_GROUPS){ showToast('Groups are limited to ' + SG_MAX_GROUPS); return; } const name = await sgNameAsk(''); if (!name) return; const members = (target.sharedWith || []).filter(function(uid){ return uid !== currentUser.uid; }).slice(0, SG_MAX_MEMBERS).map(function(uid){ return { uid: uid, nickname: (target.sharedWithNames || {})[uid] || 'user' }; }); mpShareGroups.push({ id: 'g_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name, members: members }); if (await sgSave()) showToast('Group saved · ' + members.length); sgReopen(); }
+async function sgRename(id){ const g = sgById(id); if (!g) return; const name = await sgNameAsk(g.name); if (!name) return; g.name = name; await sgSave(); sgReopen(); }
+async function sgDelete(id){ const g = sgById(id); if (!g) return; if (!(await mpConfirm('Delete the group ' + g.name + '? Nothing already shared changes — only the shortcut goes.', { title: 'Delete group', ok: 'Delete', danger: true }))) return; mpShareGroups = mpShareGroups.filter(function(x){ return x.id !== id; }); sgView = null; await sgSave(); sgReopen(); }
+async function sgRemoveMember(id, uid){ const g = sgById(id); if (!g) return; g.members = g.members.filter(function(m){ return m.uid !== uid; }); await sgSave(); sgReopen(); } // لا يمس ما شُورك مع العضو من قبل (اللقطة)
+async function sgAddMember(id){ const g = sgById(id); if (!g) return; if (g.members.length >= SG_MAX_MEMBERS){ showToast('A group holds up to ' + SG_MAX_MEMBERS + ' people'); return; } const name = await openInputModal('Add to ' + g.name + ' (username)', 'Enter their exact username', ''); if (name === null) return; const key = String(name).trim().toLowerCase(); if (!key) return;
+  try{ const doc = await mpData.nicknames.get(key); if (!doc.exists){ showToast('No user found with that username'); return; } const data = doc.data(); if (data.uid === currentUser.uid){ showToast("You can't add yourself"); return; } if (g.members.some(function(m){ return m.uid === data.uid; })){ showToast('Already in this group'); return; } g.members.push({ uid: data.uid, nickname: data.nickname || String(name).trim() }); await sgSave(); sgReopen(); }catch(e){ showToast('Could not verify username'); } }
+async function sgShareWith(id){ const g = sgById(id); const target = sgTarget(); if (!g || !target) return; if (!g.members.length){ showToast('This group has no members yet'); sgOpen(id); return; }
+  target.sharedWith = target.sharedWith || []; target.sharedWithNames = target.sharedWithNames || {};
+  const missing = g.members.filter(function(m){ return m.uid !== currentUser.uid && target.sharedWith.indexOf(m.uid) < 0; });
+  if (!missing.length){ if (!(await mpConfirm('Stop sharing with ' + g.name + ' (' + g.members.length + ')? They lose access to this ' + (shareModalKind === 'trip' ? 'trip' : 'list') + '.', { title: 'Stop sharing', ok: 'Stop sharing', danger: true }))) return; const ids = g.members.map(function(m){ return m.uid; }); target.sharedWith = target.sharedWith.filter(function(uid){ return ids.indexOf(uid) < 0; }); await sgSaveTarget(target); showToast('No longer shared with ' + g.name); sgReopen(); return; }
+  missing.forEach(function(m){ target.sharedWith.push(m.uid); target.sharedWithNames[m.uid] = m.nickname; }); mpTrack.hit('share_link'); await sgSaveTarget(target); showToast('Shared with ' + g.name + ' · ' + missing.length + ' added'); sgReopen(); } // لقطة: من يُضاف إلى المجموعة لاحقًا لا يرى هذا
+function openShareModal(kind, id){ // ر٦٩ز: نافذة «Shared with» واحدة للقائمة والرحلة (N-031 · N-034) · r80: المجموعات المحفوظة داخلها
   const isTrip = kind === 'trip'; const target = isTrip ? userTrips.find(t => t.id === id) : myCityListData; if (!target) return; if (isTrip) currentTripId = id;
   const bd = document.getElementById('tripShareBackdrop'); shareModalKind = kind;
   const names = (target.sharedWith || []).map(function(uid){ return { uid: uid, name: (target.sharedWithNames || {})[uid] || 'user' }; });
   const title = isTrip ? tripTitle(target) : ((allCities().find(function(x){ return x.id === cityListCityId; }) || {}).name || 'My list');
-  bd.innerHTML = '<div class="modal night"><div class="hdr"><button type="button" class="bk hidden">← Back</button><span class="ttl">🔗 Shared with</span><button type="button" class="x" onclick="closeTripShareModal()" aria-label="Close">✕</button></div>' /* أ-٢ · القرار ١٠: نافذة «Shared with» على القشرة الليلية */
-    + '<label class="flabel">' + escapeHtml(title) + ' — ' + (names.length ? names.length + ' ' + (names.length === 1 ? 'person' : 'people') : 'nobody yet') + '</label>'
+  if (!mpShareGroupsLoaded) sgEnsureLoaded().then(function(){ if (shareModalKind === kind && bd.classList.contains('show')) openShareModal(kind, id); }); /* r80: تُلتقط عند الدخول؛ هذا احتياط إن تعذّرت */
+  const gv = sgView ? sgById(sgView) : null; if (sgView && !gv) sgView = null;
+  bd.innerHTML = '<div class="modal night"><div class="hdr"><button type="button" class="bk' + (gv ? '' : ' hidden') + '" onclick="sgView = null; sgReopen()">← Back</button><span class="ttl">' + (gv ? '👥 Group' : '🔗 Shared with') + '</span><button type="button" class="x" onclick="closeTripShareModal()" aria-label="Close">✕</button></div>' /* أ-٢ · القرار ١٠: نافذة «Shared with» على القشرة الليلية */
+    + (gv ? sgGroupHtml(gv) + '</div>' : '')
+    + (gv ? '' : '<label class="flabel">' + escapeHtml(title) + ' — ' + (names.length ? names.length + ' ' + (names.length === 1 ? 'person' : 'people') : 'nobody yet') + '</label>'
     + (names.length ? names.map(function(n){ return '<div class="sharerow"><span>👤 ' + escapeHtml(n.name) + '</span><button type="button" class="btn btn-ghost" style="width:auto;margin:0;padding:5px 10px" onclick="removeShareFromModal(\'' + attrStr(n.uid) + '\')" title="Stop sharing">✕</button></div>'; }).join('') : '<div class="mp-empty mini">Share with someone by their username.</div>')
     + '<button type="button" class="cta wide" style="margin-top:12px" onclick="addShareFromModal()"><b>＋</b> Add by username</button>'
-    + '<button type="button" class="btn btn-ghost" onclick="closeTripShareModal()">Done</button></div>';
+    + sgRowsHtml(target) /* r80 */
+    + '<button type="button" class="btn btn-ghost" onclick="closeTripShareModal()">Done</button></div>');
   bd.classList.add('show');
 }
 function openTripShareModal(id){ openShareModal('trip', id); }
-function closeTripShareModal(){ const bd = document.getElementById('tripShareBackdrop'); if (bd) bd.classList.remove('show'); if (shareModalKind === 'trip'){ currentTripId = null; tripViewMode = true; renderMyTripsModal(); } else { renderPlacesMine(); } }
+function closeTripShareModal(){ sgView = null; const bd = document.getElementById('tripShareBackdrop'); if (bd) bd.classList.remove('show'); if (shareModalKind === 'trip'){ currentTripId = null; tripViewMode = true; renderMyTripsModal(); } else { renderPlacesMine(); } }
 async function addShareFromModal(){ if (shareModalKind === 'trip'){ const id = currentTripId; await shareTripWithSomeone(); openShareModal('trip', id); } else { await plShareWith(); openShareModal('list'); } }
 async function removeShareFromModal(uid){ if (shareModalKind === 'trip'){ const id = currentTripId; await removeTripShare(uid); openShareModal('trip', id); } else { await plRemoveShare(uid); openShareModal('list'); } }
 function shareTripFor(id){ openTripShareModal(id); }
