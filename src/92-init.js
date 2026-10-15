@@ -14,6 +14,7 @@
       currentUser = user;
       updateUserUI();
       syncOwnerMode(); // وضع المالك يتحدد هنا حصرًا: تطابق uid مع settings/app.ownerUid
+      if (user && typeof logTiming === 'function'){ (async function(){ try{ const t0 = performance.now(); const s1 = await mpData.communityProfiles.withPublic(); const t1 = performance.now(); await mpData.communityProfiles.get(user.uid); const t2 = performance.now(); logTiming('[NET] probe · query communityProfiles ' + Math.round(t1 - t0) + 'ms (' + s1.size + ' docs) · doc profile/me ' + Math.round(t2 - t1) + 'ms'); }catch(e){ logTiming('[NET] probe FAILED · ' + ((e && (e.code || e.message)) || e)); } })(); } /* هـ-٣: مسبار بعد الدخول — استعلام ثم مستند، لنرى هل الاستعلامات وحدها بطيئة */
       const tasks = [loadUserList(), registerUserRecord(), loadUserTrips(), loadSharedCityLists()]; // v1.40: مفكرات الأماكن تأتي مع userLists (placeBookmarks)
       if (isOwner) tasks.push(linkOwnerUid());
       await Promise.all(tasks);
