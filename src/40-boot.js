@@ -85,7 +85,13 @@ async function initFirebase(){
     }catch(_){ /* صامت */ }
     try{ if (typeof __mpFsDebug === 'function') __mpFsDebug(firebase); }catch(_){} /* هـ-٢: نسخة الاختبار (91-timing) تفعّل سجل Firestore الداخلي وتلتقط أسطره المهمة في لوحة TIMING */
     db = firebase.firestore();
-    try{ db.settings({ experimentalForceLongPolling: true, experimentalLongPollingOptions: { timeoutSeconds: 5 }, merge: true }); if (typeof logTiming === 'function') logTiming('[NET] Firestore transport: long polling · request timeout 5s'); }catch(e){ if (typeof logTiming === 'function') logTiming('[NET] long polling not applied · ' + (e && e.message)); } /* هـ: قناة Firestore بالنقل الطويل — العلاج القياسي لتوقف WebChannel على Safari/iOS (قراءات تتأخر ٣٠ ثانية) */
+    /* هـ: قناة Firestore بالنقل الطويل — العلاج القياسي لتوقف WebChannel على Safari/iOS (قراءات تتأخر ٣٠ ثانية).
+       هـ-٦ (السبب الجذري المثبَت من مصدر المكتبة 10.12.2): لم يُطبَّق هذا الإعداد قط منذ هـ — طبقة compat مع merge:true تدمج الإعدادات الحالية (وفيها experimentalAutoDetectLongPolling=true افتراضيًا منذ 9.22) ثم يرفض المنشئ الجمع بين force وautoDetect برسالة «cannot be used together» (firestore-compat/src/api/database.ts:200-209 · firestore/src/lite-api/settings.ts:151-156)؛ كان الخطأ يُلتقط هنا ويُكتب سطرًا مدفونًا والسطر الأصفر يقول «transport ?». العلاج: autoDetect=false صراحةً، ثم قراءة الإعداد المطبَّق فعلًا والتصريح به في السطر الأصفر */
+    try{
+      db.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false, experimentalLongPollingOptions: { timeoutSeconds: 5 }, merge: true });
+      let __applied = null; try{ const __d = db._delegate; const __s = (__d && typeof __d._getSettings === 'function') ? __d._getSettings() : null; if (__s) __applied = (__s.experimentalForceLongPolling === true && __s.experimentalAutoDetectLongPolling === false && __s.experimentalLongPollingOptions && __s.experimentalLongPollingOptions.timeoutSeconds === 5); }catch(_){}
+      if (typeof logTiming === 'function') logTiming('[NET] Firestore transport: long polling · request timeout 5s · ' + (__applied === true ? 'verified' : (__applied === false ? 'NOT VERIFIED (settings read back differ)' : 'applied (not read back)')));
+    }catch(e){ if (typeof logTiming === 'function') logTiming('[NET] long polling not applied · ' + (e && e.message)); }
     auth = firebase.auth();
   }catch(e){
     const dbg = document.getElementById('debugBanner');
