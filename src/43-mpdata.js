@@ -311,6 +311,7 @@ const mpData = (function(){
     settings: { // ر٧٠ط-٢: قالب التصنيفات (المالك)
       app: async function(){ const d = await col('settings').doc('app').get(); return d.exists ? d.data() : null; }, /* ر٧٣-أب (٢) */
       mergeApp: function(data){ return col('settings').doc('app').set(data, { merge: true }); },
+      watchApp: function(cb, err){ return col('settings').doc('app').onSnapshot(cb || function(){}, err || function(){}); }, /* هـ-٥: مستمع دائم يبقي قناة Firestore مفتوحة طوال الجلسة — بلا قراءات إضافية ما لم يتغير المستند */
       getCategoryTemplate: async function(){ const d = await col('settings').doc('category-template').get(); return d.exists ? d.data() : null; },
       rulesVersion: async function(){ const d = await col('settings').doc('app').get(); return d.exists ? (d.data().rulesVersion || '') : ''; }, // r72t (M4.26 ٧)
       saveCategoryTemplate: function(data){ return col('settings').doc('category-template').set(data, { merge: true }); }, /* ر٧٣-أب (١): الحفظ عبر الطبقة (كان نداءً مباشرًا) */
