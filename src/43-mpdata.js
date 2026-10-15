@@ -227,7 +227,7 @@ const mpData = (function(){
         if (!parent) return null; if (parent.cityId && parent.cityName) rememberCity(parent.cityId, parent.cityName, parent.country); if (parent.splitV !== 1){ if (parent.categories) mpFixAreaPlaces(parent.categories); return parent; } // ب-٦
         const me = currentUser && currentUser.uid; let q = col('userCityListCats').where('ownerId', '==', parent.ownerId).where('cityId', '==', parent.cityId);
         if (parent.ownerId !== me && !isOwner){ if (parent.public === true) q = q.where('public', '==', true); else if (me && (parent.sharedWith || []).indexOf(me) >= 0) q = q.where('sharedWith', 'array-contains', me); else return Object.assign({}, parent, { categories: {} }); }
-        const snap = await q.get();
+        logTiming('[DATA] compose ' + parent.cityId + ' · cats query…'); const snap = await q.get(); logTiming('[DATA] compose ' + parent.cityId + ' · ' + snap.size + ' cats'); /* هـ-٨ */
         const cats = {}; snap.forEach(function(d){ const c = d.data(); cats[c.catId] = { active: c.active !== false, places: c.places || [] }; });
         return Object.assign({}, parent, { categories: mpFixAreaPlaces(cats) }); // ب-٦
       },
