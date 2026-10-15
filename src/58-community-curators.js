@@ -661,11 +661,15 @@ let cmSecCollapsed = {}; /* خ-٦: حالة طيّ أقسام أماكن الآ�
 function cmSecIsClosed(k){ return cmSecCollapsed[k] === undefined ? true : !!cmSecCollapsed[k]; }
 function cmToggleSection(k){ cmSecCollapsed[k] = !cmSecIsClosed(k); renderCommunityModal(); }
 async function cmEnsureCity(uid, c){ /* خ-٦: تركيب مدينة الشخص كاملة مرة بالجلسة — من بيانات المنتقي إن كانت هي المصدر، وإلا قراءة مستنداتها الفرعية */
-  if (!c || c._full || c._loading) return c; c._loading = true;
-  try{ if (c._src){ await curEnsureCity(uid, c.id); if (c._src._full){ c.categories = c._src.categories; c._full = true; } }
-    else { const full = await mpData.cityLists.get(uid, c.id); if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; c._full = true; logTiming('[CM] city composed ' + c.id + ' cats=' + Object.keys(full.categories).length); } } }
-  catch(e){ mpSwallow(e, 'community city'); c._full = true; /* لا دوران: تبقى بيانات الفهرس */ }
-  c._loading = false; return c;
+  /* هـ-١٠ (السبب الجذري لتجمّد Open من Shared with me — أُعيد إنتاجه في Chromium وأُوقف المنقّح على مكدسه): كان الاستدعاء الثاني أثناء التحميل يعود فورًا بوعد محلول، فيعيد renderCommunityUserList الرسم في .then، فيستدعي هذه الدالة فتعود فورًا… سلسلة مهام دقيقة (microtasks) لا تترك للخيط الرئيسي فرصة لمعالجة جواب القراءة الذي ينهي التحميل — تجمّد كامل حتى يقتل Safari الصفحة. مسار المشاركة يرسم مرتين أثناء التحميل دائمًا (openCommunityModal بعد تحميل قوائم المجتمع)، والفتح المباشر لا يرسم إلا مرة. الآن: الاستدعاء الثاني ينتظر الوعد الجاري نفسه؛ وبعد المحاولة تُعدّ المدينة مكتملة (بنجاح أو ببيانات الفهرس) فلا إعادة طلب ولا دوران */
+  if (!c || c._full) return c; if (c._loading) return c._loading;
+  c._loading = (async function(){
+    try{ if (c._src){ await curEnsureCity(uid, c.id); if (c._src._full){ c.categories = c._src.categories; } }
+      else { const full = await mpData.cityLists.get(uid, c.id); if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; logTiming('[CM] city composed ' + c.id + ' cats=' + Object.keys(full.categories).length); } else showToast('Could not load this list'); } }
+    catch(e){ mpSwallow(e, 'community city'); showToast('Could not load this list · ' + ((e && (e.code || e.message)) || 'error')); }
+    c._full = true; c._loading = null; return c;
+  })();
+  return c._loading;
 }
 function backToCommunityList(){
   viewingUserUid = null;
