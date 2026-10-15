@@ -1,6 +1,8 @@
 (async function init(){
   await initFirebase();
   logTiming('Firebase SDK loaded + initialized');
+  /* هـ-٥ (التحليل الجذري): مكتبة Firestore تغلق قناة الاستماع بعد ٦٠ ثانية بلا أهداف نشطة، وأول طلب بعدها يفتح قناة جديدة — وعلى iOS/Safari قد ينتظر فتحها ~٣٠ ثانية (اتصال ميت صامت). مستمع دائم على settings/app يُبقي هدفًا نشطًا فلا تُغلق القناة ولا تُعاد؛ كلفته قراءة واحدة بالجلسة */
+  try{ mpData.settings.watchApp(function(){}, function(e){ if (typeof logTiming === 'function') logTiming('[NET] keep-alive listener error · ' + ((e && e.code) || e)); }); if (typeof logTiming === 'function') logTiming('[NET] keep-alive listener on settings/app'); }catch(e){ if (typeof logTiming === 'function') logTiming('[NET] keep-alive listener not started · ' + (e && e.message)); }
   // الطلبات دي مستقلة عن بعض — نشغلها بالتوازي بدل التتابع، يقلل وقت التحميل بشكل ملموس
   await Promise.all([
     loadOwnerUid(),
@@ -14,7 +16,7 @@
       currentUser = user;
       updateUserUI();
       syncOwnerMode(); // وضع المالك يتحدد هنا حصرًا: تطابق uid مع settings/app.ownerUid
-      if (user && typeof logTiming === 'function'){ (async function(){ try{ const t0 = performance.now(); const s1 = await mpData.communityProfiles.withPublic(); const t1 = performance.now(); await mpData.communityProfiles.get(user.uid); const t2 = performance.now(); logTiming('[NET] probe · query communityProfiles ' + Math.round(t1 - t0) + 'ms (' + s1.size + ' docs) · doc profile/me ' + Math.round(t2 - t1) + 'ms'); }catch(e){ logTiming('[NET] probe FAILED · ' + ((e && (e.code || e.message)) || e)); } })(); } /* هـ-٣: مسبار بعد الدخول — استعلام ثم مستند، لنرى هل الاستعلامات وحدها بطيئة */
+      if (user && typeof logTiming === 'function'){ (async function(){ try{ const t0 = performance.now(); const s1 = await mpData.communityProfiles.withPublic(); const t1 = performance.now(); await mpData.profiles.get(user.uid); const t2 = performance.now(); logTiming('[NET] probe · query communityProfiles ' + Math.round(t1 - t0) + 'ms (' + s1.size + ' docs) · doc profile/me ' + Math.round(t2 - t1) + 'ms'); }catch(e){ logTiming('[NET] probe FAILED · ' + ((e && (e.code || e.message)) || e)); } })(); } /* هـ-٣: مسبار بعد الدخول — استعلام ثم مستند، لنرى هل الاستعلامات وحدها بطيئة */
       const tasks = [loadUserList(), registerUserRecord(), loadUserTrips(), loadSharedCityLists()]; // v1.40: مفكرات الأماكن تأتي مع userLists (placeBookmarks)
       if (isOwner) tasks.push(linkOwnerUid());
       await Promise.all(tasks);
