@@ -74,7 +74,7 @@ function cmLayerBack(){ communityUserTripsCity = ''; if (cmDirect){ cmDirect = f
 async function cmOpenList(owner, cityId, origin){ cmDirect = true; communityTab = 'places'; personLayerOnly = null; logTiming('[CM] open shared: person…'); await viewCommunityUser(owner); logTiming('[CM] open shared: person loaded · cities ' + (viewingUserCities || []).length); await cmEnsureSharedCity(owner, cityId); logTiming('[CM] open shared: list ' + ((viewingUserCities || []).some(function(c){ return c.id === cityId; }) ? 'ready' : 'MISSING')); if (currentTab !== 'Community') switchTab('Community'); logTiming('[CM] open shared: tab switched'); /* د-٢: الفتح من وجهة الأماكن كان يرسم في جسم المجتمع المخفي — الانتقال بعد تحميل الشخص */ openCommunityCityList(cityId, origin); }
 async function cmEnsureSharedCity(uid, cityId){ /* د-٢ (ملاحظة المالك ١٤ أكتوبر): القائمة المشارَكة معي بالاسم ليست عامة فلا تأتي مع مدن الشخص العامة — تُقرأ مستندها (القواعد تسمح لمن في sharedWith) وتُضاف إلى مدنه للجلسة */
   if ((viewingUserCities || []).find(function(c){ return c.id === cityId; })) return;
-  try{ const d = await mpData.cityLists.get(uid, cityId); if (!d){ showToast('This shared list no longer exists'); return; } const meta = allCities().find(function(c){ return c.id === cityId; }); viewingUserCities.push({ id: cityId, name: (meta && meta.name) || d.cityName || cityId, categories: (function(){ const out = {}; Object.keys((d.categories && typeof d.categories === 'object') ? d.categories : {}).forEach(function(k){ const c = d.categories[k] || {}; out[k] = Object.assign({}, c, { active: c.active !== false }); }); return out; })(), _full: true, _shared: true, /* active غير المكتوب = فعّال (كما تركّبه الطبقة) */ favoriteCount: d.favoriteCount || 0, bookmarkCount: d.bookmarkCount || 0, viewCount: d.viewCount || 0 }); }catch(e){ mpSwallow(e, 'shared list'); showToast('Could not load this shared list · ' + ((e && (e.code || e.message)) || 'error')); } } /* د-٣: السبب يظهر رسالةً ليُشخَّص (إذن · فهرس · شبكة) */ // r72u: مصدر الأماكن دائمًا · ب-٢-١: المنشأ يُمرَّر إلى نقطة العدّ الواحدة
+  try{ const d = await mpData.cityLists.get(uid, cityId); logTiming('[CM] shared doc arrived+composed · cats ' + (d && d.categories ? Object.keys(d.categories).length : 'none')); if (!d){ showToast('This shared list no longer exists'); return; } const meta = allCities().find(function(c){ return c.id === cityId; }); viewingUserCities.push({ id: cityId, name: (meta && meta.name) || d.cityName || cityId, categories: (function(){ const out = {}; Object.keys((d.categories && typeof d.categories === 'object') ? d.categories : {}).forEach(function(k){ const c = d.categories[k] || {}; out[k] = Object.assign({}, c, { active: c.active !== false }); }); return out; })(), _full: true, _shared: true, /* active غير المكتوب = فعّال (كما تركّبه الطبقة) */ favoriteCount: d.favoriteCount || 0, bookmarkCount: d.bookmarkCount || 0, viewCount: d.viewCount || 0 }); }catch(e){ mpSwallow(e, 'shared list'); showToast('Could not load this shared list · ' + ((e && (e.code || e.message)) || 'error')); } } /* د-٣: السبب يظهر رسالةً ليُشخَّص (إذن · فهرس · شبكة) */ // r72u: مصدر الأماكن دائمًا · ب-٢-١: المنشأ يُمرَّر إلى نقطة العدّ الواحدة
 let cmSortOpen = false; // r72r-2
 let cmSearchOpen = false; // r72s
 let cmLastRows = []; // r72w: الصفوف المحمَّلة (بعد مرشِّح المدينة) — للأعداد بقائمة الترتيب
@@ -638,13 +638,14 @@ let communityUserLayer = null;
 let communityUserTripsCity = ''; /* ر٧٣-أب (٢): «(City) All trips» من المنتقي → رحلات المستخدم مصفّاة بهذه المدينة */
 // v1.40: فتح قائمة الشخص = دخول الطبقة ٣ + رفع عدّاد مشاهدات القائمة مرة واحدة بالجلسة (زائرًا لا صاحبًا)
 function openCommunityCityList(cityId, origin){ /* ب-٢-١ (قرار ١٠-٠٩-٠٤): نقطة العدّ الواحدة لفتح قائمة شخص آخر — كل فتح يُعدّ بمنشئه: app (المشارَك معي) · community (الافتراضي) · curator (من صفحة المنتقي) */
+  logTiming('[CM] open city list ' + cityId + ' · render…'); /* هـ-٨: علامة قبل الرسم */
   communityUserLayer = cityId; communityViewingCityId = cityId;
   if (currentUser && viewingUserUid && viewingUserUid !== currentUser.uid){
     const k = viewingUserUid + '_' + cityId;
     if (!viewBumped[k]){ viewBumped[k] = true; mpData.lists.bumpView(viewingUserUid, cityId); }
     mpTrack.statsList(k, listOpenKey(origin));
   }
-  renderCommunityModal();
+  renderCommunityModal(); logTiming('[CM] open city list ' + cityId + ' · rendered'); /* هـ-٨ */
 }
 function listOpenKey(origin){ return origin === 'app' ? 'open_app' : origin === 'curator' ? 'open_curator' : 'open_community'; } // ب-٢-١: المفاتيح البيضاء لـstats_lists (§١٧-ج)
 function mpIsVerified(uid){ /* ب-٢-١: أهو منتقٍ موثَّق بحسب ما حُمِّل بالجلسة (لا قراءة جديدة) — يحدد كتابة save/export بـstats_curators */
@@ -723,6 +724,7 @@ async function renderBookmarkedLists(wrap, cityName){ // r72s (قرار الما
 }
 // ر٦٩ح: openBookmarkedListInCommunity حُذفت — الرأس القديم لشاشة المفكرة زال (N-040)
 function renderCommunityUserList(wrap){
+  logTiming('[CM] render person · ' + (communityUserLayer ? 'layer 3 ' + communityUserLayer : 'layer 2')); /* هـ-٨ */
   if (viewingCommunityTripId){ renderCommunityTripDetail(wrap); return; }
   const __arch = curArchiveBannerHtml(); if (__arch){ wrap.innerHTML = __arch; const inner = document.createElement('div'); wrap.appendChild(inner); wrap = inner; } // ر٧٢-أ-١
   const u = viewingUserData; if (!u){ wrap.innerHTML = '<div class="mp-empty mini">Loading…</div>'; return; } /* د-٢: الملف لم يصل بعد (سباق فتح التبويب) */
