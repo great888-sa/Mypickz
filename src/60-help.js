@@ -107,8 +107,10 @@ function openHelpFor(tab){ // أ-١٢-٢: زر «؟» يفتح النبذة عل
   openHelpModal(); if (id){ const el = document.getElementById('help_sec_' + id); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' }); }
 }
 const INTRO_SEEN_KEY = 'mypickz_intro_seen'; // أ-١٢-٢: علم محلي — أول فتح للرابط (الزائر يقرأ النبذة فقط ثم البوابة)
-function introSeenLocally(){ try{ return localStorage.getItem(INTRO_SEEN_KEY) === '1'; }catch(e){ return true; } }
-function markIntroSeen(){ try{ localStorage.setItem(INTRO_SEEN_KEY, '1'); }catch(e){} }
+/* و-٢: العلم المحلي في موضعين — localStorage وكعكة mp_intro (سنة · SameSite=Strict · تديرها عملية الشبكة التي لا تُقتل مع الصفحة، كما نجا أثر هـ-٩ حين مُسح localStorage) — فلا يعود الدليل بضياع التخزين المحلي؛ أيٌّ منهما يكفي. الكعكة لهذا العلم وحده (اختيار ٣ بالبيان) */
+function introSeenCookie(){ try{ return /(?:^|;\s*)mp_intro=1(?:;|$)/.test(document.cookie); }catch(e){ return false; } }
+function introSeenLocally(){ let ls = null; try{ ls = localStorage.getItem(INTRO_SEEN_KEY); }catch(e){ return true; } return ls === '1' || introSeenCookie(); }
+function markIntroSeen(){ try{ localStorage.setItem(INTRO_SEEN_KEY, '1'); }catch(e){} try{ document.cookie = 'mp_intro=1; max-age=31536000; path=/; SameSite=Strict' + (location.protocol === 'https:' ? '; Secure' : ''); }catch(e){} }
 function openHelpModal(){
   if (helpOpenIndex === -1 && !helpExpanded) helpExpanded = false; // المستوى الأول أولًا
   renderHelpModal();
