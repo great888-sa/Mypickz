@@ -655,6 +655,7 @@ function finish(){
   buildGuard();
   manifestGuard();
   tripModelGuard();
+  perfInvariantsGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
@@ -812,4 +813,26 @@ function tripModelGuard(){
   check(!/dayRoutes\[[^\]]*\]\.(stops|order|arrive|complete)\s*=/.test(code), T + 'no stored order, times or completeness flag in dayRoutes — derived from the plan (التثبيت ٢)');
   check(/function tripCityPeriods\(/.test(engine) && /function tripDayAbsorb\(/.test(engine) && /function tripDayFold\(/.test(engine) && /tbTogglePeriod\(/.test(code), T + 'flexible periods: city periods · absorption · fold · setup toggles (r78-2)');
   check(/altCap: 2/.test(engine) && /function tripAltSlot\(/.test(engine) && /orderTiers: \{/.test(engine) && /removing an alternative sends it back here/.test(test), T + 'alternatives capped at two in the automatic build · tiered order within a period · tray note (r78-3)');
+}
+
+
+// ---------- §28 (هـ-١٠ · قرار المالك ١٥ أكتوبر: «وثّق التحسّن حتى لا يتأثر بأي تحديث مستقبلي»): ثوابت الأداء التي أنهت تجمّد المجتمع وبطء التحميل — تُحرس نصًّا ----------
+function perfInvariantsGuard(){
+  const T = '§28 perf invariants (هـ): ';
+  const boot = stripComments(fs.readFileSync(path.join(ROOT, 'src', '40-boot.js'), 'utf8'));
+  const init = stripComments(fs.readFileSync(path.join(ROOT, 'src', '92-init.js'), 'utf8'));
+  const cm = stripComments(fs.readFileSync(path.join(ROOT, 'src', '58-community-curators.js'), 'utf8'));
+  const code = stripComments(test.replace(/<script\b[^>]*>|<\/script>/g, ''));
+  // ١ · النقل الطويل مطبَّق فعلًا: force مع autoDetect=false صراحةً (compat+merge يدمج الافتراضي autoDetect=true فيرمي المنشئ «cannot be used together» — هـ-٦)
+  check(/experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false, experimentalLongPollingOptions: \{ timeoutSeconds: 10 \}, merge: true/.test(boot), T + 'Firestore long polling is forced with auto-detect explicitly off and a 10 s request timeout (هـ-٦ — without autoDetect:false the compat merge makes the call throw and the setting never applies)');
+  check(/\[NET\] long polling not applied/.test(boot), T + 'a failed settings call is logged under its own line so the NET line can show transport FAILED (never silent)');
+  // ٢ · المستمع الدائم: القناة لا تُغلق بعد ٦٠ ثانية بلا أهداف فلا تُعاد تهيئتها عند أول قراءة بعد خمول (هـ-٥)
+  check(/await initFirebase\(\);[\s\S]{0,600}mpData\.settings\.watchApp\(/.test(init), T + 'keep-alive listener on settings/app starts right after initFirebase (هـ-٥ — no stream reopen after idle)');
+  // ٣ · App Check موقوفة حتى الإنفاذ: التفعيل مشروط بـ?withcheck=1 (هـ) — لا انتظار لشهادة reCAPTCHA قبل أول قراءة
+  check(/if \(firebase\.appCheck && __withCheck\)\{/.test(boot), T + 'App Check activation stays gated behind ?withcheck=1 until enforcement (هـ)');
+  // ٤ · لا دوران: استدعاء ثانٍ لـcmEnsureCity أثناء التحميل ينتظر الوعد الجاري، وبعد المحاولة تُعدّ المدينة مكتملة (هـ-١٠ — السبب الجذري لتجمّد Open من Shared with me)
+  check(/if \(!c \|\| c\._full\) return c; if \(c\._loading\) return c\._loading;/.test(cm) && /c\._full = true; c\._loading = null; return c;/.test(cm), T + 'cmEnsureCity: a second call during a load waits for the in-flight promise and the city counts as complete after one attempt (هـ-١٠)');
+  // ٥ · صنف الخلل عمومًا: لا دالة غير متزامنة تعود فورًا بقيمة حين يكون «التحميل جاريًا» — ذلك ما يصنع سلسلة المهام الدقيقة مع .then(render)
+  const earlyReturn = code.match(/_loading\) return [A-Za-z_$][\w$]*;/g) || [];
+  check(earlyReturn.length === 0, T + 'no async loader returns a plain value while its own load is in flight (the pattern behind the microtask loop)', earlyReturn.join(' | '));
 }
