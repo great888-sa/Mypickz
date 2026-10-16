@@ -104,6 +104,8 @@ const mpData = (function(){
       remove: function(uid){ return col('userLists').doc(uid).delete(); },
       merge: function(uid, data){ return col('userLists').doc(uid).set(data, { merge: true }); },
       get: function(uid){ return col('userLists').doc(uid).get(); }, /* ر٧٣-أب (٢) */
+      /* و-١: قراءة الهوية من الخادم حصرًا — حين تتعثّر القناة ترفض (unavailable) بدل أن تعود بمستند فارغ من الذاكرة (firestore_client.ts ٧٥٧–٧٩٤)، فلا يظهر المستخدم القائم كأنه جديد (نافذة الاسم · الدليل) */
+      getServer: function(uid){ return col('userLists').doc(uid).get({ source: 'server' }); },
       // خ٢: فهرس المدن التي فيها عناوين خاصة — قراءة واحدة بدل مسح المدن كلها
       addPrivateCity: function(uid, cityId){ return col('userLists').doc(uid).set({ privateCities: firebase.firestore.FieldValue.arrayUnion(cityId) }, { merge: true }); }
     },
