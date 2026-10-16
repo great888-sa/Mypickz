@@ -254,7 +254,7 @@ function othersPlaceRowHtml(p, owner, cityObj, catId, tripCityId, extra){ // ر�
   const okey = 'oid:' + owner.uid + ':' + (cityObj ? cityObj.id : '') + ':' + (p.id || hashUrl(p.url || ''));
   const cat = (catId || '').replace(/'/g, "\\'"); const mine = !!(currentUser && owner.uid === currentUser.uid);
   const actions = [ /* r75a: البلاطات بأيقونات الطقم وأسمائها (وضع others) */
-    p.url ? { icon: 'maps', label: 'Google Maps', href: p.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="community" data-mpcat="' + attrStr(catId || '') + '"' } : { icon: 'maps', label: 'Google Maps', disabled: true, title: 'No Maps link for this place' },
+    mpMapsTile(p, cityObj, 'data-mpsrc="community" data-mpcat="' + attrStr(catId || '') + '"'), /* غ-١ */
     (p.geo && typeof p.geo.lat === 'number' && cityObj) ? { cls: 'onmap', icon: 'map', label: 'On map', on: "cmOpenPersonCityMap('" + attrStr(cityObj.id) + "', '" + attrStr(p.id || p.url) + "')", title: 'Show on our map' } : { cls: 'onmap', icon: 'map', label: 'On map', disabled: true, title: 'No pin for this place yet' }, // ز-١-ب · r75a-٢: خريطتنا بلاطةً ثانية بالصف (قرار المالك) — لا «Map» بآخره
     { cls: 'bmk' + (isBookmarked(okey) ? ' on' : ''), icon: 'bookmark', fill: isBookmarked(okey), label: 'Bookmark', on: "togglePlaceBookmark('" + okey + "', '" + safeName + "', '" + cat + "', '" + (cityObj ? cityObj.id : '').replace(/'/g, "\\'") + "', '" + safeArea + "', '" + owner.uid + "', '" + safeUrl + "')", title: isBookmarked(okey) ? 'Bookmarked — tap to remove' : 'Bookmark' },
     { icon: 'trip', label: 'Trip', on: "cmAddOthersPlaceToTrip('" + attrStr(tripCityId || (cityObj ? cityObj.id : '')) + "', '" + cat + "', '" + attrStr(p.id || '') + "', '" + owner.uid + "', '" + safeName + "')", title: 'Add to one of my trips' },
@@ -607,7 +607,7 @@ function tripPickTab(t){ tripTab = t; renderMyTripsModal(); } // r78: التبو
 function tripEntryCardHtml(e, n, readOnly, tripId, ctxCity, pos){ // بطاقة مدخل الخطة: الرقم شريحةً · الاسم · الحي · التنبيه · بلاطات: Maps · Move · Alert · Remove
   const pl = e._p || {}; const name = pl.name || e.name || 'Place';
   if (!e._available) return '<div class="row triprow dim">⚠️ ' + escapeHtml(name) + ' — no longer available</div>';
-  const acts = [ pl.url ? { icon: 'maps', label: 'Google Maps', href: pl.url, title: 'Open in Google Maps', attrs: 'data-mpsrc="trip"' } : { icon: 'maps', label: 'Google Maps', disabled: true, title: 'No Maps link for this place' } ];
+  const acts = [ mpMapsTile(pl, ctxCity, 'data-mpsrc="trip"') /* غ-١ */ ];
   if (!readOnly){ acts.push({ icon: 'move', label: 'Move', on: "tripOpenMoveSheet('" + attrStr(tripId) + "', '" + attrStr(e.id) + "')", title: 'Move to another day or period' }); acts.push({ icon: 'edit', label: 'Alert', on: "tripViewAlert('" + attrStr(e.id) + "')", title: 'A short alert for this stop' }); acts.push({ cls: 'flag', icon: 'trash', label: 'Remove', on: "tripViewRemove('" + attrStr(e.id) + "')", title: 'Remove from this trip' }); }
   const status = ((!readOnly && pos) ? tripOrdHtml(e.id, pos.i, pos.n, 'tripViewNudge') : '') + ((typeof n === 'number') ? '<span class="pc-chip trip-num">' + n + '</span>' : ''); /* ج-٤: ▲ ▼ عند الرقم */
   const alertLine = e.alert ? '<div class="pc-alert" dir="auto">⚠ ' + escapeHtml(e.alert) + '</div>' : '';
