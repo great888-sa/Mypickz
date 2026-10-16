@@ -1,222 +1,164 @@
-/* ===== عرض رحلات مستخدم آخر (Community Lists → تبويب Trips، Public فقط) — قراءة فقط ===== */
-let communityUserTrips = [];
-let viewingCommunityTripId = null;
+/* =========================================================
+   دليل الاستخدام (Help Guide) — نافذة ثابتة بالعربي/الإنجليزي، أقسام قابلة للطي
+   ========================================================= */
+let helpLang = 'en' // أ-١٢-٢: لغة الواجهة;
+let helpOpenIndex = -1; let helpExpanded = false; // أ-١٢-٢: المستوى الثاني مطوي افتراضيًّا; // القسم المفتوح افتراضيًا (الأول)
 
-async function loadCommunityUserTrips(uid){
-  try{
-    const __rows = await mpData.trips.publicByOwner(uid); const snap = { forEach: function(fn){ __rows.forEach(function(r){ fn({ id: r.id, data: function(){ return r; } }); }); }, empty: __rows.length === 0, size: __rows.length };
-    communityUserTrips = [];
-    snap.forEach(doc => communityUserTrips.push({ id: doc.id, ...doc.data() }));
-  }catch(e){ communityUserTrips = []; }
-}
-async function openCommunityTrip(tripId){
-  try{ const __t = (cmCache.trips && cmCache.trips[tripId]) || (communityUserTrips || []).find(function(t){ return t.id === tripId; }); if (__t && currentUser && __t.ownerId !== currentUser.uid) mpData.trips.bumpView(tripId).catch(function(){}); }catch(_){} // r72t (M4.26 ٣)
-  mpTrack.statsTrip(tripId, 'view_total');
-  viewingCommunityTripId = tripId;
-  let trip = communityUserTrips.find(t => t.id === tripId) || cmCache.trips[tripId]; // ر٦٩ذ: من السوق مباشرة
-  if (!trip){ try{ trip = await mpData.trips.get(tripId); }catch(e){} }
-  if (!trip){ showToast('This trip is no longer available'); return; }
-  if (!communityUserTrips.find(t => t.id === tripId)) communityUserTrips.push(trip);
-  if (!viewingUserUid){ cmDirect = true; viewingUserUid = trip.ownerId; viewingUserData = (communityUsers || []).find(u => u.uid === trip.ownerId) || { uid: trip.ownerId, nickname: trip.ownerName || 'user', publicCityIds: [] }; viewingUserCities = []; } // ر٦٩غ: الفتح من السوق مباشرة — عرض الرحلة يعيش بطبقة صاحبها
-  const wrap = document.getElementById('communityBody');
-  wrap.innerHTML = `<div class="mp-empty mini">Loading…</div>`;
-  resolvedTripCache['community_'+tripId] = await resolveTripPlaces(trip);
-  // فتح رحلة مشتركة يُحتسَب كمشاهدة إضافية (نفس أهمية فتح الملف الشخصي نفسه)
-  if (trip && trip.ownerId){
-    mpData.communityProfiles.bumpView(trip.ownerId).catch(()=>{});
-    if (viewingUserData && viewingUserData.uid === trip.ownerId) viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1;
+const HELP_CONTENT = { // أ-١٢-٢ (نص المالك v2 المعتمد ١٦ سبتمبر — على الوضع النهائي): المستوى الأول شاشة واحدة، الثاني أقسام مطوية
+  en: {
+    title: 'MyPickz — one place for your places.', closeLabel: 'Close', readMore: 'Read more', readLess: 'Read less', gotIt: 'Got it — sign in',
+    intro: {
+      def: "One platform for four things: reaching your favorite places anywhere in the world, planning your trips, keeping your personal addresses, and exploring — and saving — other users' places and trips.",
+      feats: 'Categorized on two levels · Nearby, sorted by distance from where you are · A day route with your own minutes · Export as a card with QR · Share with one person by name or a saved group · Import your Google Maps lists <span class="soon-tag">Soon</span> · Follow curators · Your addresses, private.', /* r76 (دراسة التوافق · ت٢): ما لم يُبنَ بعد موسوم */
+      dests: [
+        ['Places', 'your favorite places, city by city, in categories. Paste a Maps link and the place fills itself in.'],
+        ['Trips', 'a plan drafted for you by day and period, then a day route with the minutes you enter.'],
+        ['Curators', 'active members whose favorites you may like: when to go, what to order, where to sit.'],
+        ['Community', "other users' public lists and trips, by city and category."],
+        ['Addresses', 'your personal addresses: home, work, family — never shared, never public.'] ],
+      everywhere: '<b>Bookmark</b> what you like · <b>Save</b> a place or trip to your own world · <b>Export</b> a card or a message · <b>Share</b> a list, a trip, or a curator — publicly or with one person by name.',
+      start: '<b>Start fast:</b> create your account, add a city, then paste your first Maps link — or import your saved Google Maps lists in one file.' },
+    sections: [
+      { id: 'places', h: 'Places', b: "Every place lives in one city and one sub-category (the tree is ours: cafés, dishes, cuisines, shopping, parks, squares, waterfronts, landmarks, family, stay, transport). Add a place from a Maps link: name and area fill in, the category is suggested, and the pin is placed for you — correct it with one drag. Your list shows sections you have content in, with counts. Filter by category, then sub-category. Switch <b>☰ List · 🗺 Map</b>; <b>📍 Nearby</b> (beside Day plan) sorts this city's places by straight-line distance from where you are — ≤ 1 km · ≤ 3 km · Any — with a <i>Go</i> button in your navigation app. Your location is asked when you tap and never stored." },
+      { id: 'trips', h: 'Trips', b: "Build a trip in two steps: the city, the days and the places you pick — optionally arrival, departure, where you stay and what you take when it is too far to walk — then MyPickz drafts each day in four periods: morning, noon, afternoon, evening, with alternatives when several places are of the same kind and a <i>No day yet</i> tray for what did not fit. <i>Move</i> anything, switch between Calm, Balanced and Dense, undo, then approve. Prefer to place them yourself? <i>Arrange it myself</i> keeps every place in the tray and the grid asks you for each one in turn; <i>Auto-fill the rest</i> places what is left. The ▲ ▼ arrows beside a stop's number reorder it within its period; moving into another period that already has stops asks where in the order; <i>Repeat on…</i> adds a second visit to the same place. Tap <i>Trip</i> on any place card and it lands in its best slot — or in the tray. <b>Day route</b>: open an approved trip, pick a day, set when you leave and by when you want to be back; each leg shows its rough distance and a mode (walk, metro and transit, car — the default follows the distance), and <i>Navigate</i> opens your app in that mode. Write the minutes your app shows — MyPickz never estimates them — and the times of the day follow; a leg without minutes keeps the day <i>incomplete</i>, and a late return is flagged." },
+      { id: 'curators', h: 'Curators', b: "A curator's world is a showcase of their favorites, on top of their ordinary lists: cards with their own headings — <i>best time</i>, <i>what to order</i>, <i>where to sit</i> — a city card they keep updating, and <i>latest experiences</i>. Follow a curator to see what's new from them first. Browse their places and trips as they see them — read-only. Curators are invited by MyPickz or apply from their account; the badge means a space, not a rating." },
+      { id: 'community', h: 'Community', b: "Other users' public lists and trips, by city — and who saved what. Filter by category and sub-category; open a list and save a place to your own — it keeps its source. Your list is private until you make it public; sharing by name with one person stays between you two." },
+      { id: 'addresses', h: 'Addresses', b: 'Home, work, family, friends, clinics — your private book. Only you read it; nothing here ever appears in lists, trips, or the community. Paste from Maps, or type an address.' },
+      { id: 'cards', h: 'Cards & sharing', b: "Any place, list, trip, or curator card can be exported as an image in the app's style — Arabic or English — with a QR code that opens it in MyPickz. Long lists split into several cards. Send it anywhere; whoever opens it can save what they like." },
+      { id: 'import', h: 'Import', b: '<span class="soon-tag">Soon</span> Export your saved lists from Google Maps (Takeout), upload the file, preview what will come in, choose a category per list, and import — duplicates are skipped, and what has no category lands in <i>Others</i> until you move it.' },
+      { id: 'privacy', h: 'Your data & privacy', b: 'Your places are yours: download everything as an open file any time, import it back, and delete your account with all its traces. Location is used only when you tap <i>Nearby</i> and is never stored. Following is public to the person you follow. We use open map data with attribution. From a Google Maps link we read only the place name and address to find it in our own data — never its coordinates; the link stays the door. MyPickz is not affiliated with Google.' },
+      { id: 'howto', h: 'How to copy a link & export your lists', b: '<b>A place link:</b> open the place in Google Maps → Share → Copy → back in MyPickz: ＋ Add place → Paste from Maps.<br><b>Your saved lists:</b> Google Takeout → select only "Maps (your places)" → download the file → MyPickz → Import <span class="soon-tag">Soon</span>.<br><b>On Android:</b> from Google Maps, Share → MyPickz directly <span class="soon-tag">Soon</span>.' },
+      { id: 'settings', h: 'Settings', b: 'Home screen (auto or your choice) · my cities · export language · account.' },
+      { id: 'home', h: 'Adding MyPickz to your Home Screen or Desktop, on mobile or computer', b: '1. Open the site in your browser (Safari or others)<br>2. Tap the Share button on mobile, or the options menu on desktop<br>3. Choose "Add to Home Screen" (mobile) or "Create Shortcut" (desktop)<br>4. Now you can open MyPickz with one tap, like any other app' }
+    ]
+  },
+  ar: {
+    title: 'MyPickz — مكان واحد لأماكنك.', closeLabel: 'إغلاق', readMore: 'المزيد', readLess: 'أقل', gotIt: 'فهمت — دخول',
+    intro: {
+      def: 'منصة واحدة لأربعة أشياء: الوصول إلى أماكنك المفضلة بأي مكان في العالم، تخطيط رحلاتك، حفظ عناوينك الخاصة، واستكشاف — وحفظ — أماكن المستخدمين الآخرين ورحلاتهم.',
+      feats: 'مصنَّفة بمستويين · القريب مني مرتَّبًا بالبعد عن موضعك · مسار يوم بدقائقك أنت · تصدير بطاقةً بـQR · مشاركة مع شخص بعينه بالاسم أو مع مجموعة محفوظة · استيراد قوائمك من خرائط جوجل <span class="soon-tag">قريبًا</span> · متابعة المنتقين · عناوينك خاصة.',
+      dests: [
+        ['الأماكن', 'أماكنك المفضلة مدينةً مدينة بالتصنيفات؛ الصق رابط الخرائط فيُملأ المكان بنفسه.'],
+        ['الرحلات', 'خطة تُرسم لك بالأيام والفترات، ثم مسار يوم بالدقائق التي تكتبها أنت.'],
+        ['المنتقون', 'أعضاء نشطون قد تعجبك مفضلاتهم: متى تذهب وماذا تطلب وأين تجلس.'],
+        ['المجتمع', 'قوائم المستخدمين الآخرين ورحلاتهم العامة بالمدينة والتصنيف.'],
+        ['العناوين', 'عناوينك الخاصة: البيت والعمل والأهل — لا تُشارَك ولا تُنشر أبدًا.'] ],
+      everywhere: '<b>تمييز</b> لما تحب · <b>حفظ</b> لمكان أو رحلة إلى عالمك · <b>تصدير</b> بطاقةً أو رسالة · <b>مشاركة</b> قائمة أو رحلة أو منتقٍ — علنًا أو مع شخص بعينه بالاسم.',
+      start: '<b>ابدأ بسرعة:</b> أنشئ حسابك، أضف مدينة، ثم الصق أول رابط — أو استورد قوائمك المحفوظة بخرائط جوجل بملف واحد.' },
+    sections: [
+      { id: 'places', h: 'الأماكن', b: 'كل مكان بمدينة واحدة وفرعي واحد (الشجرة لنا: مقاهٍ · وجبات · مطابخ · تسوّق · حدائق · ساحات · واجهات بحرية · معالم · عائلة · إقامة · تنقل). أضف مكانًا من رابط الخرائط: يُملأ الاسم والمنطقة، ويُقترح التصنيف، ويُوضع الدبوس لك — صحّحه بسحبة. قائمتك تعرض الأقسام التي لك فيها محتوى بعدّاداتها. صفِّ بالتصنيف ثم الفرعي. بدّل العرض: ☰ قائمة · 🗺 خريطة؛ و«📍 Nearby» (بجوار Day plan) يرتّب أماكن المدينة بالبعد المستقيم عن موضعك — ≤ 1 km · ≤ 3 km · Any — بزر <i>Go</i> يفتح تطبيق الملاحة الذي اخترته. موقعك يُطلب عند النقر ولا يُخزَّن.' },
+      { id: 'trips', h: 'الرحلات', b: 'ابنِ الرحلة بخطوتين: المدينة والأيام والأماكن التي تختارها — واختياريًّا الوصول والمغادرة ومكان الإقامة وما تركبه حين يبعد المكان عن المشي — ثم يرسم MyPickz كل يوم بأربع فترات: صباح · ظهيرة · عصر · مساء، مع بدائل حين تتعدد أماكن الصنف نفسه، وصينية «بلا يوم بعد» لما لم يتسع له البرنامج. انقل ما شئت، وبدّل بين هادئ ومتوازن ومكثّف، وتراجع، ثم اعتمد. تفضّل الترتيب بنفسك؟ «Arrange it myself» يبقي كل الأماكن في الصينية وتسألك الشبكة عن كلٍّ بدوره، و«Auto-fill the rest» يضع ما بقي. السهمان ▲ ▼ بجوار رقم المحطة يرتّبانها داخل فترتها؛ وحين تنقل إلى فترة أخرى فيها محطات تختار موضعه في الترتيب؛ و«Repeat on…» يضيف زيارة ثانية للمكان نفسه. اضغط «رحلة» على أي بطاقة مكان فيهبط في خانته الأنسب — أو في الصينية. <b>مسار اليوم</b>: افتح رحلة معتمدة واختر يومًا وحدّد متى تخرج ومتى تريد العودة؛ كل رِجل تعرض مسافتها التقريبية ووسيلتها (مشي · مترو ومواصلات · سيارة — الافتراض من المسافة)، و«ملاحة» يفتح تطبيقك بالوضع نفسه. اكتب الدقائق التي يعرضها تطبيقك — MyPickz لا يقدّرها أبدًا — فتتبعها أوقات اليوم؛ رِجل بلا دقائق تُبقي اليوم «غير مكتمل»، والعودة بعد الموعد تُعلَّم.' },
+      { id: 'curators', h: 'المنتقون', b: 'عالم المنتقي مساحة عرض لمفضلاته فوق قوائمه العادية: بطاقات بعناوينه — أفضل وقت · ماذا تطلب · أين تجلس — وبطاقة مدينة يحدّثها، وآخر التجارب. تابع منتقيًا ليصلك جديده أولًا. تصفّح أماكنه ورحلاته كما يراها — للعرض فقط. المنتقون يُدعون من MyPickz أو يطلبون من حسابهم؛ الشارة مساحة لا تقييم.' },
+      { id: 'community', h: 'المجتمع', b: 'قوائم المستخدمين الآخرين ورحلاتهم العامة بالمدينة — ومن حفظ ماذا. صفِّ بالتصنيف والفرعي؛ افتح قائمة واحفظ مكانًا إلى قائمتك — يحتفظ بمصدره. قائمتك خاصة حتى تجعلها عامة؛ والمشاركة بالاسم مع شخص تبقى بينكما.' },
+      { id: 'addresses', h: 'العناوين', b: 'البيت والعمل والأهل والأصدقاء والعيادات — دفترك الخاص. أنت وحدك تقرأه؛ لا شيء منه يظهر بالقوائم أو الرحلات أو المجتمع. الصق من الخرائط أو اكتب عنوانًا.' },
+      { id: 'cards', h: 'البطاقات والمشاركة', b: 'أي مكان أو قائمة أو رحلة أو بطاقة منتقٍ تُصدَّر صورةً بهوية التطبيق — عربية أو إنجليزية — برمز QR يفتحها في MyPickz. القوائم الطويلة تنقسم بطاقات. أرسلها حيث شئت؛ من يفتحها يحفظ ما يحب.' },
+      { id: 'import', h: 'الاستيراد', b: '<span class="soon-tag">قريبًا</span> صدّر قوائمك المحفوظة من خرائط جوجل، ارفع الملف، عاين ما سيدخل، اختر تصنيفًا لكل قائمة، واستورد — المكرر يُتخطّى، وما بلا تصنيف يهبط في «أخرى» حتى تنقله.' },
+      { id: 'privacy', h: 'بياناتك وخصوصيتك', b: 'أماكنك ملكك: نزّل كل بياناتك بملف مفتوح متى شئت، واستوردها، واحذف حسابك بكل أثره. الموقع يُستعمل عند ضغطك «Nearby» فقط ولا يُخزَّن. المتابعة معلنة لمن تتابعه. نستعمل بيانات خرائط مفتوحة بنسبتها. من رابط خرائط جوجل نقرأ اسم المكان وعنوانه فقط لنجده في بياناتنا — لا إحداثياته أبدًا؛ الرابط يبقى الباب. MyPickz ليس تابعًا لجوجل.' },
+      { id: 'howto', h: 'كيف تنسخ رابطًا وتصدّر قوائمك', b: '<b>رابط المكان:</b> افتح المكان بخرائط جوجل ← مشاركة ← نسخ ← بالتطبيق: ＋ Add place ← Paste from Maps.<br><b>قوائمك المحفوظة:</b> Google Takeout ← اختر «Maps (your places)» فقط ← نزّل الملف ← بالتطبيق: Import <span class="soon-tag">قريبًا</span>.<br><b>على أندرويد:</b> من خرائط جوجل، مشاركة ← MyPickz مباشرة <span class="soon-tag">قريبًا</span>.' },
+      { id: 'settings', h: 'الإعدادات', b: 'الشاشة الرئيسية (تلقائي أو اختيارك) · مدني · لغة التصدير · الحساب.' },
+      { id: 'home', h: 'إضافة MyPickz إلى سطح المكتب سواء في جهاز الجوال أو الكمبيوتر', b: '1. افتح الموقع من المتصفح (Safari أو غيره)<br>2. اضغط زر المشاركة (Share) على الجوال، أو قائمة الخيارات على الكمبيوتر<br>3. اختر "Add to Home Screen" (جوال) أو "Create Shortcut" (كمبيوتر)<br>4. الآن يمكنك فتح MyPickz بضغطة واحدة، تمامًا كأي تطبيق آخر' }
+    ]
   }
-  renderCommunityModal();
-}
-function backFromCommunityTrip(){ viewingCommunityTripId = null; if (cmDirect){ cmDirect = false; viewingUserUid = null; communityUserLayer = null; } renderCommunityModal(); } // ر٦٩غ: الرجوع إلى حيث فُتحت
+};
 
-function renderCommunityTripDetail(wrap){ // r77: رحلة الآخرين بالخطة — قراءة فقط (الأيام · الفترات · البدائل)
-  const trip = communityUserTrips.find(t => t.id === viewingCommunityTripId);
-  if (!trip){ viewingCommunityTripId = null; renderCommunityModal(); return; }
-  const resolved = resolvedTripCache['community_'+trip.id] || { days: [], tray: [] };
-  let html = `<button type="button" class="backchip" onclick="backFromCommunityTrip()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back</button>
-  <h4 style="text-align:center; margin:4px 0 4px; font-family:'Cairo',sans-serif;" dir="auto">${escapeHtml(tripTitle(trip))}</h4><div class="ctx" style="text-align:center; margin-bottom:8px;">${escapeHtml(tripMetaLine(trip))}</div>`;
-  if (!tripHasPlan(trip)){ wrap.innerHTML = html + '<div class="mp-empty mini">This trip uses the old format.</div>'; return; }
-  (resolved.days || []).forEach(function(day){
-    const es = tripDayEntries(day); if (!es.length) return;
-    html += `<div class="dayhead"><span class="daynum">${day.n}</span><span class="daytitle">${escapeHtml(tripDayLabel(day).toUpperCase())}${day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : ''}</span><span class="dayline"></span></div>`;
-    TRIP_PERIODS.forEach(function(p){ const arr = day.periods[p] || []; if (!arr.length) return; let __tcards = '';
-      arr.forEach(function(e){ [e].concat(e.alts || []).forEach(function(x, k){
-        if (!x._available){ __tcards += `<div class="row triprow dim">⚠️ This place is no longer available</div>`; return; }
-        const ref = x._ref || x.ref || {}; const pl = x._p || {}; const ouid = ref.sourceUid || viewingUserUid || ''; const sCat = String(ref.subcatId || ''); const cityNm = ((trip.cities || []).find(function(c){ return c.cityId === (ref.cityId || trip.cityId); }) || {}).cityName || trip.cityName || '';
-        __tcards += (k ? '<div class="pc-lab" style="margin:0 0 2px 6px;">or</div>' : '') + othersPlaceRowHtml({ id: ref.placeId || pl.id || hashUrl(pl.url || ''), name: pl.name || x.name || 'Place', url: pl.url, area: pl.area, picks: pl.picks, note: pl.note, geo: pl.geo }, { uid: ouid, nickname: (viewingUserData && viewingUserData.nickname) || 'a user' }, { id: ref.cityId || trip.cityId || '', name: cityNm }, sCat, ref.cityId || trip.cityId || '') + (x.alert ? '<div class="pc-lab" style="margin:-2px 0 8px 6px;">Alert · <span class="pc-val">' + escapeHtml(x.alert) + '</span></div>' : '');
-      }); });
-      html += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', __tcards, 'stop'); });
-  });
-  wrap.innerHTML = html;
+
+function setHelpLang(lang){ /* ب-٢-٢-أ٢ (v3 · ١٤): مبدّل اللغة شريحتان مقطعيتان تحت رأس القشرة */
+  helpLang = lang;
+  document.getElementById('helpLangArBtn').classList.toggle('on', lang === 'ar');
+  document.getElementById('helpLangEnBtn').classList.toggle('on', lang === 'en');
+  renderHelpModal();
 }
 
-/* ب-٢-٢-ب (v2-ب · ٧): Most saved داخل القشرة — مبدّل Places (placeFavoriteCounts أعلى ٣٠) / Lists (copyCount من فهرس السوق القائم) · الرتبة بدائرة زعفرانية · Back إلى اللوحة */
-let mostSavedTab = 'places';
-function mostSavedPick(t){ mostSavedTab = t; openMostSavedStats(); }
-async function openMostSavedStats(){
-  const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
-  dashSet('📊 Most saved', adminBack); bd.classList.add('show');
-  const seg = '<div class="pseg"><button type="button" class="chip' + (mostSavedTab === 'places' ? ' on' : '') + '" onclick="mostSavedPick(\'places\')">Places</button><button type="button" class="chip' + (mostSavedTab === 'lists' ? ' on' : '') + '" onclick="mostSavedPick(\'lists\')">Lists</button></div><div class="ctx" style="text-align:center;">all cities · top 30</div>';
-  body.innerHTML = seg + '<div class="mp-empty mini">Loading…</div>';
-  try{
-    let rowsHtml = '';
-    if (mostSavedTab === 'places'){
-      const rows = await mpData.placeCounts.top(30); // v1.40: placeFavoriteCounts = عدّاد الحفظ
-      rowsHtml = rows.length ? rows.map(function(d, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span><a href="' + attrStr(d.url || '#') + '" target="_blank" rel="noopener" class="stats-name">' + escapeHtml(d.name || '') + '</a></div><div class="pl-sub">' + (d.count || 0) + ' save' + (d.count === 1 ? '' : 's') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No saves recorded yet</div>';
-    } else {
-      const rows = (await mpData.cityLists.publicLists()).filter(function(l){ return (l.copyCount || 0) > 0; }).sort(function(a, b){ return (b.copyCount || 0) - (a.copyCount || 0); }).slice(0, 30);
-      rowsHtml = rows.length ? rows.map(function(l, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span>' + escapeHtml(l.cityName || l.cityId || '') + '</div><div class="pl-sub">' + (l.copyCount || 0) + ' cop' + (l.copyCount === 1 ? 'y' : 'ies') + (l.nickname ? ' · by ' + escapeHtml(l.nickname) : '') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No copies recorded yet</div>';
-    }
-    body.innerHTML = seg + rowsHtml;
-  }catch(e){ mpSwallow(e, 'most saved'); body.innerHTML = seg + '<div class="mp-empty mini">Could not load statistics</div><button type="button" class="dash-door" onclick="openMostSavedStats()"><span>↻ Retry</span><span></span></button>'; }
+function toggleHelpSection(i){
+  helpOpenIndex = (helpOpenIndex === i) ? -1 : i;
+  renderHelpModal();
 }
 
-// خ١-ب: البوابة (المشهد ١) تسبق نافذة الدخول/التسجيل (المشهد ٢) — النافذة موحَّدة (قرار المالك: الاسم داخلها)، والعنوان بحسب الزر
-function openGate(){
-  document.getElementById('authGateView').style.display = '';
-  document.getElementById('authFormView').style.display = 'none';
-  const b = document.getElementById('authBackdrop'); b.classList.add('show'); b.classList.add('gate-mode');
-}
-function closeGate(){ document.getElementById('authBackdrop').classList.remove('show'); }
-function openAuthModal(mode){
-  const errEl = document.getElementById('authError');
-  errEl.textContent = '';
-  errEl.className = 'errline'; /* r75c */
-  document.getElementById('authEmail').value = '';
-  document.getElementById('authPassword').value = '';
-  const signup = mode === 'signup';
-  document.getElementById('authTitle').textContent = signup ? '✨ Create your account' : '👤 Welcome back';
-  document.getElementById('authSubtitle').textContent = signup ? 'Pick a username, then your email and a password (8+ characters)' : 'Sign in to your account';
-  document.getElementById('authNickname').style.display = signup ? '' : 'none';
-  document.getElementById('authLoginBtn').style.display = signup ? 'none' : '';
-  document.getElementById('authSignupBtn').style.display = signup ? '' : 'none';
-  document.getElementById('authGateView').style.display = 'none';
-  document.getElementById('authFormView').style.display = '';
-  const b = document.getElementById('authBackdrop'); b.classList.add('show'); b.classList.add('gate-mode'); // النموذج بنفس الخلفية المعتمة
-  setTimeout(() => document.getElementById(signup ? 'authNickname' : 'authEmail').focus(), 50);
-}
-function closeAuthModal(force){
-  // البوابة إلزامية: إغلاق النموذج بلا دخول يعيد مشهد البوابة — إلا بعد نجاح الدخول/التسجيل (force) حيث الإشعار بالمستخدم يصل بعد لحظة
-  if (!currentUser && !force){ openGate(); return; }
-  document.getElementById('authBackdrop').classList.remove('show');
-}
-function openModalById(id){ document.getElementById(id).classList.add('show'); }
-// v1.37 (قرار المالك ١ سبتمبر): ما فُتح من الدرج يعود إليه عند الإغلاق — ب-٢-٢-أ٢ (المسودة v3): طبقتان — نوافذ القشرة (dashBackdrop) تستلم Back صريحًا «أغلق وافتح الدرج»؛ النوافذ الأخرى تُرصد فتعيد الدرج حين تُغلق (✕ يرفع علم __mpNoReopen فلا عودة)
-function mpOpenThen(openFn, after){ /* يفتح نافذة ويستدعي after حين تُغلق (ما لم تُغلق بـ✕) — أساس العودة للدرج وللإعدادات */
-  const before = new Set(Array.from(document.querySelectorAll('.modal-backdrop.show')));
-  try{ openFn(); }catch(e){ return null; }
-  const opened = Array.from(document.querySelectorAll('.modal-backdrop.show')).find(b => !before.has(b));
-  if (!opened || !window.MutationObserver) return opened || null;
-  const isDash = opened.id === 'dashBackdrop'; /* نوافذ القشرة: Back صريح (لا عودة بالإغلاق) — المراقب يستهلك علم ✕ فقط */
-  if (isDash && !__dashBack && typeof after === 'function'){ const t = document.getElementById('dashTitle'); dashSet(t ? t.textContent : '', function(){ closeModalById('dashBackdrop'); after(); }); }
-  __mpWatched.add(opened.id);
-  const obs = new MutationObserver(function(){
-    if (!opened.classList.contains('show')){ obs.disconnect(); __mpWatched.delete(opened.id); if (window.__mpNoReopen){ window.__mpNoReopen = false; return; } if (!isDash && typeof after === 'function') after(); }
-  });
-  obs.observe(opened, { attributes: true, attributeFilter: ['class'] });
-  return opened;
-}
-function openFromDrawer(openFn){
-  closeAccountModal(); window.__mpFromDrawer = true;
-  try{ mpOpenThen(openFn, function(){ if (currentUser) openAccountModal(); }); } finally { window.__mpFromDrawer = false; }
-}
-function closeModalById(id){ document.getElementById(id).classList.remove('show'); }
-const __mpWatched = new Set(); /* ب-٢-٢-أ٢: النوافذ التي يرصدها mpOpenThen الآن — علم «لا عودة» يُرفع لها وحدها فلا يبقى معلَّقًا */
-function mpNoReopenFor(id){ if (__mpWatched.has(id)) window.__mpNoReopen = true; }
-function mpCloseAll(id){ mpNoReopenFor(id); closeModalById(id); } /* ب-٢-٢-أ: ✕ بالقشرة الموحَّدة — إغلاق النافذة بلا إعادة فتح الدرج */
-let __dashBack = null; /* ب-٢-٢-أ: معالج Back الحالي لنافذة dashBackdrop (null = لا طبقة سابقة فيُخفى الزر) */
-function dashSet(title, backFn){ const t = document.getElementById('dashTitle'); if (t) t.textContent = title || ''; __dashBack = (typeof backFn === 'function') ? backFn : null; const b = document.getElementById('dashBackBtn'); if (b) b.classList.toggle('hidden', !__dashBack); }
-function dashBack(){ const f = __dashBack; if (f) f(); else closeModalById('dashBackdrop'); }
-
-/* ب-٢-٢-أ٢ (القرار ١ من ٦): الورقة السفلية — بديل confirm()/prompt() المتصفح. mpSheet(o) يعيد وعدًا: 'ok' للفعل الأساسي · 'alt' للبديل الاختياري · 'alt2' لبديل ثانٍ (r75c) · null للإلغاء (زر Cancel أو النقر خارجها أو السحب لأسفل).
-   o = { title, text, ok, alt, cancel, danger, input: { value, placeholder } } — مع input يعيد النص المكتوب بدل 'ok'. المحاكي يجيب عبر window.__mpSheetAuto(o) بلا رسم (كما __geoAuto). */
-let __sheetResolve = null, __sheetHasInput = false, __sheetTouchY = null;
-function mpSheet(o){
-  o = o || {};
-  if (typeof window.__mpSheetAuto === 'function') return Promise.resolve(window.__mpSheetAuto(o));
-  if (__sheetResolve) sheetDone(null);
-  const el = function(id){ return document.getElementById(id); };
-  el('sheetTitle').textContent = o.title || ''; el('sheetText').textContent = o.text || ''; el('sheetText').style.display = o.text ? '' : 'none';
-  const ok = el('sheetOk'); ok.textContent = o.ok || 'OK'; ok.classList.toggle('btn-danger', !!o.danger); ok.classList.toggle('btn-brass', !o.danger);
-  const alt = el('sheetAlt'); alt.style.display = o.alt ? '' : 'none'; alt.textContent = o.alt || '·';
-  const alt2 = el('sheetAlt2'); if (alt2){ alt2.style.display = o.alt2 ? '' : 'none'; alt2.textContent = o.alt2 || '·'; } /* r75c: 'alt2' */
-  el('sheetCancel').textContent = o.cancel || 'Cancel';
-  const inp = el('sheetInput'); __sheetHasInput = !!o.input; inp.style.display = o.input ? '' : 'none'; inp.value = (o.input && o.input.value) || ''; inp.placeholder = (o.input && o.input.placeholder) || '';
-  const alts = el('sheetAlts'); if (alts) alts.style.display = (o.alt || o.alt2) ? '' : 'none'; /* r75d-٢: البديلان بصف واحد */
-  el('sheetCard').style.transform = ''; el('sheetBackdrop').classList.add('show'); sheetBarsHide(true); /* r75d-٢ (ملاحظة المالك ١٢ أكتوبر): الأشرطة السفلية تختفي ما دامت الورقة مفتوحة — الورقة على حافة الشاشة بلا قياس ولا رفع (بديل sheetLift) */
-  if (o.input) setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(_){} }, 30);
-  return new Promise(function(res){ __sheetResolve = res; });
-}
-function sheetDone(v){
-  const r = __sheetResolve; __sheetResolve = null;
-  const out = (v === 'ok' && __sheetHasInput) ? document.getElementById('sheetInput').value : v;
-  document.getElementById('sheetBackdrop').classList.remove('show'); sheetBarsHide(false);
-  if (r) r(out);
-}
-function sheetBarsHide(on){ /* r75d-٢ (قرار المالك ١٢ أكتوبر — يغلق ملاحظة ١٠-١٠ جذريًّا): الشريط الخمسي وشريط التوقيت وشريط الرحلة النشطة تُخفى ما دامت ورقة مفتوحة (العتمة تحجبها أصلًا) فتجلس الورقة على حافة الشاشة مع المنطقة الآمنة — لا قياس يتعطل حين يبدّل سفاري ارتفاع نافذته */
-  document.body.classList.toggle('sheet-open', !!on);
-}
-function sheetBackdropTap(ev){ if (ev && ev.target && ev.target.id === 'sheetBackdrop') sheetDone(null); }
-function sheetKey(ev){ if (!ev) return; if (ev.key === 'Enter'){ ev.preventDefault(); sheetDone('ok'); } else if (ev.key === 'Escape'){ sheetDone(null); } }
-function sheetTouch(ev, phase){ /* السحب لأسفل أكثر من ٧٠ بكسل = إلغاء؛ الورقة تتبع الإصبع */
-  const card = document.getElementById('sheetCard'); const t = ev && ev.touches && ev.touches[0];
-  if (phase === 'start'){ __sheetTouchY = t ? t.clientY : null; return; }
-  if (__sheetTouchY === null) return;
-  if (phase === 'move'){ const dy = t ? t.clientY - __sheetTouchY : 0; if (dy > 0){ card.style.transform = 'translateY(' + dy + 'px)'; } return; }
-  const m = card.style.transform.match(/translateY\((\d+(?:\.\d+)?)px\)/); const dy = m ? parseFloat(m[1]) : 0; __sheetTouchY = null; card.style.transform = '';
-  if (dy > 70) sheetDone(null);
-}
-function mpConfirm(text, o){ return mpSheet(Object.assign({ title: 'Are you sure?', text: text }, o || {})).then(function(v){ return v === 'ok'; }); } /* بديل confirm() بسطر واحد: يعيد true/false */
-
-// خ١-ب: الوجهة الافتراضية (المشهد ٥) — تُحفظ بمستند المستخدم، والتطبيق يفتح عليها
-const HOME_TABS = ['Places','Trips','Community','Curators','Addresses'];
-let pendingHome = 'Places';
-function openHomeScreen(){ /* ب-٢-٢-أ٢ (المسودة v3 · ٢-ب): الوجهة الافتراضية داخل القشرة — Back = Settings · البطاقات من القالب homeCardsTpl */
-  const body = document.getElementById('dashBody'); const tpl = document.getElementById('homeCardsTpl'); if (!body || !tpl) return;
-  const cur = (userListData && HOME_TABS.includes(userListData.defaultTab)) ? userListData.defaultTab : 'Places';
-  pendingHome = cur; dashSet('🏠 Home screen', openSettings);
-  body.innerHTML = '<div class="ctx" style="text-align:center;">MyPickz opens here every time</div>' + tpl.innerHTML + '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="openSettings()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" onclick="saveHome()">Save</button></div>';
-  document.querySelectorAll('#homeCards .hcard').forEach(b => b.classList.toggle('on', b.getAttribute('data-home') === cur));
-  document.getElementById('dashBackdrop').classList.add('show');
-}
-function pickHome(btn){
-  pendingHome = btn.getAttribute('data-home');
-  document.querySelectorAll('#homeCards .hcard').forEach(b => b.classList.toggle('on', b === btn));
-}
-async function saveHome(){
-  closeModalById('dashBackdrop'); /* ب-٢-٢-أ٢: الحفظ يغلق القشرة ويذهب للوجهة */
-  if (!currentUser) return;
-  userListData.defaultTab = pendingHome;
-  try{ await mpData.userLists.merge(currentUser.uid, { defaultTab: pendingHome }); }catch(e){}
-  switchTab(pendingHome);
-  showToast('Home saved ✓');
-}
-// النبذة (المشهد ٤): مرة واحدة بالعمر — العلم بمستند المستخدم؛ بعدها اختيار الوجهة إن لم تُختر
-async function runOnboardingIfNeeded(){
-  if (!currentUser || !userListData) return;
-  if (userListData.guideSeen !== true){
-    openHelpModal();
-    try{ await mpData.userLists.merge(currentUser.uid, { guideSeen: true }); userListData.guideSeen = true; }catch(e){}
-    const hb = document.getElementById('helpBackdrop');
-    await new Promise(res => { const t = setInterval(() => { if (!hb.classList.contains('show')){ clearInterval(t); res(); } }, 300); });
+function renderHelpModal(){
+  const data = HELP_CONTENT[helpLang];
+  const dir = helpLang === 'ar' ? 'rtl' : 'ltr'; const al = helpLang === 'ar' ? 'right' : 'left';
+  document.getElementById('helpTitle').textContent = data.title;
+  const wrap = document.getElementById('helpSections');
+  wrap.style.direction = dir; wrap.style.textAlign = al;
+  const it = data.intro;
+  let h = '<div class="help-l1" style="font-size:13px; line-height:1.75;">'
+    + '<p style="margin:0 0 8px;">' + it.def + '</p>'
+    + '<p class="help-feats" style="margin:0 0 10px; font-size:11.5px; font-weight:700; color:var(--saffron);">' + it.feats + '</p>'
+    + '<ul style="margin:0 0 10px; padding-inline-start:18px;">' + it.dests.map(function(d){ return '<li style="margin:2px 0;"><b>' + d[0] + '</b> — ' + d[1] + '</li>'; }).join('') + '</ul>'
+    + '<p style="margin:0 0 8px;">' + it.everywhere + '</p>'
+    + '<p style="margin:0 0 10px;">' + it.start + '</p></div>'
+    + '<button type="button" class="btn btn-ghost" style="margin:0 0 10px; padding:7px 14px; font-size:12px;" onclick="helpExpanded = !helpExpanded; renderHelpModal();">' + (helpExpanded ? data.readLess + ' <span class="arr">⌃</span>' : data.readMore + ' <span class="arr">⌄</span>') + '</button>';
+  if (helpExpanded){
+    h += data.sections.map((sec, i) => `
+    <div style="border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden; background:var(--ivory-bright);" id="help_sec_${sec.id}">
+      <button type="button" onclick="toggleHelpSection(${i})" style="width:100%; text-align:${al}; background:var(--ivory-bright); border:none; padding:11px 14px; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; color:var(--ink); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <span>${sec.h}</span><span style="font-size:11px; color:var(--brass);">${helpOpenIndex===i ? '▲' : '▼'}</span>
+      </button>
+      ${helpOpenIndex===i ? `<div style="padding:12px 14px; font-size:12.5px; line-height:1.9; color:var(--ink);">${sec.b}${sec.id === 'privacy' ? '<div class="help-counters">' + escapeHtml(mpTripCountersLine()) + ' <button type="button" class="actn" onclick="mpTripCountersReset()">Reset</button></div>' : ''}</div>` : ''}
+    </div>`).join('');
   }
-  switchTab(defaultTabFor()); // r70r (قرار المالك ١٦ سبتمبر): الأماكن دائمًا؛ الاختيار اليدوي فوقها؛ المدينة = آخر محددة
-  if (pendingShareText) consumePendingShare(); // r70q: اختصار iOS — نص المشاركة ينتظر الدخول
+  wrap.innerHTML = h;
+  wrap.innerHTML += '<div class="chipgrid c3" style="margin-top:6px;"><button type="button" class="pl-src" onclick="closeHelpModal(); copyLink();">🔗 Copy link</button><button type="button" class="pl-src" onclick="closeHelpModal(); showQR();">🀄 QR</button><a class="pl-src" href="mailto:mypickz.app@gmail.com?subject=MyPickz%20Feedback">✉️ Contact us</a></div>'; // ر٧٢-أ-١: «Share the app» داخل Help (المرجع §٧)
+  const cb = document.getElementById('helpCloseBtn'); cb.textContent = currentUser ? data.closeLabel : data.gotIt; // أ-١٢-٢: للزائر «Got it — sign in»
 }
-// r70q (قرار المالك: تقديم اختصار iOS): ?share=<نص> من ورقة المشاركة — يُحفظ حتى يكتمل الدخول ثم يفتح نافذة المكان بوضع اللصق محلَّلًا
-let pendingShareText = null;
-function captureShareParam(){ try{ const sp = new URLSearchParams(location.search); const t = sp.get('share'); if (t && t.trim()){ pendingShareText = t.trim(); try{ sessionStorage.setItem('mypickz_pending_share', pendingShareText); }catch(e){} history.replaceState(null, '', location.pathname); } else { try{ const k = sessionStorage.getItem('mypickz_pending_share'); if (k) pendingShareText = k; }catch(e){} } }catch(e){} }
-async function consumePendingShare(){
-  const t = pendingShareText; pendingShareText = null; try{ sessionStorage.removeItem('mypickz_pending_share'); }catch(e){}
-  if (!t || !currentUser) return;
-  const r = parseMapsShare(t); const c = inferCityFrom(r.parts || []);
-  if (c && c.id !== cityListCityId){ plSessionCity = c.id; try{ await selectCityListCity(c.id); }catch(e){} }
-  switchTab('Places'); if (!cityListCityId){ showToast('Pick a city first, then paste again'); return; }
-  openPlPlaceModal(null, null); plSetMethod(true); document.getElementById('plShareText').value = t; plParseShare();
+function openHelpFor(tab){ // أ-١٢-٢: زر «؟» يفتح النبذة على قسم الوجهة الحالية
+  const map = { Places: 'places', Trips: 'trips', Curators: 'curators', Community: 'community', Addresses: 'addresses' }; const id = map[tab] || null;
+  helpExpanded = !!id; helpOpenIndex = id ? HELP_CONTENT[helpLang].sections.findIndex(function(x){ return x.id === id; }) : -1;
+  openHelpModal(); if (id){ const el = document.getElementById('help_sec_' + id); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' }); }
 }
-// أ-١٢-١: الوجهة الافتراضية — يدويًّا ما اختاره؛ وإلا: له أماكن → الأماكن على مدينته؛ وإلا → المجتمع
-function totalMyPlaces(){ const c = (userListData && userListData.cityPlaceCounts) || {}; return Object.keys(c).reduce(function(a, k){ return a + (Number(c[k]) || 0); }, 0); }
-function homePrefLabel(){ return (userListData && HOME_TABS.includes(userListData.defaultTab)) ? userListData.defaultTab : 'Places'; } // r70r
-function defaultTabFor(){ if (userListData && HOME_TABS.includes(userListData.defaultTab)) return userListData.defaultTab; return 'Places'; } // r70r: الأماكن دائمًا — لوحة الأبواب الأربعة ترشد الجديد
+const INTRO_SEEN_KEY = 'mypickz_intro_seen'; // أ-١٢-٢: علم محلي — أول فتح للرابط (الزائر يقرأ النبذة فقط ثم البوابة)
+/* و-٢: العلم المحلي في موضعين — localStorage وكعكة mp_intro (سنة · SameSite=Strict · تديرها عملية الشبكة التي لا تُقتل مع الصفحة، كما نجا أثر هـ-٩ حين مُسح localStorage) — فلا يعود الدليل بضياع التخزين المحلي؛ أيٌّ منهما يكفي. الكعكة لهذا العلم وحده (اختيار ٣ بالبيان) */
+function introSeenCookie(){ try{ return /(?:^|;\s*)mp_intro=1(?:;|$)/.test(document.cookie); }catch(e){ return false; } }
+function introSeenLocally(){ let ls = null; try{ ls = localStorage.getItem(INTRO_SEEN_KEY); }catch(e){ return true; } return ls === '1' || introSeenCookie(); }
+function markIntroSeen(){ try{ localStorage.setItem(INTRO_SEEN_KEY, '1'); }catch(e){} try{ document.cookie = 'mp_intro=1; max-age=31536000; path=/; SameSite=Strict' + (location.protocol === 'https:' ? '; Secure' : ''); }catch(e){} }
+function openHelpModal(){
+  if (helpOpenIndex === -1 && !helpExpanded) helpExpanded = false; // المستوى الأول أولًا
+  renderHelpModal();
+  document.getElementById('helpLangArBtn').classList.toggle('on', helpLang === 'ar');
+  document.getElementById('helpLangEnBtn').classList.toggle('on', helpLang === 'en');
+  const bk = document.getElementById('helpBackBtn'); if (bk) bk.classList.toggle('hidden', !window.__mpFromDrawer); /* ب-٢-٢-أ٢: Back يظهر حين تُفتح من الدرج فقط (من «؟» أو أول فتح: ✕ وزر الإغلاق) */
+  document.getElementById('helpBackdrop').classList.add('show');
+}
+function closeHelpModal(){
+  document.getElementById('helpBackdrop').classList.remove('show');
+  if (!currentUser){ markIntroSeen(); if (!document.getElementById('authBackdrop').classList.contains('show')) openGate(); } // أ-١٢-٢: الزائر: النبذة ثم البوابة
+}
+// نبذة دليل الاستخدام تُفتح تلقائيًا مرة واحدة: فور إنشاء الحساب الجديد فقط (قرار المالك ١٧ أغسطس).
+// كانت تفتح عند تحميل الصفحة لأي مسجَّل مرة بالجهاز (علم محلي) — أثرها العملي: تظهر بعد التحديث لا بعد التسجيل.
+function openHelpAfterSignUp(){
+  try{ runOnboardingIfNeeded(); }catch(e){}
+}
 
+/* r75a (اللوحة ٨ — قرار المالك ١١ أكتوبر): «Icons guide» من الدرج تحت Help — صفحة واحدة على القشرة تجمع رموز التطبيق بأقسامها: أفعال البطاقة · مشاركة القائمة · دبابيس الخريطة · شرائح الحالة · الشارات. تُبنى من الطقم نفسه (mpIcon) فلا تتباعد عن البطاقة */
+function iconsGuideHtml(){
+  const row = function(icon, name, desc, cls){ return '<div class="ig-row"><span class="ig-ic' + (cls ? ' ' + cls : '') + '">' + icon + '</span><span class="ig-nm">' + name + '</span><span class="ig-ds">' + desc + '</span></div>'; };
+  const sec = function(t){ return '<div class="ig-sec">' + t + '</div>'; };
+  const fams = ['cafe', 'dish', 'cuisine', 'store', 'product', 'parks', 'squares', 'rest'];
+  return '<div class="ig">'
+    + sec('Place card actions')
+    + row(mpIcon('maps', { size: 18 }), 'Google Maps', 'Opens the place in Google Maps, outside the app')
+    + row(mpIcon('map', { size: 18 }) + '<span class="pc-dot ig-dot" aria-hidden="true"></span>', 'On map', 'Shows the place on our map. A saffron dot means it still needs a pin — confirm or move it there')
+    + row(mpIcon('bookmark', { size: 18 }), 'Bookmark', 'Keep it in your private Bookmarked list — any place, yours or others’')
+    + row(mpIcon('trip', { size: 18 }), 'Trip', 'Add it to one of your trips')
+    + row(mpIcon('share', { size: 18 }), 'Share', 'Send this one place as a card or a message')
+    + row(mpIcon('save', { size: 18 }), 'Save', 'Copy a place from someone’s list into yours — with credit (Saved ✓ once copied)')
+    + row(mpIcon('flag', { size: 18 }), 'Report', 'Flag someone’s place or list to the owner of the app', 'flag')
+    + row(mpIcon('phone', { size: 18 }), 'Call', 'Personal addresses only — dials the saved number')
+    + row(mpIcon('edit', { size: 18 }), 'Edit', 'Name, area, note, category — and delete')
+    + row(mpIcon('top', { size: 18, fill: true }), 'Top', 'Mark it among your top places — shown on your curator page', 'on')
+    + sec('Sharing a whole list')
+    + row(mpIcon('globe', { size: 18 }), 'Public', 'Your city list is open to everyone in Community')
+    + row(mpIcon('personPlus', { size: 18 }), 'Share with', 'Give one person access — appears in their “Shared with you”. Saved groups share with the same people in one tap; a group is yours alone and sharing with it is a snapshot of its members at that moment')
+    + sec('Pins on the map')
+    + '<div class="ig-pins">' + fams.map(function(f){ return '<span class="ig-pk"><span class="pinkey-' + f + '"><span class="pinkey-dot"></span></span>' + escapeHtml(PIN_FAMILY_LABEL[f] || f) + '</span>'; }).join('')
+    + '<span class="ig-pk"><span class="pinkey-dot ig-sugg"></span>Suggested — one match, not confirmed</span><span class="ig-pk"><span class="pinkey-dot ig-prob"></span>Probable — several matches, numbered</span></div>'
+    + '<div class="ig-ds" style="padding:2px 0 0;">Confirming, choosing or moving a pin happens on the map — tap On map, then use the pin’s popup.</div>'
+    + sec('Badges')
+    + row('<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="m9 12 2 2 4-4"/></svg>', 'Curator', 'Carries the Curator badge — their lists appear under Curators')
+    + row('<span style="font-size:10px; font-weight:800;">From</span>', 'From …', 'A copy saved from someone’s list; “From ex-member” when that account is gone')
+    + '</div>';
+}
+function openIconsGuide(){
+  const bd = document.getElementById('dashBackdrop'), body = document.getElementById('dashBody'); if (!bd || !body) return;
+  dashSet('Icons guide', null); body.innerHTML = iconsGuideHtml(); bd.classList.add('show');
+}
