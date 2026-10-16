@@ -135,7 +135,7 @@ function renderBookmarkedPlaces(body){
       byCat[cat].forEach(function(b){ // r72q-2 (وضع bookmark): Maps · 🔖 · 🧳 · 📤
         const q = function(v){ return String(v || '').replace(/'/g, "\\'"); };
         const actions = [
-          b.url ? { icon: 'maps', label: 'Google Maps', href: b.url, title: 'Open in Google Maps' } : { icon: 'maps', label: 'Google Maps', disabled: true, title: 'No Maps link for this place' }, /* r75a-٢: الطقم بالمفكرة — أربع بلاطات (لا On map: المفكرة لا تحمل إحداثيات) */
+          mpMapsTile(b, b.cityId), /* غ-١ · r75a-٢: الطقم بالمفكرة — أربع بلاطات (لا On map: المفكرة لا تحمل إحداثيات) */
           { cls: 'bmk on', icon: 'bookmark', fill: true, label: 'Bookmark', on: "togglePlaceBookmark('" + q(b.url) + "', '" + q(b.name || 'Place') + "', '" + q(b.category) + "', '" + q(b.cityId) + "', '" + q(b.area) + "')", title: 'Bookmarked — tap to remove' },
           { icon: 'trip', label: 'Trip', on: "plAddToTripFor('" + q(b.cityId) + "', '" + q(b.category) + "', '" + q(String(b.pid || '').replace(/^id:/, '')) + "', '" + q(b.name || 'Place') + "')", title: 'Add to a trip' },
           { icon: 'share', label: 'Share', on: "mpSendText('📍 ' + " + JSON.stringify(escapeHtml(b.name || 'Place')) + " + ('" + q(b.url) + "' ? '\\n' + '" + q(b.url) + "' : ''))", title: 'Send' }
@@ -226,10 +226,14 @@ function plRow4Html(){ /* r74m: الصف الرابع (غير ثابت) — تخ
     + '<button type="button" class="actn ico' + (nShared ? ' on' : '') + '" id="plShareBtn" onclick="openShareModal(\'list\')" title="' + (nShared ? 'Shared with ' + nShared + ' — tap to manage' : 'Share my list with…') + '">' + shareSvg() + '</button>' // ر٦٩ص (N-055): زعفراني حين تكون مشارَكة
     + '</div>';
 }
+/* غ-١ (ت٥ · ق١٠-١٦-٠٧): بلاطة Google Maps لا تتعطّل — مكان بلا رابط ملصوق يُفتح بحثًا رسميًّا في خرائط جوجل باسمه وحيّه ومدينته ودولته (نص بحث لا إحداثيات؛ يُبنى عند العرض ولا يُخزَّن؛ خروج فقط بلا قراءة). المدينة تُعرَف بمعرّفها أو بكائن يحمل id/cityId أو name/country */
+function mpMapsCity(ref){ if (!ref) return null; const id = (typeof ref === 'object') ? (ref.cityId || ref.id || '') : String(ref); let c = null; try{ c = cityListAllCities().find(function(x){ return x.id === id; }) || null; }catch(_){} if (!c){ try{ c = allCities().find(function(x){ return x.id === id; }) || null; }catch(_){} } if (!c && typeof ref === 'object' && ref.name) c = { id: id, name: ref.name, country: ref.country || '' }; return c; }
+function mpMapsHref(p, cityRef){ if (p && p.url) return p.url; const name = String((p && p.name) || '').trim(); if (!name) return ''; const c = mpMapsCity(cityRef); const parts = [name, String((p && p.area) || '').trim(), (c && c.name) || '', (c && c.country) || ''].filter(Boolean); return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(parts.join(', ')); }
+function mpMapsTile(p, cityRef, attrs){ const href = mpMapsHref(p, cityRef); if (!href) return { icon: 'maps', label: 'Google Maps', disabled: true, title: 'No name for this place' }; const t = { icon: 'maps', label: 'Google Maps', href: href, title: (p && p.url) ? 'Open in Google Maps' : 'Search in Google Maps' }; if (attrs) t.attrs = attrs; return t; }
 function plMineActions(cityId, cat, pl, i, bm){ /* r72q-2 · r74m-٢ · r75a (اللوحة ١ — قرار المالك ١١ أكتوبر): ستة أفعال ثابتة للجميع بأسمائها — Maps ↗ · Bookmark · Trip · Share · Edit · Top؛ لا زر تثبيت بالبطاقة (التثبيت والنقل بفقاعة الخريطة) */
   const st = plPlaceStatus(pl); const need = st.kind === 'suggested' || st.kind === 'probable' || st.kind === 'notFound';
   return [
-        pl.url ? { icon: 'maps', label: 'Google Maps', href: pl.url, title: 'Open in Google Maps' } : { icon: 'maps', label: 'Google Maps', disabled: true, title: 'No Maps link for this place' },
+        mpMapsTile(pl, cityId), /* غ-١: رابط ملصوق أو بحث مبنيّ */
         { cls: 'onmap' + (need ? ' need' : ''), icon: 'map', label: 'On map', dot: need, on: "plGoToPin('" + cat.id + "', " + i + ")", title: st.kind === 'pinned' ? 'Show on our map' : (need ? 'Needs a pin — open our map to confirm' : 'Find it on our map') }, // r75a-٢ (قرار المالك): خريطتنا بلاطةً بنقطة حين يلزم تثبيت — لا شريحة بالرأس
         { cls: 'bmk' + (bm ? ' on' : ''), icon: 'bookmark', fill: bm, label: 'Bookmark', on: "plToggleBm('" + cat.id + "', " + i + ")", title: bm ? 'Bookmarked — tap to remove' : 'Bookmark' },
         (activeTripId && pl.id) ? { icon: 'trip', label: 'Trip', on: "addPlaceToTrip('mylist', '" + cityId + "', '" + cat.id + "', '" + pl.id + "', null, '" + attrStr(pl.name) + "')", title: 'Add to active trip' } : (pl.id ? { icon: 'trip', label: 'Trip', on: "plAddToTripFor('" + cityId + "', '" + cat.id + "', '" + pl.id + "', '" + attrStr(pl.name) + "')", title: 'Add to a trip' } : { icon: 'trip', label: 'Trip', disabled: true, title: 'Save this place first' }),
@@ -519,7 +523,7 @@ const mpMap = (function(){
       : st.kind === 'notFound' ? '<button type="button" class="act pri" onclick="' + pre + 'plPinMoveStart(' + at + ')">' + mpIcon('pin', { size: 14 }) + 'Place on map</button>'
       : st.kind === 'pinned' ? '<button type="button" class="act alt" onclick="' + pre + 'plPinMoveStart(' + at + ')">' + mpIcon('move', { size: 12 }) + 'Move pin</button>' : ''; /* r75b-٢: Move pin بصف الفعل الأساسي (بإطار) فتبقى الفقاعة صفّين */
     const secondary = (loc ? '<button type="button" class="act" onclick="' + pre + 'plOpenCardAt(' + at + ')">Open card</button>' : '')
-      + (p.url ? '<a class="act" href="' + attrStr(p.url) + '" target="_blank" rel="noopener">Google Maps ' + mpIcon('maps', { size: 12 }) + '</a>' : '')
+      + (function(){ const mh = mpMapsHref(p, cityListCityId); return mh ? '<a class="act" href="' + attrStr(mh) + '" target="_blank" rel="noopener" title="' + (p.url ? 'Open in Google Maps' : 'Search in Google Maps') + '">Google Maps ' + mpIcon('maps', { size: 12 }) + '</a>' : ''; })() /* غ-١: الفقاعة تكسب الرابط للمكان بلا رابط */
       + (loc ? '<button type="button" class="act" onclick="' + pre + 'openPlPlaceModal(' + at + ')">' + mpIcon('edit', { size: 12 }) + 'Edit</button>' : '')
       ;
     return '<div class="geo-pop"><b dir="auto">' + escapeHtml(p.name || 'Place') + '</b><div class="geo-pop-meta">' + (p.area ? '<span class="dim" dir="auto">' + mpIcon('pin', { size: 11 }) + escapeHtml(p.area) + '</span>' : '') + chip + '</div>' + (lead ? '<div class="geo-pop-lead">' + escapeHtml(lead) + '</div>' : '') + (primary ? '<div class="geo-pop-acts pri-row">' + primary + '</div>' : '') + '<div class="geo-pop-acts">' + secondary + '</div></div>';
@@ -578,7 +582,7 @@ function plNearbyHtml(){ const me = plNearby; const rows = []; Object.keys(myCit
   h += '<div class="ctx near-ctx">' + inRange.filter(function(r){ return r.km !== null; }).length + ' of ' + pinned + ' pinned places within range · straight-line distance from our pins · your location is not stored</div>';
   if (!inRange.length) h += '<div class="mp-empty mini">Nothing here yet — add places with pins to this city.</div>';
   inRange.forEach(function(r){ const p = r.p; const app = tripNavApp(); const mode = (r.km !== null && r.km * TRIP_RHYTHM.detour.walk <= TRIP_RHYTHM.walkKm) ? 'walk' : 'transit'; const nav = r.km !== null ? tripNavUrl(app, me, p.geo, mode) : null; const mark = plNearbyTodayMark(r.catId, p.id);
-    const acts = [ nav ? { icon: 'navigate', label: 'Go', href: nav, title: 'Navigate with ' + tripNavAppLabel() } : { icon: 'navigate', label: 'Go', disabled: true, title: 'No pin yet' }, p.url ? { icon: 'maps', label: 'Google Maps', href: p.url, title: 'Open in Google Maps' } : null ];
+    const acts = [ nav ? { icon: 'navigate', label: 'Go', href: nav, title: 'Navigate with ' + tripNavAppLabel() } : { icon: 'navigate', label: 'Go', disabled: true, title: 'No pin yet' }, mpMapsTile(p, cityListCityId) /* غ-١ */ ];
     const status = r.km !== null ? '<span class="pc-chip">' + tripKmLabel(r.km) + '</span>' : '<span class="pc-chip warn">no pin</span>';
     h += placeCardHtml(p, 'nearby', { actions: acts, status: status, extraLines: (mark ? '<div class="pc-today">📅 ' + escapeHtml(mark) + '</div>' : '') + '<div class="pc-area">' + escapeHtml(catPathOf(r.catId)) + '</div>', open: !!mark }); });
   return h; }
