@@ -11,7 +11,7 @@
   logTiming('Initial app data loaded (ownerUid, categories)');
   if (auth) {
     mpData.auth.onChange(async (user) => {
-      logTiming('onAuthStateChanged fired (auth state known)'); document.body.classList.remove('auth-pending'); // r72s: الشاشات تظهر بعد معرفة الحالة — البوابة أولًا للزائر
+      logTiming('onAuthStateChanged fired (auth state known) · ' + (user ? 'signed-in' : 'guest')); /* غ-١: الحدث يُسجَّل للزائر والمستخدم — الكلمة تميّزهما في السطر الأصفر (ق١٠-١٦-٠٣) */ document.body.classList.remove('auth-pending'); // r72s: الشاشات تظهر بعد معرفة الحالة — البوابة أولًا للزائر
       if (!user || !currentUser || user.uid !== currentUser.uid) resetSessionState(); // r72n (ملاحظة المالك ٣): لا أثر لحساب سابق قبل تحميل الجديد
       currentUser = user;
       updateUserUI();
