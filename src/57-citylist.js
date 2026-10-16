@@ -33,7 +33,7 @@ async function loadUserList(){
   if (!currentUser){ userListData = { customCities: [], customCountries: [], nickname: null }; cityListCityId = null; cityListCountry = null; currentUserSuspended = false; myCityListData = null; myCityListLoadedFor = null; return; }
   userListLoadFailed = false;
   try{
-    const doc = await withAuthRetry(() => mpData.userLists.get(currentUser.uid));
+    const doc = await withAuthRetry(() => mpData.userLists.getServer(currentUser.uid)); /* و-١: من الخادم حصرًا — تعثّر القناة رفضٌ لا مستند فارغ */
     const data = doc.exists ? doc.data() : {};
     userListData = {
       customCities: Array.isArray(data.customCities) ? data.customCities : [],
@@ -58,7 +58,13 @@ async function loadUserList(){
     try{ const prof = await mpData.profiles.get(currentUser.uid); userListData.curatorSelf = !!(prof && prof.verified === true); }catch(e){} // ر٧٢-أ-١د: علم المنتقي لنافذة المكان والدرج
     if (data.myCities !== undefined){ try{ await mpData.userLists.merge(currentUser.uid, { myCities: mpData.fieldDelete() }); }catch(e){} } // ر٧٢-أ-١ح: تنظيف أثر «مدينتي» الملغى من الخاص (مرة)
     listBookmarksMap = null; tripSavesMap = null; // تُبنى من المرآة المحمَّلة لا من الفراغ
-  }catch(e){ userListData = { customCities: [], customCountries: [], nickname: null }; userListLoadFailed = true; }
+  }catch(e){
+    userListData = { customCities: [], customCountries: [], nickname: null }; userListLoadFailed = true;
+    /* و-١: الفشل بصوت — سطر باللوحة ورسالة للمستخدم؛ لا إعادة محاولة تلقائية (اختيار ٢ بالبيان): المستخدم يعيد التحميل */
+    const __code = (e && (e.code || e.message)) || 'error';
+    if (typeof logTiming === 'function') logTiming('[NET] userLists read FAILED · ' + __code);
+    try{ const __t = document.getElementById('toast'); __t.textContent = 'Could not load your account · please reload'; __t.classList.add('show'); setTimeout(function(){ __t.classList.remove('show'); }, 8000); }catch(_){} /* القرص نفسه لثماني ثوانٍ (لا ٢٫٢) حتى تُقرأ */
+  }
   try{
     // v3: الحالة تُقرأ من suspensions/{uid} (وجود المستند = إيقاف). users.suspended احتياط انتقالي حتى نشر v3.
     const sDoc = await withAuthRetry(() => mpData.suspensions.get(currentUser.uid));
