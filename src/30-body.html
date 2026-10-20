@@ -57,6 +57,7 @@
     </div>
     <label class="flabel">Area (optional)</label>
     <input id="plArea" class="modal-input" placeholder="e.g. 10th arr.">
+    <div class="chiprow" style="margin-top:6px;"><button type="button" class="chip tog" id="plTownChip" onclick="plModalTown = !plModalTown; plTownChipRender()">Outside the city</button><span class="dim" style="font-size:11px;">a nearby town, kept under this city</span></div><!-- r84-2 (كلمة المالك ١٣:٢٠): يكتب/يمسح town يدويًّا — ما يسِمه الاستيراد يملك المستخدم تعديله -->
     <label class="flabel">Picks (optional)</label><!-- ر٧٠ح (ق٠٩-٠٢-٠٣): الاختيارات حقل مستقل — بندًا بكل سطر -->
     <textarea id="plPicks" class="modal-input" rows="2" placeholder="what to order or look for — one per line"></textarea>
     <label class="flabel" style="display:flex;align-items:center;justify-content:space-between">Note (optional) <button type="button" class="actn" style="padding:2px 10px" onclick="plNoteBullet()" title="Start a bullet line">• list</button></label>
