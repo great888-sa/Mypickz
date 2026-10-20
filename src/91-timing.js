@@ -33,7 +33,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-window.__mpBuild = 'M2-ID-r84-3';
+window.__mpBuild = 'M2-ID-r84-4';
 /* د-٦: ملخص الشبكة سطرًا واحدًا مثبَّتًا: شهادة App Check · أول قراءة · الدخول (وتكراره) · الأخطاء · آخر خطوة بطيئة */
 let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '' };
 /* هـ-٧: السطر الأصفر يحمل ساعته «t=52s» (تتقدم كل ثانية — إن توقفت فالخيط الرئيسي متجمد لا الشبكة) · «BLOCKED 3.2s ×1» حين يتأخر نبض الثانية (شفرة مشغولة) · نتيجة مسبارَي الشبكة حين ينتظر هدف ٨ ثوانٍ: نفس الأصل (manifest.json) وخادم Firestore بـREST (settings/app الذي تقرأه القواعد للجميع) */
@@ -105,7 +105,7 @@ function __fsHandle(t){
 /* د-٤: نسخة الاختبار تسجّل الأخطاء غير الملتقَطة في لوحة TIMING نفسها (الرسالة والسطر) — ليُقرأ السبب من الهاتف بلا وحدة تحكم */
 window.addEventListener('error', function(e){ try{ logTiming('[ERR] ' + (e.message || 'error') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?')); }catch(_){} });
 window.addEventListener('unhandledrejection', function(e){ try{ const r = e.reason; logTiming('[ERR] rejection: ' + ((r && (r.code || r.message)) || String(r)).slice(0, 160)); }catch(_){} }); /* ب-٢-٢-أ٢: تذييل الدرج يعرض رقم البناء */
-logTiming('BUILD: M2-ID-r84-3 (r84-3 - decision 10-20-02, neighbours by gap: a town joins the nearest destination (your city, 100k+, island, or 5+ places) when the gap between their footprints is 60 km or less (Menorca after Mallorca, Pietrasanta under Forte dei Marmi) · the tree is ordered in clusters not by count, fixed once so rows never jump · every small town gets a native parent picker sorted by distance with km and (far), merge is one choice with undo, big cities get merge into another city… · status tags are plain text (as island · in your cities · new city) · map ↗ per city · adding a place by hand detects a nearby town from the address (keep under the city · outside, switch, or add it as a city) and the map step then looks around that town · r84-2 rules untouched)');
+logTiming('BUILD: M2-ID-r84-4 (r84-4 - decision 10-20-03, one door one rule: the address is read by containment and distance, not position (a part naming your city means the place is in it; a match inside a bigger match is a district; a match over 100 km from the biggest is a namesake), Arabic comma, digits and names · district = inside a city of 100k+ that is 3x bigger (or a one-city country or an island) and gets Area only; anything else is a town and gets Area plus Outside the city, in the add window (with a Keep under / Switch / Add dropdown) and in the import (absorbed places now carry their area, towns their flag) · your city uses its gazetteer population · Edit has Check the address on tap and no city change · villages under 2,000 within 20 km come tucked under their city by default with undo · small branches list their places · Nearby town line in Diag · city line reworded · r84-3 rules untouched)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
