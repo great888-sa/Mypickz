@@ -37,10 +37,10 @@
     <div class="hdr"><button type="button" class="bk hidden">← Back</button><span class="ttl" id="plPlaceTitle">➕ Add a place</span><button type="button" class="x" onclick="closePlPlaceModal()" aria-label="Close">✕</button></div>
     <div class="chiprow" id="plMethodRow"><button type="button" class="chip on" id="plMethodPaste" onclick="plSetMethod(true)">📋 Paste from Maps</button><button type="button" class="chip" id="plMethodManual" onclick="plSetMethod(false)">✍️ Enter manually</button></div>
     <div id="plPasteWrap">
-      <textarea id="plShareText" class="modal-input" rows="3" placeholder="Paste what Google Maps shared…" onpaste="setTimeout(plParseShare, 0)" onchange="plParseShare()"></textarea>
+      <textarea id="plShareText" class="modal-input" rows="3" placeholder="Paste what Google Maps shared…" onpaste="setTimeout(plParseShare, 0)" onchange="plParseShare()" oninput="if (!this.value.trim()) plPasteBtnState(false)"></textarea>
       <div style="display:flex; gap:6px; margin-top:6px; align-items:center;">
-        <button type="button" class="pl-actbtn" onclick="plPasteShare()">📋 Paste from Maps</button>
-        <span class="pl-sub" style="margin:0;">In Google Maps: Share → Copy, then tap here — or paste in the box.</span>
+        <button type="button" class="pl-actbtn" id="plPasteBtn" onclick="plPasteShare()">📋 Paste from Maps</button>
+        <span class="pl-sub" style="margin:0;">In Google Maps: Share → Copy, then tap here (iPhone asks once: tap Paste) — or paste in the box.</span>
       </div>
       <div id="plCityHint" class="pl-sub" style="display:none; margin:6px 0 0;"></div>
     </div>
@@ -288,6 +288,7 @@
       <button type="button" class="dr-item" onclick="openFromDrawer(openSettings)"><span>⚙️ Settings</span><span class="dim mini">account · preferences ›</span></button>
       <button type="button" class="dr-item" onclick="openFromDrawer(openHelpModal)"><span>❓ <span id="helpBtnLabel">Help</span></span><span class="dim mini">guide · share · contact ›</span></button>
       <button type="button" class="dr-item" onclick="openFromDrawer(openIconsGuide)"><span>🔣 Icons guide</span><span class="dim mini">what the symbols mean ›</span></button>
+      <button type="button" class="dr-item" onclick="openFromDrawer(tkOpenImport)"><span>📥 Import from Google Maps</span><span class="dim mini">Takeout · one file ›</span></button><!-- أ-١٣ (r84): كان في Coming next -->
       <button type="button" class="dr-item" onclick="openFromDrawer(reportAppProblem)"><span>⚑ Report a problem</span><span class="dim mini">›</span></button>
       <div id="drawerOwner" style="display:none;">
         <div class="dr-head">Owner</div>
@@ -295,7 +296,6 @@
       </div>
       <button type="button" class="dr-head toggle" onclick="drToggleComing()"><span>🕒 Coming next</span><span id="drComingArrow">⌄</span></button>
       <div id="drComing" style="display:none;">
-        <button type="button" class="dr-item" disabled><span>📥 Import from Google Maps</span><span class="soon">أ-١٣</span></button>
         <button type="button" class="dr-item" disabled><span>🪪 App card &amp; home-screen icon</span><span class="soon">المرحلة ب</span></button><!-- و-٦: كان «Share cards · Export» — متقادم (البطاقات والتصدير مبنيان منذ ر٦٩/ر٧٠)؛ بند المرحلة ب الفعلي بطاقة التطبيق وأيقونة الشاشة (ق١٠-٠٨-٠٣) -->
         <button type="button" class="dr-item" disabled><span>🅖 Continue with Google</span><span class="soon">هـ</span></button>
       </div>
