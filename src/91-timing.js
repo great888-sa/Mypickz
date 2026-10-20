@@ -33,7 +33,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-window.__mpBuild = 'M2-ID-r84-2';
+window.__mpBuild = 'M2-ID-r84-3';
 /* د-٦: ملخص الشبكة سطرًا واحدًا مثبَّتًا: شهادة App Check · أول قراءة · الدخول (وتكراره) · الأخطاء · آخر خطوة بطيئة */
 let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '' };
 /* هـ-٧: السطر الأصفر يحمل ساعته «t=52s» (تتقدم كل ثانية — إن توقفت فالخيط الرئيسي متجمد لا الشبكة) · «BLOCKED 3.2s ×1» حين يتأخر نبض الثانية (شفرة مشغولة) · نتيجة مسبارَي الشبكة حين ينتظر هدف ٨ ثوانٍ: نفس الأصل (manifest.json) وخادم Firestore بـREST (settings/app الذي تقرأه القواعد للجميع) */
@@ -105,7 +105,7 @@ function __fsHandle(t){
 /* د-٤: نسخة الاختبار تسجّل الأخطاء غير الملتقَطة في لوحة TIMING نفسها (الرسالة والسطر) — ليُقرأ السبب من الهاتف بلا وحدة تحكم */
 window.addEventListener('error', function(e){ try{ logTiming('[ERR] ' + (e.message || 'error') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?')); }catch(_){} });
 window.addEventListener('unhandledrejection', function(e){ try{ const r = e.reason; logTiming('[ERR] rejection: ' + ((r && (r.code || r.message)) || String(r)).slice(0, 160)); }catch(_){} }); /* ب-٢-٢-أ٢: تذييل الدرج يعرض رقم البناء */
-logTiming('BUILD: M2-ID-r84-2 (r84-2 v2 - decision 10-20-01, the city is what a traveller calls it: five rules read from the gazetteer (districts absorbed into a city 3x bigger whose radius holds them · one-city countries QA BH KW SG HK MO MC by a country-sized radius · graded radius cap 25/35/45 km for import only · an island entry up to 60 km (and the Maldives) is one destination · famous small towns stay their own city when outside the big neighbour radius) · the preview is a tree country → city → smaller towns: nothing hidden, under-5 towns marked, one tap tucks a town under the big city as its area or splits an absorbed district back out, one button with a live count · Takeout steps from the first screen and both products (Saved + Maps (your places)) · primary text ivory · replaces r84 and the withdrawn first r84-2)');
+logTiming('BUILD: M2-ID-r84-3 (r84-3 - decision 10-20-02, neighbours by gap: a town joins the nearest destination (your city, 100k+, island, or 5+ places) when the gap between their footprints is 60 km or less (Menorca after Mallorca, Pietrasanta under Forte dei Marmi) · the tree is ordered in clusters not by count, fixed once so rows never jump · every small town gets a native parent picker sorted by distance with km and (far), merge is one choice with undo, big cities get merge into another city… · status tags are plain text (as island · in your cities · new city) · map ↗ per city · adding a place by hand detects a nearby town from the address (keep under the city · outside, switch, or add it as a city) and the map step then looks around that town · r84-2 rules untouched)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
