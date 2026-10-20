@@ -406,6 +406,7 @@ function plFillModal(pasteMode){
   document.getElementById('plNote').value = pl.note || '';
   document.getElementById('plPicks').value = (pl.picks || []).map(function(x){ return x && x.name ? x.name : ''; }).filter(Boolean).join('\n'); // ر٧٠ح
   plModalFine = (pl.flags || []).indexOf('fine_dining') >= 0; plModalTop = !!pl.topPlace; plMoveMode = false; catPairClose('plModal'); // ر٧٠ط
+  plModalTown = !!pl.town; plTownChipRender(); /* r84-2: مفتاح «Outside the city» */
   plPasted = null; const ch = document.getElementById('plCityHint'); if (ch){ ch.style.display = 'none'; ch.innerHTML = ''; } // أ-١٢-٤
   document.getElementById('plDeleteBtn').style.display = plEdit ? '' : 'none';
   document.getElementById('plPlaceBackdrop').classList.add('show');
@@ -476,6 +477,8 @@ function plParseShare(){
   if (r.url) plPasteBtnState(true); /* غ-٢: الزر يصير «Pasted ✓» معطَّلًا بعد القراءة من الصندوق أو الزر — فلا يُضغط مرتين */
   showToast(r.url ? (hadUrl ? 'Link replaced ✓' : (r.grade === 3 ? 'Read ✓ — name and area filled' : r.grade === 2 ? 'Read ✓ — name filled' : 'Link only — type the name')) : 'No link found in the pasted text');
 }
+let plModalTown = false; /* r84-2 (١٣:٢٠): مفتاح «Outside the city» في نافذة التحرير */
+function plTownChipRender(){ const b = document.getElementById('plTownChip'); if (b) b.classList.toggle('on', !!plModalTown); }
 function plPasteBtnState(done){ const b = document.getElementById('plPasteBtn'); if (!b) return; b.disabled = !!done; b.textContent = done ? '✓ Pasted' : '📋 Paste from Maps'; } /* غ-٢ (١٠-١٦-٠٩): يعود عند فتح النافذة أو مسح الصندوق */
 let plResolvedAddr = ''; // ز-١-ب: عنوان الرابط بعد حلّه (للمطابقة فقط)
 let plAreaAuto = ''; // خ-٤: آخر حي مُلئ تلقائيًّا — يُستبدل فقط إن لم يغيّره المستخدم
@@ -846,6 +849,7 @@ async function savePlPlace(){
   place.picks = String(document.getElementById('plPicks').value || '').split('\n').map(function(l){ return l.trim(); }).filter(Boolean).slice(0, 12).map(function(n){ return { name: n }; }); // ر٧٠ح: البنية النهائية picks:[{name}]
   if (!place.picks.length) delete place.picks;
   place.flags = plModalFine ? ['fine_dining'] : []; if (!place.flags.length) delete place.flags; // ر٧٠ط: العلامات
+  if (plModalTown){ place.town = place.area || place.town || name; } else { delete place.town; } /* r84-2 (١٣:٢٠): «Outside the city» — town = الحي (أو اسم المكان بلا حي) · إطفاؤه يمسح الوسم */
   if (plModalTop){ if (!place.topPlace || !place.topAt) place.topAt = Date.now(); place.topPlace = true; } else { delete place.topPlace; delete place.topAt; } // ر٧٢-أ-١د
   if (!plEdit) try{ mpTrack.statsCity(cityListCityId, 'place_added'); }catch(_){} // r72m (M4.25 ١١): إضافة لا تعديل: Top place بطابع مخزَّن للفرز (لا يُعرض)
   const verified = !!(plPasted && plPasted.url === url && plPasted.name); // أ-١٢-٤: الرابط متحقَّق حين جاء الاسم مع الرابط نفسه
