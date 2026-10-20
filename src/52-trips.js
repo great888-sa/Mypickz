@@ -238,7 +238,7 @@ function placeCardHtml(p, mode, ctx){ /* r75a (اللوحات ١–٣): ثلاث
   const hasMore = !!(picks || p.note || (ctx.extraLines || '') || (mode === 'mine' && p.fromCat));
   return '<div class="pcard' + (open ? ' open' : '') + '" data-key="' + attrStr(key) + '"><div class="pc-data">'
     + '<div class="pc-head"><div class="pc-name" dir="auto">' + escapeHtml(p.name || ctx.fallbackName || 'Place') + '</div>' + (ctx.status || '') + '</div>' + flagsHtml(p.flags)
-    + (p.area ? '<div class="pc-area" dir="auto">' + mpIcon('pin', { size: 13 }) + escapeHtml(p.area) + '</div>' : '')
+    + (p.area ? '<div class="pc-area" dir="auto">' + mpIcon('pin', { size: 13 }) + escapeHtml(p.area) + (p.town ? ' <span class="dim">· outside ' + escapeHtml(ctx.cityName || (mode === 'mine' || mode === 'nearby' ? plCityName() : '') || 'the city') + '</span>' : '') + '</div>' : '') /* r84-2 (١٣:٠٠): بلدة ضُمّت في الاستيراد → «Estepona · outside Marbella» */
     + (p.phone ? '<div class="pc-phone" dir="ltr">' + mpIcon('phone', { size: 13 }) + escapeHtml(p.phone) + '</div>' : '') /* r75a-٢: الهاتف سطرًا بسماعة (العناوين) لا بسطر الحي */
     + ((p.source && p.source.ownerId) ? '<div class="pc-fromrow"><span class="pc-chip pc-from" dir="auto">From ' + escapeHtml(plOwnerName(p.source.ownerId, p.source.ownerName)) + '</span></div>' : '') // ز-١-ب · r74m-٢ · r75a: الإسناد شريحة صغيرة تحت الحي — ظاهرة دائمًا
     + (picks ? '<div class="pc-lab pc-more">Picks</div><div class="pc-val pc-more" dir="auto">' + escapeHtml(picks) + '</div>' : '')
