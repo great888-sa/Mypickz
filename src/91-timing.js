@@ -33,7 +33,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-window.__mpBuild = 'M2-ID-r84';
+window.__mpBuild = 'M2-ID-r84-2';
 /* د-٦: ملخص الشبكة سطرًا واحدًا مثبَّتًا: شهادة App Check · أول قراءة · الدخول (وتكراره) · الأخطاء · آخر خطوة بطيئة */
 let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '' };
 /* هـ-٧: السطر الأصفر يحمل ساعته «t=52s» (تتقدم كل ثانية — إن توقفت فالخيط الرئيسي متجمد لا الشبكة) · «BLOCKED 3.2s ×1» حين يتأخر نبض الثانية (شفرة مشغولة) · نتيجة مسبارَي الشبكة حين ينتظر هدف ٨ ثوانٍ: نفس الأصل (manifest.json) وخادم Firestore بـREST (settings/app الذي تقرأه القواعد للجميع) */
@@ -105,7 +105,7 @@ function __fsHandle(t){
 /* د-٤: نسخة الاختبار تسجّل الأخطاء غير الملتقَطة في لوحة TIMING نفسها (الرسالة والسطر) — ليُقرأ السبب من الهاتف بلا وحدة تحكم */
 window.addEventListener('error', function(e){ try{ logTiming('[ERR] ' + (e.message || 'error') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?')); }catch(_){} });
 window.addEventListener('unhandledrejection', function(e){ try{ const r = e.reason; logTiming('[ERR] rejection: ' + ((r && (r.code || r.message)) || String(r)).slice(0, 160)); }catch(_){} }); /* ب-٢-٢-أ٢: تذييل الدرج يعرض رقم البناء */
-logTiming('BUILD: M2-ID-r84 (r84 - batch أ-13 part 1 (import from Google Takeout, decision 10-19-01, process map v1.1 IM1-IM8): one upload - zip read on the device, every place finds its city from the file (Saved Places.json coordinates or the S2 cell in the place id - used in memory only, never stored or sent), cities created from the gazetteer with one tap, lists meaning asked once, three-degree dedupe (gid - name+proximity - similar flagged), groups tk:<list> land in the existing uncategorized box, one save per city with the count guard, result card - plus غ-2: Paste from Maps button shows Pasted ✓, hint names the iPhone Paste bubble, Link replaced ✓ when editing) - 30 parts');
+logTiming('BUILD: M2-ID-r84-2 (r84-2 v2 - decision 10-20-01, the city is what a traveller calls it: five rules read from the gazetteer (districts absorbed into a city 3x bigger whose radius holds them · one-city countries QA BH KW SG HK MO MC by a country-sized radius · graded radius cap 25/35/45 km for import only · an island entry up to 60 km (and the Maldives) is one destination · famous small towns stay their own city when outside the big neighbour radius) · the preview is a tree country → city → smaller towns: nothing hidden, under-5 towns marked, one tap tucks a town under the big city as its area or splits an absorbed district back out, one button with a live count · Takeout steps from the first screen and both products (Saved + Maps (your places)) · primary text ivory · replaces r84 and the withdrawn first r84-2)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
