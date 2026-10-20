@@ -656,6 +656,7 @@ function finish(){
   manifestGuard();
   tripModelGuard();
   perfInvariantsGuard();
+  importRedLinesGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
@@ -835,4 +836,22 @@ function perfInvariantsGuard(){
   // ٥ · صنف الخلل عمومًا: لا دالة غير متزامنة تعود فورًا بقيمة حين يكون «التحميل جاريًا» — ذلك ما يصنع سلسلة المهام الدقيقة مع .then(render)
   const earlyReturn = code.match(/_loading\) return [A-Za-z_$][\w$]*;/g) || [];
   check(earlyReturn.length === 0, T + 'no async loader returns a plain value while its own load is in flight (the pattern behind the microtask loop)', earlyReturn.join(' | '));
+}
+
+// ---------- §29 (أ-١٣ · ق١٠-١٩-٠١ · خريطة الاستيراد v1.1 — الخطوط الحمراء): الاستيراد من Takeout لا ينادي أحدًا ولا يكتب موقعًا من الملف ----------
+function importRedLinesGuard(){
+  const T = '§29 import red lines (أ-١٣): ';
+  const f = path.join(ROOT, 'src', '64-import.js'); check(fs.existsSync(f), T + 'src/64-import.js exists (the import part is its own file so the guard can read it whole)'); if (!fs.existsSync(f)) return;
+  const imp = stripComments(fs.readFileSync(f, 'utf8'));
+  // ١ · لا نداء خارجيًّا من جزء الاستيراد: لا fetch ولا XHR ولا beacon ولا نداء للعامل (mpData.geo) — الملف يُقرأ على الجهاز فقط
+  check(!/\bfetch\s*\(/.test(imp) && !/XMLHttpRequest/.test(imp) && !/sendBeacon/.test(imp) && !/mpData\.geo\./.test(imp), T + 'no fetch / XMLHttpRequest / sendBeacon / mpData.geo call inside the import part (the file is read on the device; nothing is uploaded, nothing is asked of Google or the worker)');
+  // ٢ · المكان المكتوب يُبنى من دالة واحدة لا تحمل موقعًا: لا lat/lng/loc/cell/coordinates في بانيه
+  const m = /function tkPlaceOf\(r, section, plan\)\{([^\n]*)/.exec(imp); check(!!m && !/\b(lat|lng|loc|cell|coordinates)\b/.test(m[1]), T + 'tkPlaceOf (the only builder of a written place) carries no lat / lng / loc / cell / coordinates — the file location stays in memory (٠٩-١٥-٠٥)');
+  // ٣ · حارس العدّ قبل كل حفظة · gid هو الحقل الوحيد المكتوب على مكان قائم
+  check(/if \(after !== before \+ added\)\{ res\.failed\.push\(c\.name \+ ' \(count mismatch\)'\); continue; \}/.test(imp), T + 'count guard before every city save (before + added = after, else nothing is saved)');
+  check(/c\.gidWrites\.forEach\(function\(w\)\{ if \(!w\.p\.gid\)\{ w\.p\.gid = w\.gid; res\.gid\+\+; \} \}\);/.test(imp) && !/w\.p\.url\s*=/.test(imp), T + 'an existing place gains gid only — its url is never rewritten by the import');
+  // ٤ · لا دمج بالاسم وحده: الاسم بلا قرب يوسم similar ولا يُتخطّى
+  check(/r\.similar = true; c\.similar\+\+;/.test(imp) && /e\.geo && r\.loc && tkKm\(r\.loc, e\.geo\) <= TK_DUP_KM/.test(imp), T + 'name-only matches are flagged similar (S7), never merged; a duplicate needs gid, the same url, or name + proximity with a pinned existing place');
+  // ٥ · السقف لكل مدينة ٥٠٠ (٠٩-١٥-٠٥ · ق١٠-١٩-٠١)
+  check(/const TK_CAP_PER_CITY = 500;/.test(imp) && /added >= TK_CAP_PER_CITY\) return;/.test(imp), T + 'cap of 500 imported places per city per run');
 }
