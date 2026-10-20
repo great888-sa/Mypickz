@@ -55,6 +55,7 @@
       <input id="plUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" style="flex:1; text-align:left; margin-top:0;" onpaste="plOnPaste(event)"><div class="dim" id="plUrlLine" style="font-size:12px; margin-top:4px;"></div>
       <button type="button" class="pl-actbtn" onclick="plPasteUrl()" title="Paste link from clipboard">📋</button>
     </div>
+    <div class="chiprow" id="plCheckAddr" style="display:none; margin-top:6px;"><button type="button" class="chip" onclick="plCheckAddress()">Check the address</button><span class="dim" style="font-size:11px;">reads the link once</span></div><!-- r84-4 (البند ٥): في التحرير فقط · لا نداء تلقائي للعامل -->
     <label class="flabel">Area (optional)</label>
     <input id="plArea" class="modal-input" placeholder="e.g. 10th arr.">
     <div class="chiprow" style="margin-top:6px;"><button type="button" class="chip tog" id="plTownChip" onclick="plModalTown = !plModalTown; if (!plModalTown) plTownGeo = null; plTownChipRender()">Outside the city</button><span class="dim" style="font-size:11px;">a nearby town, kept under this city</span></div><!-- r84-2 (كلمة المالك ١٣:٢٠): يكتب/يمسح town يدويًّا — ما يسِمه الاستيراد يملك المستخدم تعديله -->
