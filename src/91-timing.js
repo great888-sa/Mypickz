@@ -33,11 +33,11 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-window.__mpBuild = 'M2-ID-r84-4';
+window.__mpBuild = 'M2-ID-r85';
 /* د-٦: ملخص الشبكة سطرًا واحدًا مثبَّتًا: شهادة App Check · أول قراءة · الدخول (وتكراره) · الأخطاء · آخر خطوة بطيئة */
-let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '' };
+let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '', sort: '' };
 /* هـ-٧: السطر الأصفر يحمل ساعته «t=52s» (تتقدم كل ثانية — إن توقفت فالخيط الرئيسي متجمد لا الشبكة) · «BLOCKED 3.2s ×1» حين يتأخر نبض الثانية (شفرة مشغولة) · نتيجة مسبارَي الشبكة حين ينتظر هدف ٨ ثوانٍ: نفس الأصل (manifest.json) وخادم Firestore بـREST (settings/app الذي تقرأه القواعد للجميع) */
-function __netRender(){ const el = __netLineEl; if (!el) return; el.textContent = 'NET · t=' + Math.round((performance.now() - __timingStart) / 1000) + 's · AppCheck ' + (__net.check || '…') + ' · transport ' + (__net.transport || '?') + ' · keep-alive ' + (__net.keep || '…') + ' · first read ' + (__net.first || '…') + ' · auth @' + (__net.auth.join(', ') || '…') + (__net.imp ? ' · IMPORT ' + __net.imp : '') + (__net.errs ? ' · errors ' + __net.errs : '') + (__net.blocked ? ' · BLOCKED ' + __net.blocked : '') + (__net.wait ? ' · WAITING: ' + __net.wait : '') + (__net.slow ? ' · slow: ' + __net.slow : ''); }
+function __netRender(){ const el = __netLineEl; if (!el) return; el.textContent = 'NET · t=' + Math.round((performance.now() - __timingStart) / 1000) + 's · AppCheck ' + (__net.check || '…') + ' · transport ' + (__net.transport || '?') + ' · keep-alive ' + (__net.keep || '…') + ' · first read ' + (__net.first || '…') + ' · auth @' + (__net.auth.join(', ') || '…') + (__net.imp ? ' · IMPORT ' + __net.imp : '') + (__net.sort ? ' · ' + __net.sort : '') + (__net.errs ? ' · errors ' + __net.errs : '') + (__net.blocked ? ' · BLOCKED ' + __net.blocked : '') + (__net.wait ? ' · WAITING: ' + __net.wait : '') + (__net.slow ? ' · slow: ' + __net.slow : ''); }
 function __netNote(label, elapsed){
   if (/^BUILD:/.test(label)) return; /* هـ-٦: سطر البناء يذكر «first Firestore read» في نصه فكان يلوّث الحقل حتى تأتي القراءة الحقيقية */
   if (/App Check token in/.test(label)) __net.check = label.replace(/.*token in /, '') ; else if (/App Check token FAILED/.test(label)) __net.check = 'FAILED'; else if (/App Check OFF/.test(label)) __net.check = 'OFF';
@@ -46,6 +46,7 @@ function __netNote(label, elapsed){
   else if (/keep-alive listener on/.test(label)) __net.keep = 'on'; else if (/keep-alive listener (error|not started)/.test(label)) __net.keep = 'FAILED';
   else if (/onAuthStateChanged/.test(label)) __net.auth.push(elapsed + 's' + (/signed-in/.test(label) ? ' signed-in' : (/guest/.test(label) ? ' guest' : ''))); /* غ-١ */
   else if (/^IMPORT · /.test(label)) __net.imp = label.replace(/^IMPORT · /, ''); /* أ-١٣ (IM-R): الدليل لا الوعد — «2,615 rows · 0 external requests · 0 coordinates kept» */
+  else if (/^(AUTOSORT|CONFIRM ALL STRONG) · /.test(label)) __net.sort = label; /* r85: الدليل لا الوعد — «AUTOSORT · paris · 61 scanned · 38 sorted · 0 coordinates from the file written» */
   else if (/^\[ERR\]|^\[SWALLOWED\]/.test(label)) __net.errs++;
   const m = /in (\d+)ms/.exec(label); if (m && +m[1] > 4000) __net.slow = label.replace(/^\[\w+\] /, '');
   __netRender();
@@ -105,7 +106,7 @@ function __fsHandle(t){
 /* د-٤: نسخة الاختبار تسجّل الأخطاء غير الملتقَطة في لوحة TIMING نفسها (الرسالة والسطر) — ليُقرأ السبب من الهاتف بلا وحدة تحكم */
 window.addEventListener('error', function(e){ try{ logTiming('[ERR] ' + (e.message || 'error') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?')); }catch(_){} });
 window.addEventListener('unhandledrejection', function(e){ try{ const r = e.reason; logTiming('[ERR] rejection: ' + ((r && (r.code || r.message)) || String(r)).slice(0, 160)); }catch(_){} }); /* ب-٢-٢-أ٢: تذييل الدرج يعرض رقم البناء */
-logTiming('BUILD: M2-ID-r84-4 (r84-4 - decision 10-20-03, one door one rule: the address is read by containment and distance, not position (a part naming your city means the place is in it; a match inside a bigger match is a district; a match over 100 km from the biggest is a namesake), Arabic comma, digits and names · district = inside a city of 100k+ that is 3x bigger (or a one-city country or an island) and gets Area only; anything else is a town and gets Area plus Outside the city, in the add window (with a Keep under / Switch / Add dropdown) and in the import (absorbed places now carry their area, towns their flag) · your city uses its gazetteer population · Edit has Check the address on tap and no city change · villages under 2,000 within 20 km come tucked under their city by default with undo · small branches list their places · Nearby town line in Diag · city line reworded · r84-3 rules untouched)');
+logTiming('BUILD: M2-ID-r85 (r85 - decision 10-21-02, most places find their pin and category: when a city opens, imported places are matched in our map data (batches of 40, progress in the box); the place’s own link gives its Google spot in memory to pick the right branch within 300 m (never written); exact name within 100 m = strong; Confirm all strong is one explicit sheet with a sample of three and Undo; Overture category maps to our tree by the approved table v1.1 and the place moves to its category unsorted-pin-wise (Suggested, never pinned silently); the list’s Mostly section holds conflicts in the box; duplicates by map id are flagged; places outside the content guidelines are flagged, never sorted, removable with confirmation, and a sure banned match cannot be pinned when adding by hand; report in Diag and the NET line; worker touched once in ب-١ for the category only)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
