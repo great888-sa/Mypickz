@@ -658,6 +658,7 @@ function finish(){
   perfInvariantsGuard();
   importRedLinesGuard();
   sortRedLinesGuard();
+  undoRedLinesGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
@@ -850,13 +851,29 @@ function importRedLinesGuard(){
   const m = /function tkPlaceOf\(r, section, plan\)\{([^\n]*)/.exec(imp); check(!!m && !/\b(lat|lng|loc|cell|coordinates)\b/.test(m[1]), T + 'tkPlaceOf (the only builder of a written place) carries no lat / lng / loc / cell / coordinates — the file location stays in memory (٠٩-١٥-٠٥)');
   // ٣ · حارس العدّ قبل كل حفظة · gid هو الحقل الوحيد المكتوب على مكان قائم
   check(/if \(after !== before \+ added\)\{ res\.failed\.push\(c\.name \+ ' \(count mismatch\)'\); continue; \}/.test(imp), T + 'count guard before every city save (before + added = after, else nothing is saved)');
-  check(/c\.gidWrites\.forEach\(function\(w\)\{ if \(!w\.p\.gid\)\{ w\.p\.gid = w\.gid; res\.gid\+\+; \} \}\);/.test(imp) && !/w\.p\.url\s*=/.test(imp), T + 'an existing place gains gid only — its url is never rewritten by the import');
+  check(/const write = function\(w\)\{ const p = resolve\(w\); if \(!p \|\| p\.gid \|\| !w\.gid\) return; p\.gid = w\.gid; p\.gidBy = plan\.importId;/.test(imp) && !/\bp\.url\s*=/.test(imp) && !/w\.p\.url\s*=/.test(imp), T + 'an existing place gains gid (+gidBy · url2) only when it had none — its url is never rewritten by the import (r86)');
   // ٤ · لا دمج بالاسم وحده: الاسم بلا قرب يوسم similar ولا يُتخطّى
   check(/r\.similar = true; c\.similar\+\+;/.test(imp) && /e\.geo && r\.loc && tkKm\(r\.loc, e\.geo\) <= TK_DUP_KM/.test(imp), T + 'name-only matches are flagged similar (S7), never merged; a duplicate needs gid, the same url, or name + proximity with a pinned existing place');
   // ٥ · السقف لكل مدينة ٥٠٠ (٠٩-١٥-٠٥ · ق١٠-١٩-٠١)
   check(/const TK_CAP_PER_CITY = 500;/.test(imp) && /added >= TK_CAP_PER_CITY\) return;/.test(imp), T + 'cap of 500 imported places per city per run');
 }
 
+// ---------- §31 (r86 · ق١٠-٢١-٠٣ — الخطوط الحمراء): Undo لا يحذف ما لمسته يدك · waiting بلا موقع · الإيصال لا يُخزَّن · url2 من الرابط حرفيًّا ----------
+function undoRedLinesGuard(){
+  const T = '§31 undo/receipt/waiting red lines (r86): ';
+  const f = path.join(ROOT, 'src', '64-import.js'); if (!fs.existsSync(f)) return; const src = stripComments(fs.readFileSync(f, 'utf8'));
+  check(/function tkTouched\(p, tripIds\)\{ if \(p\.geo && typeof p\.geo\.lat === 'number'\) return 'pinned'; if \(\(p\.updatedAt \|\| 0\) > \(p\.importedAt \|\| 0\)\) return 'edited'; if \(p\.topPlace \|\| \(p\.picks && p\.picks\.length\)\) return 'edited'; if \(p\.id && tripIds\[p\.id\]\) return 'trip'; return ''; \}/.test(src), T + 'Undo never removes a place that carries a pin (geo), was updated after import (updatedAt > importedAt), is Top/Picks, or is referenced by a trip (tkTouched — the dividing line)');
+  check(/if \(p\.importId === last\.importId\)\{ const why = tkTouched\(p, tripIds\); if \(why\)\{ city\.keep\+\+;/.test(src) && /else if \(p\.gidBy === last\.importId\)\{ city\.clears\.push\(p\); \}/.test(src), T + 'Undo selects by this importId only and clears the gid bundle only where gidBy names this import — older places are otherwise untouched');
+  const undo = src.slice(src.indexOf('async function tkUndoRun'), src.indexOf('function tkReceiptText'));
+  check(undo.length > 200 && /if \(after !== before - c\.remove\.length\)\{ res\.failed\.push\(c\.name \+ ' \(count mismatch\)'\); continue; \}/.test(undo) && /removeCityListCity\(c\.id, \{ confirmed: true \}\)/.test(undo) && /c\.willBeEmpty && after === 0/.test(undo), T + 'reversed count guard before every Undo save (before − removed = after) and a created city is dropped only when it ends empty');
+  check(/const ok = await mpConfirm\(msg, \{ title: '↶ Undo this import\?'/.test(src) && /keeps ' \+ u\.keeps \+ ' you worked on'/.test(src), T + 'Undo goes through a preview sheet that states what is removed and what is kept');
+  check(/out\.push\(\{ name: String\(r\.name \|\| ''\)\.slice\(0, 120\), url: r\.url, gid: r\.gid \|\| '', country: cn \}\);/.test(src) && /const TK_WAIT_MAX = 500;/.test(src), T + 'waiting rows carry name · url · gid · country only (no location) and are capped at 500');
+  const rc = src.slice(src.indexOf('function tkReceiptText'), src.indexOf('function tkLastHtml'));
+  check(rc.length > 200 && !/localStorage\.setItem|mpData\.|sessionStorage\.setItem/.test(rc) && /a\.download = name;/.test(rc), T + 'the receipt is generated and downloaded — never written to localStorage, sessionStorage or any document');
+  check((src.match(/url2: r\.url \}/g) || []).length === 2 && !/url2\s*=\s*[^;]*(lat|lng|loc\b|cell)/.test(src) && /if \(w\.url2 && w\.url2 !== p\.url\) p\.url2 = w\.url2;/.test(src), T + 'url2 is copied from the row’s link verbatim (r.url) — never built from a coordinate or a cell (٠٩-١٥-٠٥)');
+  check(/if \(same\.length === 1 && rowKeyCount\[key\] === 1 && !same\[0\]\.p\.gid && r\.gid\)\{ r\.state = 'upgrade';/.test(src), T + 'an older place is upgraded only when exactly one row carries that name, it is the only older place with it, and it has no gid yet');
+  check(/function tkPlanStrip\(plan\)/.test(src) && !/loc: r\.loc|cell: r\.cell|addr: r\.addr/.test(src.slice(src.indexOf('function tkPlanStrip'), src.indexOf('async function tkResume'))), T + 'the resume plan stored in sessionStorage strips loc · cell · addr (no location survives the session)');
+}
 // ---------- §30 (r85 · ق١٠-١٩-٠١ §٢ · جدول التحويل v1.1 — الخطوط الحمراء): الفرز الآلي لا يثبّت ولا يكتب موقع الملف ولا يحذف صامتًا ولا يصنّف الممنوع ----------
 function sortRedLinesGuard(){
   const T = '§30 auto-sort red lines (r85): ';
