@@ -27,7 +27,7 @@ async function candidatesByTokenV2(env, cc, meta, lat, lng, rKm, names){
   const postings = {}; for (let i = 0; i < tl.length; i += 12) await Promise.all(tl.slice(i, i + 12).map(async t => { const b = bucketOfN(t, N); const d = dirs[b]; const ent = d && own(d, t) ? d[t] : null; postings[t] = ent ? await tokBlob(env, cc, b, t, ent) : []; }));
   return qsets.map(qs => { const hits = new Map(); const entries = {};
     for (const t of qs){ const arr = postings[t] || []; const rare = 1 / Math.sqrt(arr.length || 1); for (const e of arr){ if (geoDist(lat, lng, e[1], e[2]) > R) continue; hits.set(e[0], (hits.get(e[0]) || 0) + rare); entries[e[0]] = e; } }
-    return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).map(x => { const e = entries[x[0]]; return { id: 'ovt:' + e[0], lat: e[1], lng: e[2], name: e[3], addr: e[4] || '', locality: e[5] || '', names: [] }; }); });
+    return [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 800).map(x => { const e = entries[x[0]]; return { id: 'ovt:' + e[0], lat: e[1], lng: e[2], name: e[3], addr: e[4] || '', locality: e[5] || '', cat: e[6] || '', names: [] }; }); }); /* ب-١ (ق١٠-٢١-٠١): الفئة من العنصر السابع — فهرس قديم (٦ عناصر) → فارغ */
 }
 async function candidatesFor(env, lat, lng, rKm, name, cc){ const r = await candidatesAny(env, lat, lng, rKm, [name], cc); return r === null ? null : r[0]; }
 async function candidatesAny(env, lat, lng, rKm, names, cc){ if (cc && /^[A-Z]{2}$/.test(cc)){ const meta = await tokMetaOf(env, cc); if (meta && meta.m && meta.m.format === 2) return candidatesByTokenV2(env, cc, meta.m, lat, lng, rKm, names); } return null; } // لا فهرس للدولة → noData (الخلفي يفهرسها)
