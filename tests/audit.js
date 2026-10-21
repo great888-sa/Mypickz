@@ -657,6 +657,7 @@ function finish(){
   tripModelGuard();
   perfInvariantsGuard();
   importRedLinesGuard();
+  sortRedLinesGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
@@ -854,4 +855,19 @@ function importRedLinesGuard(){
   check(/r\.similar = true; c\.similar\+\+;/.test(imp) && /e\.geo && r\.loc && tkKm\(r\.loc, e\.geo\) <= TK_DUP_KM/.test(imp), T + 'name-only matches are flagged similar (S7), never merged; a duplicate needs gid, the same url, or name + proximity with a pinned existing place');
   // ٥ · السقف لكل مدينة ٥٠٠ (٠٩-١٥-٠٥ · ق١٠-١٩-٠١)
   check(/const TK_CAP_PER_CITY = 500;/.test(imp) && /added >= TK_CAP_PER_CITY\) return;/.test(imp), T + 'cap of 500 imported places per city per run');
+}
+
+// ---------- §30 (r85 · ق١٠-١٩-٠١ §٢ · جدول التحويل v1.1 — الخطوط الحمراء): الفرز الآلي لا يثبّت ولا يكتب موقع الملف ولا يحذف صامتًا ولا يصنّف الممنوع ----------
+function sortRedLinesGuard(){
+  const T = '§30 auto-sort red lines (r85): ';
+  const f = path.join(ROOT, 'src', '65-sort.js'); check(fs.existsSync(f), T + 'src/65-sort.js exists (its own part so the guard reads it whole)'); if (!fs.existsSync(f)) return;
+  const src = stripComments(fs.readFileSync(f, 'utf8'));
+  const run = src.slice(src.indexOf('async function tkSortRun'), src.indexOf('function tkStrongList'));
+  check(run.length > 200 && !/\.geo\s*=/.test(run) && !/openId\s*=/.test(run), T + 'tkSortRun never writes a pin (no .geo = / openId = inside it) — sorting moves and flags only; pins need Confirm');
+  check(!/tkFileLocOf\([^)]*\)[^\n]*\.geo\s*=/.test(src) && !/geo\s*=\s*\{[^}]*(fileLoc|loc\.lat|loc\.lng)/.test(src), T + 'the file location (tkFileLocOf) is never written into a pin — pins carry Overture coordinates (sg.lat / sg.lng) only (٠٩-١٥-٠٥)');
+  check(/x\.p\.geo = \{ lat: \+\(\+sg\.lat\)\.toFixed\(5\), lng: \+\(\+sg\.lng\)\.toFixed\(5\), source: 'overture' \};/.test(src), T + 'Confirm all writes the suggestion (sg) coordinates with source overture');
+  check(/function tkConfirmStrongOpen\(\)/.test(src) && /tkPickSample\(list, 3\)/.test(src) && /tkUndoLast = \{ city: cityListCityId, items: undo/.test(src), T + 'Confirm all strong is an explicit sheet with a sample of three and an Undo record — no silent pinning (ق١٠-١٩-٠١ البند ٧)');
+  check(/async function tkRemoveBanned\(\)[^\n]*const ok = await mpConfirm\([^\n]*if \(!ok\) return;/.test(src) && (run.match(/\.splice\(/g) || []).length === (run.match(/\.places\.push\(/g) || []).length, T + 'removal of guideline-breaking places goes through a confirmation sheet; in tkSortRun every splice is a move (paired with a push) — nothing is deleted');
+  check(/const TK_CAT_BANNED = \/[^\n]*(bar|nightlife_venue|dance_club|casino|hookah_bar|adult_entertainment_venue)[^\n]*\//.test(src) && /if \(!c \|\| tkCatBanned\(c\) \|\| TK_CAT_BOX\.test\(c\)\) return null;/.test(src), T + 'banned categories (content guidelines §1) and box-only categories never map to a category of ours');
+  check((src.match(/liveCountOf\(cats\)/g) || []).length >= 4 && /rep\.err = 'count mismatch — nothing saved'/.test(src), T + 'count guard before every save in the sort part (sort · confirm all · remove)');
 }
