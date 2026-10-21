@@ -441,7 +441,7 @@ function plRenderModalCats(){
 async function plMovePlaceTo(catId){ // ر٧٠ط (N-083): نقل المكان المحرَّر إلى تصنيف آخر فورًا
   if (!plEdit || !catId || catId === plEdit.catId) { plRenderModalCats(); return; }
   const from = userEnsurePlaces(plEdit.catId); const pl = (from.places || [])[plEdit.index]; if (!pl){ plRenderModalCats(); return; }
-  from.places.splice(plEdit.index, 1); userEnsurePlaces(catId).places.push(pl); pl.searchKey = placeSearchKey(pl, catId);
+  from.places.splice(plEdit.index, 1); userEnsurePlaces(catId).places.push(pl); pl.searchKey = placeSearchKey(pl, catId); pl.updatedAt = Date.now(); delete pl.autoCat; /* r86: النقل بيدك يُؤرَّخ (Undo this import يُبقيه) ويمسح وسم الفرز الآلي */
   await saveMyCityList(); const c = plCatsAll().find(function(x){ return x.id === catId; }); showToast('Moved to ' + (c ? c.name : catId) + ' ✓');
   closePlPlaceModal(); renderPlacesMine();
 }
@@ -673,7 +673,7 @@ async function plSuggestRunOnce(places, gen){ // يقين المطابق (أو �
   const rest = []; plSuggestProgress('Checking pinned-before places… ' + todo.length); const idKeys = todo.map(function(p){ return mpData.identity.keyOf(cityListCityId, p.name); }); const knownMap = await mpData.identity.getMany(idKeys); if (!alive()) return [];
   todo.forEach(function(p, k){ const known = knownMap[idKeys[k]]; if (known && typeof known.lat === 'number') plSuggestCache[plSugKey(p)] = { lat: known.lat, lng: known.lng, openId: known.openId || null, source: known.source === 'user_pin' ? 'user_pin' : 'overture', known: true, city: cityListCityId }; else rest.push(p); }); plSuggestDiag.known = todo.length - rest.length; plSuggestDiag.asked = rest.length;
   const chunks = []; for (let i = 0; i < rest.length; i += 40) chunks.push(rest.slice(i, i + 40)); const nb = chunks.length; let done = 0;
-  const runChunk = async function(chunk){ const __t0 = Date.now(); try{ const r = await mpData.geo.matchBatch(cityListCityId, chunk.map(function(p){ return { name: p.name || '', addr: p.area || '' }; }), g); if (!alive()) return; if (r && r.index) plSuggestDiag.index = r.index; if (r && r.noData) plSuggestDiag.err.push('noData'); (r && r.results || []).forEach(function(res, k){ const p = chunk[k]; if (!p) return; const top = (res && res.candidates && res.candidates[0]) || null; plSuggestCache[plSugKey(p)] = (res && res.auto) ? { lat: res.auto.lat, lng: res.auto.lng, openId: res.auto.id || null, source: 'overture', city: cityListCityId } : (top ? { lat: top.lat, lng: top.lng, openId: top.id || null, source: 'overture', probable: true, n: (res.candidates || []).length, city: cityListCityId } : null); }); }catch(e){ plSuggestDiag.err.push(/abort/i.test(String(e)) ? 'timeout' : String((e && e.message) || e).slice(0, 24)); } plSuggestDiag.batches++; plSuggestDiag.slowest = Math.max(plSuggestDiag.slowest, Date.now() - __t0); done++; if (alive()) plSuggestProgress('Finding suggestions… ' + done + '/' + nb); };
+  const runChunk = async function(chunk){ const __t0 = Date.now(); try{ const r = await mpData.geo.matchBatch(cityListCityId, chunk.map(function(p){ return { name: p.name || '', addr: p.area || '' }; }), g); if (!alive()) return; if (r && r.index) plSuggestDiag.index = r.index; if (r && r.noData) plSuggestDiag.err.push('noData'); (r && r.results || []).forEach(function(res, k){ const p = chunk[k]; if (!p) return; plSuggestCache[plSugKey(p)] = tkJudge(p, res, tkFileLocOf(p)); }); /* r86: الحكم الواحد (r85) — موقع الملف (url2 للمترقّي) يرجّح ويمنح «قوي» · auto كما كان · لا دبوس يُكتب */ }catch(e){ plSuggestDiag.err.push(/abort/i.test(String(e)) ? 'timeout' : String((e && e.message) || e).slice(0, 24)); } plSuggestDiag.batches++; plSuggestDiag.slowest = Math.max(plSuggestDiag.slowest, Date.now() - __t0); done++; if (alive()) plSuggestProgress('Finding suggestions… ' + done + '/' + nb); };
   for (let i = 0; i < chunks.length; i += 2){ if (!alive()) return []; await Promise.all(chunks.slice(i, i + 2).map(runChunk)); } /* دفعتان بالتوازي */
   if (!alive()) return [];
   return noGeo.map(function(p){ return { p: p, s: plSuggestCache[plSugKey(p)] || null }; });
@@ -708,7 +708,7 @@ async function plPinMoveSave(){ const p = plPinMovePlace(); const c = plPinMoveC
   try{ await saveMyCityList(); showToast('Pin saved ✓'); }catch(e){ mpSwallow(e, 'pin save'); showToast('Could not save the pin'); }
   renderPlacesMine(); }
 async function plPinRemove(){ const p = plPinMovePlace(); if (!p || !(p.geo && typeof p.geo.lat === 'number')) return;
-  const ok = await mpConfirm('Remove the pin? The place stays in your list.', { title: 'Remove pin', okLabel: 'Remove', danger: true }); if (!ok) return;
+  const ok = await mpConfirm('Remove the pin? The place stays in your list.', { title: 'Remove pin', ok: 'Remove', danger: true }); if (!ok) return;
   delete p.geo; delete p.openId; delete plSuggestCache[plSugKey(p)]; plPinMove = null; plMapFocus = null;
   try{ await saveMyCityList(); showToast('Pin removed'); }catch(e){ mpSwallow(e, 'pin remove'); showToast('Could not save'); }
   renderPlacesMine(); }
@@ -754,7 +754,7 @@ function plKnownCatIds(){ const ids = {}; DATA.forEach(function(sec){ (sec.items
 function plUnknownCats(){ if (!myCityListData || !myCityListData.categories) return []; const known = plKnownCatIds(); return Object.keys(myCityListData.categories).filter(function(k){ const e = myCityListData.categories[k]; return !known[k] && e && Array.isArray(e.places) && e.places.some(function(q){ return q && (q.name || q.url); }); }).map(function(k){ return { id: k, n: myCityListData.categories[k].places.filter(function(q){ return q && (q.name || q.url); }).length }; }); }
 function plUnsortedPanelHtml(){
   const unk = plUnknownCats(); const orphans = isOwner ? customItems.map(function(c, i){ return { c: c, i: i }; }).filter(function(x){ return x.c && x.c.legacySection; }) : [];
-  if (!unk.length && !orphans.length) return '';
+  if (!unk.length && !orphans.length) return (typeof tkMiniPanelHtml === 'function') ? tkMiniPanelHtml() : ''; /* r86: لوحة مصغّرة حين لا صندوق */
   const total = unk.reduce(function(a, x){ return a + x.n; }, 0);
   const opts = '<option value="">Choose a category…</option>' + DATA.map(function(sec){ return '<optgroup label="' + attrStr(sectionDisplay(sec).name) + '">' + (sec.items || []).filter(function(it){ return !isPrivateCategoryId(it.id); }).map(function(it){ return '<option value="' + attrStr(it.id) + '">' + escapeHtml(catLabelOf(it.id)) + '</option>'; }).join('') + '</optgroup>'; }).join('');
   const tkN = unk.filter(function(x){ return /^tk:/.test(x.id); }).reduce(function(a, x){ return a + x.n; }, 0); /* أ-١٣ (IM-R): الصندوق يُسمّى حين يحمل مستورَدات */
@@ -766,7 +766,7 @@ function plUnsortedPanelHtml(){
 async function plResortUnknown(oldId, newId){ // النقل بالعدّ: قبل = بعد، وإلا لا حفظ
   if (!newId || !myCityListData || !myCityListData.categories || !myCityListData.categories[oldId]) return;
   const before = Object.keys(myCityListData.categories).reduce(function(a, k){ return a + ((myCityListData.categories[k] || {}).places || []).length; }, 0);
-  const src = myCityListData.categories[oldId].places || []; const dst = userEnsurePlaces(newId); dst.active = true; src.forEach(function(p){ if (p && (p.name || p.url)){ if (!p.fromCat) p.fromCat = oldId; dst.places.push(p); } }); // fromCat: أصل المكان لصاحبه (يزول عند التحرير)
+  const src = myCityListData.categories[oldId].places || []; const dst = userEnsurePlaces(newId); dst.active = true; src.forEach(function(p){ if (p && (p.name || p.url)){ if (!p.fromCat) p.fromCat = oldId; p.updatedAt = Date.now(); delete p.autoCat; dst.places.push(p); } }); /* r86: اختيارك للتصنيف عملٌ بيدك — Undo this import يُبقيه */ // fromCat: أصل المكان لصاحبه (يزول عند التحرير)
   delete myCityListData.categories[oldId]; if (myCityListOldKeys.indexOf(oldId) < 0) myCityListOldKeys.push(oldId);
   const after = Object.keys(myCityListData.categories).reduce(function(a, k){ return a + ((myCityListData.categories[k] || {}).places || []).length; }, 0);
   if (after !== before){ showToast('Count mismatch — nothing saved'); await loadMyCityList(cityListCityId); renderPlacesMine(); return; }
