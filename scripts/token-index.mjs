@@ -17,13 +17,13 @@ for (const f of fs.readdirSync(SRC).filter(x => x.endsWith('.jsonl'))){
   const streetWords = [...addrWords.entries()].filter(([, n]) => n >= Math.max(200, withAddr * 0.002)).sort((a, b) => b[1] - a[1]).slice(0, 60).map(([t]) => t); // كلمات الشارع: الأكثر تكرارًا بحقل العنوان (rue · quai · straße · شارع …)
   const postcodePatterns = [...postcodes.entries()].filter(([, n]) => n >= Math.max(100, withAddr * 0.001)).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t]) => t);
   const localityList = [...localities.entries()].filter(([, n]) => n >= 20).sort((a, b) => b[1] - a[1]).slice(0, 4000).map(([t]) => t); // الأحياء والبلدات المعروفة بالدولة (≥ ٢٠ مكانًا) BUCKETS = 4096; // بالصيغة ٢ حجم الدلو لا يهم القارئ (يقرأ الكلمة وحدها) — ٤٠٩٦ لكل الدول
-  let bytes = 0, postings = 0, maxBucket = 0;
+  let bytes = 0, postings = 0, maxBucket = 0, withCat = 0;
   for (let pass = 0; pass < PASSES; pass++){
     const lo = pass * (BUCKETS / PASSES), hi = lo + BUCKETS / PASSES; const buckets = new Map(); // أجزاء متساوية من نطاق الأدلاء
     const rl = readline.createInterface({ input: fs.createReadStream(path.join(SRC, f)), crlfDelay: Infinity });
     for await (const line of rl){ if (!line.trim()) continue; let p; try{ p = JSON.parse(line); }catch(_){ continue; } if (!p.name || typeof p.lat !== 'number') continue;
       const names = [p.name].concat(p.common && typeof p.common === 'object' ? Object.values(p.common).filter(x => x && x !== p.name).slice(0, 3) : []); const T = toks(names.join(' '));
-      const entry = [p.id, +(+p.lat).toFixed(5), +(+p.lng).toFixed(5), String(p.name).slice(0, 80), String(p.addr || '').slice(0, 60), String(p.locality || '').slice(0, 30)];
+      const entry = [p.id, +(+p.lat).toFixed(5), +(+p.lng).toFixed(5), String(p.name).slice(0, 80), String(p.addr || '').slice(0, 60), String(p.locality || '').slice(0, 30), String(p.cat || '').slice(0, 40)]; if (p.cat) withCat++; /* ب-١ (ق١٠-٢١-٠١): العنصر السابع فئة Overture كما هي — لتصنيف r85؛ عامل قديم يتجاهله */
       T.forEach(t => { if (stopSet.has(t)) return; const b = bucket4096(t); if (b < lo || b >= hi) return; if (!buckets.has(b)) buckets.set(b, Object.create(null)); const bk = buckets.get(b); (bk[t] = bk[t] || []).push(entry); }); } // كائن بلا وراثة: «constructor» كلمة لا خاصية
     for (const [b, bk] of buckets){ const parts = [], dirIdx = Object.create(null); let off = 0; // الصيغة ٢: كتلة مضغوطة لكل كلمة داخل ملف الدلو + دليل (قراءة بالمدى: الكلمة وحدها تُنزَّل)
       for (const t of Object.keys(bk)){ const arr = bk[t]; const gz = zlib.gzipSync(Buffer.from(JSON.stringify(arr)), { level: 9 }); dirIdx[t] = [off, gz.length, arr.length]; parts.push(gz); off += gz.length; postings += arr.length; if (gz.length > maxBucket) maxBucket = gz.length; }
@@ -31,7 +31,7 @@ for (const f of fs.readdirSync(SRC).filter(x => x.endsWith('.jsonl'))){
     buckets.clear();
   }
   fs.writeFileSync(path.join(dir, 'stop.json'), JSON.stringify(stop)); fs.writeFileSync(path.join(dir, 'vocab.json'), JSON.stringify({ streetWords, postcodePatterns, localities: localityList })); fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ cc, format: 2, places, postings, buckets: BUCKETS, stop: stop.length, streetWords: streetWords.length, localities: localityList.length, postcodePatterns, maxTokenKB: Math.round(maxBucket / 1024), mb: +(bytes / 1048576).toFixed(1), builtAt: new Date().toISOString() }));
-  report[cc] = { places, postings, stop: stop.length, maxTokenKB: Math.round(maxBucket / 1024), mb: +(bytes / 1048576).toFixed(1) };
+  report[cc] = { places, postings, withCat: Math.round(withCat / PASSES), stop: stop.length, maxTokenKB: Math.round(maxBucket / 1024), mb: +(bytes / 1048576).toFixed(1) }; /* ب-١: withCat للتحقق من /health — الملف يُقرأ PASSES مرات فيُقسم */
   console.log(cc.padEnd(4), 'places', String(places).padStart(9), 'postings', String(postings).padStart(10), 'stop-tokens', String(stop.length).padStart(4), 'street-words', streetWords.length, '(' + streetWords.slice(0, 6).join(',') + ')', 'postcodes', JSON.stringify(postcodePatterns), 'localities', localityList.length, 'max token blob', Math.round(maxBucket / 1024) + ' KB', 'total', (bytes / 1048576).toFixed(0) + ' MB');
 }
 fs.mkdirSync(OUT, { recursive: true }); fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify(report, null, 1)); console.log('DONE countries', Object.keys(report).length);
