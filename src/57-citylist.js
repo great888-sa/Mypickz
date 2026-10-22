@@ -318,7 +318,7 @@ let cityListEditBackup = {}; // نسخة أصلية لكل مكان لحظة د�
 
 function removeUserPlace(id, index){
   const e = userEnsurePlaces(id);
-  e.places.splice(index, 1);
+  const gone = e.places.splice(index, 1); try{ if (typeof tkRemember === 'function') tkRemember(gone); }catch(_){} /* r86-3 (البند ٣): المستورَد المحذوف بيدك يُذكر — لا يعود في إعادة الاختيار إلا بطلبك */
   [...cityListEditingKeys].forEach(k => { if (k.startsWith(id + '#')) cityListEditingKeys.delete(k); });
   saveMyCityList();
 }
