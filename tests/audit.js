@@ -659,6 +659,7 @@ function finish(){
   importRedLinesGuard();
   sortRedLinesGuard();
   undoRedLinesGuard();
+  planTruthGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
@@ -858,6 +859,20 @@ function importRedLinesGuard(){
   check(/const TK_CAP_PER_CITY = 500;/.test(imp) && /added >= TK_CAP_PER_CITY\) return;/.test(imp), T + 'cap of 500 imported places per city per run');
 }
 
+// ---------- §32 (r86-1 · ق١٠-٢٢-٠١ — الخطة تقول الحقيقة): الاسم يرجّح بين المحتوين فقط · لا ضمّ افتراضيًّا فوق ٢٠ كم ولا لمدينة أكبر من أمّها · البلدة كمكان لا تُستورد افتراضيًّا · الممتصّ الأقرب والسلسلة تُحلّ ----------
+function planTruthGuard(){
+  const T = '§32 plan truth (r86-1): ';
+  const f = path.join(ROOT, 'src', '64-import.js'); if (!fs.existsSync(f)) return; const src = stripComments(fs.readFileSync(f, 'utf8'));
+  check(/const named = pool\.filter\(function\(x\)\{ return mentions\(x\.city\) \|\| \(x\.sub && mentions\(x\.sub\)\); \}\); const from = named\.length \? named : pool;/.test(src) && /if \(s <= slack\) list\.push\(\{ city: c, sub: null, s: s \}\);/.test(src), T + 'the place name only tips the choice between candidates that already contain the point (s ≤ slack) — it never jumps to a far city');
+  check(/const TK_TINY_P = 1000, TK_PASS2_SLACK = 1\.5, TK_TOWN_P = 5000, TK_TOWN_KM = 3, TK_TOWN_SNAP_KM = 15, TK_SMALL_ROWS = 3, TK_AUTO_GAP = 20;/.test(src), T + 'constants as decided: hamlet < 1000 · second pass 1.5× · town ≥ 5000 within 3 km · small < 3 places · default tuck ≤ 20 km');
+  check(/if \(P && tkRowsN\(c\) > 0 && tkGap\(c, P\) <= TK_AUTO_GAP && \(c\.p \|\| 0\) <= Math\.max\(P\.p \|\| 0, TK_BIG_P\)\)\{ c\.autoMerged = true; tkMergeIn\(plan, c\.id\); \} else \{ c\.on = false; \}/.test(src) && !/TK_VILLAGE/.test(src), T + 'a small new city is tucked by default only under a tree parent within 20 km that is not smaller than it; otherwise it is left unticked — and the old village merge is gone');
+  check(/if \(c\.merged \|\| c\.virtual \|\| c\.mine \|\| !tkSmall\(c\)\) return;/.test(src) && /function tkSmall\(c\)\{ return !c\.mine && !c\.virtual && tkRowsN\(c\) < TK_SMALL_ROWS; \}/.test(src), T + 'defaults never touch the user’s own cities or cities with 3+ places');
+  check(/if \(r\.isTown && !tkState\.includeTowns\)\{ r\.state = 'town'; c\.towns\+\+; return; \}/.test(src) && /if \(r\.state !== 'new' \|\| added >= TK_CAP_PER_CITY\) return;/.test(src) && /tkState\.includeTowns = false; tkState\.decoderOk = tkSelfCheck\(\);/.test(src), T + 'a town saved as a place is not imported unless the user asks (state town · reset per plan · commit saves new rows only)');
+  check(/if \(\(c\.p \|\| 0\) >= TK_TOWN_P && !\(c\.absorbedBy && tkIsDistrict\(c\.absorbedBy\)\)\)/.test(src), T + 'a district of a big city (Times Square · Retiro) is never mistaken for a town saved as a place');
+  check(/const sc = \(b\.micro \|\| \(b\.island && b\.dest\) \? 0 : 1\) \+ d \/ b\.rr; if \(sc < bestS\)\{ best = b; bestS = sc; \}/.test(src) && /while \(b && b\.absorbedBy && n\+\+ < 8\) b = b\.absorbedBy;/.test(src), T + 'the absorber is the nearest eligible one by relative distance and chains resolve to the root (Paris 08 → Paris, not Paris 17)');
+  check(/\(\(c\.p \|\| 0\) >= TK_BIG_P && !\(c\.island && !c\.dest\)\)/.test(src), T + 'a big island (> 60 km) is not an absorber — its towns stay cities (owner rule 4)');
+  check(/if \(k\.locFrom === 'cell' && r\.locFrom === 'json' && r\.loc\)\{ k\.loc = r\.loc; k\.locFrom = 'json';/.test(src) && !/locFrom === 'json'[^\n]*\.geo\s*=/.test(src), T + 'JSON coordinates replace the link cell for the same place in memory only — still never written');
+}
 // ---------- §31 (r86 · ق١٠-٢١-٠٣ — الخطوط الحمراء): Undo لا يحذف ما لمسته يدك · waiting بلا موقع · الإيصال لا يُخزَّن · url2 من الرابط حرفيًّا ----------
 function undoRedLinesGuard(){
   const T = '§31 undo/receipt/waiting red lines (r86): ';
