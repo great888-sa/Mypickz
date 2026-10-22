@@ -93,12 +93,13 @@ function plEmptyGuideHtml(){ // أ-١٢-٢ (قرار المالك): عرض ال�
   if (totalMyPlaces() > 0) return '<div class="mp-empty mini">Pick a city — or add one — to start your places</div>';
   return '<div class="pl-guide">'
     + '<div class="pl-guide-h">Start here — four ways to fill MyPickz</div>'
-    + '<button type="button" class="pl-guide-row" onclick="plAddCity()"><b>1 · Add your first place</b><span>＋ City, then ＋ Add place → Paste from Maps. In Google Maps: open the place → Share → Copy.</span></button>'
-    + '<button type="button" class="pl-guide-row" onclick="tkOpenImport()"><b>2 · Import your Google Maps lists</b><span>' + (tkWaiting() ? '⏳ Waiting for your Takeout file — tap when Google\'s email arrives.' : 'One file from Google Takeout · every place finds its city on your device.') + '</span></button>'
+    + '<button type="button" class="pl-guide-row" style="border-color:var(--saffron); border-width:2px;" onclick="tkOpenImport()"><b style="font-size:14px;">📥 1 · Bring everything you saved in Google Maps</b><span>' + (tkWaiting() ? '⏳ Waiting for your Takeout file — tap when Google\'s email arrives.' : 'One file from Google Takeout · your lists become cities and places here, on your phone · nothing is sent to Google.') + '</span><span style="display:inline-block; margin-top:4px; padding:4px 10px; border-radius:999px; background:var(--saffron); color:var(--ink); font-weight:800; font-size:12px; align-self:flex-start;">Import</span></button>' /* r86-3 (البند ٥ · قرار المالك): الاستيراد الباب الأول وبطاقة بارزة */
+    + '<button type="button" class="pl-guide-row" onclick="plAddCity()"><b>2 · Add a place by hand</b><span>＋ City, then ＋ Add place → Paste from Maps. In Google Maps: open the place → Share → Copy.</span></button>'
     + '<button type="button" class="pl-guide-row" onclick="switchTab(\'Community\')"><b>3 · Explore the Community</b><span>Other users\' public lists and trips by city — save what you like.</span></button>'
     + '<button type="button" class="pl-guide-row" onclick="switchTab(\'Curators\')"><b>4 · Follow Curators</b><span>Active members whose favorites you may like.</span></button>'
     + '</div>';
 }
+function plImportNudgeHtml(){ if (!currentUser) return ''; const n = totalMyPlaces(); if (!(n > 0 && n < 10)) return ''; try{ if (JSON.parse(localStorage.getItem('mp_import_runs') || '{}').runs) return ''; }catch(_){} return '<button type="button" class="chip" style="margin:6px 0 2px; white-space:normal; text-align:left; line-height:1.3;" onclick="tkOpenImport()">📥 Have lists in Google Maps? Import them →</button>'; } /* r86-3 (البند ٥ · قرار المالك): تذكير بعد أول مكان ما دام < ١٠ أماكن ولا استيراد على هذا الجهاز — يختفي بالقاعدة لا بزر */
 function plInitialCityPick(){ // r70r (قرار المالك ٣): آخر مدينة كانت محددة ← وإلا (ر٧٢-أ-١ح) الأكثر محتوًى ← لا شيء — وسم «مدينتي» أُلغي (قرار المالك ١٦ سبتمبر)
   const all = cityListAllCities(), saved = userListData && userListData.listCity;
   const bySaved = saved && all.find(function(c){ return c.id === saved; }); if (bySaved) return bySaved;
@@ -274,7 +275,7 @@ function renderPlacesMine(){
   const countriesAll = cityListAllCountries();
   plHeadSet('city'); /* الصفوف ١–٣ بالرأس الثابت */
   { const __own = []; Object.keys(myCityListData.categories || {}).forEach(function(k){ ((myCityListData.categories[k] || {}).places || []).forEach(function(p){ if (p && p.source && p.source.ownerId && !(p.source.ownerId in plOwnerCache)) __own.push(p.source.ownerId); }); }); if (__own.length) plEnsureOwners(__own).then(function(did){ if (did && placesSource === 'mine') renderPlacesMine(); }); } /* r74m-٢: سطر From بالاسم الحي — يُجلب مرة ثم يُعاد الرسم */
-  const __pm = !!(plView === 'map' && plPinMove && plPinMovePlace()); let outerHtml = catPairHost('plFilter') + (__pm ? '' : plRow4Html() + '<div class="ctx" id="plCtx"><b>My places</b></div>'); /* r75b: بوضع النقل لا صف رابع ولا سطر سياق — التركيز على الخريطة */
+  const __pm = !!(plView === 'map' && plPinMove && plPinMovePlace()); let outerHtml = catPairHost('plFilter') + (__pm ? '' : plRow4Html() + '<div class="ctx" id="plCtx"><b>My places</b></div>' + plImportNudgeHtml()); /* r75b: بوضع النقل لا صف رابع ولا سطر سياق — التركيز على الخريطة */
 
   /* ر٧٠ب (N-011 · ق٠٩-٠٧-٠٥): اللوحات الثلاث بلوحة الاختيار المشتركة — الدول (بعلمها N-067) · المدن (عدّاد ثابت · المختارة بنقطة · الحذف بوضع التحرير على مدني الخاصة · ＋ Add city أسفل النتائج) · التصنيفات (＋ على كل تصنيف بما فيه الفارغ) */
   if (plPanel === 'countries'){
