@@ -33,7 +33,7 @@ def run(label, x0, y0, x1, y1):
           COPY (
             SELECT id, names.primary AS name, names.common AS common, {cat_expr} AS cat,
                    ST_Y(geometry) AS lat, ST_X(geometry) AS lng,
-                   addresses[1].freeform AS addr, addresses[1].locality AS locality,
+                   addresses[1].freeform AS addr, addresses[1].locality AS locality, addresses[1].postcode AS postcode,
                    'c' || CAST(CAST(floor(ST_Y(geometry) * 10) AS INTEGER) AS VARCHAR) || '_' || CAST(CAST(floor(ST_X(geometry) * 10) AS INTEGER) AS VARCHAR) AS cell
             FROM read_parquet('{src}', hive_partitioning=1)
             WHERE bbox.xmin >= {x0} AND bbox.xmax <= {x1} AND bbox.ymin >= {y0} AND bbox.ymax <= {y1}
