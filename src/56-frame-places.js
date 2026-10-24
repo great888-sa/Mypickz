@@ -389,7 +389,7 @@ function openPlPlaceModal(catId, index){
   if (catId !== null && index !== null){ plEdit = { catId: catId, index: index }; plModalCat = catId; }
   else { plEdit = null; plModalCat = catId; }
   if (!catId) plModalSec = null;
-  plFillModal(false);
+  const __pe = plEdit ? ((((myCityListData || {}).categories || {})[plEdit.catId] || { places: [] }).places[plEdit.index] || null) : null; plFillModal(!plEdit || !(__pe && __pe.geo && typeof __pe.geo.lat === 'number')); /* r86-8 (كلمة المالك ١٢:١٧): الإضافة تفتح على Paste from map · التحرير كذلك حين لا دبوس — والمثبَّت يفتح يدويًّا (اسمه وتصنيفه أولًا) */
 }
 function plFillModal(pasteMode){
   document.getElementById('plPlaceTitle').textContent = plEdit ? '✏️ Edit place' : '➕ Add a place';
@@ -569,9 +569,9 @@ const mpMap = (function(){
     const st = loc ? plPlaceStatus(p) : { kind: '' }; const at = loc ? "'" + attrStr(loc.catId) + "', " + loc.index : '';
     const chip = st.kind === 'pinned' ? '<span class="geo-st st-pinned">' + mpIcon('check', { size: 11 }) + 'Pinned</span>' : st.kind === 'suggested' ? '<span class="geo-st st-suggested">Suggested</span>' : st.kind === 'probable' ? '<span class="geo-st st-probable"><span class="n">' + (st.n || 1) + '</span>possible match' + (st.n === 1 ? '' : 'es') + '</span>' : st.kind === 'notFound' ? '<span class="geo-st st-notfound">Not found</span>' : '';
     const lead = st.kind === 'suggested' ? 'One match in our data. Is this the right spot?' : st.kind === 'probable' ? ((st.n || 1) + (st.n === 1 ? ' spot carries' : ' spots carry') + ' this name — pick the right one on the map.') : st.kind === 'notFound' ? 'Not in our data — place the pin yourself.' : (o.note && !loc ? o.note : '');
-    const primary = !loc ? '' : st.kind === 'suggested' ? '<button type="button" class="act pri" onclick="' + pre + 'plPinAccept(' + at + ')">' + mpIcon('check', { size: 14 }) + 'Confirm</button><button type="button" class="act alt" onclick="' + pre + 'plPinMoveStart(' + at + ')">Not here → Move pin</button>'
-      : st.kind === 'probable' ? '<button type="button" class="act pri" onclick="' + pre + 'plConfirmPin(' + at + ')">Pick the right one</button><button type="button" class="act alt" onclick="' + pre + 'plPinMoveStart(' + at + ')">None of them → Move pin</button>'
-      : st.kind === 'notFound' ? '<button type="button" class="act pri" onclick="' + pre + 'plPinMoveStart(' + at + ')">' + mpIcon('pin', { size: 14 }) + 'Place on map</button>'
+    const primary = !loc ? '' : st.kind === 'suggested' ? '<button type="button" class="act pri" onclick="' + pre + 'plPinAccept(' + at + ')">' + mpIcon('check', { size: 14 }) + 'Confirm</button><button type="button" class="act alt" onclick="' + pre + 'plPinMoveStart(' + at + ')">Not here → Move pin</button><button type="button" class="act alt" onclick="' + pre + 'tkPastePinAt(' + at + ')">Paste &amp; pin</button>'
+      : st.kind === 'probable' ? '<button type="button" class="act pri" onclick="' + pre + 'plConfirmPin(' + at + ')">Pick the right one</button><button type="button" class="act alt" onclick="' + pre + 'plPinMoveStart(' + at + ')">None of them → Move pin</button><button type="button" class="act alt" onclick="' + pre + 'tkPastePinAt(' + at + ')">Paste &amp; pin</button>'
+      : st.kind === 'notFound' ? '<button type="button" class="act pri" onclick="' + pre + 'plPinMoveStart(' + at + ')">' + mpIcon('pin', { size: 14 }) + 'Place on map</button><button type="button" class="act alt" onclick="' + pre + 'tkPastePinAt(' + at + ')">Paste &amp; pin</button>'
       : st.kind === 'pinned' ? '<button type="button" class="act alt" onclick="' + pre + 'plPinMoveStart(' + at + ')">' + mpIcon('move', { size: 12 }) + 'Move pin</button>' : ''; /* r75b-٢: Move pin بصف الفعل الأساسي (بإطار) فتبقى الفقاعة صفّين */
     const secondary = (loc ? '<button type="button" class="act" onclick="' + pre + 'plOpenCardAt(' + at + ')">Open card</button>' : '')
       + (function(){ const mh = mpMapsHref(p, cityListCityId); return mh ? '<a class="act" href="' + attrStr(mh) + '" target="_blank" rel="noopener" title="' + (p.url ? 'Open in Google Maps' : 'Search in Google Maps') + '">Google Maps ' + mpIcon('maps', { size: 12 }) + '</a>' : ''; })() /* غ-١: الفقاعة تكسب الرابط للمكان بلا رابط */
