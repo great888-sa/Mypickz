@@ -37,7 +37,7 @@ function pickNamePart(parts){ // الجزء الذي يشبه اسم مكان: �
   parts.forEach((x, i) => { const letters = (x.match(/[A-Za-z\u0600-\u06FF]/g) || []).length, digits = (x.match(/\d/g) || []).length; let sc = Math.min(letters, 12) - 6 * digits - (UNIT_RE.test(x) ? 30 : 0) - (i >= n - 2 && n > 2 ? 6 : 0) - i; if (letters < 2) sc -= 50; if (sc > bestS){ bestS = sc; best = i; } });
   return best;
 }
-async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويستخرج الاسم والعنوان من المسار أو من عنوان الصفحة — لا يقرأ الإحداثيات أبدًا (الثابت السابع)
+async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويستخرج الاسم والعنوان من المسار أو من عنوان الصفحة — لا يقرأ الإحداثيات أبدًا (الثابت السابع) · r86-8 v1.2: ويعيد الرابط النهائي نصًّا (final) للجهاز
   let u; try{ u = new URL(raw.trim()); }catch(_){ return { error: 'bad url' }; } if (!GOOGLE_HOSTS.test(u.hostname)) return { error: 'not a google maps link' };
   const H = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'Accept-Language': 'en,ar;q=0.8', 'Accept': 'text/html' };
   let final = u.href, html = '';
@@ -73,7 +73,7 @@ async function resolveGoogle(raw, debug){ // يتتبّع الرابط ويست�
   if (/^-?\d+(\.\d+)?$/.test(name)) name = ''; // لا نقبل رقمًا (إحداثية) اسمًا
   if (!name) via = 'none';
   let host = ''; try{ host = new URL(final).hostname; }catch(_){ }
-  const out = { name: name.slice(0, 120), addr: addr.slice(0, 160), host, via }; // لا lat/lng إطلاقًا · via للقياس
+  const out = { name: name.slice(0, 120), addr: addr.slice(0, 160), host, via, final: String(final || '').slice(0, 800) }; // لا lat/lng إطلاقًا · via للقياس · r86-8 v1.2 (استثناء المالك ق١٠-٢٤-٠٥): الرابط النهائي يُعاد كما هو — الجهاز يقرأ منه نقطته في حساب المستخدم وحده؛ العامل لا يفكّه ولا يخزّنه
   if (debug){ let path = ''; try{ const f = new URL(final); path = (f.pathname + f.search).replace(/@-?\d+\.?\d*,-?\d+\.?\d*[^/]*/g, '@…').replace(/[?&](ll|q|center|sll|near)=-?\d+\.?\d*,-?\d+\.?\d*/g, '?…').slice(0, 200); }catch(_){ }
     const t = (html.match(/<title>([^<]{0,160})<\/title>/i) || [])[1] || ''; const og = (html.match(/property=["']og:title["'][^>]+content=["']([^"']{0,160})["']/i) || [])[1] || '';
     const mask = x => String(x).replace(/-?\d{1,3}\.\d{3,}/g, '#').replace(/\s+/g, ' ');
