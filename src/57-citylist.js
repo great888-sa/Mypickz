@@ -145,6 +145,7 @@ async function saveMyCityList(){
   // حارس التطابق: لا يُكتب محتوى مدينة فوق مستند مدينة أخرى — ولا يُكتب قبل اكتمال التحميل
   if (myCityListLoadedFor !== cityListCityId){
     console.warn('[MyPickz] save skipped — loaded:', myCityListLoadedFor, 'target:', cityListCityId);
+    try{ logTiming('SAVE · ' + cityListCityId + ' · SKIPPED · loaded ' + (myCityListLoadedFor || 'none')); }catch(_){} showToast('Not saved — this city is still loading, try again in a moment'); /* r87-3 (البند ٤): لا حفظ يختفي بصمت */
     return;
   }
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
@@ -174,7 +175,7 @@ async function saveMyCityList(){
       myCityListOldKeys = []; myCityListCatsDirty = false;
       if (Object.keys(priv).length) await mpData.privatePlaces.save(currentUser.uid, cityListCityId, priv);
       userListData.cityPlaceCounts = userListData.cityPlaceCounts || {}; if (userListData.cityPlaceCounts[cityListCityId]){ userListData.cityPlaceCounts[cityListCityId] = 0; try{ await saveUserListGeneral(); }catch(e){} }
-      delete __cmSummary.places; try{ await syncCommunityProfile(); }catch(e){} return; // ر٧٢-أ-١د: لا مدينة شبح بالملف العام بعد حذف القائمة الفارغة
+      delete __cmSummary.places; try{ await syncCommunityProfile(); }catch(e){} try{ logTiming('SAVE · ' + cityListCityId + ' · 0 places · list removed'); }catch(_){} return; // ر٧٢-أ-١د: لا مدينة شبح بالملف العام بعد حذف القائمة الفارغة · r87-3
     }
     await mpData.cityLists.save(currentUser.uid, cityListCityId,
       { ownerId: currentUser.uid, cityId: cityListCityId, cityName: cityNameOf(cityListCityId) || cityListCityId, nickname: userListData.nickname || null, ...meta, categories: pub, catsV: CATS_VERSION }); // ر٧٠ط
@@ -185,7 +186,8 @@ async function saveMyCityList(){
       userListData.cityPlaceCounts = userListData.cityPlaceCounts || {}; if (userListData.cityPlaceCounts[cityListCityId] !== total){ userListData.cityPlaceCounts[cityListCityId] = total; const patch = { cityPlaceCounts: {} }; patch.cityPlaceCounts[cityListCityId] = total; await mpData.userLists.merge(currentUser.uid, patch); } }catch(e){}
     const hasRealPlace = Object.values(myCityListData.categories).some(entry => (entry.places||[]).some(p => p.url && p.name));
     if (hasRealPlace) mpData.users.flag(currentUser.uid, 'hasMyListActivity').catch(()=>{});
-  }catch(e){ showToast('Could not save your list'); }
+    try{ logTiming('SAVE · ' + cityListCityId + ' · ' + livePlaces + ' places · ok'); }catch(_){} /* r87-3 (البند ٤): سطر لكل حفظ — الدليل لا الوعد */
+  }catch(e){ showToast('Could not save your list'); try{ logTiming('SAVE · ' + cityListCityId + ' · FAILED · ' + ((e && e.code) || (e && e.message) || 'error')); }catch(_){} }
 }
 
 // مدن المالك المتاحة للقائمة الشخصية: المنشورة فقط (زي أي زائر بالظبط) — مش أي مدينة لسه Draft
