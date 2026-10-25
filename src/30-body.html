@@ -56,6 +56,12 @@
       <button type="button" class="pl-actbtn" onclick="plPasteUrl()" title="Paste link from clipboard">📋</button>
     </div>
     <div class="chiprow" id="plCheckAddr" style="display:none; margin-top:6px;"><button type="button" class="chip" onclick="plCheckAddress()">Check the address</button><span class="dim" style="font-size:11px;">reads the link once</span></div><!-- r84-4 (البند ٥): في التحرير فقط · لا نداء تلقائي للعامل -->
+    <label class="flabel">Plus code (optional — pins it exactly)</label><!-- r87: الرمز من تحت العنوان في بطاقة Google Maps — يُفكّ على الجهاز -->
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input id="plPlusCode" class="modal-input" placeholder="GV74+C3 London" style="flex:1; text-align:left; margin-top:0;" autocapitalize="characters" autocorrect="off">
+      <button type="button" class="pl-actbtn" onclick="plPastePlusCode()" title="Paste the Plus code from the clipboard">📋</button>
+    </div>
+    <div class="dim" style="font-size:11px; margin-top:4px;">In Google Maps: open the place, swipe its card up — under the address tap <b>Plus code</b> (it says Copied), then paste here.</div>
     <label class="flabel">Area (optional)</label>
     <input id="plArea" class="modal-input" placeholder="e.g. 10th arr.">
     <div class="chiprow" style="margin-top:6px;"><button type="button" class="chip tog" id="plTownChip" onclick="plModalTown = !plModalTown; if (!plModalTown) plTownGeo = null; plTownChipRender()">Outside the city</button><span class="dim" style="font-size:11px;">a nearby town, kept under this city</span></div><!-- r84-2 (كلمة المالك ١٣:٢٠): يكتب/يمسح town يدويًّا — ما يسِمه الاستيراد يملك المستخدم تعديله -->
@@ -388,6 +394,7 @@
     </div>
   </div>
   <!-- ر٧٢-أ-١: لوحة My Dashboard (المرجع ٦/ز) بطبقتيها -->
+  <div id="tkPasteBar" style="display:none;"></div><!-- r87: شريط «Paste the code you copied» عند العودة من Google Maps -->
   <div class="modal-backdrop" id="dashBackdrop">
     <div class="modal night" style="max-width:460px;">
       <div class="hdr" id="dashHdr"><button type="button" class="bk" id="dashBackBtn" onclick="dashBack()">← Back</button><span class="ttl" id="dashTitle">🎛 My Dashboard</span><button type="button" class="x" onclick="mpCloseAll('dashBackdrop')" aria-label="Close">✕</button></div><!-- ب-٢-٢-أ: القشرة الموحَّدة — Back يعود طبقة واحدة · ✕ يغلق كل الطبقات (المسودة v2-أ) -->
