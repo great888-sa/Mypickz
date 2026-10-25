@@ -3,10 +3,11 @@
 
   <!-- خ١: الشريط العلوي — القائمة + شارة الهوية (المشهد ٦) -->
   <div class="mp-topbar" id="mpTopbar">
-    <div style="display:flex; align-items:center; gap:10px;">
+    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
       <button type="button" class="mp-burger" onclick="openAccountModal()" aria-label="Menu">☰</button>
       <button type="button" class="mp-burger" onclick="openHelpFor(currentTab)" aria-label="Help" title="How this screen works">?</button>
-      <span class="mp-wordmark">MyPickz</span>
+      <button type="button" class="mp-sym" onclick="openSymbols()" title="What each button and status means">Symbols</button><!-- r87-2 (كلمة المالك ١٢:٥٥ · ١٣:٠٤): ظاهرة لا مدفونة -->
+      <span class="mp-wordmark" style="margin-left:auto; padding-left:6px;">MyPickz</span>
     </div>
     <button type="button" class="mp-idchip" id="accountChipBtn" onclick="toggleChipMenu()" style="display:none;">
       <span class="mini-av" id="accountChipAv" style="background:var(--ink);">··</span><span id="accountChipLabel">Account</span><span class="sus" id="accountChipSus" style="display:none;">· Suspended</span>
