@@ -101,6 +101,22 @@ function renderHelpModal(){
   wrap.innerHTML += '<div class="chipgrid c3" style="margin-top:6px;"><button type="button" class="pl-src" onclick="closeHelpModal(); copyLink();">🔗 Copy link</button><button type="button" class="pl-src" onclick="closeHelpModal(); showQR();">🀄 QR</button><a class="pl-src" href="mailto:mypickz.app@gmail.com?subject=MyPickz%20Feedback">✉️ Contact us</a></div>'; // ر٧٢-أ-١: «Share the app» داخل Help (المرجع §٧)
   const cb = document.getElementById('helpCloseBtn'); cb.textContent = currentUser ? data.closeLabel : data.gotIt; // أ-١٢-٢: للزائر «Got it — sign in»
 }
+function openSymbols(){ /* r87-2 (كلمة المالك ١٢:٥٥ · ١٣:٠٤): ما معنى كل زر وكل حالة — ظاهرة في الشريط العلوي */
+  const bd = document.getElementById('dashBackdrop'); if (!bd) return; bd.classList.add('show'); if (typeof dashSet === 'function') dashSet('Symbols', null); const body = document.getElementById('dashBody'); if (!body) return;
+  const row = function(ic, name, what){ return '<div style="display:flex; gap:10px; align-items:flex-start; padding:7px 0; border-bottom:1px solid var(--line-night);"><span style="flex:none; width:34px; height:34px; border-radius:10px; border:1px solid var(--line-night); display:inline-flex; align-items:center; justify-content:center;">' + (ic.indexOf('<') === 0 ? ic : mpIcon(ic, { size: 18 })) + '</span><span style="flex:1; min-width:0; font-size:13px; line-height:1.45;"><b>' + name + '</b><br><span class="dim" style="font-size:12px;">' + what + '</span></span></div>'; };
+  body.innerHTML = '<div id="mpSymbols"><div class="dim" style="font-size:12px; margin-bottom:6px;">The buttons on every place card</div>'
+    + row('maps', 'Google Maps', 'Opens this place in Google Maps — your saved link, exactly as you had it.')
+    + row('map', 'On map', 'This place is pinned: shows it on your MyPickz map (the one used for day plans and Nearby).')
+    + row('pin', 'Pin', 'Not pinned yet. Opens “Pin from Google Maps”: accept a match we found, or paste the Plus code from under the address in Google Maps — one exact pin.')
+    + row('bookmark', 'Bookmark', 'Keeps the place in your bookmarks across cities.')
+    + row('trip', 'Trip', 'Adds the place to a trip (it needs a pin to be routed in a day plan).')
+    + row('share', 'Share', 'Shares the place with someone.')
+    + row('edit', 'Edit', 'Name, category, link, area, picks, note — and the Plus code field.')
+    + row('top', 'Top', 'Marks it as one of your top places.')
+    + '<div class="dim" style="font-size:12px; margin:12px 0 6px;">The two states of a place</div>'
+    + row('<b style="font-size:12px;">✓</b>', 'Pinned', 'It has a spot on your MyPickz map — from your Takeout file, from a match in our map data you accepted, from someone who pinned the same place before, or from your own Plus code / map tap. Its Plus code shows under the address (More).')
+    + row('<b style="font-size:12px;">·</b>', 'Not pinned yet', 'It is on your list with its Google link, but has no spot on your map yet. Nothing is pinned without your tap. A pin matters only for day plans, Nearby and the map.')
+    + '<div class="dim" style="font-size:12px; margin:12px 0 6px;">Where things live</div><div style="font-size:13px; line-height:1.5;"><b>List</b> — your places by category; what the file transferred, and what still needs a category.<br><b>Map</b> — your pins; suggested pins to accept, look-alikes to pick, and what is not pinned yet.</div></div>'; }
 function openHelpFor(tab){ // أ-١٢-٢: زر «؟» يفتح النبذة على قسم الوجهة الحالية
   const map = { Places: 'places', Trips: 'trips', Curators: 'curators', Community: 'community', Addresses: 'addresses' }; const id = map[tab] || null;
   helpExpanded = !!id; helpOpenIndex = id ? HELP_CONTENT[helpLang].sections.findIndex(function(x){ return x.id === id; }) : -1;
