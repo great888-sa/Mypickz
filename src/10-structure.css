@@ -95,13 +95,14 @@ h1{font-family:'Cairo',sans-serif; font-size:36px; font-weight:900; margin:8px 0
 .modal-topbar .btn{margin-top:0; padding:9px 12px; font-size:12.5px;}
 /* ===== خ١ (٢٧ أغسطس ٢٠٢٦) — الإطار: الشريط العلوي · الشريط الخمسي · الوجهات · الدرج (النموذج المعلَّم: المشاهد ٦ و٧) ===== */
   body{padding-top:44px; padding-bottom:58px;}
-.mp-topbar{position:fixed; top:0; left:0; right:0; height:44px; z-index:700; border-bottom:1px solid; display:flex; align-items:center; justify-content:space-between; padding:0 12px;}
+.mp-topbar{position:fixed; top:0; left:0; right:0; height:44px; z-index:700; border-bottom:1px solid; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 12px;}
 .mp-burger{border:1.5px solid; border-radius:8px; width:32px; height:32px; font-size:16px; cursor:pointer;}
 .mp-idchip{display:inline-flex; align-items:center; gap:7px; border:1.5px solid; border-radius:999px; padding:3px 10px 3px 3px; cursor:pointer; font-family:'Cairo',sans-serif; font-weight:700; font-size:12px;}
 .mp-idchip .mini-av{width:30px; height:30px; font-size:12px;}
 .mp-idchip{max-width:45vw;}
 .mp-idchip > span:last-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .mp-wordmark{font-family:'Cairo',sans-serif; font-weight:900; font-size:18px; letter-spacing:.3px;}
+.mp-sym{font-family:'Cairo',sans-serif; font-weight:700; font-size:12px; height:30px; padding:0 10px; border-radius:15px; border:1px solid; cursor:pointer;} /* r87-2 */
 .mp-chipmenu{display:none; position:fixed; top:54px; right:12px; z-index:1100; border:1.5px solid; border-radius:12px; min-width:170px; overflow:hidden;}
 .mp-chipmenu.show{display:block;}
 .mp-chipmenu button{display:block; width:100%; border:none; padding:11px 14px; text-align:left; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; border-bottom:1px solid;}
