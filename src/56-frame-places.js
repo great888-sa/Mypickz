@@ -235,7 +235,7 @@ function plMineActions(cityId, cat, pl, i, bm){ /* r72q-2 · r74m-٢ · r75a (ا
   const st = plPlaceStatus(pl); const need = st.kind === 'suggested' || st.kind === 'probable' || st.kind === 'notFound';
   return [
         mpMapsTile(pl, cityId), /* غ-١: رابط ملصوق أو بحث مبنيّ */
-        { cls: 'onmap' + (need ? ' need' : ''), icon: 'map', label: 'On map', dot: need, on: "plGoToPin('" + cat.id + "', " + i + ")", title: st.kind === 'pinned' ? 'Show on our map' : (need ? 'Needs a pin — open our map to confirm' : 'Find it on our map') }, // r75a-٢ (قرار المالك): خريطتنا بلاطةً بنقطة حين يلزم تثبيت — لا شريحة بالرأس
+        (st.kind === 'pinned' ? { cls: 'onmap', icon: 'map', label: 'On map', on: "plGoToPin('" + cat.id + "', " + i + ")", title: 'Show on our map' } : { cls: 'onmap need', icon: 'pin', label: 'Pin', dot: true, on: "tkPinFromGoogleOpen('" + attrStr(plSugKey(pl)) + "')", title: 'Pin from Google Maps — paste its Plus code (one exact pin), or move the map' }), /* r87: غير المثبَّت → «Pin» يفتح ورقة Pin from Google Maps */ // r75a-٢ (قرار المالك): خريطتنا بلاطةً بنقطة حين يلزم تثبيت — لا شريحة بالرأس
         { cls: 'bmk' + (bm ? ' on' : ''), icon: 'bookmark', fill: bm, label: 'Bookmark', on: "plToggleBm('" + cat.id + "', " + i + ")", title: bm ? 'Bookmarked — tap to remove' : 'Bookmark' },
         (activeTripId && pl.id) ? { icon: 'trip', label: 'Trip', on: "addPlaceToTrip('mylist', '" + cityId + "', '" + cat.id + "', '" + pl.id + "', null, '" + attrStr(pl.name) + "')", title: 'Add to active trip' } : (pl.id ? { icon: 'trip', label: 'Trip', on: "plAddToTripFor('" + cityId + "', '" + cat.id + "', '" + pl.id + "', '" + attrStr(pl.name) + "')", title: 'Add to a trip' } : { icon: 'trip', label: 'Trip', disabled: true, title: 'Save this place first' }),
         { icon: 'share', label: 'Share', on: "plSendPlace('" + cat.id + "', " + i + ")", title: 'Send this place' },
@@ -395,7 +395,7 @@ function plFillModal(pasteMode){
   document.getElementById('plPlaceTitle').textContent = plEdit ? '✏️ Edit place' : '➕ Add a place';
   const delBtn = document.getElementById('plDeleteBtn'); if (delBtn) delBtn.style.display = plEdit ? '' : 'none'; // ر٦١: الحذف داخل التحرير
   plSetMethod(pasteMode !== false);
-  document.getElementById('plShareText').value = ''; plPasteBtnState(false); /* غ-٢ (١٠-١٦-٠٩) */
+  document.getElementById('plShareText').value = ''; plPasteBtnState(false); /* غ-٢ (١٠-١٦-٠٩) */ const __pf = document.getElementById('plPlusCode'); if (__pf) __pf.value = ''; /* r87 */
   document.getElementById('plModalCity').textContent = '🏙 ' + plCityName() + (plEdit ? '' : ' — adding here · for another city, close this and pick it first'); /* r84-4 (البند ٦): التحرير بلا تغيير مدينة · الإضافة بجملة صادقة */
   const __ck = document.getElementById('plCheckAddr'); if (__ck) __ck.style.display = plEdit ? '' : 'none'; /* r84-4 (البند ٥): «Check the address» في التحرير فقط */
   if (plModalCat){ const c0 = plCatsAll().find(c => c.id === plModalCat); if (c0) plModalSec = c0.section; }
@@ -544,6 +544,7 @@ async function plResolveLink(url){
 function plOnPaste(ev){ // ز-١-ج-٢: اللصق المباشر يُقرأ كنص مشاركة (لا نافذة إذن من النظام)
   try{ const t = ((ev.clipboardData || window.clipboardData) || {}).getData ? (ev.clipboardData || window.clipboardData).getData('text') : ''; if (!t || !t.trim()) return; const r = parseMapsShare(t.trim()); if (!r.url) return; ev.preventDefault(); document.getElementById('plUrl').value = r.url; if (r.name && !document.getElementById('plName').value.trim()) document.getElementById('plName').value = r.name; if (!r.name || !r.area) plResolveLink(r.url); plPasteBtnState(true); showToast(r.name ? 'Read ✓ — name filled' : 'Link pasted ✓'); }catch(_){}
 }
+async function plPastePlusCode(){ let t = ''; try{ t = await navigator.clipboard.readText(); }catch(e){ showToast('Could not read the clipboard — tap the Plus code in Google Maps first, or type it'); return; } const el = document.getElementById('plPlusCode'); if (el) el.value = String(t || '').trim().slice(0, 60); showToast(t ? 'Pasted ✓ — Save pins it exactly' : 'Clipboard is empty'); } /* r87 */
 async function plPasteUrl(){
   try{ const t = await navigator.clipboard.readText(); if (!t || !t.trim()){ showToast('Clipboard is empty'); return; } const r = parseMapsShare(t.trim()); document.getElementById('plUrl').value = r.url || t.trim(); if (r.name && !document.getElementById('plName').value.trim()) document.getElementById('plName').value = r.name; if (r.url && (!r.name || !r.area)) plResolveLink(r.url); showToast('Pasted ✓'); }
   catch(e){ showToast('Could not access clipboard — paste manually in the field'); }
@@ -571,7 +572,7 @@ const mpMap = (function(){
     const lead = st.kind === 'suggested' ? 'One match in our data. Is this the right spot?' : st.kind === 'probable' ? ((st.n || 1) + (st.n === 1 ? ' spot carries' : ' spots carry') + ' this name — pick the right one on the map.') : st.kind === 'notFound' ? 'No match in our data — pin it on the map yourself.' : (o.note && !loc ? o.note : '');
     const primary = !loc ? '' : st.kind === 'suggested' ? '<button type="button" class="act pri" onclick="' + pre + 'plPinAccept(' + at + ')">' + mpIcon('check', { size: 14 }) + 'Confirm</button><button type="button" class="act alt" onclick="' + pre + 'plPinMoveStart(' + at + ')">Not here → Move pin</button>'
       : st.kind === 'probable' ? '<button type="button" class="act pri" onclick="' + pre + 'plConfirmPin(' + at + ')">Pick the right one</button><button type="button" class="act alt" onclick="' + pre + 'plPinMoveStart(' + at + ')">None of them → Move pin</button>'
-      : st.kind === 'notFound' ? '<button type="button" class="act pri" onclick="' + pre + 'plPinMoveStart(' + at + ')">' + mpIcon('pin', { size: 14 }) + 'Pin on map</button>'
+      : st.kind === 'notFound' ? '<button type="button" class="act pri" onclick="' + pre + 'tkPinFromGoogleOpen(\'' + attrStr(plSugKey(p)) + '\')">' + mpIcon('pin', { size: 14 }) + 'Pin from Google Maps</button><button type="button" class="act alt" onclick="' + pre + 'plPinMoveStart(' + at + ')">Pin on map</button>'
       : st.kind === 'pinned' ? '<button type="button" class="act alt" onclick="' + pre + 'plPinMoveStart(' + at + ')">' + mpIcon('move', { size: 12 }) + 'Move pin</button>' : ''; /* r75b-٢: Move pin بصف الفعل الأساسي (بإطار) فتبقى الفقاعة صفّين */
     const secondary = (loc ? '<button type="button" class="act" onclick="' + pre + 'plOpenCardAt(' + at + ')">Open card</button>' : '')
       + (function(){ const mh = mpMapsHref(p, cityListCityId); return mh ? '<a class="act" href="' + attrStr(mh) + '" target="_blank" rel="noopener" title="' + (p.url ? 'Open in Google Maps' : 'Search in Google Maps') + '">Google Maps ' + mpIcon('maps', { size: 12 }) + '</a>' : ''; })() /* غ-١: الفقاعة تكسب الرابط للمكان بلا رابط */
@@ -890,6 +891,7 @@ async function savePlPlace(){
   place.id = place.id || ('place_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
   place.name = name; place.url = url;
   place.area = mpFixAreaDot(mpStripBidi(document.getElementById('plArea').value).trim()); // ب-٦
+  const __plus = String((document.getElementById('plPlusCode') || {}).value || '').trim(); if (__plus && !plGeoConfirmed){ const __pt = await tkPlusPoint(__plus); if (!__pt || __pt.err){ showToast((__pt && __pt.err) || 'Plus code not recognised'); return; } plGeoResult = { geo: { lat: +(+__pt.lat).toFixed(5), lng: +(+__pt.lng).toFixed(5), source: 'user_paste', via: __pt.how }, openId: null }; plGeoConfirmed = true; try{ logTiming('PLUS CODE PIN · ' + cityListCityId + ' · 1 pins · source user_paste via ' + __pt.how + ' · add place · your account only'); }catch(_){} } /* r87: خانة Plus code في الإضافة/التحرير → نقطة دقيقة بلا خطوة الخريطة */
   if (!plGeoConfirmed){ if (!plEdit && typeof TK_NAME_WARN !== 'undefined' && TK_NAME_WARN.test(name)) showToast('Heads-up: bars, nightlife, alcohol, hookah and gambling places are outside the content guidelines'); plGeoConfirmed = false; await openGeoStep(place); return; } /* r85: تحذير بالاسم بلا منع */ // ز-١-ب: خطوة الخريطة بملء الشاشة — تعود إلى الحفظ بعد التأكيد/التخطي
   plGeoConfirmed = false; if (plGeoResult){ if (plGeoResult.geo) place.geo = plGeoResult.geo; else delete place.geo; if (plGeoResult.openId) place.openId = plGeoResult.openId; else delete place.openId; plGeoResult = null; }
   place.updatedAt = Date.now(); /* ر٧٣-أب (٢) — قرار المالك: «Latest update places» بختم زمني لكل مكان من الآن */
