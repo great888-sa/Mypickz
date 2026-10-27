@@ -33,7 +33,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-window.__mpBuild = 'M2-ID-r87-4c';
+window.__mpBuild = 'M2-ID-r87-4d';
 /* د-٦: ملخص الشبكة سطرًا واحدًا مثبَّتًا: شهادة App Check · أول قراءة · الدخول (وتكراره) · الأخطاء · آخر خطوة بطيئة */
 let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '', sort: '', save: '' };
 /* هـ-٧: السطر الأصفر يحمل ساعته «t=52s» (تتقدم كل ثانية — إن توقفت فالخيط الرئيسي متجمد لا الشبكة) · «BLOCKED 3.2s ×1» حين يتأخر نبض الثانية (شفرة مشغولة) · نتيجة مسبارَي الشبكة حين ينتظر هدف ٨ ثوانٍ: نفس الأصل (manifest.json) وخادم Firestore بـREST (settings/app الذي تقرأه القواعد للجميع) */
@@ -46,7 +46,7 @@ function __netNote(label, elapsed){
   else if (/keep-alive listener on/.test(label)) __net.keep = 'on'; else if (/keep-alive listener (error|not started)/.test(label)) __net.keep = 'FAILED';
   else if (/onAuthStateChanged/.test(label)) __net.auth.push(elapsed + 's' + (/signed-in/.test(label) ? ' signed-in' : (/guest/.test(label) ? ' guest' : ''))); /* غ-١ */
   else if (/^IMPORT · /.test(label)) __net.imp = label.replace(/^IMPORT · /, ''); else if (/^UNDO IMPORT · /.test(label)) __net.imp = 'undone · ' + label.replace(/^UNDO IMPORT · /, ''); /* r86 */ /* أ-١٣ (IM-R): الدليل لا الوعد — «2,615 rows · 0 external requests · 0 coordinates kept» */
-  else if (/^(AUTOSORT|CONFIRM ALL STRONG|CONFIRM LIKELY|PIN AT GOOGLE SPOT|PIN REVIEW|PICK BY NAME|PICK SUGGESTED|PICK LOOK-ALIKES|REMOVED|RESTORE REMOVED|UNPINNED LIST|PASTE PIN|PLUS CODE PIN|AREAS) · /.test(label)) __net.sort = label; /* r85: الدليل لا الوعد — «AUTOSORT · paris · 61 scanned · 38 sorted · 0 coordinates from the file written» */
+  else if (/^(AUTOSORT|CONFIRM ALL STRONG|CONFIRM LIKELY|PIN AT GOOGLE SPOT|PIN REVIEW|PICK BY NAME|PICK SUGGESTED|PICK LOOK-ALIKES|REMOVED|RESTORE REMOVED|UNPINNED LIST|PASTE PIN|PLUS CODE PIN|AREAS|TO ADDRESSES) · /.test(label)) __net.sort = label; /* r85: الدليل لا الوعد — «AUTOSORT · paris · 61 scanned · 38 sorted · 0 coordinates from the file written» */
   else if (/^SAVE · /.test(label)) __net.save = label.replace(/^SAVE · /, ''); /* r87-3 (البند ٤): آخر حفظ — ok · FAILED · SKIPPED */
   else if (/^\[ERR\]|^\[SWALLOWED\]/.test(label)) __net.errs++;
   const m = /in (\d+)ms/.exec(label); if (m && +m[1] > 4000) __net.slow = label.replace(/^\[\w+\] /, '');
@@ -107,7 +107,7 @@ function __fsHandle(t){
 /* د-٤: نسخة الاختبار تسجّل الأخطاء غير الملتقَطة في لوحة TIMING نفسها (الرسالة والسطر) — ليُقرأ السبب من الهاتف بلا وحدة تحكم */
 window.addEventListener('error', function(e){ try{ logTiming('[ERR] ' + (e.message || 'error') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?')); }catch(_){} });
 window.addEventListener('unhandledrejection', function(e){ try{ const r = e.reason; logTiming('[ERR] rejection: ' + ((r && (r.code || r.message)) || String(r)).slice(0, 160)); }catch(_){} }); /* ب-٢-٢-أ٢: تذييل الدرج يعرض رقم البناء */
-logTiming('BUILD: M2-ID-r87-4c (r87-4c - a municipality (localadmin) is not an area and is never written, counted as municipality only; the last Re-read result stays in Diag)');
+logTiming('BUILD: M2-ID-r87-4d (r87-4d - Re-read clears areas the app wrote itself when they turn out to be a municipality or the city; strong rows say N m from Google spot; a Plus code button on every Suggested pins row opens the Pin from Google Maps sheet; Diag counts unpinned places with an area from the file; a single place can be moved to the private Addresses from the category step or Edit)');
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
