@@ -715,7 +715,7 @@ async function plPinMoveSave(){ const p = plPinMovePlace(); const c = plPinMoveC
   try{ await tkAreaRefresh(p); }catch(e){ mpSwallow(e, 'area'); } /* خ-٤ · r87-4: الحيّ من نقطة الدبوس يستبدل الآلي */
   plPinMove = null; plMapFocus = { lat: c.lat, lng: c.lng }; plMapOpenKey = plPlaceKey(p);
   try{ await saveMyCityList(); showToast('Pin saved ✓'); }catch(e){ mpSwallow(e, 'pin save'); showToast('Could not save the pin'); }
-  renderPlacesMine(); if (typeof tkAfterPinCat === 'function') tkAfterPinCat(plSugKey(p)); } /* r87-3 (البند ٢): بعد الدبوس — التصنيف إن كان المكان بلا تصنيف */
+  renderPlacesMine(); if (!(typeof tkAfterPinCat === 'function' && tkAfterPinCat(plSugKey(p))) && typeof tkPinReturn === 'function') tkPinReturn(); } /* r90: العودة إلى الورقة الأصل إن جاء Move the map منها · r87-3 (البند ٢): بعد الدبوس — التصنيف إن كان المكان بلا تصنيف */
 async function plPinRemove(){ const p = plPinMovePlace(); if (!p || !(p.geo && typeof p.geo.lat === 'number')) return;
   const ok = await mpConfirm('Remove the pin? The place stays in your list.', { title: 'Remove pin', ok: 'Remove', danger: true }); if (!ok) return;
   delete p.geo; delete p.openId; delete plSuggestCache[plSugKey(p)]; plPinMove = null; plMapFocus = null;
@@ -727,7 +727,7 @@ async function plPinAccept(catId, index){ /* r75b: Confirm للمقترَح — 
   try{ await tkAreaRefresh(p); }catch(e){ mpSwallow(e, 'area'); } /* r87-4 */
   plMapFocus = { lat: p.geo.lat, lng: p.geo.lng }; plMapOpenKey = plPlaceKey(p);
   try{ await saveMyCityList(); showToast('Pinned ✓'); }catch(e){ mpSwallow(e, 'pin accept'); showToast('Could not save the pin'); }
-  renderPlacesMine(); if (typeof tkAfterPinCat === 'function') tkAfterPinCat(plSugKey(p)); } /* r87-4 (البند ١): Confirm في الفقاعة — ثم التصنيف إن لزم */
+  if (typeof tkPinOrigin !== 'undefined') tkPinOrigin = ''; renderPlacesMine(); if (typeof tkAfterPinCat === 'function') tkAfterPinCat(plSugKey(p)); } /* r90: الفقاعة ليست من ورقة — لا أصل · r87-4 (البند ١): Confirm في الفقاعة — ثم التصنيف إن لزم */
 function plPinMoveBarHtml(){ const p = plPinMovePlace(); if (!p) return ''; const pinned = !!(p.geo && typeof p.geo.lat === 'number');
   return '<div class="pinmove-bar"><div class="pinmove-k">' + (pinned ? 'Move pin' : 'Pin on map') + '</div><div class="pinmove-n" dir="auto">' + escapeHtml(p.name || 'Place') + '</div><div class="pinmove-t">Move the map until the pin sits on the place — zoom in for an exact spot — then Save.</div></div>'; }
 function plPinMoveFootHtml(){ const p = plPinMovePlace(); if (!p) return ''; const pinned = !!(p.geo && typeof p.geo.lat === 'number');
