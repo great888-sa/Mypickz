@@ -124,7 +124,7 @@ function openFromDrawer(openFn){
 function closeModalById(id){ document.getElementById(id).classList.remove('show'); }
 const __mpWatched = new Set(); /* ب-٢-٢-أ٢: النوافذ التي يرصدها mpOpenThen الآن — علم «لا عودة» يُرفع لها وحدها فلا يبقى معلَّقًا */
 function mpNoReopenFor(id){ if (__mpWatched.has(id)) window.__mpNoReopen = true; }
-function mpCloseAll(id){ mpNoReopenFor(id); closeModalById(id); } /* ب-٢-٢-أ: ✕ بالقشرة الموحَّدة — إغلاق النافذة بلا إعادة فتح الدرج */
+function mpCloseAll(id){ mpNoReopenFor(id); closeModalById(id); if (id === 'dashBackdrop' && typeof tkPinOrigin !== 'undefined') tkPinOrigin = ''; } /* r90: ✕ ينسى الورقة الأصل لمسار Pin */ /* ب-٢-٢-أ: ✕ بالقشرة الموحَّدة — إغلاق النافذة بلا إعادة فتح الدرج */
 let __dashBack = null; /* ب-٢-٢-أ: معالج Back الحالي لنافذة dashBackdrop (null = لا طبقة سابقة فيُخفى الزر) */
 function dashSet(title, backFn){ const t = document.getElementById('dashTitle'); if (t) t.textContent = title || ''; __dashBack = (typeof backFn === 'function') ? backFn : null; const b = document.getElementById('dashBackBtn'); if (b) b.classList.toggle('hidden', !__dashBack); }
 function dashBack(){ const f = __dashBack; if (f) f(); else closeModalById('dashBackdrop'); }
