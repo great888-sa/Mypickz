@@ -165,7 +165,7 @@
   .panel .prow .dim{color:var(--night-3);}
   .trip-on{color:var(--saffron);}
   .pl-ownerpanel b{color:var(--saffron);}
-  .pl-ownerpanel .pl-sub{color:var(--night-2);}
+  .pl-ownerpanel .pl-sub{color:var(--night-2);} .pl-ownerpanel .row.rowblock .pl-sub,.pl-ownerpanel .row.rowblock .dim,.pl-ownerpanel .row.rowblock .pl-unsorted-item .dim{color:var(--ink-strong);} .pl-ownerpanel .row.rowblock b{color:var(--ink);} /* r88 (ملاحظة المالك ١٤:٢١): داخل الصف العاجي لا رمادي الليل — حبر داكن */
 
   .act{background:none; border-color:var(--ink); color:var(--ink);}
   .curhead .act,.place-row-view .act,.stickyhead .act{border-color:var(--on-night); color:var(--on-night);} /* ر٦٨ب: .act على الليل بحبر الليل */
