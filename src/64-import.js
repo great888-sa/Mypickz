@@ -458,6 +458,4 @@ function tkResultHtml(){ const r = tkState.result, p = tkState.plan; if (!r) ret
   h += '<button type="button" class="btn btn-ghost" style="margin-top:8px; padding:7px 14px; font-size:12px;" onclick="mpCloseAll(\'dashBackdrop\')">Done</button>'; return h;
 }
 async function tkStartWith(cityId){ closeModalById('dashBackdrop'); try{ switchTab('Places'); }catch(_){} const c = cityListAllCities().find(function(x){ return String(x.id) === String(cityId); }); if (!c) return; cityListCountry = c.country; cityListCityId = c.id; if (userListData){ userListData.listCountry = c.country; userListData.listCity = c.id; } if (myCityListLoadedFor !== c.id){ myCityListLoadedFor = null; await loadMyCityList(c.id); } if (typeof renderPlacesMine === 'function') renderPlacesMine(); }
-function tkSetSection(groupId, v){ // الصندوق: «mostly» يُضبط لاحقًا — لكل أماكن المجموعة في المدينة الحالية
-  const e = myCityListData && myCityListData.categories && myCityListData.categories[groupId]; if (!e) return; (e.places || []).forEach(function(p){ if (!p) return; if (v) p.section = v; else delete p.section; }); saveMyCityList().then(function(){ showToast(v ? 'Set: mostly ' + tkSectionName(v) + ' ✓' : 'Cleared'); }).catch(function(e){ mpSwallow(e, 'import-section'); });
-}
+/* r88: دالة قائمة «Mostly» في الصندوق حُذفت — الصندوق صار بالحال لا بأسماء القوائم؛ القسم يُضبط عند الاستيراد فقط */
