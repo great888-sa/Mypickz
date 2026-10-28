@@ -6,7 +6,7 @@ async function loadCommunityUserTrips(uid){
   try{
     const __rows = await mpData.trips.publicByOwner(uid); const snap = { forEach: function(fn){ __rows.forEach(function(r){ fn({ id: r.id, data: function(){ return r; } }); }); }, empty: __rows.length === 0, size: __rows.length };
     communityUserTrips = [];
-    snap.forEach(doc => communityUserTrips.push({ id: doc.id, ...doc.data() }));
+    snap.forEach(doc => { const d = doc.data(); if (d && d.dayPlan) return; communityUserTrips.push({ id: doc.id, ...d }); }); /* r92 (ق١٠-٢٨-٠٦): خطة اليوم لا تُعرض في المجتمع */
   }catch(e){ communityUserTrips = []; }
 }
 async function openCommunityTrip(tripId){
