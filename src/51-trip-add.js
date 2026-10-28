@@ -94,12 +94,12 @@ async function resolveTripPlaces(trip){
   const communityLinks = {}; // uid|cityId
   for (const e of flat){ if (e.ref && e.ref.sourceType === 'community' && e.ref.sourceUid){ const k = e.ref.sourceUid + '|' + (e.ref.cityId || trip.cityId); if (communityLinks[k]) continue; try{ const d = await mpData.cityLists.get(e.ref.sourceUid, e.ref.cityId || trip.cityId); communityLinks[k] = (d && d.categories) || {}; }catch(err){ communityLinks[k] = {}; } } }
   function resolveRef(e){
-    const ref = e.ref || {}; const linksObj = ref.sourceType === 'community' ? (communityLinks[ref.sourceUid + '|' + (ref.cityId || trip.cityId)] || {}) : (myLinksByCity[ref.cityId || trip.cityId] || {});
+    const ref = e.ref || {}; if (ref.sourceType === 'stop') return Object.assign({}, e, { alts: [], _p: null, _available: true }); /* r92: المحطة غير المحفوظة تحمل اسمها وموضعها في الخطة نفسها */ const linksObj = ref.sourceType === 'community' ? (communityLinks[ref.sourceUid + '|' + (ref.cityId || trip.cityId)] || {}) : (myLinksByCity[ref.cityId || trip.cityId] || {});
     const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
     if (!place) console.warn('[MyPickz][trip-resolve] unavailable', JSON.stringify(ref)); // ر٦٠ · عدسة التشخيص
     return Object.assign({}, e, { alts: (e.alts || []).map(resolveRef), _p: place || null, _available: !!place });
   }
-  return { days: plan.days.map(function(d){ const out = Object.assign({}, d, { periods: {} }); TRIP_PERIODS.forEach(function(p){ out.periods[p] = (d.periods[p] || []).map(resolveRef); }); return out; }), tray: (plan.tray || []).map(resolveRef) };
+  return { days: plan.days.map(function(d){ const out = Object.assign({}, d, { periods: {} }); TRIP_PERIODS.forEach(function(p){ out.periods[p] = (d.periods[p] || []).map(resolveRef); }); out.stops = (d.stops || []).map(resolveRef); return out; }), tray: (plan.tray || []).map(resolveRef) }; /* r92: محطات يوم الرحلة تُحلّ أيضًا */
 }
 
 /* ===== وضع الإضافة القائم (ر٧٠ز) ===== */
@@ -177,7 +177,7 @@ function plAddToTrip(catId, placeId, placeName){
   tripAddStart(cityListCityId);
 }
 function tripAddStart(cityId){
-  const trips = (userTrips || []).filter(function(t){ return tripHasPlan(t) && tripHasCity(t, cityId); });
+  const trips = (userTrips || []).filter(function(t){ return tripHasPlan(t) && !t.dayPlan && tripHasCity(t, cityId); }); /* r92 (ق١٠-٢٨-٠٦): خطط اليوم ليست رحلات هنا */
   tripAddOrigin = { tab: currentTab };
   if (activeTripId && userTrips.find(function(t){ return t.id === activeTripId && tripHasPlan(t); })){ tripAddContinue(activeTripId); return; } // الشريط قائم: النقرات التالية تتجاوز «أي رحلة»
   if (!trips.length){ openTripBuilder({ cityId: cityId, preselect: pendingPlaceRef }); return; } // لا رحلة بالمدينة → المنشئ والمدينة محددة والمكان مُعلَّم
