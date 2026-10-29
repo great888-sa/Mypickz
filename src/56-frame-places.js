@@ -176,7 +176,12 @@ function plSearchInput(v){ clearTimeout(plSearchTimer); plSearchTimer = setTimeo
 function plSearchClear(){ plSearchQ = ''; const i = document.getElementById('plSearch'); if (i) i.value = ''; const x = document.getElementById('plSearchX'); if (x) x.style.display = 'none'; renderPlacesMine(); }
 let plSearchOpen = false; /* ملاحظة المالك: شريحة بسهم تفتح حقل البحث وتغلقه بإعادة الضغط */
 function plSearchToggle(){ plSearchOpen = !plSearchOpen; const row = document.getElementById('plSearchRow'), arr = document.getElementById('plSearchArr'), chip = document.getElementById('plSearchChip'); if (row) row.style.display = plSearchOpen ? '' : 'none'; if (arr) arr.textContent = plSearchOpen ? '⌃' : '⌄'; if (chip) chip.classList.toggle('on', plSearchOpen); if (plSearchOpen){ const i = document.getElementById('plSearch'); if (i) setTimeout(function(){ i.focus(); }, 30); } else { plSearchClear(); } }
-function plSearchHit(p){ if (!plSearchQ) return true; const hay = pickerNormalize([p.name, p.area, p.note, p.tags].filter(Boolean).join(' ')); return hay.indexOf(plSearchQ) >= 0; }
+let plTownSel = ''; /* r93 (ق١٠-٢٩-٠٢): التصفية بالبلدة المضمومة — تعمل مع التصنيف والبحث معًا */
+function plTownHit(p){ return !plTownSel || String((p && p.town) || '').trim() === plTownSel; }
+function plTowns(){ return (typeof cmTownsOf === 'function' && myCityListData) ? cmTownsOf(myCityListData.categories || {}) : []; }
+function plTownPick(t){ plTownSel = (t && t === plTownSel) ? '' : String(t || ''); const r = document.getElementById('plRow3'); if (r) r.innerHTML = plRow3Html(); renderPlacesMine(); }
+function plTownRowHtml(){ const towns = plTowns(); if (!towns.length){ if (plTownSel) plTownSel = ''; return ''; } if (plTownSel && !towns.some(function(t){ return t.town === plTownSel; })) plTownSel = ''; const chip = function(on, label, on_, title){ return '<button type="button" class="chip' + (on ? ' on' : '') + '" style="flex:none;" onclick="' + on_ + '" title="' + attrStr(title || '') + '">' + label + '</button>'; }; return '<div class="chiprow" id="plTownRow" style="margin:4px 0 0; gap:6px;">' + chip(!plTownSel, '📍 All of ' + escapeHtml(plCityName() || 'the city'), "plTownPick('')", 'Every place under this city') + towns.map(function(t){ return chip(plTownSel === t.town, escapeHtml(t.town) + ' <span class="dim">· ' + t.n + '</span>', "plTownPick('" + attrStr(t.town) + "')", 'Only the places in ' + t.town + ' — a nearby town kept under this city'); }).join('') + '</div>'; } /* r93 (ق١٠-٢٩-٠٢): الصف يظهر فقط حين في المدينة بلدات مضمومة */
+function plSearchHit(p){ if (!plTownHit(p)) return false; if (!plSearchQ) return true; const hay = pickerNormalize([p.name, p.area, p.note, p.tags].filter(Boolean).join(' ')); return hay.indexOf(plSearchQ) >= 0; }
 let plSecDefaultClosed = true; // ز-١-ج-٣ (قرار المالك): الأقسام الرئيسية تُفتح مغلقة (قابل للتفضيل لاحقًا)
 let plGroupDefaultClosed = true; /* r89 (قرار المالك ٢٧ أكتوبر ١٦:٠٧): التصنيف الفرعي يُفتح مطويًّا — إلا البحث والبطاقة النشطة والقسم بفرعي واحد */
 function plSecIsClosed(id){ return plSecCollapsed[id] === undefined ? plSecDefaultClosed : !!plSecCollapsed[id]; }
@@ -214,7 +219,7 @@ let plActiveKey = null, plScrollActive = false; /* r87-2 (اقتراح الما�
 function plCardActivate(key){ plActiveKey = key || null; try{ document.querySelectorAll('.pcard.active').forEach(function(el){ el.classList.remove('active'); }); if (key){ const el = document.querySelector('.pcard[data-key="' + String(key).replace(/"/g, '\\"') + '"]'); if (el) el.classList.add('active'); } }catch(_){} }
 function plScrollToActive(){ if (!plScrollActive || !plActiveKey) return; plScrollActive = false; try{ const el = document.querySelector('.pcard.active'); if (el) setTimeout(function(){ try{ el.scrollIntoView({ block: 'center' }); }catch(_){} }, 30); }catch(_){} }
 function plStatusLinesHtml(){ if (!myCityListData) return ''; let n = 0, imp = 0, pinned = 0; Object.keys(myCityListData.categories || {}).forEach(function(k){ ((myCityListData.categories[k] || {}).places || []).forEach(function(p){ if (!p || !(p.name || p.url)) return; n++; if (p.importId) imp++; if (p.geo && typeof p.geo.lat === 'number') pinned++; }); }); if (!n) return ''; return '<div class="ctx" id="plStatusLines" style="line-height:1.5;">' + (imp ? imp + ' place' + (imp === 1 ? '' : 's') + ' transferred from your takeout file<br>' : '') + '<b>On map</b> · ' + pinned + ' pinned · ' + (n - pinned) + ' not pinned yet</div>'; } /* r87-2 (كلمة المالك ١٢:٥٥ · ١٣:٠٤): السطر الأول للملف وحده · الثاني حيّ لكل أماكن المدينة */ /* r75b: الخروج من عرض الخريطة ينهي وضع النقل */
-function plRow3Html(){ return catPairRow({ id: 'plFilter', main: plFilterMain, sub: plFilterSub, allowAll: true, allLabel: 'All categories', allSubLabel: 'All in this category', countOf: plCatCount, placesOf: plPlaceNamesOf, rerender: 'renderPlacesMine', lead: plViewSegHtml(), noHost: true }); } // ر٧٠ط (N-082): التصفية رئيسي ← فرعي · r74m: مع مبدّل العرض أقصى اليسار، ولوحتها خارج الرأس الثابت
+function plRow3Html(){ return plTownRowHtml() + catPairRow({ id: 'plFilter', main: plFilterMain, sub: plFilterSub, allowAll: true, allLabel: 'All categories', allSubLabel: 'All in this category', countOf: plCatCount, placesOf: plPlaceNamesOf, rerender: 'renderPlacesMine', lead: plViewSegHtml(), noHost: true }); } // ر٧٠ط (N-082): التصفية رئيسي ← فرعي · r74m: مع مبدّل العرض أقصى اليسار، ولوحتها خارج الرأس الثابت
 function plHeadSet(mode){ /* r74m: الرأس الثابت — 'city' الصفوف الثلاثة · 'nocity' الصف الأول فقط · 'other' (المفكرة · المشارَك · المنسوخ) بلا صفَّي السياق والتصفية ولا زر الإضافة */
   const r1 = document.getElementById('plRow1'), r3 = document.getElementById('plRow3'), add = document.getElementById('plAddBtn'), row = document.getElementById('plSrcRow');
   if (r1) r1.innerHTML = mode === 'other' ? '' : plRow1Html();
@@ -267,6 +272,7 @@ function renderPlacesMine(){
   if (placesSource === 'curators' || placesSource === 'community' || placesSource === 'bookmarked' || placesSource === 'shared'){ renderPlacesBody(); return; } /* r74m-٢: أي فعل يعيد الرسم وعرضٌ آخر فعّال (النسخ · المفكرة · المشارَك) يعيد ذلك العرض لا قائمة المدينة */
   try{ plSetSrcTitle(myCityListData ? liveCountOf(myCityListData.categories) : 0); }catch(_){} // r72r-1: العنوان بعدده
   const body = document.getElementById('plBody'); if (!body) return;
+  try{ const r3 = document.getElementById('plRow3'); if (r3){ const cur = document.getElementById('plTownRow'); const th = plTownRowHtml(); if (cur){ if (th) cur.outerHTML = th; else cur.remove(); } else if (th) r3.insertAdjacentHTML('afterbegin', th); } }catch(_){} /* r93 (ق١٠-٢٩-٠٢): صف البلدات يتبع المستند (يظهر بعد الدمج ويختفي بعد الفصل) */
   if (!cityListCityId){ // أ-١٢-١: بلا مدينة محددة — صف الرأس بشريحة «Select city» وإرشاد قصير؛ لا مدينة تُفرض
     plHeadSet('nocity'); let h = '';
     if (plPanel === 'countries'){ h += pickerPanel({ id: 'plCountries', title: 'Browse countries', filterPlaceholder: 'Type a country…', onPick: 'plPickCountry', onClose: 'plTogglePanel(null)', items: cityListAllCountries().map(function(k){ return { id: k, name: k, icon: countryFlag(k) || '', count: cityListAllCities().filter(function(c){ return c.country === k; }).length }; }) }); }
@@ -386,11 +392,7 @@ async function plDeleteRow(catId, i){
   renderPlacesMine();
 }
 /* نافذة المكان الموحدة: إضافة · تحرير · نقل بين التصنيفات · لصق ما شاركته الخرائط */
-function plSetMethod(paste){                 // طريقتا الإضافة داخل النافذة: لصق ما شاركته الخرائط · أو إدخال يدوي
-  document.getElementById('plPasteWrap').style.display = paste ? '' : 'none';
-  document.querySelectorAll('#plMethodRow .chip').forEach(function(b){ b.classList.remove('on'); });
-  document.getElementById(paste ? 'plMethodPaste' : 'plMethodManual').classList.add('on');
-}
+/* r93-٣ (ق١٠-٢٩-٠١): «Enter manually» وصندوق نص المشاركة حُذفا — خانة الرابط أولًا وتقرأ نص المشاركة عند اللصق (plSetMethod زالت) */
 function openPlPlaceModal(catId, index){
   plResolvedAddr = ''; plGeoConfirmed = false; plGeoResult = null; // ز-١-ب
   if (catId !== null && index !== null){ plEdit = { catId: catId, index: index }; plModalCat = catId; }
@@ -401,8 +403,7 @@ function openPlPlaceModal(catId, index){
 function plFillModal(pasteMode){
   document.getElementById('plPlaceTitle').textContent = plEdit ? '✏️ Edit place' : '➕ Add a place';
   const delBtn = document.getElementById('plDeleteBtn'); if (delBtn) delBtn.style.display = plEdit ? '' : 'none'; // ر٦١: الحذف داخل التحرير
-  plSetMethod(pasteMode !== false);
-  document.getElementById('plShareText').value = ''; plPasteBtnState(false); /* غ-٢ (١٠-١٦-٠٩) */ const __pf = document.getElementById('plPlusCode'); const __pp = plEdit ? ((((myCityListData || {}).categories || {})[plEdit.catId] || { places: [] }).places[plEdit.index] || null) : null; plPlusWas = (__pp && __pp.geo && typeof __pp.geo.lat === 'number' && typeof tkPlusOf === 'function') ? (tkPlusOf(__pp.geo) + ' ' + plCityName()).trim() : ''; if (__pf) __pf.value = plPlusWas; plUrlWas = __pp ? String(__pp.url || '') : ''; plAreaWas = __pp ? String(__pp.area || '') : ''; /* r87 · r87-3 (ملاحظة المالك ١٦:١٠ البند ١): المثبَّت يفتح ورمزه في الخانة — يُحفظ ما كان للمقارنة عند Save */
+  plPasteBtnState(false); /* غ-٢ (١٠-١٦-٠٩) */ const __pf = document.getElementById('plPlusCode'); const __pp = plEdit ? ((((myCityListData || {}).categories || {})[plEdit.catId] || { places: [] }).places[plEdit.index] || null) : null; plPlusWas = (__pp && __pp.geo && typeof __pp.geo.lat === 'number' && typeof tkPlusOf === 'function') ? (tkPlusOf(__pp.geo) + ' ' + plCityName()).trim() : ''; if (__pf) __pf.value = plPlusWas; plUrlWas = __pp ? String(__pp.url || '') : ''; plAreaWas = __pp ? String(__pp.area || '') : ''; /* r87 · r87-3 (ملاحظة المالك ١٦:١٠ البند ١): المثبَّت يفتح ورمزه في الخانة — يُحفظ ما كان للمقارنة عند Save */
   document.getElementById('plModalCity').textContent = '🏙 ' + plCityName() + (plEdit ? '' : ' — adding here · for another city, close this and pick it first'); /* r84-4 (البند ٦): التحرير بلا تغيير مدينة · الإضافة بجملة صادقة */
   if (plModalCat){ const c0 = plCatsAll().find(c => c.id === plModalCat); if (c0) plModalSec = c0.section; }
   const __ul = document.getElementById('plUrlLine'); if (__ul) __ul.textContent = ''; plAreaAuto = ''; // خ-٤
@@ -418,7 +419,7 @@ function plFillModal(pasteMode){
   plPasted = null; const ch = document.getElementById('plCityHint'); if (ch){ ch.style.display = 'none'; ch.innerHTML = ''; ch.dataset.kind = ''; } // أ-١٢-٤
   document.getElementById('plDeleteBtn').style.display = plEdit ? '' : 'none';
   document.getElementById('plPlaceBackdrop').classList.add('show');
-  if (pasteMode) setTimeout(() => document.getElementById('plShareText').focus(), 60);
+  if (pasteMode && !plEdit) setTimeout(() => { const u = document.getElementById('plUrl'); if (u) u.focus(); }, 60); /* r93-٣: التركيز على خانة الرابط */
 }
 let plModalSec = null;   // r10: القسم المختار بالمرحلة الأولى
 let plModalSecs = [];    // أسماء الأقسام بترتيبها (التمرير بالفهرس لا بالنص)
@@ -438,13 +439,15 @@ let plModalMainId = null;
 function plRenderModalCats(){
   const cats = plCatsAll();
   const cur = cats.find(function(c){ return c.id === plModalCat; }); if (cur) plModalMainId = cur.sectionId; else if (!plModalMainId && plModalSec){ const sc = catSections().find(function(x){ return x.name === plModalSec; }); if (sc) plModalMainId = sc.id; }
-  const isEdit = !!plEdit;
+  const isEdit = !!plEdit; const __chip = document.getElementById('plTownChip'); /* r93-٣: عقدة واحدة تُعاد إلى موضعها بعد كل رسم (replaceWith يعيد العقدة نفسها فتبقى مراجعها صالحة) */
   document.getElementById('plModalCats').innerHTML = catPairRow({ id: 'plModal', main: plModalMainId, sub: plModalCat, rerender: 'plRenderModalCats' })
     + '<div class="chiprow" style="margin-top:8px;"><button type="button" class="chip tog' + (plModalFine ? ' on' : '') + '" onclick="plModalFine = !plModalFine; plRenderModalCats()">Fine dining</button>'
     + '<button type="button" class="chip tog' + (plModalTop ? ' on' : '') + '" onclick="plToggleTop()">⭐ Top place</button>' // ر٧٢-أ-١د (قرار المالك): ظاهر للجميع، مفعّل للمنتقي
+    + '<span id="plTownSlot"></span>' /* r84-2 · r93-٣: موضع شريحة Outside the city (العقدة الثابتة تُنقل إليه) */
     + (isEdit ? '<button type="button" class="chip" onclick="plMoveMode = true; catPairToggle(\'plModal\', \'main\')">Move to another category</button>' : '') + '</div>'
     + (isEdit ? '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"><select class="modal-input" style="display:inline-block; width:auto; flex:1 1 150px; margin:0; padding:4px 8px; font-size:12px;" onchange="plEditToAddresses(this.value)" title="Move this place to your private Addresses"><option value="">🔒 To Addresses…</option>' + (typeof privateCategoryList === 'function' ? privateCategoryList() : []).map(function(it){ return '<option value="' + attrStr(it.id) + '">' + escapeHtml(it.name) + '</option>'; }).join('') + '</select>' + ((typeof cmOthers === 'function' && cmOthers(cityListCityId).length) ? '<select class="modal-input" style="display:inline-block; width:auto; flex:1 1 150px; margin:0; padding:4px 8px; font-size:12px;" onchange="plEditToCity(this.value)" title="Move this place to another of your cities — same category"><option value="">🏙 To another city…</option>' + cmOthers(cityListCityId).map(function(c){ return '<option value="' + attrStr(c.id) + '">' + escapeHtml(c.name) + '</option>'; }).join('') + '</select>' : '') + '</div>' : '') /* r91: القائمتان في سطرهما تحت الشرائح — لا تختفيان خلف تمرير الصف */
     + (plMoveMode ? '<div class="pl-sub" style="margin-top:4px;">Pick the new category — the place moves as soon as you choose a sub-category.</div>' : '');
+  const __slot = document.getElementById('plTownSlot'); if (__slot && __chip){ __slot.replaceWith(__chip); plTownChipRender(); } /* r93-٣ */
 }
 async function plMovePlaceTo(catId){ // ر٧٠ط (N-083): نقل المكان المحرَّر إلى تصنيف آخر فورًا
   if (!plEdit || !catId || catId === plEdit.catId) { plRenderModalCats(); return; }
@@ -456,10 +459,6 @@ async function plMovePlaceTo(catId){ // ر٧٠ط (N-083): نقل المكان ا
 function closePlPlaceModal(){ document.getElementById('plPlaceBackdrop').classList.remove('show'); plEdit = null; }
 async function plUseInferredCity(id){ closePlPlaceModal(); plSessionCity = id; try{ await selectCityListCity(id); }catch(e){} renderPlacesMine(); showToast('City set to ' + (cityListAllCities().find(function(c){ return c.id === id; }) || {}).name + ' — add the place again here'); }
 function nameSim(a, b){ a = pickerNormalize(a); b = pickerNormalize(b); if (!a || !b) return 0; if (a === b || a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return 1; const g = function(x){ const o = {}; for (let i = 0; i < x.length - 2; i++) o[x.substr(i, 3)] = 1; return Object.keys(o); }; const ga = g(a), gb = g(b); if (!ga.length || !gb.length) return 0; const sb = {}; gb.forEach(function(t){ sb[t] = 1; }); let n = 0; ga.forEach(function(t){ if (sb[t]) n++; }); return (2 * n) / (ga.length + gb.length); }
-async function plPasteShare(){
-  try{ const t = await navigator.clipboard.readText(); if (!t || !t.trim()){ showToast('Clipboard is empty'); return; } document.getElementById('plShareText').value = t.trim(); plParseShare(); }
-  catch(e){ showToast('Could not access clipboard — paste manually in the box'); }
-}
 let plPasted = null; // أ-١٢-٤: ما جاء مع الرابط (الاسم · الرابط) لمطابقة الاسم ووسم الرابط
 function parseMapsShare(raw){ // المحلّل بثلاث درجات: اسم+عنوان+رابط · اسم+رابط · رابط وحده — دالة واحدة (نقطة تحول نص المشاركة)
   raw = String(raw || '').trim(); const um = raw.match(/https?:\/\/\S+/); const url = um ? um[0] : '';
@@ -473,8 +472,8 @@ function parseMapsShare(raw){ // المحلّل بثلاث درجات: اسم+ع
   return { url: url, name: name, address: address, area: area, parts: parts, grade: (name && address) ? 3 : (name ? 2 : (url ? 1 : 0)) };
 }
 function inferCityFrom(parts){ const cities = cityListAllCities(); for (let i = 0; i < parts.length; i++){ const k = pickerNormalize(parts[i]); if (!k) continue; const c = cities.find(function(x){ return pickerNormalize(x.name) === k || (x.alt || []).some(function(a){ return pickerNormalize(a) === k; }); }); if (c) return c; } return null; }
-function plParseShare(){
-  const raw = (document.getElementById('plShareText').value || '').trim(); if (!raw){ showToast('Paste the shared text first'); return; }
+function plParseShare(text){ /* r93-٣: النص يأتي من اللصق في خانة الرابط أو من الحافظة — لا صندوق */
+  const raw = String(text || '').trim(); if (!raw){ showToast('Paste what Google Maps shared first'); return; }
   const r = parseMapsShare(raw); plPasted = r.url ? { name: r.name, url: r.url } : null;
   const hadUrl = !!(plEdit && (document.getElementById('plUrl').value || '').trim() && r.url && (document.getElementById('plUrl').value || '').trim() !== r.url); /* غ-٢: في التحرير — الرابط الملصوق يحل محل القائم */
   if (r.url) document.getElementById('plUrl').value = r.url;
@@ -529,7 +528,7 @@ function plTownChoose(v){ const f = plTownFound; if (!f) return; if (!v){ plTown
 async function plTownAdd(){ const f = plTownFound; if (!f) return; const cur = cityListAllCities().find(function(c){ return c.id === cityListCityId; }); if (!Array.isArray(userListData.customCities)) userListData.customCities = []; if (!userListData.customCities.some(function(c){ return String(c.id) === String(f.row.id); })) userListData.customCities.push(gazEntryToCity(f.row, cur ? cur.country : '')); try{ await saveUserListGeneral(); }catch(e){ mpSwallow(e, 'town-add'); } await plUseInferredCity(String(f.row.id)); }
 function plTownLine(){ const t = plTownLast; if (!t) return 'Nearby town: no check yet'; return 'Nearby town: last check — ' + (t.city || '?') + ' · [' + (t.parts || []).join(' | ') + '] → ' + t.result; } /* r84-4 (البند ٨): لسطر Diag */
 function plTownChipRender(){ const b = document.getElementById('plTownChip'); if (b) b.classList.toggle('on', !!plModalTown); }
-function plPasteBtnState(done){ const b = document.getElementById('plPasteBtn'); if (!b) return; b.disabled = !!done; b.textContent = done ? '✓ Pasted' : '📋 Paste from Maps'; } /* غ-٢ (١٠-١٦-٠٩): يعود عند فتح النافذة أو مسح الصندوق */
+function plPasteBtnState(done){ const b = document.getElementById('plPasteBtn'); if (!b) return; b.disabled = !!done; b.textContent = done ? '✓ Pasted' : '📋 Paste'; } /* غ-٢ (١٠-١٦-٠٩): يعود عند فتح النافذة أو مسح الصندوق */
 let plResolvedAddr = ''; // ز-١-ب: عنوان الرابط بعد حلّه (للمطابقة فقط)
 let plAreaAuto = ''; // خ-٤: آخر حي مُلئ تلقائيًّا — يُستبدل فقط إن لم يغيّره المستخدم
 const KNOWN_COUNTRIES = ['saudi arabia', 'السعودية', 'bahrain', 'البحرين', 'united arab emirates', 'uae', 'الإمارات', 'qatar', 'قطر', 'kuwait', 'oman', 'عمان', 'lebanon', 'لبنان', 'egypt', 'مصر', 'france', 'italy', 'spain', 'switzerland', 'greece', 'united kingdom', 'uk', 'united states', 'usa', 'sweden', 'turkey', 'jordan', 'الأردن'];
@@ -548,14 +547,16 @@ async function plResolveLink(url){
     if (r.addr) await plTownDetect(r.addr.split(/[,،]/).map(function(x){ return x.trim(); }).filter(Boolean)); /* r84-3: البلدة المجاورة من العنوان المحلول (الأدقّ — يغلب الملصوق) · r84-4: بعد ملء الحي ليكون له القول الأخير · الفاصلة العربية */
   }catch(e){ mpSwallow(e, 'resolve'); }
 }
-function plOnPaste(ev){ // ز-١-ج-٢: اللصق المباشر يُقرأ كنص مشاركة (لا نافذة إذن من النظام)
-  try{ const t = ((ev.clipboardData || window.clipboardData) || {}).getData ? (ev.clipboardData || window.clipboardData).getData('text') : ''; if (!t || !t.trim()) return; const r = parseMapsShare(t.trim()); if (!r.url) return; ev.preventDefault(); document.getElementById('plUrl').value = r.url; if (r.name && !document.getElementById('plName').value.trim()) document.getElementById('plName').value = r.name; if (!r.name || !r.area) plResolveLink(r.url); plPasteBtnState(true); showToast(r.name ? 'Read ✓ — name filled' : 'Link pasted ✓'); }catch(_){}
+function plOnPaste(ev){ /* ز-١-ج-٢ · r93-٣: اللصق في خانة الرابط يُقرأ كنص مشاركة كاملًا (الاسم · العنوان · الرابط · البلدة · المدينة) */
+  try{ const t = ((ev.clipboardData || window.clipboardData) || {}).getData ? (ev.clipboardData || window.clipboardData).getData('text') : ''; if (!t || !t.trim()) return; ev.preventDefault(); plParseShare(t.trim()); }catch(_){}
 }
-async function plPastePlusCode(){ let t = ''; try{ t = await navigator.clipboard.readText(); }catch(e){ showToast('Could not read the clipboard — tap the Plus code in Google Maps first, or type it'); return; } const el = document.getElementById('plPlusCode'); if (el) el.value = String(t || '').trim().slice(0, 60); showToast(t ? 'Pasted ✓ — Save pins it exactly' : 'Clipboard is empty'); } /* r87 */
-async function plPasteUrl(){
-  try{ const t = await navigator.clipboard.readText(); if (!t || !t.trim()){ showToast('Clipboard is empty'); return; } const r = parseMapsShare(t.trim()); document.getElementById('plUrl').value = r.url || t.trim(); if (r.name && !document.getElementById('plName').value.trim()) document.getElementById('plName').value = r.name; if (r.url && (!r.name || !r.area)) plResolveLink(r.url); showToast('Pasted ✓'); }
-  catch(e){ showToast('Could not access clipboard — paste manually in the field'); }
+async function plPastePlusCode(){ let t = ''; try{ t = await navigator.clipboard.readText(); }catch(e){ showToast('Could not read the clipboard — tap the Plus code in Google Maps first, or type it'); return; } const el = document.getElementById('plPlusCode'); if (el) el.value = String(t || '').trim().slice(0, 60); showToast(t ? 'Pasted ✓ — Save pins it exactly' : 'Clipboard is empty'); if (t) plPlusChanged(); } /* r87 */
+async function plPasteUrl(){ /* r93-٣: 📋 Paste بجانب الرابط — الحافظة إلى المحلّل نفسه */
+  try{ const t = await navigator.clipboard.readText(); if (!t || !t.trim()){ showToast('Clipboard is empty'); return; } plParseShare(t.trim()); }
+  catch(e){ showToast('Could not access clipboard — paste into the link field'); }
 }
+function plUrlChanged(){ const u = String((document.getElementById('plUrl') || {}).value || '').trim(); const nm = document.getElementById('plName'); if (/^https?:\/\//.test(u) && nm && !nm.value.trim()) plResolveLink(u); } /* r93-٣: رابط كُتب يدويًّا بلا اسم → يُحلّ */
+async function plPlusChanged(){ const code = String((document.getElementById('plPlusCode') || {}).value || '').trim(); const ar = document.getElementById('plArea'); if (!code || !ar || typeof tkPlusPoint !== 'function') return; if (ar.value.trim() && ar.value.trim() !== plAreaAuto) return; try{ const pt = await tkPlusPoint(code); if (!pt || pt.err || typeof pt.lat !== 'number') return; const a = await mpData.geo.area(cityListCityId, pt.lat, pt.lng); if (a && !isCityOrCountry(a)){ ar.value = a; plAreaAuto = a; showToast('Area read from the pin ✓'); } }catch(e){ mpSwallow(e, 'plus-area'); } } /* r93-٣ (ق١٠-٢٩-٠١): الحي يُقرأ من موضع الرمز — لا يُستبدل ما كتبه المستخدم */
 // ═══ ز-١-ب: خطوة الخريطة (Leaflet/OSM خلفيةً) — الدبوس على المرشَّح الأفضل، المرشَّحون مرقَّمون، سحب الدبوس، Skip · لا شيء يُكتب إلى OSM · لا إحداثيات من جوجل
 let plGeoConfirmed = false, plGeoResult = null, geoMap = null, geoPin = null, geoPick = null, geoCands = [], geoBanned = false;
 let plPlusWas = '', plUrlWas = '', plAreaWas = ''; /* r87-3: ما كان في الخانتين عند فتح التحرير */
