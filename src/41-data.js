@@ -145,7 +145,7 @@ const DATA = [ // ر٧٠ل (الشجرة v3 المعتمدة ١٥ سبتمبر �
   { id:"theme_parks", title:"Theme & Water Parks", icon:"🎡", items:[ {id:"amusement", icon:"🎢", name:"Theme Parks"}, {id:"water_parks", icon:"💧", name:"Water Parks"}, {id:"game_zones", icon:"🎮", name:"Game Zones"}, {id:"kids", icon:"🧒", name:"Kids Play Areas"} ]}, 
   { id:"zoos_aquariums", title:"Zoos & Aquariums", icon:"🦁", items:[ {id:"zoo", icon:"🦁", name:"Zoo"}, {id:"safari", icon:"🦒", name:"Safari"}, {id:"aquarium", icon:"🐠", name:"Aquarium"} ]}, 
   { id:"stay", title:"Stay", icon:"🏨", items:[ {id:"hotels", icon:"🏨", name:"Hotels"}, {id:"apartments", icon:"🏢", name:"Apartments"}, {id:"resorts", icon:"🏝️", name:"Resorts"} ]}, 
-  { id:"transportation", title:"Transportation", icon:"✈️", items:[ {id:"airports", icon:"✈️", name:"Airports"}, {id:"train_stations", icon:"🚆", name:"Train Stations"}, {id:"ferry", icon:"⛴️", name:"Ferry Terminals"} ]}, 
+  { id:"transportation", title:"Transportation", icon:"✈️", items:[ {id:"airports", icon:"✈️", name:"Airports"}, {id:"train_stations", icon:"🚆", name:"Train Stations"}, {id:"ferry", icon:"⛴️", name:"Ferry Terminals"}, {id:"parking", icon:"🅿️", name:"Parking"} ]}, /* r94 (ق١٠-٢٩-٠٧ — قياس المالك: موقف سيارات محفوظ في Takeout): يقلب بند v3 «بلا Parking» */ 
   { id:"others", title:"Others", icon:"📌", items:[ {id:"others", icon:"📌", name:"Others"} ]},
 ];
 /* r74b (ر٧٣-أب المرحلة ٢ · قرار ٠٩-٢٩-٠٢): العناوين الشخصية كيان مستقل — تصنيفاتها خارج شجرة الأماكن (DATA = ١٨ قسمًا عامًّا صِرفة).
