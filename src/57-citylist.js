@@ -542,7 +542,7 @@ async function cmMovePlace(fromId, catId, index, toId){ if (!currentUser || !fro
   try{ await cmWriteDoc(fromId, A.name, cmMetaOf(docA), catsA); }catch(e){ mpSwallow(e, 'move-write-src'); showToast('Could not save ' + A.name + ' — the place is now in both; undo from City'); }
   cmUndo = { kind: 'move', label: 'Undo move · ' + (p.name || 'place') + ' → ' + B.name, at: Date.now(), docs: undoDocs, cities: JSON.parse(JSON.stringify(userListData.customCities || [])), names: { from: A.name, to: B.name } };
   cmLog('MOVE PLACE · ' + fromId + ' → ' + toId + ' · 1 place · ' + catId); showToast((p.name || 'Place') + ' → ' + B.name + ' ✓ — Undo is in City');
-  await cmAfter([fromId, toId]); return true; }
+  await cmAfter([fromId, toId]); if (fromId === cityListCityId && typeof plCityEmptyAsk === 'function') plCityEmptyAsk(); /* r94 (ق١٠-٢٩-٠٩): نقل آخر مكان يفرغ المدينة → السؤال */ return true; }
 /* ── Undo للجلسة: يعيد مستندَي المدينتين وقيد المدن كما كانت ── */
 async function cmUndoLast(){ const u = cmUndo; if (!u || !currentUser) return false; if (currentUserSuspended){ showToast('Your account is suspended — you can’t save changes'); return false; } cmUndo = null; const ids = Object.keys(u.docs); userListData.customCities = JSON.parse(JSON.stringify(u.cities));
   for (const id of ids){ const d = u.docs[id]; try{ if (d){ const c = cmCityOf(id); let cur = null; try{ cur = await cmReadDoc(id); }catch(_){} await cmWriteDoc(id, (c && c.name) || d.cityName || id, cmMetaOf(d), cmCatsOf(d), cur); } else { await mpData.cityLists.remove(currentUser.uid, id); } }catch(e){ mpSwallow(e, 'cm-undo'); showToast('Could not undo fully — check both cities'); } }
