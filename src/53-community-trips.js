@@ -215,7 +215,7 @@ async function consumePendingShare(){
   const r = parseMapsShare(t); const c = inferCityFrom(r.parts || []);
   if (c && c.id !== cityListCityId){ plSessionCity = c.id; try{ await selectCityListCity(c.id); }catch(e){} }
   switchTab('Places'); if (!cityListCityId){ showToast('Pick a city first, then paste again'); return; }
-  openPlPlaceModal(null, null); plSetMethod(true); document.getElementById('plShareText').value = t; plParseShare();
+  openPlPlaceModal(null, null); plParseShare(t); /* r93-٣: النص إلى المحلّل مباشرة */
 }
 // أ-١٢-١: الوجهة الافتراضية — يدويًّا ما اختاره؛ وإلا: له أماكن → الأماكن على مدينته؛ وإلا → المجتمع
 function totalMyPlaces(){ const c = (userListData && userListData.cityPlaceCounts) || {}; return Object.keys(c).reduce(function(a, k){ return a + (Number(c[k]) || 0); }, 0); }
