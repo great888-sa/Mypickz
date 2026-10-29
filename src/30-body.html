@@ -50,6 +50,7 @@
       <label class="flabel">Plus code<span style="display:flex; gap:6px; align-items:center;"><input id="plPlusCode" class="modal-input" placeholder="GV74+C3 London" style="flex:1; text-align:left; margin-top:0;" autocapitalize="characters" autocorrect="off" onchange="plPlusChanged()"><button type="button" class="pl-actbtn" onclick="plPastePlusCode()" title="Paste the Plus code from the clipboard">📋</button></span></label><!-- r87 · r93-٣: الرمز يثبّت المكان ويقرأ الحي من موضعه -->
       <label class="flabel">Area<input id="plArea" class="modal-input" placeholder="reads from the pin · or type" style="margin-top:0;"></label>
     </div>
+    <div id="plPlusErr" class="warn" style="font-size:12px; font-weight:700; margin-top:4px; display:none;"></div><!-- r94 (ق١٠-٢٩-٠٨): خطأ الرمز سطرًا ثابتًا لا toast عابرًا -->
     <div class="dim" style="font-size:11px; margin-top:4px;">In Google Maps: open the place, swipe its card up — under the address tap <b>Plus code</b> (it says Copied), then paste here: one exact pin, and the area reads from it.</div>
     <label class="flabel">Name</label>
     <input id="plName" class="modal-input" placeholder="reads from the link · or type it">
