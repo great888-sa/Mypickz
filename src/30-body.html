@@ -36,36 +36,25 @@
   <!-- r75c (البند ١٠): حذف المدينة صار ورقة سفلية (mpSheet بخيارين وبديل ثانٍ) — النافذة القديمة زالت -->
   <div class="modal-backdrop" id="plPlaceBackdrop"><div class="modal night"><!-- r75c (البند ١٠): نموذج المكان على القشرة الليلية — الحقول عاجية · Save مملوء · ✕ يلغي -->
     <div class="hdr"><button type="button" class="bk hidden">← Back</button><span class="ttl" id="plPlaceTitle">➕ Add a place</span><button type="button" class="x" onclick="closePlPlaceModal()" aria-label="Close">✕</button></div>
-    <div class="chiprow" id="plMethodRow"><button type="button" class="chip on" id="plMethodPaste" onclick="plSetMethod(true)">📋 Paste from Maps</button><button type="button" class="chip" id="plMethodManual" onclick="plSetMethod(false)">✍️ Enter manually</button></div>
-    <div id="plPasteWrap">
-      <textarea id="plShareText" class="modal-input" rows="3" placeholder="Paste what Google Maps shared…" onpaste="setTimeout(plParseShare, 0)" onchange="plParseShare()" oninput="if (!this.value.trim()) plPasteBtnState(false)"></textarea>
-      <div style="display:flex; gap:6px; margin-top:6px; align-items:center;">
-        <button type="button" class="pl-actbtn" id="plPasteBtn" onclick="plPasteShare()">📋 Paste from Maps</button>
-        <span class="pl-sub" style="margin:0;">In Google Maps: Share → Copy, then tap here (iPhone asks once: tap Paste) — or paste in the box.</span>
-      </div>
-    </div>
     <label class="flabel">City</label>
     <div id="plModalCity" style="font-family:'Cairo',sans-serif; font-weight:700; font-size:12px;"></div>
-    <div id="plCityHint" class="pl-sub" style="display:none; margin:6px 0 0;"></div><!-- r84-3: تحت سطر المدينة لا داخل صندوق اللصق — يظهر في الإدخال اليدوي أيضًا (الرابط يُحلّ هناك كذلك) -->
-    <label class="flabel">Category</label>
-    <div id="plModalCats" style="margin-top:2px;"></div>
+    <div id="plCityHint" class="pl-sub" style="display:none; margin:6px 0 0;"></div><!-- r84-3: تحت سطر المدينة — الرابط يُحلّ هنا -->
+    <label class="flabel">Google Maps link</label><!-- r93-٣ (ق١٠-٢٩-٠١): خانة واحدة أولًا — اللصق فيها يقرأ نص المشاركة (الاسم · العنوان · الرابط) · «Enter manually» وصندوق المشاركة حُذفا -->
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input id="plUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" style="flex:1; text-align:left; margin-top:0;" onpaste="plOnPaste(event)" onchange="plUrlChanged()">
+      <button type="button" class="pl-actbtn" id="plPasteBtn" onclick="plPasteUrl()" title="Paste what Google Maps shared">📋 Paste</button>
+    </div>
+    <div class="dim" id="plUrlLine" style="font-size:12px; margin-top:4px;"></div>
+    <div class="pl-sub" style="margin:4px 0 0;">In Google Maps: Share → Copy, then tap 📋 Paste — the name and area fill in. No link? Just type the name below.</div>
+    <div class="tb-grid2" style="margin-top:2px;">
+      <label class="flabel">Plus code<span style="display:flex; gap:6px; align-items:center;"><input id="plPlusCode" class="modal-input" placeholder="GV74+C3 London" style="flex:1; text-align:left; margin-top:0;" autocapitalize="characters" autocorrect="off" onchange="plPlusChanged()"><button type="button" class="pl-actbtn" onclick="plPastePlusCode()" title="Paste the Plus code from the clipboard">📋</button></span></label><!-- r87 · r93-٣: الرمز يثبّت المكان ويقرأ الحي من موضعه -->
+      <label class="flabel">Area<input id="plArea" class="modal-input" placeholder="reads from the pin · or type" style="margin-top:0;"></label>
+    </div>
+    <div class="dim" style="font-size:11px; margin-top:4px;">In Google Maps: open the place, swipe its card up — under the address tap <b>Plus code</b> (it says Copied), then paste here: one exact pin, and the area reads from it.</div>
     <label class="flabel">Name</label>
-    <input id="plName" class="modal-input" placeholder="e.g. Holybelly">
-    <label class="flabel">Google Maps link</label>
-    <div style="display:flex; gap:6px; align-items:center;">
-      <input id="plUrl" class="modal-input" placeholder="https://maps.app.goo.gl/…" style="flex:1; text-align:left; margin-top:0;" onpaste="plOnPaste(event)"><div class="dim" id="plUrlLine" style="font-size:12px; margin-top:4px;"></div>
-      <button type="button" class="pl-actbtn" onclick="plPasteUrl()" title="Paste link from clipboard">📋</button>
-    </div>
-    <!-- r87-4 (البند ٣): «Check the address» حُذف — Google يحجب العامل (قياس ٢٤ أكتوبر) وPlus code يغني عنه -->
-    <label class="flabel">Plus code (optional — pins it exactly)</label><!-- r87: الرمز من تحت العنوان في بطاقة Google Maps — يُفكّ على الجهاز -->
-    <div style="display:flex; gap:6px; align-items:center;">
-      <input id="plPlusCode" class="modal-input" placeholder="GV74+C3 London" style="flex:1; text-align:left; margin-top:0;" autocapitalize="characters" autocorrect="off">
-      <button type="button" class="pl-actbtn" onclick="plPastePlusCode()" title="Paste the Plus code from the clipboard">📋</button>
-    </div>
-    <div class="dim" style="font-size:11px; margin-top:4px;">In Google Maps: open the place, swipe its card up — under the address tap <b>Plus code</b> (it says Copied), then paste here.</div>
-    <label class="flabel">Area (optional)</label>
-    <input id="plArea" class="modal-input" placeholder="e.g. 10th arr.">
-    <div class="chiprow" style="margin-top:6px;"><button type="button" class="chip tog" id="plTownChip" onclick="plModalTown = !plModalTown; if (!plModalTown) plTownGeo = null; plTownChipRender()">Outside the city</button><span class="dim" style="font-size:11px;">a nearby town, kept under this city</span></div><!-- r84-2 (كلمة المالك ١٣:٢٠): يكتب/يمسح town يدويًّا — ما يسِمه الاستيراد يملك المستخدم تعديله -->
+    <input id="plName" class="modal-input" placeholder="reads from the link · or type it">
+    <label class="flabel">Category</label>
+    <div id="plModalCats" style="margin-top:2px;"></div><span id="plTownHold" style="display:none;"><button type="button" class="chip tog" id="plTownChip" onclick="plModalTown = !plModalTown; if (!plModalTown) plTownGeo = null; plTownChipRender()" title="A nearby town, kept under this city">Outside the city</button></span><!-- r84-2 · r93-٣: الشريحة عقدة واحدة تُنقل إلى صفّ شرائح التصنيف عند كل رسم -->
     <label class="flabel">Picks (optional)</label><!-- ر٧٠ح (ق٠٩-٠٢-٠٣): الاختيارات حقل مستقل — بندًا بكل سطر -->
     <textarea id="plPicks" class="modal-input" rows="2" placeholder="what to order or look for — one per line"></textarea>
     <label class="flabel" style="display:flex;align-items:center;justify-content:space-between">Note (optional) <button type="button" class="actn" style="padding:2px 10px" onclick="plNoteBullet()" title="Start a bullet line">• list</button></label>
