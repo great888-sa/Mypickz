@@ -343,11 +343,12 @@ async function saveUserListGeneral(){
 let cityListEditingKeys = new Set(); // مفاتيح "itemId#index" للأماكن اللي حاليًا في وضع تعديل
 let cityListEditBackup = {}; // نسخة أصلية لكل مكان لحظة دخول وضع التعديل — تتيح التراجع قبل الحفظ
 
+function removeUserPlaceObj(id, pl){ const e = userGetEntry(id); const i = ((e && e.places) || []).indexOf(pl); if (i < 0) return false; return removeUserPlace(id, i); } /* r100-ب: الحذف بالهوية — التوأم (مفتاح مكرّر) لا يُصاب، والمحذوف للتو لا يُحذف ثانية */
 function removeUserPlace(id, index){
   const e = userEnsurePlaces(id);
   const gone = e.places.splice(index, 1); try{ if (typeof tkRemember === 'function') tkRemember(gone); }catch(_){} /* r86-3 (البند ٣): المستورَد المحذوف بيدك يُذكر — لا يعود في إعادة الاختيار إلا بطلبك */
   [...cityListEditingKeys].forEach(k => { if (k.startsWith(id + '#')) cityListEditingKeys.delete(k); });
-  saveMyCityList();
+  return saveMyCityList(); /* r100-ب: يعيد وعد الحفظ ليُنتظر تحت مفتاح الحذف */
 }
 let updateFieldSaveTimer = null;
 /* ب-٢-٢-أ٢ (المسودة v3 · ٨): نافذة الاسم المستعار المسماة بالقشرة الليلية — القيد ظاهر (٣–٢٤) · فحص التوفر الحي عند التوقف عن الكتابة · تعيد وعدًا true/false كما كانت (مسار الإلزام عند أول دخول يبقى يكررها حتى الحفظ) */
