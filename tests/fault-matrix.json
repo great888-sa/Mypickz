@@ -1,0 +1,4026 @@
+{
+ "build": "M2-ID-r100",
+ "at": "2026-11-03",
+ "modes": [
+  "network",
+  "permission",
+  "partial",
+  "bad",
+  "concurrency",
+  "stale"
+ ],
+ "groups": [
+  {
+   "id": "places",
+   "name": "الأماكن",
+   "caps": [
+    {
+     "id": "places.open",
+     "name": "فتح مدينة",
+     "kind": "read"
+    },
+    {
+     "id": "places.add",
+     "name": "إضافة مكان",
+     "kind": "write"
+    },
+    {
+     "id": "places.edit",
+     "name": "تعديل مكان",
+     "kind": "write"
+    },
+    {
+     "id": "places.delete",
+     "name": "حذف مكان",
+     "kind": "write"
+    },
+    {
+     "id": "places.moveCat",
+     "name": "نقل مكان إلى تصنيف آخر",
+     "kind": "write"
+    },
+    {
+     "id": "places.pinPlus",
+     "name": "تثبيت برمز Plus",
+     "kind": "write"
+    },
+    {
+     "id": "places.bookmark",
+     "name": "حفظ مكان من قائمة غيري (Bookmark)",
+     "kind": "write"
+    },
+    {
+     "id": "places.dupKeep",
+     "name": "Duplicates → Keep this",
+     "kind": "write"
+    },
+    {
+     "id": "places.townRemove",
+     "name": "حذف بلدة مضمومة",
+     "kind": "write"
+    },
+    {
+     "id": "places.merge",
+     "name": "Merge into another city + Undo",
+     "kind": "write"
+    }
+   ]
+  },
+  {
+   "id": "trips",
+   "name": "الرحلات",
+   "caps": [
+    {
+     "id": "trips.openBuilder",
+     "name": "فتح المنشئ لمدينة",
+     "kind": "read"
+    },
+    {
+     "id": "trips.build",
+     "name": "بناء رحلة وحفظها",
+     "kind": "write"
+    },
+    {
+     "id": "trips.open",
+     "name": "فتح رحلة محفوظة",
+     "kind": "read"
+    },
+    {
+     "id": "trips.promote",
+     "name": "ترقية بديل إلى المحطة",
+     "kind": "write"
+    },
+    {
+     "id": "trips.share",
+     "name": "مشاركة رحلة باسم مستخدم",
+     "kind": "write"
+    },
+    {
+     "id": "trips.delete",
+     "name": "حذف رحلة",
+     "kind": "write"
+    },
+    {
+     "id": "trips.dayPlan",
+     "name": "خطة اليوم: بناء وحفظ",
+     "kind": "write"
+    },
+    {
+     "id": "trips.dayPlanCopy",
+     "name": "نسخ خطة يوم إلى رحلة",
+     "kind": "write"
+    }
+   ]
+  },
+  {
+   "id": "import",
+   "name": "الاستيراد",
+   "caps": [
+    {
+     "id": "import.files",
+     "name": "قراءة الملفات وبناء الخطة",
+     "kind": "read"
+    },
+    {
+     "id": "import.filesBad",
+     "name": "ملفات فاسدة",
+     "kind": "read"
+    },
+    {
+     "id": "import.commit",
+     "name": "الالتزام (نقل الأماكن إلى القوائم)",
+     "kind": "write"
+    },
+    {
+     "id": "import.undo",
+     "name": "Undo last import",
+     "kind": "write"
+    },
+    {
+     "id": "import.pinSuggested",
+     "name": "تثبيت اقتراح من بياناتنا",
+     "kind": "write"
+    },
+    {
+     "id": "import.resume",
+     "name": "استئناف بعد انقطاع",
+     "kind": "read"
+    }
+   ]
+  },
+  {
+   "id": "community",
+   "name": "المجتمع",
+   "caps": [
+    {
+     "id": "community.root",
+     "name": "جذر المجتمع (الأكثر حفظًا · المشارَك)",
+     "kind": "read"
+    },
+    {
+     "id": "community.user",
+     "name": "شاشة مستخدم (قوائمه العامة)",
+     "kind": "read"
+    },
+    {
+     "id": "community.search",
+     "name": "بحث باسم مستخدم",
+     "kind": "read"
+    },
+    {
+     "id": "community.bookmarkList",
+     "name": "حفظ قائمة مدينة كاملة (Bookmark list)",
+     "kind": "write"
+    },
+    {
+     "id": "community.follow",
+     "name": "متابعة/إلغاء متابعة",
+     "kind": "write"
+    },
+    {
+     "id": "community.trip",
+     "name": "فتح رحلة مجتمعية",
+     "kind": "read"
+    }
+   ]
+  },
+  {
+   "id": "curators",
+   "name": "المنتقون",
+   "caps": [
+    {
+     "id": "curators.page",
+     "name": "صفحة منتقٍ",
+     "kind": "read"
+    },
+    {
+     "id": "curators.request",
+     "name": "طلب أن أصير منتقيًا",
+     "kind": "write"
+    },
+    {
+     "id": "curators.publicToggle",
+     "name": "قائمة عامة/خاصة",
+     "kind": "write"
+    },
+    {
+     "id": "curators.top",
+     "name": "Top ★ على مكان",
+     "kind": "write"
+    },
+    {
+     "id": "curators.reportUser",
+     "name": "إبلاغ عن قائمة/مستخدم",
+     "kind": "write"
+    }
+   ]
+  },
+  {
+   "id": "addresses",
+   "name": "العناوين",
+   "caps": [
+    {
+     "id": "addresses.open",
+     "name": "فتح العناوين",
+     "kind": "read"
+    },
+    {
+     "id": "addresses.add",
+     "name": "إضافة عنوان",
+     "kind": "write"
+    },
+    {
+     "id": "addresses.edit",
+     "name": "تعديل عنوان",
+     "kind": "write"
+    },
+    {
+     "id": "addresses.delete",
+     "name": "حذف عنوان",
+     "kind": "write"
+    },
+    {
+     "id": "addresses.removeCity",
+     "name": "حذف مدينة عناوين",
+     "kind": "write"
+    }
+   ]
+  },
+  {
+   "id": "account",
+   "name": "الحساب",
+   "caps": [
+    {
+     "id": "account.signIn",
+     "name": "تسجيل الدخول",
+     "kind": "write"
+    },
+    {
+     "id": "account.signUp",
+     "name": "إنشاء حساب",
+     "kind": "write"
+    },
+    {
+     "id": "account.reset",
+     "name": "استعادة كلمة السر",
+     "kind": "write"
+    },
+    {
+     "id": "account.nickname",
+     "name": "تغيير الاسم",
+     "kind": "write"
+    },
+    {
+     "id": "account.signOut",
+     "name": "تسجيل الخروج",
+     "kind": "write"
+    },
+    {
+     "id": "account.delete",
+     "name": "حذف الحساب (التتالي)",
+     "kind": "write"
+    }
+   ]
+  },
+  {
+   "id": "admin",
+   "name": "الإدارة",
+   "caps": [
+    {
+     "id": "admin.users",
+     "name": "قائمة المستخدمين",
+     "kind": "read"
+    },
+    {
+     "id": "admin.suspend",
+     "name": "إيقاف/إعادة مستخدم",
+     "kind": "write"
+    },
+    {
+     "id": "admin.report",
+     "name": "تقرير المستخدمين",
+     "kind": "read"
+    }
+   ]
+  },
+  {
+   "id": "drawer",
+   "name": "الدرج",
+   "caps": [
+    {
+     "id": "drawer.profile",
+     "name": "My profile / My stats",
+     "kind": "read"
+    },
+    {
+     "id": "drawer.report",
+     "name": "Report a problem",
+     "kind": "write"
+    },
+    {
+     "id": "drawer.diag",
+     "name": "ⓘ Diag يعمل مقطوع الشبكة",
+     "kind": "read"
+    },
+    {
+     "id": "drawer.open",
+     "name": "فتح الدرج بحالة ناقصة/متقادمة",
+     "kind": "read"
+    }
+   ]
+  }
+ ],
+ "cells": [
+  {
+   "cap": "places.open",
+   "mode": "network",
+   "v": "R:AD",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "places",
+   "kind": "read"
+  },
+  {
+   "cap": "places.open",
+   "mode": "permission",
+   "v": "R:AD",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "places",
+   "kind": "read"
+  },
+  {
+   "cap": "places.open",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
+    ],
+    "text": ""
+   },
+   "group": "places",
+   "kind": "read"
+  },
+  {
+   "cap": "places.open",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "places",
+   "kind": "read"
+  },
+  {
+   "cap": "places.open",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "places",
+   "kind": "read"
+  },
+  {
+   "cap": "places.open",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "places",
+   "kind": "read"
+  },
+  {
+   "cap": "places.add",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.add",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.add",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Saved to My List · Faultville ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.add",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Name and Google Maps link are required | Saved to My List · Faultville ✓ | Only Google Maps links are allowed — removed 1 invalid link(s) | Saved to My List · F"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.add",
+   "mode": "concurrency",
+   "v": "R:B",
+   "why": "invariant false",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Saved to My List · Faultville ✓ | Saved to My List · Faultville ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.add",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Saved to My List · Faultville ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.edit",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.edit",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.edit",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Saved to My List · Faultville ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.edit",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Name and Google Maps link are required | Only Google Maps links are allowed — removed 1 invalid link(s) | Saved to My List · Faultville ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.edit",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Saved to My List · Faultville ✓ | Saved to My List · Faultville ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.edit",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Saved to My List · Faultville ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.delete",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "🗑 Delete \"Second Cafe\"? | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.delete",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "🗑 Delete \"Second Cafe\"? | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.delete",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "🗑 Delete \"Second Cafe\"?"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.delete",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.delete",
+   "mode": "concurrency",
+   "v": "R:B",
+   "why": "invariant false",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "🗑 Delete \"Second Cafe\"? | 🗑 Delete \"Second Cafe\"?"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.delete",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "🗑 Delete \"Second Cafe\"?"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.moveCat",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.moveCat",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.moveCat",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
+    ],
+    "text": "Moved to Hotels ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.moveCat",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_no_such_cat"
+    ],
+    "text": "Moved to no_such_cat ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.moveCat",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
+    ],
+    "text": "Moved to Hotels ✓ | Moved to Hotels ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.moveCat",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
+    ],
+    "text": "Moved to Hotels ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.pinPlus",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not save | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.pinPlus",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not save | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.pinPlus",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Pinned ✓ · from your Google Plus code"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.pinPlus",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "No Plus code, coordinates or pin link found | No Plus code, coordinates or pin link found | Place not found"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.pinPlus",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Pinned ✓ · from your Google Plus code | Pin moved ✓ · from your Google Plus code"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.pinPlus",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Pinned ✓ · from your Google Plus code"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.bookmark",
+   "mode": "network",
+   "v": "R:AD",
+   "why": "",
+   "detail": {
+    "text": "Could not update bookmark — unavailable"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.bookmark",
+   "mode": "permission",
+   "v": "R:AD",
+   "why": "",
+   "detail": {
+    "text": "Could not update bookmark — permission-denied"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.bookmark",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": ""
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.bookmark",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": ""
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.bookmark",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": ""
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.bookmark",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": ""
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.dupKeep",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not save | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.dupKeep",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not save | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.dupKeep",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
+    ],
+    "text": "Kept “Fault Cafe” · removed 1 — Undo is on the Duplicates row"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.dupKeep",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.dupKeep",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
+    ],
+    "text": "Kept “Fault Cafe” · removed 1 — Undo is on the Duplicates row"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.dupKeep",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
+    ],
+    "text": "Kept “Fault Cafe” · removed 1 — Undo is on the Duplicates row"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.townRemove",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not save | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.townRemove",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not save | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.townRemove",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmB",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmB_coffee",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Removed Brienz · 1 place — Undo is in City | City deleted | Removed Faultville | Faultville has no places now"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.townRemove",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "No places marked “NoSuchTown”"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.townRemove",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "No places marked “Brienz” | Removed Brienz · 1 place — Undo is in City"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.townRemove",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Removed Brienz · 1 place — Undo is in City"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.merge",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not read the lists"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.merge",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not read the lists"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.merge",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Faultville has no places — delete it instead"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.merge",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "City not found"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.merge",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmB",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmB_coffee",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Faultville → Faultburg · 4 places ✓ — Undo is in City | City deleted | Faultville → Faultburg · 4 places ✓ — Undo is in City | Undone · Faultville ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.merge",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmB",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmB_coffee",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "City deleted | Faultville → Faultburg · 6 places ✓ — Undo is in City | Undone · Faultville ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.openBuilder",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.openBuilder",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.openBuilder",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.openBuilder",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.openBuilder",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.openBuilder",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.build",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.build",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.build",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/trip_1793710855609_3peeq"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.build",
+   "mode": "bad",
+   "v": "R:AB",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "trips/trip_1793710856431_ewkh8",
+     "trips/trip_1793710856518_0z562",
+     "trips/trip_1793710856609_turw6"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.build",
+   "mode": "concurrency",
+   "v": "R:B",
+   "why": "invariant false",
+   "detail": {
+    "changed": [
+     "trips/trip_1793710857401_t28sc"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.build",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/trip_1793710858225_tipny"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.open",
+   "mode": "network",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.open",
+   "mode": "permission",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.open",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.open",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.open",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.open",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "trips",
+   "kind": "read"
+  },
+  {
+   "cap": "trips.promote",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.promote",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.promote",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/fmt1"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.promote",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.promote",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/fmt1"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.promote",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/fmt1"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.share",
+   "mode": "network",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Could not verify username"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.share",
+   "mode": "permission",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Could not verify username"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.share",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "No user found with that username"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.share",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "No user found with that username | No user found with that username | No user found with that username"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.share",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "No user found with that username | No user found with that username"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.share",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "No user found with that username"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.delete",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "🗑 Delete this trip? | Not saved | Not saved"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.delete",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "🗑 Delete this trip? | Not saved | Not saved"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.delete",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/fmt1"
+    ],
+    "text": "Trip deleted | 🗑 Delete this trip?"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.delete",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Trip deleted | Trip deleted | 🗑 Delete this trip? | 🗑 Delete this trip?"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.delete",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/fmt1"
+    ],
+    "text": "Trip deleted | Trip deleted | 🗑 Delete this trip? | 🗑 Delete this trip?"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.delete",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/fmt1"
+    ],
+    "text": "Trip deleted | 🗑 Delete this trip?"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlan",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlan",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlan",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/trip_1793710879021_o5jr6"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlan",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlan",
+   "mode": "concurrency",
+   "v": "R:B",
+   "why": "invariant false",
+   "detail": {
+    "changed": [
+     "trips/trip_1793710879862_8m6p6"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlan",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/trip_1793710880738_lryl5"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlanCopy",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Fault Day → Fault Trip · day 2 ✓ | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlanCopy",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Fault Day → Fault Trip · day 2 ✓ | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlanCopy",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/fmt1"
+    ],
+    "text": "Fault Day → Fault Trip · day 2 ✓"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlanCopy",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlanCopy",
+   "mode": "concurrency",
+   "v": "R:B",
+   "why": "invariant false",
+   "detail": {
+    "changed": [
+     "trips/fmt1"
+    ],
+    "text": "Fault Day → Fault Trip · day 2 ✓ | Fault Day → Fault Trip · day 3 ✓"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.dayPlanCopy",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/fmt1"
+    ],
+    "text": "Fault Day → Fault Trip · day 2 ✓"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "import.files",
+   "mode": "network",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.files",
+   "mode": "permission",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.files",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.files",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.files",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.files",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.filesBad",
+   "mode": "network",
+   "na": "لا شبكة في القراءة المحلية",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.filesBad",
+   "mode": "permission",
+   "na": "لا إذن في القراءة المحلية",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.filesBad",
+   "mode": "partial",
+   "na": "لا مستند",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.filesBad",
+   "mode": "bad",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.filesBad",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.filesBad",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.commit",
+   "mode": "network",
+   "v": "R:B",
+   "why": "memory diverged from store (ghost state)",
+   "detail": {
+    "text": "Could not save your list"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.commit",
+   "mode": "permission",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.commit",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris_museums",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris_parks",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris_bakery"
+    ],
+    "text": ""
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.commit",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.commit",
+   "mode": "concurrency",
+   "v": "R:B",
+   "why": "invariant false",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl_tk:مايوركا - ساحات",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl_tk:Saved"
+    ],
+    "text": ""
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.commit",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl_tk:مايوركا - ساحات",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl_tk:Saved"
+    ],
+    "text": ""
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.undo",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Nothing left to undo — everything from this import was pinned, edited or moved"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.undo",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Nothing left to undo — everything from this import was pinned, edited or moved"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.undo",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Nothing left to undo — everything from this import was pinned, edited or moved"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.undo",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.undo",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl_tk:مايوركا - ساحات",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl_tk:Saved"
+    ],
+    "text": "Undone — 2 removed · 0 kept"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.undo",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Nothing left to undo — everything from this import was pinned, edited or moved"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.pinSuggested",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not save | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.pinSuggested",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not save | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.pinSuggested",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Pinned ✓ · Second Cafe"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.pinSuggested",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "No suggestion for this place | Pinned ✓ · Second Cafe"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.pinSuggested",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "No suggestion for this place | Pinned ✓ · Second Cafe"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.pinSuggested",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Pinned ✓ · Second Cafe"
+   },
+   "group": "import",
+   "kind": "write"
+  },
+  {
+   "cap": "import.resume",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.resume",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.resume",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.resume",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.resume",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "import.resume",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "import",
+   "kind": "read"
+  },
+  {
+   "cap": "community.root",
+   "mode": "network",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.root",
+   "mode": "permission",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.root",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.root",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.root",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.root",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.user",
+   "mode": "network",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.user",
+   "mode": "permission",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.user",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": ""
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.user",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.user",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.user",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.search",
+   "mode": "network",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "This name doesn't exist"
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.search",
+   "mode": "permission",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "This name doesn't exist"
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.search",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": ""
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.search",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "This name doesn't exist | This name doesn't exist"
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.search",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.search",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.bookmarkList",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "This is your list — bookmarks count others, not you",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.bookmarkList",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "This is your list — bookmarks count others, not you",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.bookmarkList",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "This is your list — bookmarks count others, not you"
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.bookmarkList",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "listBookmarks/uBBBBBBBBBBBBBBBBBBBBBBBBBBB___",
+     "userCityLists/_"
+    ],
+    "text": "This is your list — bookmarks count others, not you | This is your list — bookmarks count others, not you"
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.bookmarkList",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "This is your list — bookmarks count others, not you | This is your list — bookmarks count others, not you"
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.bookmarkList",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "This is your list — bookmarks count others, not you"
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.follow",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.follow",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.follow",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.follow",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "follows/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_",
+     "follows/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_no-such-uid"
+    ],
+    "text": "Following ✓ | Following ✓"
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.follow",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.follow",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "community",
+   "kind": "write"
+  },
+  {
+   "cap": "community.trip",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "This trip is no longer available",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.trip",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "This trip is no longer available",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.trip",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "This trip is no longer available"
+   },
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.trip",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.trip",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "community.trip",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "community",
+   "kind": "read"
+  },
+  {
+   "cap": "curators.page",
+   "mode": "network",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "curators",
+   "kind": "read"
+  },
+  {
+   "cap": "curators.page",
+   "mode": "permission",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "curators",
+   "kind": "read"
+  },
+  {
+   "cap": "curators.page",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": ""
+   },
+   "group": "curators",
+   "kind": "read"
+  },
+  {
+   "cap": "curators.page",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "curators",
+   "kind": "read"
+  },
+  {
+   "cap": "curators.page",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "curators",
+   "kind": "read"
+  },
+  {
+   "cap": "curators.page",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "curators",
+   "kind": "read"
+  },
+  {
+   "cap": "curators.request",
+   "mode": "network",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": "Could not send · unavailable"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.request",
+   "mode": "permission",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": "Could not send · permission-denied"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.request",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "curatorRequests/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": "Request sent — pending"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.request",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Tell us briefly why | Tell us briefly why"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.request",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Tell us briefly why | Tell us briefly why"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.request",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Tell us briefly why"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.publicToggle",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.publicToggle",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.publicToggle",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA"
+    ],
+    "text": ""
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.publicToggle",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.publicToggle",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": ""
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.publicToggle",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA"
+    ],
+    "text": ""
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.top",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.top",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.top",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Marked as Top ★ — shown on your curator page once you are a curator"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.top",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.top",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Marked as Top ★ — shown on your curator page once you are a curator | Removed from your top places"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.top",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "Marked as Top ★ — shown on your curator page once you are a curator"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.reportUser",
+   "mode": "network",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": "Could not report · unavailable"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.reportUser",
+   "mode": "permission",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": "Could not report · permission-denied"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.reportUser",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "reports/r_1793710946017_dbtbfh"
+    ],
+    "text": "Thanks — reported"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.reportUser",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "reports/r_1793710946921_i51ino"
+    ],
+    "text": "Thanks — reported"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.reportUser",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "reports/r_1793710947826_vvyw2e",
+     "reports/r_1793710947826_ct0ibl"
+    ],
+    "text": "Thanks — reported | Thanks — reported"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "curators.reportUser",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "reports/r_1793710948759_fg49nr"
+    ],
+    "text": "Thanks — reported"
+   },
+   "group": "curators",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.open",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not load your addresses — showing what was on screen"
+   },
+   "group": "addresses",
+   "kind": "read"
+  },
+  {
+   "cap": "addresses.open",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not load your addresses — showing what was on screen"
+   },
+   "group": "addresses",
+   "kind": "read"
+  },
+  {
+   "cap": "addresses.open",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "addresses",
+   "kind": "read"
+  },
+  {
+   "cap": "addresses.open",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "addresses",
+   "kind": "read"
+  },
+  {
+   "cap": "addresses.open",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "addresses",
+   "kind": "read"
+  },
+  {
+   "cap": "addresses.open",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "addresses",
+   "kind": "read"
+  },
+  {
+   "cap": "addresses.add",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved | Could not save — try again",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.add",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved | Could not save — try again",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.add",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Saved ✓"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.add",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Saved ✓"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.add",
+   "mode": "concurrency",
+   "v": "R:B",
+   "why": "invariant false",
+   "detail": {
+    "changed": [
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Saved ✓ | Saved ✓"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.add",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Saved ✓"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.edit",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved | Could not save — try again",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.edit",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved | Could not save — try again",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.edit",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Saved ✓"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.edit",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Enter a name"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.edit",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Saved ✓ | Saved ✓"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.edit",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Saved ✓"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.delete",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "🗑 Delete this address? | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.delete",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "🗑 Delete this address? | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.delete",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Deleted | 🗑 Delete this address?"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.delete",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Deleted | 🗑 Delete this address?"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.delete",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Deleted | Deleted | 🗑 Delete this address? | 🗑 Delete this address?"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.delete",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "Deleted | 🗑 Delete this address?"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.removeCity",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "🗑 Addrtown | 🗑 Delete Addrtown everywhere? | Not saved | Not saved"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.removeCity",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "🗑 Addrtown | 🗑 Delete Addrtown everywhere? | Not saved | Not saved"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.removeCity",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "City deleted | 🗑 Addrtown | 🗑 Delete Addrtown everywhere?"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.removeCity",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "🗑  | 🗑 no_city | 🗑 Delete no_city everywhere?"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.removeCity",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "City deleted | 🗑 Addrtown | 🗑 Addrtown | 🗑 Delete Addrtown everywhere? | 🗑 Delete Addrtown everywhere?"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "addresses.removeCity",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
+    ],
+    "text": "City deleted | 🗑 Addrtown | 🗑 Delete Addrtown everywhere?"
+   },
+   "group": "addresses",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signIn",
+   "mode": "network",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Something went wrong, try again"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signIn",
+   "mode": "permission",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Something went wrong, try again"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signIn",
+   "mode": "partial",
+   "na": "لا مستند يُقرأ",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signIn",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Welcome ✓"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signIn",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Welcome ✓ | Welcome ✓"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signIn",
+   "mode": "stale",
+   "na": "لا مستند يُكتب",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signUp",
+   "mode": "network",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Could not verify username — try again"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signUp",
+   "mode": "permission",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Could not verify username — try again"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signUp",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "nicknames/faultnick1793710972815",
+     "stats/users"
+    ],
+    "text": "Account created ✓"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signUp",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Enter a valid email and a password of 8+ characters"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signUp",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "stats/users",
+     "nicknames/faultnick1793710974367"
+    ],
+    "text": "Account created ✓ | Account created ✓"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signUp",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "stats/users",
+     "nicknames/faultnick1793710975091"
+    ],
+    "text": "Account created ✓"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.reset",
+   "mode": "network",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Could not send — make sure the email is correct and try again"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.reset",
+   "mode": "permission",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Could not send — make sure the email is correct and try again"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.reset",
+   "mode": "partial",
+   "na": "لا مستند يُقرأ",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.reset",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Enter your email in the field above, then tap \"Forgot password?\""
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.reset",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Reset link sent to your email ✓ Check your inbox (and spam)"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.reset",
+   "mode": "stale",
+   "na": "لا مستند يُكتب",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.nickname",
+   "mode": "network",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Could not save nickname"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.nickname",
+   "mode": "permission",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Could not save nickname"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.nickname",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "nicknames/faultnew79734",
+     "nicknames/faultnick1793710975091"
+    ],
+    "text": "Nickname saved ✓"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.nickname",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "nicknames/<b>bad</b>",
+     "nicknames/takennick",
+     "nicknames/faultnick1793710975091"
+    ],
+    "text": "Nickname must be at least 3 characters | Nickname saved ✓ | Nickname must be 24 characters or fewer | Nickname saved ✓"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.nickname",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "nicknames/faultnew81209",
+     "nicknames/faultnick1793710975091"
+    ],
+    "text": "Nickname saved ✓ | Nickname saved ✓"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.nickname",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "nicknames/faultnew81814",
+     "nicknames/faultnick1793710975091"
+    ],
+    "text": "Nickname saved ✓"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signOut",
+   "mode": "network",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "unhandled": "unavailable",
+    "text": "Logged out"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signOut",
+   "mode": "permission",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "unhandled": "permission-denied",
+    "text": "Logged out"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signOut",
+   "mode": "partial",
+   "na": "لا مستند",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signOut",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signOut",
+   "mode": "concurrency",
+   "na": "فعل واحد",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.signOut",
+   "mode": "stale",
+   "na": "لا مستند",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.delete",
+   "mode": "network",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "thrown": "hang",
+    "text": "Could not confirm — try again",
+    "note": "الفعل ينتظر إدخالًا في نافذة مفتوحة قابلة للإغلاق"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.delete",
+   "mode": "permission",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "thrown": "hang",
+    "text": "Could not confirm — try again",
+    "note": "الفعل ينتظر إدخالًا في نافذة مفتوحة قابلة للإغلاق"
+   },
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.delete",
+   "mode": "partial",
+   "na": "عملية مدمّرة — تُقاس بمحطات التتالي ٢٦",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.delete",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.delete",
+   "mode": "concurrency",
+   "na": "عملية مدمّرة — تُقاس بمحطات التتالي ٢٦",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "account.delete",
+   "mode": "stale",
+   "na": "عملية مدمّرة — تُقاس بمحطات التتالي ٢٦",
+   "group": "account",
+   "kind": "write"
+  },
+  {
+   "cap": "admin.users",
+   "mode": "network",
+   "v": "R:AD",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.users",
+   "mode": "permission",
+   "v": "R:AD",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.users",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.users",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.users",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.users",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.suspend",
+   "mode": "network",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Could not update user | ⛔ Suspend faultfriend?"
+   },
+   "group": "admin",
+   "kind": "write"
+  },
+  {
+   "cap": "admin.suspend",
+   "mode": "permission",
+   "v": "R:D",
+   "why": "",
+   "detail": {
+    "text": "Could not update user | ⛔ Suspend faultfriend?"
+   },
+   "group": "admin",
+   "kind": "write"
+  },
+  {
+   "cap": "admin.suspend",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "suspensions/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": "Could not update user | ⛔ Suspend faultfriend?"
+   },
+   "group": "admin",
+   "kind": "write"
+  },
+  {
+   "cap": "admin.suspend",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "suspensions/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": "Could not update user | ⛔ Suspend faultfriend?"
+   },
+   "group": "admin",
+   "kind": "write"
+  },
+  {
+   "cap": "admin.suspend",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "suspensions/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": "Could not update user | Could not update user | ⛔ Suspend faultfriend? | ⛔ Suspend faultfriend?"
+   },
+   "group": "admin",
+   "kind": "write"
+  },
+  {
+   "cap": "admin.suspend",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "suspensions/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": "Could not update user | ⛔ Suspend faultfriend?"
+   },
+   "group": "admin",
+   "kind": "write"
+  },
+  {
+   "cap": "admin.report",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.report",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.report",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.report",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.report",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "admin.report",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "admin",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.profile",
+   "mode": "network",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.profile",
+   "mode": "permission",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.profile",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.profile",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.profile",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.profile",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.report",
+   "mode": "network",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": "Could not report · unavailable"
+   },
+   "group": "drawer",
+   "kind": "write"
+  },
+  {
+   "cap": "drawer.report",
+   "mode": "permission",
+   "v": "R:A",
+   "why": "",
+   "detail": {
+    "text": "Could not report · permission-denied"
+   },
+   "group": "drawer",
+   "kind": "write"
+  },
+  {
+   "cap": "drawer.report",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "reports/r_1793711011237_xsz1wg"
+    ],
+    "text": "Thanks — we will look into it"
+   },
+   "group": "drawer",
+   "kind": "write"
+  },
+  {
+   "cap": "drawer.report",
+   "mode": "bad",
+   "v": "R:B",
+   "why": "bad input reached the store",
+   "detail": {
+    "changed": [
+     "reports/r_1793711012314_33hx97"
+    ],
+    "text": "Please describe the problem | Thanks — we will look into it"
+   },
+   "group": "drawer",
+   "kind": "write"
+  },
+  {
+   "cap": "drawer.report",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "reports/r_1793711013276_6onoqf",
+     "reports/r_1793711013276_c6rrng"
+    ],
+    "text": "Thanks — we will look into it | Thanks — we will look into it"
+   },
+   "group": "drawer",
+   "kind": "write"
+  },
+  {
+   "cap": "drawer.report",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "reports/r_1793711014245_tbiz0x"
+    ],
+    "text": "Thanks — we will look into it"
+   },
+   "group": "drawer",
+   "kind": "write"
+  },
+  {
+   "cap": "drawer.diag",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.diag",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+   },
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.diag",
+   "mode": "partial",
+   "na": "يقرأ الذاكرة لا المخزن",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.diag",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.diag",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.diag",
+   "mode": "stale",
+   "na": "قراءة — لا كتابة",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.open",
+   "mode": "network",
+   "na": "يقرأ الذاكرة",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.open",
+   "mode": "permission",
+   "na": "يقرأ الذاكرة",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.open",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.open",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.open",
+   "mode": "concurrency",
+   "na": "قراءة — لا كتابة",
+   "group": "drawer",
+   "kind": "read"
+  },
+  {
+   "cap": "drawer.open",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "drawer",
+   "kind": "read"
+  }
+ ],
+ "reds": 66,
+ "ok": 180,
+ "na": 72
+}
