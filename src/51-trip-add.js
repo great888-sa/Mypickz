@@ -43,6 +43,7 @@ async function loadUserTrips(){
     snap2.forEach(doc => sharedTrips.push({ id: doc.id, ...doc.data() }));
   }catch(e){ sharedTrips = []; }
   userTrips.forEach(tripNormalize); sharedTrips.forEach(tripNormalize);
+  userTrips.forEach(tripSnap); mpSaveOk('trips'); /* r100-أ */
   tripsLoaded = true;
   if (typeof plRow4Refresh === 'function') plRow4Refresh(); /* r98b (ق١١-٠٣-٠١): عدّاد Day plan — الصف قد يكون رُسم قبل اكتمال التحميل */
 }
@@ -59,6 +60,9 @@ function tripSpec(t){ return { cities: t.cities || [], version: t.version || 'ba
 function tripRestRowHtml(stayName, minutes, removeOn){ return '<div class="trip-rest"><span><b>Rest at ' + escapeHtml(stayName || 'your stay') + '</b> <span class="dim">· about ' + (minutes >= 90 ? (Math.round(minutes / 30) / 2) + ' h' : minutes + ' min') + '</span></span>' + (removeOn ? '<button type="button" class="actn" onclick="' + removeOn + '">Remove</button>' : '') + '</div>'; } // ب-٧: سطر الراحة بين فترتين (المسودة والعرض)
 function tripRestAddHtml(hasStay, addOn){ return hasStay ? '<button type="button" class="trip-rest-add" onclick="' + addOn + '">＋ Add rest</button>' : '<div class="trip-rest-add off">＋ Add rest <span class="dim">· set where you stay in Setup</span></div>'; } // ب-٧: الزر بين الفترتين؛ بلا إقامة تلميح
 function tripLegWarnHtml(w){ return '<div class="trip-legwarn">↓ ' + tripKmLabel(w.km) + ' · ' + (w.mode === 'walk' ? 'walk' : w.mode === 'car' ? 'car' : 'metro') + ' — a long leg</div>'; } // ب-٥: الرِّجل الطويلة سطرًا رفيعًا قبل محطتها (المسودة والعرض)
+const tripSavedJson = {}; /* r100-أ: لقطة آخر حفظ لكل رحلة — Discard يعيدها في مكانها (الرحلة الجديدة تُزال) */
+function tripSnap(t){ if (t && t.id) tripSavedJson[t.id] = JSON.stringify(t); }
+async function tripDiscard(trip){ const j = tripSavedJson[trip.id]; const i = userTrips.findIndex(function(t){ return t.id === trip.id; }); if (j){ const old = JSON.parse(j); Object.keys(trip).forEach(function(k){ delete trip[k]; }); Object.assign(trip, old); if (i < 0) userTrips.push(trip); } else { if (i >= 0) userTrips.splice(i, 1); if (typeof TB !== 'undefined' && TB){ TB = null; const bd = document.getElementById('tripBuildBackdrop'); if (bd) bd.classList.remove('show'); } } delete resolvedTripCache[trip.id]; try{ renderTripsBody(); }catch(_){} }
 async function saveTrip(trip){
   mpTrack.hit('trip_save');
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
@@ -69,7 +73,8 @@ async function saveTrip(trip){
     const __hasLegs = !!(trip.dayRoutes && Object.keys(trip.dayRoutes).some(function(k){ return trip.dayRoutes[k] && trip.dayRoutes[k].legs && Object.keys(trip.dayRoutes[k].legs).length; }));
     await mpData.trips.save(trip, Object.assign({ ownerId: currentUser.uid }, __hasLegs ? { legSources: ['user'] } : {})); // الدفعة ب: الأرجل من المستخدم وحده (legSourcesOk)
     if (__isNew && !trip.source) try{ mpTrack.statsCity(trip.cityId, 'trip_built'); }catch(_){}
-  }catch(e){ showToast('Could not save trip'); }
+    tripSnap(trip); mpSaveOk('trips'); /* r100-أ */
+  }catch(e){ await mpSaveFailed('trips', e, function(){ return saveTrip(trip); }, function(){ return tripDiscard(trip); }); try{ renderTripsBody(); }catch(_){} }
 }
 function generateTripId(){
   return "trip_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
