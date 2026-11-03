@@ -351,6 +351,16 @@ async function mpSaveFailed(k, e, retry, discard){ /* يعيد 'retry' | 'discar
   if (v === 'ok' && canRetry){ await retry(); return 'retry'; }
   mpUnsavedSet(k, true); return 'keep';
 }
+/* ═══ r100-ب (ق١١-٠٣-٠٥): حارس الانشغال بالمفتاح — النقرة الثانية أثناء الحفظ تُتجاهل، والزر المعني يتعطّل ويقول «Saving…» إن طال؛ لا قفل عام ═══ */
+const mpBusy = {}; window.__mpBusy = mpBusy;
+async function mpBusyRun(key, fn, btn){ /* يعيد 'busy' إن كان المفتاح مشغولًا، وإلا نتيجة fn — المفتاح يُحرَّر في finally مهما حدث */
+  if (mpBusy[key]) return 'busy';
+  mpBusy[key] = Date.now();
+  const els = btn ? (typeof btn === 'string' ? [].slice.call(document.querySelectorAll(btn)) : [btn]) : []; const labels = els.map(function(e){ e.disabled = true; return e.innerHTML; });
+  const slow = setTimeout(function(){ if (els[0] && mpBusy[key]) els[0].textContent = 'Saving…'; }, 400);
+  try{ return await fn(); }
+  finally{ clearTimeout(slow); delete mpBusy[key]; els.forEach(function(e, i){ e.innerHTML = labels[i]; e.disabled = false; }); }
+}
 function mpSwallow(e, ctx){ // ر٦٤: بديل الابتلاع الصامت — يعدّ بعدّاد الأخطاء القائم (Other) ويطبع بوضع التصحيح
   try{ if (typeof mpTrack !== 'undefined' && mpTrack.trapError) mpTrack.trapError('Other'); }catch(_){}
   try{ console.warn('[MyPickz][swallowed]', ctx || '', (e && e.code) || (e && e.message) || e); }catch(_){}
