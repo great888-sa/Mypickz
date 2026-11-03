@@ -246,13 +246,13 @@ const mpData = (function(){
       getIndex: async function(uid, cityId){ const d = await col('userCityLists').doc(uid + '_' + cityId).get(); return d.exists ? mpData.cityLists._fromIndex(d.data()) : null; }, /* خ-٦: الأم وحدها (الفهرس) — للشاشات الجماعية قبل فتح المدينة */
       catDoc: async function(uid, cityId, catId){ const d = await col('userCityListCats').doc(uid + '_' + cityId + '_' + catId).get(); if (!d.exists) return null; const c = d.data(); return { active: c.active !== false, places: c.places || [] }; }, /* خ-٦: مستند تصنيف واحد — Latest والبحث يقرآن المعنيّ فقط لا المدينة كلها */
       get: async function(uid, cityId){ const d = await col('userCityLists').doc(uid + '_' + cityId).get(); return d.exists ? mpData.cityLists._compose(d.data(), d.id) : null; },
-      save: async function(uid, cityId, data){ // r72m: المشتقات · r72t: الفرعية + الفهرس بدفعة ذرّية؛ الأم بلا categories
-        const id = uid + '_' + cityId; const cats = (data && data.categories) || null; const parent = Object.assign({}, data, listDerived(data));
+      save: async function(uid, cityId, data, opts){ // r72m: المشتقات · r72t: الفرعية + الفهرس بدفعة ذرّية؛ الأم بلا categories · r100-أ: opts.onlyCats = مفاتيح الفرعية التي تُكتب (الأم تُكتب دائمًا بفهرسها الكامل)
+        const id = uid + '_' + cityId; const cats = (data && data.categories) || null; const parent = Object.assign({}, data, listDerived(data)); const only = opts && Array.isArray(opts.onlyCats) ? opts.onlyCats : null;
         if (!cats){ return col('userCityLists').doc(id).set(parent, { merge: true }); }
         delete parent.categories; parent.index = mpData.cityLists._indexOf(cats); parent.splitV = 1;
         const isPublic = data.public === true; const shared = data.sharedWith || [];
         const b = db.batch(); b.set(col('userCityLists').doc(id), Object.assign({}, parent, { categories: del() }), { merge: true });
-        Object.keys(cats).forEach(function(k){ const e = cats[k] || {}; b.set(col('userCityListCats').doc(id + '_' + k), { ownerId: uid, cityId: cityId, catId: k, public: isPublic, sharedWith: shared, active: e.active !== false, places: (e.places || []).filter(function(p){ return p && (p.name || p.url); }), updatedAt: Date.now() }); });
+        Object.keys(cats).forEach(function(k){ if (only && only.indexOf(k) < 0) return; const e = cats[k] || {}; b.set(col('userCityListCats').doc(id + '_' + k), { ownerId: uid, cityId: cityId, catId: k, public: isPublic, sharedWith: shared, active: e.active !== false, places: (e.places || []).filter(function(p){ return p && (p.name || p.url); }), updatedAt: Date.now() }); });
         return b.commit();
       },
       setVisibility: async function(uid, cityId, isPublic, shared){ // r72t: نسخة شرط القراءة بالفرعية تتبع الأم
