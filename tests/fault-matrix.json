@@ -1,5 +1,5 @@
 {
- "build": "M2-ID-r100",
+ "build": "M2-ID-r101",
  "at": "2026-11-03",
  "modes": [
   "network",
@@ -450,15 +450,10 @@
   {
    "cap": "places.add",
    "mode": "concurrency",
-   "v": "R:B",
-   "why": "invariant false",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
-     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
-    ],
-    "text": "Saved to My List · Faultville ✓ | Saved to My List · Faultville ✓"
+    "text": ""
    },
    "group": "places",
    "kind": "write"
@@ -544,7 +539,7 @@
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
      "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
     ],
-    "text": "Saved to My List · Faultville ✓ | Saved to My List · Faultville ✓"
+    "text": "Saved to My List · Faultville ✓"
    },
    "group": "places",
    "kind": "write"
@@ -615,15 +610,15 @@
   {
    "cap": "places.delete",
    "mode": "concurrency",
-   "v": "R:B",
-   "why": "invariant false",
+   "v": "ok",
+   "why": "",
    "detail": {
     "changed": [
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
      "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
     ],
-    "text": "🗑 Delete \"Second Cafe\"? | 🗑 Delete \"Second Cafe\"?"
+    "text": "🗑 Delete \"Second Cafe\"?"
    },
    "group": "places",
    "kind": "write"
@@ -1230,7 +1225,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1793710855609_3peeq"
+     "trips/trip_1793732798667_mushu"
     ],
     "text": ""
    },
@@ -1244,9 +1239,9 @@
    "why": "bad input reached the store",
    "detail": {
     "changed": [
-     "trips/trip_1793710856431_ewkh8",
-     "trips/trip_1793710856518_0z562",
-     "trips/trip_1793710856609_turw6"
+     "trips/trip_1793732799487_vklsj",
+     "trips/trip_1793732799573_2nnio",
+     "trips/trip_1793732799668_gtklv"
     ],
     "text": ""
    },
@@ -1256,11 +1251,11 @@
   {
    "cap": "trips.build",
    "mode": "concurrency",
-   "v": "R:B",
-   "why": "invariant false",
+   "v": "ok",
+   "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1793710857401_t28sc"
+     "trips/trip_1793732800477_j9g7m"
     ],
     "text": ""
    },
@@ -1274,7 +1269,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1793710858225_tipny"
+     "trips/trip_1793732801291_vutdr"
     ],
     "text": ""
    },
@@ -1584,7 +1579,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1793710879021_o5jr6"
+     "trips/trip_1793732822108_8v8ph"
     ],
     "text": ""
    },
@@ -1601,11 +1596,11 @@
   {
    "cap": "trips.dayPlan",
    "mode": "concurrency",
-   "v": "R:B",
-   "why": "invariant false",
+   "v": "ok",
+   "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1793710879862_8m6p6"
+     "trips/trip_1793732822945_oo6kh"
     ],
     "text": ""
    },
@@ -1619,7 +1614,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1793710880738_lryl5"
+     "trips/trip_1793732823759_nrbio"
     ],
     "text": ""
    },
@@ -1678,13 +1673,13 @@
   {
    "cap": "trips.dayPlanCopy",
    "mode": "concurrency",
-   "v": "R:B",
-   "why": "invariant false",
+   "v": "ok",
+   "why": "",
    "detail": {
     "changed": [
      "trips/fmt1"
     ],
-    "text": "Fault Day → Fault Trip · day 2 ✓ | Fault Day → Fault Trip · day 3 ✓"
+    "text": "Fault Day → Fault Trip · day 2 ✓"
    },
    "group": "trips",
    "kind": "write"
@@ -2773,7 +2768,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793710946017_dbtbfh"
+     "reports/r_1793732889217_xhvx2n"
     ],
     "text": "Thanks — reported"
    },
@@ -2787,7 +2782,7 @@
    "why": "bad input reached the store",
    "detail": {
     "changed": [
-     "reports/r_1793710946921_i51ino"
+     "reports/r_1793732890115_6k2k6v"
     ],
     "text": "Thanks — reported"
    },
@@ -2801,8 +2796,8 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793710947826_vvyw2e",
-     "reports/r_1793710947826_ct0ibl"
+     "reports/r_1793732891002_8j9lc4",
+     "reports/r_1793732891002_67djd3"
     ],
     "text": "Thanks — reported | Thanks — reported"
    },
@@ -2816,7 +2811,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793710948759_fg49nr"
+     "reports/r_1793732891884_2lful4"
     ],
     "text": "Thanks — reported"
    },
@@ -2933,13 +2928,13 @@
   {
    "cap": "addresses.add",
    "mode": "concurrency",
-   "v": "R:B",
-   "why": "invariant false",
+   "v": "ok",
+   "why": "",
    "detail": {
     "changed": [
      "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
     ],
-    "text": "Saved ✓ | Saved ✓"
+    "text": "Saved ✓"
    },
    "group": "addresses",
    "kind": "write"
@@ -3016,7 +3011,7 @@
     "changed": [
      "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
     ],
-    "text": "Saved ✓ | Saved ✓"
+    "text": "Saved ✓"
    },
    "group": "addresses",
    "kind": "write"
@@ -3076,13 +3071,10 @@
   {
    "cap": "addresses.delete",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
-    ],
-    "text": "Deleted | 🗑 Delete this address?"
+    "text": ""
    },
    "group": "addresses",
    "kind": "write"
@@ -3096,7 +3088,7 @@
     "changed": [
      "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
     ],
-    "text": "Deleted | Deleted | 🗑 Delete this address? | 🗑 Delete this address?"
+    "text": "Deleted | 🗑 Delete this address?"
    },
    "group": "addresses",
    "kind": "write"
@@ -3283,7 +3275,7 @@
     "changed": [
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnick1793710972815",
+     "nicknames/faultnick1793732916135",
      "stats/users"
     ],
     "text": "Account created ✓"
@@ -3312,7 +3304,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1793710974367"
+     "nicknames/faultnick1793732917689"
     ],
     "text": "Account created ✓ | Account created ✓"
    },
@@ -3329,7 +3321,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1793710975091"
+     "nicknames/faultnick1793732918393"
     ],
     "text": "Account created ✓"
    },
@@ -3426,8 +3418,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew79734",
-     "nicknames/faultnick1793710975091"
+     "nicknames/faultnew23067",
+     "nicknames/faultnick1793732918393"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3446,7 +3438,7 @@
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "nicknames/<b>bad</b>",
      "nicknames/takennick",
-     "nicknames/faultnick1793710975091"
+     "nicknames/faultnick1793732918393"
     ],
     "text": "Nickname must be at least 3 characters | Nickname saved ✓ | Nickname must be 24 characters or fewer | Nickname saved ✓"
    },
@@ -3463,8 +3455,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew81209",
-     "nicknames/faultnick1793710975091"
+     "nicknames/faultnew24544",
+     "nicknames/faultnick1793732918393"
     ],
     "text": "Nickname saved ✓ | Nickname saved ✓"
    },
@@ -3481,8 +3473,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew81814",
-     "nicknames/faultnick1793710975091"
+     "nicknames/faultnew25151",
+     "nicknames/faultnick1793732918393"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3867,7 +3859,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793711011237_xsz1wg"
+     "reports/r_1793732954399_ilvnwt"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -3881,7 +3873,7 @@
    "why": "bad input reached the store",
    "detail": {
     "changed": [
-     "reports/r_1793711012314_33hx97"
+     "reports/r_1793732955460_udsn2w"
     ],
     "text": "Please describe the problem | Thanks — we will look into it"
    },
@@ -3895,8 +3887,8 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793711013276_6onoqf",
-     "reports/r_1793711013276_c6rrng"
+     "reports/r_1793732956421_jxckuy",
+     "reports/r_1793732956421_vv7vv5"
     ],
     "text": "Thanks — we will look into it | Thanks — we will look into it"
    },
@@ -3910,7 +3902,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793711014245_tbiz0x"
+     "reports/r_1793732957397_skcew0"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -4020,7 +4012,7 @@
    "kind": "read"
   }
  ],
- "reds": 66,
- "ok": 180,
+ "reds": 59,
+ "ok": 187,
  "na": 72
 }
