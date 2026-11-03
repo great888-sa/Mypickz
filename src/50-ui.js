@@ -338,6 +338,19 @@ async function toggleListBookmark(ownerUid, cityId){
 // حفظ الرحلة — على رحلات الآخرين بعدّاده؛ المحفوظة مؤشر لأصل حي (التملك بالنسخ — المحطة ٤)
 function isSelfTripBookmarked(id){ return !!(userListData && userListData.tripSelfBookmarks && userListData.tripSelfBookmarks[id]); }
 function addrModalDelete(){ if (!addrEditRef) return; const r = addrEditRef; closeModalById('addrBackdrop'); deleteAddr(r.cityId, r.catId, r.index); } /* r98 (ما كشفته محطة الزر): كان يستدعي closeAddrModal() وهي غير معرَّفة في أي جزء — زر Delete في نافذة العنوان كان يرمي خطأً ولا يفعل شيئًا */
+/* r100-أ (ق١١-٠٣-٠٤ · مصفوفة الإفشال — العائلة ١): الحفظ الصادق — عند فشل الحفظ لا تبقى الشاشة تدّعي النجاح:
+   ورقة «Not saved» بخيارين: Retry (مرة واحدة تلقائيًّا) أو Discard (استعادة آخر حفظ)؛ وإن أُبقي التعديل يُوسم «Unsaved» في سطر السياق وفي window.__mpUnsaved (عقد Diag/المصفوفة) حتى ينجح حفظ */
+const mpUnsaved = { places: false, trips: false, addresses: false }; const mpSaveStreak = { places: 0, trips: 0, addresses: 0 };
+function mpUnsavedSet(k, on){ mpUnsaved[k] = !!on; window.__mpUnsaved = !!(mpUnsaved.places || mpUnsaved.trips || mpUnsaved.addresses); }
+function mpSaveOk(k){ mpSaveStreak[k] = 0; mpUnsavedSet(k, false); }
+function mpUnsavedTag(k){ return mpUnsaved[k] ? ' · <span class="unsaved" title="This change is not saved yet — save again or discard it">Unsaved</span>' : ''; }
+async function mpSaveFailed(k, e, retry, discard){ /* يعيد 'retry' | 'discard' | 'keep' */
+  mpSwallow(e, 'save-' + k); mpSaveStreak[k]++; const canRetry = mpSaveStreak[k] < 2;
+  const v = await mpSheet({ title: 'Not saved', text: canRetry ? 'Your change is still on screen — check your connection and retry, or discard it.' : 'Still not saved. Keep the change on screen (marked Unsaved) or discard it.', ok: canRetry ? 'Retry' : 'Keep on screen', alt: 'Discard', cancel: 'Keep on screen' });
+  if (v === 'alt'){ mpSaveOk(k); try{ await discard(); }catch(e2){ mpSwallow(e2, 'discard-' + k); } return 'discard'; }
+  if (v === 'ok' && canRetry){ await retry(); return 'retry'; }
+  mpUnsavedSet(k, true); return 'keep';
+}
 function mpSwallow(e, ctx){ // ر٦٤: بديل الابتلاع الصامت — يعدّ بعدّاد الأخطاء القائم (Other) ويطبع بوضع التصحيح
   try{ if (typeof mpTrack !== 'undefined' && mpTrack.trapError) mpTrack.trapError('Other'); }catch(_){}
   try{ console.warn('[MyPickz][swallowed]', ctx || '', (e && e.code) || (e && e.message) || e); }catch(_){}
