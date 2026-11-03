@@ -44,6 +44,7 @@ async function loadUserTrips(){
   }catch(e){ sharedTrips = []; }
   userTrips.forEach(tripNormalize); sharedTrips.forEach(tripNormalize);
   tripsLoaded = true;
+  if (typeof plRow4Refresh === 'function') plRow4Refresh(); /* r98b (ق١١-٠٣-٠١): عدّاد Day plan — الصف قد يكون رُسم قبل اكتمال التحميل */
 }
 function tripNormalize(t){ if (!t) return t; if (t.plan) tripPlanNormalize(t.plan); if (t.dayPlan && !t.title && t.plan && t.plan.days && t.plan.days[0] && t.plan.days[0].transportNote){ t.title = String(t.plan.days[0].transportNote).trim().slice(0, 80); t.plan.days[0].transportNote = ''; } /* r93-١: ما كُتب في Transport note (r92) يصير اسم الخطة */ if (!Array.isArray(t.cities)) t.cities = t.cityId ? [{ cityId: t.cityId, cityName: t.cityName || '', days: tripHasPlan(t) ? Math.max(1, t.plan.days.filter(function(d){ return d.kind === 'full'; }).length) : 1, stay: null, arrival: null, departure: null, fallback: 'transit' }] : []; t.cities = t.cities.map(function(c){ return (typeof c === 'string') ? { cityId: c, cityName: c, days: 1, stay: null, arrival: null, departure: null, fallback: 'transit' } : c; }); if (!t.version) t.version = 'balanced'; if (!t.status) t.status = tripHasPlan(t) ? 'approved' : 'draft'; if (t.dayRoutes && (typeof t.dayRoutes !== 'object' || Array.isArray(t.dayRoutes))) t.dayRoutes = {}; if (t.dayRoutes) tripRoutesPrune(t); return t; } // r78: مسار اليوم يُقرأ مقلَّمًا (أرجل فقدت طرفًا تسقط)
 function tripHasPlan(t){ return !!(t && t.plan && Array.isArray(t.plan.days)); }
