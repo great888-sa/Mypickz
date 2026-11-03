@@ -70,10 +70,10 @@ const PLACES = { id: 'places', name: 'الأماكن', caps: [
 
 /* ── الرحلات ── */
 const U2 = 'uBBBBBBBBBBBBBBBBBBBBBBBBBBB';
-const TR_SETUP = PL_CITY + " tripsLoaded = true; userTrips = (userTrips || []).filter(function(t){ return !/^fmt/.test(t.id); }); delete TB_PLACES['fmA|mine']; delete TB_PLACES['fmA']; currentTripId = null; TB = null;"
+const TR_SETUP = PL_CITY + " tripsLoaded = true; userTrips = (userTrips || []).filter(function(t){ return !/^fmt/.test(t.id); }); __fm.trips0 = userTrips.map(function(t){ return t.id; }); /* r100-ب: ما تصنعه الخلية من رحلات يُزال في التنظيف — كان يتراكم فيُكذّب ثابت التزامن */ delete TB_PLACES['fmA|mine']; delete TB_PLACES['fmA']; currentTripId = null; TB = null;"
   + " var trip = { id: 'fmt1', ownerId: uid, title: 'Fault Trip', cityId: 'fmA', cities: [{ cityId: 'fmA', name: 'Faultville', days: 1 }], status: 'planned', plan: { days: [{ periods: { morning: [{ id: 'e-host', ref: { cityId: 'fmA', subcatId: 'coffee', id: 'f1' }, name: 'Fault Cafe', alts: [{ id: 'e-alt', ref: { cityId: 'fmA', subcatId: 'coffee', id: 'f2' }, name: 'Second Cafe', alts: [] }] }], noon: [], afternoon: [], evening: [] } }] }, __saved: true };"
   + " await mpData.trips.save(trip); userTrips.push(trip); await mpData.nicknames.set('faultfriend', { uid: '" + 'uBBBBBBBBBBBBBBBBBBBBBBBBBBB' + "' }); await mpData.users.merge('" + 'uBBBBBBBBBBBBBBBBBBBBBBBBBBB' + "', { nickname: 'faultfriend' }); " + WAIT;
-const TR_CLEAN = "try{ tbClose(); }catch(_){} try{ closeModalById('tripBackdrop'); }catch(_){} TB = null; currentTripId = null; userTrips = (userTrips || []).filter(function(t){ return !/^fmt/.test(t.id); }); for (var i = 0; i < 3; i++){ try{ await mpData.trips.remove('fmt' + i); }catch(_){} } try{ await mpData.trips.remove('fmt1'); }catch(_){} " + PL_CLEAN;
+const TR_CLEAN = "try{ tbClose(); }catch(_){} try{ closeModalById('tripBackdrop'); }catch(_){} TB = null; currentTripId = null; var __keep = {}; (__fm.trips0 || []).forEach(function(i){ __keep[i] = true; }); var __gone = (userTrips || []).filter(function(t){ return !__keep[t.id]; }); userTrips = (userTrips || []).filter(function(t){ return __keep[t.id] && !/^fmt/.test(t.id); }); for (var gi = 0; gi < __gone.length; gi++){ try{ await mpData.trips.remove(__gone[gi].id); }catch(_){} } for (var i = 0; i < 3; i++){ try{ await mpData.trips.remove('fmt' + i); }catch(_){} } try{ await mpData.trips.remove('fmt1'); }catch(_){} " + PL_CLEAN;
 const TRIPS = { id: 'trips', name: 'الرحلات', caps: [
   { id: 'trips.openBuilder', name: 'فتح المنشئ لمدينة', kind: 'read', na: READ_NA, setup: TR_SETUP, action: "await openTripBuilder({ cityId: 'fmA' }); " + WAIT, cleanup: TR_CLEAN },
   { id: 'trips.build', name: 'بناء رحلة وحفظها', kind: 'write', setup: TR_SETUP, invariant: "(userTrips || []).filter(function(t){ return t.cityId === 'fmA' && t.id !== 'fmt1'; }).length <= 1",
@@ -173,7 +173,7 @@ const ADM_CLEAN = "isOwner = __fm.owner0; try{ closeModalById('dashBackdrop'); }
 const ADMIN = { id: 'admin', name: 'الإدارة', caps: [
   { id: 'admin.users', name: 'قائمة المستخدمين', kind: 'read', na: READ_NA, setup: ADM_SETUP, action: "await openUsersModal(); " + WAIT, cleanup: ADM_CLEAN },
   { id: 'admin.suspend', badKind: 'ids', name: 'إيقاف/إعادة مستخدم', kind: 'write', setup: ADM_SETUP, invariant: "true", action: "await toggleSuspendUser('" + U2 + "'); " + WAIT, bad: ["await toggleSuspendUser(''); " + WAIT, "await toggleSuspendUser(currentUser.uid); " + WAIT, "await toggleSuspendUser('no-such-uid'); " + WAIT], cleanup: ADM_CLEAN },
-  { id: 'admin.report', name: 'تقرير المستخدمين', kind: 'read', na: READ_NA, setup: ADM_SETUP + " openAdminPanel(); " + WAIT, action: "generateUsersReport(); " + WAIT, cleanup: ADM_CLEAN },
+  { id: 'admin.report', name: 'تقرير المستخدمين', kind: 'read', na: READ_NA, setup: ADM_SETUP + " await openAdminPanel(); " + WAIT, action: "generateUsersReport(); " + WAIT, cleanup: ADM_CLEAN },
 ] };
 
 /* ── الدرج ── */
