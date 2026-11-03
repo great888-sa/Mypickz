@@ -61,7 +61,7 @@ function refreshTripCityPick(){ // المحدد يُملأ من رحلاتك ف�
     : '';
 }
 function renderTripsBody(){
-  refreshTripCityPick();
+  refreshTripCityPick(); try{ const __t = document.getElementById('tripSrcTitle'); if (__t){ const __u = __t.querySelector('.unsaved'); if (mpUnsaved.trips && !__u) __t.insertAdjacentHTML('beforeend', mpUnsavedTag('trips')); else if (!mpUnsaved.trips && __u) __u.previousSibling && __u.previousSibling.nodeType === 3 ? (__u.previousSibling.remove(), __u.remove()) : __u.remove(); } }catch(_){} /* r100-أ: وسم Unsaved على عنوان المصدر */
   if (tripsSource === 'saved'){ renderSavedTrips(); return; }
   if (tripsSource === 'savedCur' || tripsSource === 'savedCom'){ renderSavedOthersTrips(tripsSource === 'savedCur'); return; } // ر٧٢-أ-٢: رحلات الآخرين المحفوظة بمصدرها
   if (tripsSource === 'shared'){ const w = document.getElementById('myTripsBody'); if (w){ w.innerHTML = '<div class="mp-empty mini">Loading…</div>'; renderSharedTripsInto(w).then(function(){ tripSetSrcTitle(sharedTrips.length); }); } return; } // r72r-1
@@ -219,7 +219,7 @@ function tripCardHtml(t){ // r77 (اللوحة ٧): بطاقة الرحلة — 
     + (t.source ? '<div class="pc-lab">From</div><div class="pc-val pc-area" dir="auto">' + escapeHtml(tripSourceName(t)) + '</div>' : '')
     + '</div><div class="pc-acts"><div class="pc-grid">' + acts.map(btn).join('') + '</div></div></div>';
 }
-async function deleteTripById(id){ if (!(await mpConfirm('This cannot be undone.', { title: '🗑 Delete this trip?', ok: 'Delete trip', danger: true }))) return; try{ await mpData.trips.remove(id); }catch(e){} userTrips = userTrips.filter(t => t.id !== id); delete resolvedTripCache[id]; if (currentTripId === id) currentTripId = null; if (activeTripId === id){ activeTripId = null; updateActiveTripBanner(); } renderTripsBody(); showToast('Trip deleted'); }
+async function deleteTripById(id){ if (!(await mpConfirm('This cannot be undone.', { title: '🗑 Delete this trip?', ok: 'Delete trip', danger: true }))) return; const __kept = userTrips.find(t => t.id === id); /* r100-أ: الحذف يُؤكَّد بالمخزن قبل أن يختفي من الشاشة؛ فشله → ورقة Retry/Discard (Discard يبقيها) */ let __done = false; const __attempt = async function(){ try{ await mpData.trips.remove(id); __done = true; return true; }catch(e){ await mpSaveFailed('trips', e, __attempt, async function(){}); return __done; } }; if (!(await __attempt())){ renderTripsBody(); return; } userTrips = userTrips.filter(t => t.id !== id); delete resolvedTripCache[id]; if (currentTripId === id) currentTripId = null; if (activeTripId === id){ activeTripId = null; updateActiveTripBanner(); } renderTripsBody(); showToast('Trip deleted'); }
 // ر٦٩هـ: ضابطا الرحلة من بطاقتها (المبدأ: الأفعال على الصف)
 async function toggleTripPublicFor(id){ currentTripId = id; await toggleTripPublic(); currentTripId = null; tripViewMode = true; renderMyTripsModal(); } // ر٦٩و (N-030): تبديل الحالة بلا فتح العرض
 
