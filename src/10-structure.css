@@ -282,6 +282,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 #activeTripBar{display:none; position:fixed; left:0; right:0; bottom:58px; z-index:800; padding:9px 12px 11px; max-height:38vh; overflow-y:auto; border-top:1px solid;}
 .flabel{display:block; font-size:11px; margin:0 0 3px;}
 .ctx{font-family:'Cairo',sans-serif; font-weight:700; font-size:11.5px; margin:6px 0 2px; user-select:none; -webkit-user-select:none;}
+.unsaved{font-weight:700;} /* r100-أ */
 .stattext{font-size:11px; user-select:none; -webkit-user-select:none;}
 .mp-idchip .sus{font-size:10px; font-weight:700; white-space:nowrap;}
 .fav{font-size:13px; line-height:1;}
