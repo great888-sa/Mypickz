@@ -2,6 +2,9 @@
 // المصدر الوحيد: userPrivatePlaces/{uid}_{cityId} عبر النواة · لا علم عام ولا مشاركة ولا زر رحلة
 // مدينة العناوين مستقلة عن مدينة التصفح بالأماكن (استخدام يومي) — تُحفظ بمستند المستخدم (addrCity)
 let addrData = {};          // { cityId: { catId: { active, places:[{id,name,url,note,area}] } } }
+let addrSaved = null; /* r100-أ: لقطة آخر حالة محفوظة/محمَّلة للعناوين */
+function addrSnap(){ addrSaved = JSON.stringify(addrData || {}); mpSaveOk('addresses'); }
+function addrDiscard(){ if (addrSaved) addrData = JSON.parse(addrSaved); addrEditRef = null; try{ closeModalById('addrBackdrop'); }catch(_){} renderAddresses(); }
 let addrCities = [];        // مدن فيها عناوين (من فهرس userLists.privateCities)
 let addrCurrentCity = null; // المدينة المعروضة (لا "الكل")
 let addrCurrentCountry = null; // الدولة المعروضة — الدولة أولًا ثم المدينة (منهج الأماكن)
@@ -21,9 +24,9 @@ async function loadAddresses(force){
   if (addrLoaded && !force){ renderAddresses(); return; }
   const idx = (userListData && userListData.privateCities) || [];
   const cities = Array.from(new Set(idx)).filter(Boolean);
-  addrData = {};
-  await Promise.all(cities.map(async c => { try{ addrData[c] = await mpData.privatePlaces.get(currentUser.uid, c); }catch(e){ addrData[c] = {}; } }));
-  addrCities = cities.filter(c => addrCountOf(c) > 0);
+  const prev = addrData || {}; addrData = {}; let readFailed = false; /* r100-أ: قراءة فاشلة لا تمسح ما كان على الشاشة ولا تُحدّث اللقطة */
+  await Promise.all(cities.map(async c => { try{ addrData[c] = await mpData.privatePlaces.get(currentUser.uid, c); }catch(e){ readFailed = true; mpSwallow(e, 'addresses-load'); addrData[c] = prev[c] || {}; } }));
+  addrCities = cities.filter(c => addrCountOf(c) > 0); if (!readFailed) addrSnap(); else showToast('Could not load your addresses — showing what was on screen');
   // المدينة المعروضة: المحفوظة، وإلا مدينة أكثر العناوين
   const saved = userListData && userListData.addrCity;
   if (saved && addrCities.includes(saved)) addrCurrentCity = saved;
@@ -94,7 +97,7 @@ function renderAddresses(){
     + (!cityId ? '<span class="csel label grow"><b>Add your city</b></span>'
         : '<button type="button" class="csel grow" onclick="addrTogglePanel(\'cities\')"><b>' + escapeHtml(cityNameOf(cityId)) + '</b> ' + (addrPanel === 'cities' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button>')
     + '<button type="button" class="actn primary hact" onclick="addAddrCity()"><b>＋</b> City</button>'; // ر٧٠د (N-073): فعل رئيس ثلث الصف
-  const actx = document.getElementById('addrCtx'); if (actx) actx.innerHTML = '<b>My addresses</b>' + (cityId ? ' · ' + escapeHtml(cityNameOf(cityId)) : '');
+  const actx = document.getElementById('addrCtx'); if (actx) actx.innerHTML = '<b>My addresses</b>' + (cityId ? ' · ' + escapeHtml(cityNameOf(cityId)) : '') + mpUnsavedTag('addresses');
   const cb = document.getElementById('addrCatBtn'); if (cb) cb.innerHTML = '<b>＋</b> Add address';
 
   /* ر٧٠د (N-011 · ٦/و): اللوحات الثلاث بلوحة الاختيار المشتركة — الدول بعلمها · المدن بعدّاد عناويني (الحذف بوضع التحرير = عناويني فيها) · التصنيفات الخاصة */
@@ -238,7 +241,7 @@ async function cityDelSide(other){
   const n1 = from === 'addr' ? await cityCountAddr(cityId) : await cityCountList(cityId);
   if (!(await mpConfirm('This cannot be undone.', { title: (from === 'addr' ? '🗑 Remove your ' + n1 + ' address' + (n1 === 1 ? '' : 'es') + ' in ' : '🗑 Clear your list of ' + n1 + ' place' + (n1 === 1 ? '' : 's') + ' in ') + cityNameOf(cityId) + '?', ok: from === 'addr' ? 'Remove addresses' : 'Clear list', danger: true }))) return; /* ب-٢-٢-أ٢ */
   if (from === 'addr'){
-    try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); }catch(e){}
+    let __ok = false; const __att = async function(){ try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); __ok = true; return true; }catch(e){ await mpSaveFailed('addresses', e, __att, async function(){}); return __ok; } }; if (!(await __att())) return; /* r100-أ: لا تُمسّ الذاكرة إلا بعد نجاح الحذف */
     delete addrData[cityId];
     addrCities = addrCities.filter(c => c !== cityId);
     if (addrCurrentCity === cityId) addrCurrentCity = null;
@@ -246,7 +249,7 @@ async function cityDelSide(other){
     showToast('Removed from Addresses');
     renderAddresses(); if (currentTab === 'Places') renderPlacesBody();
   } else {
-    try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){} try{ await syncCommunityProfile(); }catch(e){} // ر٧٢-أ-١د: إلغاء المحتوى بمدينة قياسية يزامن الملف العام أيضًا
+    let __ok2 = false; const __att2 = async function(){ try{ await mpData.cityLists.remove(currentUser.uid, cityId); __ok2 = true; return true; }catch(e){ await mpSaveFailed('places', e, __att2, async function(){}); return __ok2; } }; if (!(await __att2())) return; /* r100-أ */ try{ await syncCommunityProfile(); }catch(e){} // ر٧٢-أ-١د: إلغاء المحتوى بمدينة قياسية يزامن الملف العام أيضًا
     if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
     if (cityDelCtx.isCustom && (await cityCountAddr(cityId)) === 0){ await removeCityListCity(cityId, { confirmed: true }); }
     else if (cityListCityId === cityId){ const rem = cityListAllCities().filter(c => c.country === cityListCountry && c.id !== cityId); cityListCityId = rem.length ? rem[0].id : null; }
@@ -258,7 +261,7 @@ async function cityDelFull(){
   const { cityId } = cityDelCtx || {}; if (!cityId) return;
   const nA = await cityCountAddr(cityId), nL = await cityCountList(cityId);
   if (!(await mpConfirm((nA + nL) + ' item' + (nA + nL === 1 ? '' : 's') + ' will be lost. This cannot be undone.', { title: '🗑 Delete ' + cityNameOf(cityId) + ' everywhere?', ok: 'Delete everywhere', danger: true }))) return; /* ب-٢-٢-أ٢ */
-  try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); }catch(e){}
+  let __ok = false; const __att = async function(){ try{ await mpData.privatePlaces.remove(currentUser.uid, cityId); __ok = true; return true; }catch(e){ await mpSaveFailed('addresses', e, __att, async function(){}); return __ok; } }; if (!(await __att())) return; /* r100-أ */
   delete addrData[cityId];
   addrCities = addrCities.filter(c => c !== cityId);
   if (addrCurrentCity === cityId) addrCurrentCity = null;
@@ -293,22 +296,26 @@ async function saveAddr(){
       try{ await mpData.privatePlaces.setCategory(currentUser.uid, addrEditRef.cityId, addrEditRef.catId, old); }catch(e){} }
     entry.places.push(place);
   }
-  try{
-    await commitPendingCityIfNeeded(cityId); // r18: تخليد المدينة المعلقة مع حفظ أول عنوان
-    await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry);
-    await mpData.userLists.addPrivateCity(currentUser.uid, cityId);
-    if (userListData && !userListData.privateCities.includes(cityId)) userListData.privateCities.push(cityId);
-    addrCurrentCity = cityId; if (userListData){ userListData.addrCity = cityId; mpData.userLists.merge(currentUser.uid, { addrCity: cityId }).catch(()=>{}); }
-    closeModalById('addrBackdrop');
-    showToast('Saved ✓');
-    await loadAddresses(true);
-  }catch(e){ err.textContent = 'Could not save — try again'; }
+  const __attempt = async function(){ /* r100-أ: إعادة المحاولة تعيد الكتابة فقط — الذاكرة عُدّلت أعلاه مرة واحدة */
+    try{
+      await commitPendingCityIfNeeded(cityId); // r18: تخليد المدينة المعلقة مع حفظ أول عنوان
+      await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry);
+      await mpData.userLists.addPrivateCity(currentUser.uid, cityId);
+      if (userListData && !userListData.privateCities.includes(cityId)) userListData.privateCities.push(cityId);
+      addrCurrentCity = cityId; if (userListData){ userListData.addrCity = cityId; mpData.userLists.merge(currentUser.uid, { addrCity: cityId }).catch(()=>{}); }
+      closeModalById('addrBackdrop');
+      showToast('Saved ✓');
+      await loadAddresses(true);
+    }catch(e){ err.textContent = 'Could not save — try again'; await mpSaveFailed('addresses', e, __attempt, async function(){ addrDiscard(); }); renderAddresses(); }
+  };
+  await __attempt();
 }
 async function deleteAddr(cityId, catId, index){
   const entry = addrData[cityId] && addrData[cityId][catId]; if (!entry) return;
   if (!(await mpConfirm('', { title: '🗑 Delete this address?', ok: 'Delete', danger: true }))) return; /* ب-٢-٢-أ٢ */
   entry.places.splice(index, 1);
-  try{ await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry); showToast('Deleted'); }catch(e){ showToast('Could not delete'); }
+  let __done = false; const __attempt = async function(){ try{ await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry); showToast('Deleted'); __done = true; return true; }catch(e){ await mpSaveFailed('addresses', e, __attempt, async function(){ addrDiscard(); }); return __done; } }; /* r100-أ: الناتج هو الحقيقة بعد كل المحاولات */
+  if (!(await __attempt())){ renderAddresses(); return; }
   await loadAddresses(true);
 }
 
