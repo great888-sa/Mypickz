@@ -13,6 +13,10 @@ async function openTripBuilder(o){ // o = { tripId?, stage?, cityId?, preselect?
   if (!currentUser){ openAuthModal(); return; }
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   const t = o.tripId ? (userTrips || []).find(function(x){ return x.id === o.tripId; }) : null;
+  if (TB && !o.preselect && !o.addCity && document.getElementById('tripBuildBackdrop').classList.contains('show')){ /* r100-ب: المنشئ مفتوح لنفس الهدف (الرحلة أو المدينة+النوع) → فتحه ثانيةً لا شيء — لا رحلتان من نقرتين */
+    const same = o.tripId ? (TB.tripId === o.tripId) : (!TB.tripId && !!o.cityId && !!(TB.cities[0] && TB.cities[0].cityId === o.cityId) && !!o.dayPlan === !!TB.dayPlan && !!o.dayTrip === !!TB.dayTrip);
+    if (same) return;
+  }
   TB = { tripId: t ? t.id : null, stage: 1, ci: 0, cities: t ? JSON.parse(JSON.stringify(t.cities || [])) : [], picked: {}, version: t ? (t.version || 'balanced') : 'balanced', plan: t && tripHasPlan(t) ? tripPlanNormalize(JSON.parse(JSON.stringify(t.plan))) : null, undo: [], moved: false, dayPlan: !!(o.dayPlan || (t && t.dayPlan)), title: t ? String(t.title || '') : '', dayTrip: !!(o.dayTrip || (t && tripHasPlan(t) && t.plan && Array.isArray(t.plan.days) && t.plan.days[0] && t.plan.days[0].mode === 'daytrip')), daySel: 0, pick: null, src: 'mine', saveTimer: null, preselect: o.preselect || null, setupSig: '' };
   if (TB.plan){ tripPlanEntries(TB.plan).concat(TB.plan.tray).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x){ const cid = (x.ref && x.ref.cityId) || t.cityId; TB.picked[cid] = TB.picked[cid] || {}; TB.picked[cid][tbKey(x.ref)] = x; }); }); TB.moved = true; }
   if (!t && o.cityId){ const c = cityListAllCities().find(function(x){ return x.id === o.cityId; }); if (c){ const nc = tbNewCity(c); if (o.dayPlan) nc.days = 1; TB.cities.push(nc); } }
