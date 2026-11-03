@@ -61,7 +61,7 @@
     <label class="flabel" style="display:flex;align-items:center;justify-content:space-between">Note (optional) <button type="button" class="actn" style="padding:2px 10px" onclick="plNoteBullet()" title="Start a bullet line">• list</button></label>
     <textarea id="plNote" class="modal-input" rows="3" placeholder="e.g. best pancakes before 11 — book ahead"></textarea>
     <div style="display:flex; gap:6px; margin-top:10px;">
-      <button type="button" class="btn btn-brass" style="flex:1;" onclick="savePlPlace()">Save</button>
+      <button type="button" class="btn btn-brass" id="plSaveBtn" style="flex:1;" onclick="savePlPlace()">Save</button>
       <button type="button" class="btn btn-ghost danger" id="plDeleteBtn" style="display:none;" onclick="deletePlPlaceFromModal()">🗑 Delete</button>
       <button type="button" class="btn btn-ghost" onclick="closePlPlaceModal()">Cancel</button>
     </div>
@@ -213,7 +213,7 @@
       <input id="addrPhone" class="modal-input" placeholder="e.g. +966 5x xxx xxxx" inputmode="tel" autocomplete="off" >
       <div id="addrError" class="errline"></div>
       <div style="display:flex; gap:6px; margin-top:8px;">
-        <button class="btn btn-brass" style="flex:1;" onclick="saveAddr()">Save</button>
+        <button class="btn btn-brass" id="addrSaveBtn" style="flex:1;" onclick="saveAddr()">Save</button>
         <button class="btn btn-ghost danger" id="addrDeleteBtn" style="display:none;" onclick="addrModalDelete()">🗑 Delete</button>
         <button class="btn btn-ghost" onclick="closeModalById('addrBackdrop')">Cancel</button>
       </div>
