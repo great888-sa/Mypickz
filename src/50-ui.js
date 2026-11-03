@@ -254,7 +254,7 @@ function catPairPanel(id){
   return pickerPanel({ id: id + '_s', bare: true, search: true, query: st.query || '', filterPlaceholder: 'Type a sub-category or a place…', items: items, onPick: 'catPairPickSub_' + id, limit: 20 });
 }
 function catPairRefresh(id){ const h = document.getElementById('cp_' + id + '_host'); if (h) h.innerHTML = catPairPanel(id); }
-function catPairToggle(id, which){ const st = __cp[id]; if (!st) return; st.open = (st.open === which) ? null : which; st.query = ''; if (st.spec && st.spec.rerender) window[st.spec.rerender](); else catPairRefresh(id); }
+function catPairToggle(id, which){ const st = __cp[id]; if (!st) return; st.open = (st.open === which) ? null : which; st.query = ''; if (st.open && st.spec && st.spec.onOpen && typeof window[st.spec.onOpen] === 'function') window[st.spec.onOpen](); /* r98b: خطّاف الفتح (plFilter يعيد إلى أعلى) */ if (st.spec && st.spec.rerender) window[st.spec.rerender](); else catPairRefresh(id); }
 function catPairClose(id){ const st = __cp[id]; if (st){ st.open = null; st.query = ''; } }
 function catPairRegister(id, onMain, onSub){ window['catPairPickMain_' + id] = function(v){ catPairClose(id); onMain(v); }; window['catPairPickSub_' + id] = function(v){ catPairClose(id); onSub(v); }; }
 function pickerRender(id){
@@ -337,7 +337,7 @@ async function toggleListBookmark(ownerUid, cityId){
 }
 // حفظ الرحلة — على رحلات الآخرين بعدّاده؛ المحفوظة مؤشر لأصل حي (التملك بالنسخ — المحطة ٤)
 function isSelfTripBookmarked(id){ return !!(userListData && userListData.tripSelfBookmarks && userListData.tripSelfBookmarks[id]); }
-function addrModalDelete(){ if (!addrEditRef) return; const r = addrEditRef; closeAddrModal(); deleteAddr(r.cityId, r.catId, r.index); }
+function addrModalDelete(){ if (!addrEditRef) return; const r = addrEditRef; closeModalById('addrBackdrop'); deleteAddr(r.cityId, r.catId, r.index); } /* r98 (ما كشفته محطة الزر): كان يستدعي closeAddrModal() وهي غير معرَّفة في أي جزء — زر Delete في نافذة العنوان كان يرمي خطأً ولا يفعل شيئًا */
 function mpSwallow(e, ctx){ // ر٦٤: بديل الابتلاع الصامت — يعدّ بعدّاد الأخطاء القائم (Other) ويطبع بوضع التصحيح
   try{ if (typeof mpTrack !== 'undefined' && mpTrack.trapError) mpTrack.trapError('Other'); }catch(_){}
   try{ console.warn('[MyPickz][swallowed]', ctx || '', (e && e.code) || (e && e.message) || e); }catch(_){}
