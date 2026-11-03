@@ -390,10 +390,13 @@ async function plToggleBm(catId, i){
 }
 async function plDeleteRow(catId, i){
   const e = userGetEntry(catId); const pl = (e.places || [])[i]; if (!pl) return;
-  if (!(await mpConfirm('', { title: '🗑 Delete "' + (pl.name || 'this place') + '"?', ok: 'Delete', danger: true }))) return; /* ب-٢-٢-أ٢: ورقة بدل confirm */
-  removeUserPlace(catId, i);
-  renderPlacesMine();
-  plCityEmptyAsk(); /* r94 (ق١٠-٢٩-٠٩) */
+  return mpBusyRun('place-delete', async function(){ /* r100-ب: ورقة تأكيد واحدة · الحذف بهوية الكائن لا بالفهرس — نقرة ثانية بعد الحذف لا تجد شيئًا */
+    if (!(await mpConfirm('', { title: '🗑 Delete "' + (pl.name || 'this place') + '"?', ok: 'Delete', danger: true }))) return; /* ب-٢-٢-أ٢: ورقة بدل confirm */
+    const __w = removeUserPlaceObj(catId, pl); if (!__w){ showToast('Already removed'); renderPlacesMine(); return; }
+    renderPlacesMine();
+    plCityEmptyAsk(); /* r94 (ق١٠-٢٩-٠٩) */
+    await __w; /* r100-ب: المفتاح يبقى حتى تنتهي الكتابة */
+  });
 }
 async function plCityEmptyAsk(){ /* r94 (ق١٠-٢٩-٠٩ — ملاحظة المالك ١٦:٠٨): آخر مكان حُذف أو نُقل → سؤال لا حذف صامت */
   if (!currentUser || !cityListCityId || !myCityListData || (pendingCity && pendingCity.id === cityListCityId)) return; if (liveCountOf(myCityListData.categories) !== 0) return; const cityId = cityListCityId; const name = plCityName() || 'This city'; let nAddr = 0; try{ nAddr = await cityCountAddr(cityId); }catch(_){}
@@ -891,8 +894,8 @@ async function saveOthersPlace(ownerUid, cityId, catId, placeId){ // ز-١-ب: �
 }
 function cmOpenPersonCityMap(cityId, focusId){ const c = (viewingUserCities || []).find(function(x){ return x.id === cityId; }); const places = c ? Object.keys(c.categories || {}).flatMap(function(k){ return ((c.categories[k] || {}).places || []); }) : []; openContextMap(places, ((viewingUserData && viewingUserData.nickname) || 'User') + ' · ' + (c ? c.name : ''), focusId); }
 async function openGeoStep(place){
-  if (window.__geoAuto){ plGeoResult = window.__geoAuto === 'confirm' ? { geo: { lat: 24.7, lng: 46.7, source: 'user_pin' }, openId: null } : { geo: null, openId: null }; plGeoConfirmed = true; return savePlPlace(); } // قناة المحاكاة (لا واجهة)
-  const bd = document.getElementById('geoBackdrop'); if (!bd) { plGeoConfirmed = true; return savePlPlace(); }
+  if (window.__geoAuto){ plGeoResult = window.__geoAuto === 'confirm' ? { geo: { lat: 24.7, lng: 46.7, source: 'user_pin' }, openId: null } : { geo: null, openId: null }; plGeoConfirmed = true; return; } /* r100-ب: لا نداء متداخل — المستدعي يكمل */ // قناة المحاكاة (لا واجهة)
+  const bd = document.getElementById('geoBackdrop'); if (!bd) { plGeoConfirmed = true; return; } /* r100-ب */
   document.getElementById('geoTitle').textContent = place.name || 'Place'; document.getElementById('geoStatus').textContent = 'Finding it on the map…'; document.getElementById('geoCands').innerHTML = ''; geoPick = null; geoCands = [];
   bd.classList.add('show');
   const g = plTownGeo || await cityGeoOf(cityListCityId); // ز-١-ج-٢: مركز المدينة ونصف قطرها من المعجم · r84-3: أو مركز البلدة المجاورة حين اختار «keep under · outside» (المكان خارج نطاق المدينة فلا يُطابَق بمركزها)
@@ -911,7 +914,8 @@ async function openGeoStep(place){
   setTimeout(function(){ geoMap.resize(); }, 60);
 }
 function geoChoose(i){ const c = geoCands[i]; if (!c) return; geoPick = Object.assign({}, c); if (geoPin) geoPin.setLatLng([c.lat, c.lng]); if (geoMap) geoMap.setView([c.lat, c.lng], 16); document.querySelectorAll('.geo-cand').forEach(function(b, k){ b.classList.toggle('on', k === i); }); document.getElementById('geoStatus').textContent = 'Selected ' + (i + 1) + ' — confirm or drag.'; geoShowArea(c.lat, c.lng, 'Selected ' + (i + 1) + ' — confirm or drag'); }
-async function geoConfirm(){
+async function geoConfirm(){ return mpBusyRun('place-save', geoConfirmRun, '#plSaveBtn, #plDeleteBtn'); } /* r100-ب: التأكيد والبحث عن الحي والهوية والحفظ تحت مفتاح واحد — Save أثناءها يُتجاهل */
+async function geoConfirmRun(){
   if (geoBanned && !(geoPick && geoPick.dragged)){ showToast(tkGuidelineMsg()); return; } /* r85: لا تثبيت على مرشَّح ممنوع — إلا دبوسًا سحبه المستخدم بنفسه */
   if (!geoPick){ showToast('Drag the pin to the place, or skip'); return; }
   const src = geoPick.dragged ? 'user_pin' : (geoPick.keep ? ((myCityListData && plEdit && (userGetEntry(plEdit.catId).places || [])[plEdit.index] || {}).geo || {}).source || 'user_pin' : 'overture');
@@ -919,7 +923,7 @@ async function geoConfirm(){
   plGeoConfirmed = true; closeModalById('geoBackdrop'); if (plGeoResult && plGeoResult.geo && plView === 'map') plMapFocus = { lat: plGeoResult.geo.lat, lng: plGeoResult.geo.lng };
   try{ if (plGeoResult && plGeoResult.geo){ const ar = document.getElementById('plArea'); if (ar && (!ar.value.trim() || ar.value === plAreaAuto)){ const a = (await tkAreaFor(cityListCityId, plGeoResult.geo.lat, plGeoResult.geo.lng)).area; if (a){ ar.value = a; plAreaAuto = a; } } } }catch(e){ mpSwallow(e, 'area'); } /* r96: الدالة الواحدة */ // خ-٤: الحي من الموضع — لا يستبدل ما كتبه المستخدم
   try{ if (currentUser && plGeoResult && plGeoResult.geo){ const nm = (document.getElementById('plName') || {}).value || ''; const key = mpData.identity.keyOf(cityListCityId, nm); let prev = null; try{ prev = await mpData.identity.get(key); }catch(_){} const far = prev && typeof prev.lat === 'number' && geoDistM(prev, plGeoResult.geo) > 1000; if (!far){ const rec = { lat: plGeoResult.geo.lat, lng: plGeoResult.geo.lng, source: plGeoResult.geo.source === 'user_pin' ? 'user_pin' : 'overture', n: nm.slice(0, 120), cityId: String(cityListCityId || '').slice(0, 40), by: currentUser.uid, at: Date.now() }; if (plGeoResult.openId && /^ovt:/.test(plGeoResult.openId)) rec.openId = plGeoResult.openId.slice(0, 80); await mpData.identity.put(key, rec); } } }catch(e){ mpSwallow(e, 'identity'); } // v3.11: آخر مؤكِّد يفوز — إلا إن ابتعد > ١ كم عن المسجَّل
-  await savePlPlace();
+  await savePlPlaceRun();
 }
 function geoDistM(a, b){ const R = 6371000, t = function(x){ return x * Math.PI / 180; }; const dLat = t(b.lat - a.lat), dLng = t(b.lng - a.lng); const q = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(t(a.lat)) * Math.cos(t(b.lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2); return 2 * R * Math.asin(Math.sqrt(q)); }
 let geoAreaSeq = 0;
@@ -936,8 +940,10 @@ function geoBack(all){ /* r75c (البند ١٠): Back يغلق خطوة الخ�
   closeModalById('geoBackdrop'); plGeoConfirmed = false; plGeoResult = null; if (geoMap){ try{ geoMap.remove(); }catch(_){} geoMap = null; }
   const form = document.getElementById('plPlaceBackdrop'); if (all || !(form && form.classList.contains('show'))) closePlPlaceModal();
 }
-async function geoSkip(){ if (plView === 'map'){ const c = geoPick || null; if (c) plMapFocus = { lat: c.lat, lng: c.lng }; else if (geoMap && geoMap.map && geoMap.map.getCenter){ try{ const ce = geoMap.map.getCenter(); plMapFocus = { lat: ce.lat, lng: ce.lng }; }catch(_){} } } /* خ-٤: Skip يبقي الخريطة على موضع الدبوس كما ✓ */ plGeoResult = { geo: null, openId: null }; plGeoConfirmed = true; closeModalById('geoBackdrop'); await savePlPlace(); }
-async function savePlPlace(){
+async function geoSkip(){ return mpBusyRun('place-save', geoSkipRun, '#plSaveBtn, #plDeleteBtn'); } /* r100-ب */
+async function geoSkipRun(){ if (plView === 'map'){ const c = geoPick || null; if (c) plMapFocus = { lat: c.lat, lng: c.lng }; else if (geoMap && geoMap.map && geoMap.map.getCenter){ try{ const ce = geoMap.map.getCenter(); plMapFocus = { lat: ce.lat, lng: ce.lng }; }catch(_){} } } /* خ-٤: Skip يبقي الخريطة على موضع الدبوس كما ✓ */ plGeoResult = { geo: null, openId: null }; plGeoConfirmed = true; closeModalById('geoBackdrop'); await savePlPlaceRun(); }
+async function savePlPlace(){ return mpBusyRun('place-save', savePlPlaceRun, '#plSaveBtn, #plDeleteBtn'); } /* r100-ب: المفتاح يغطي الحفظ كله — نقرة ثانية تُتجاهل وزرا الحفظ والحذف معطَّلان */
+async function savePlPlaceRun(){
   if (currentUserSuspended){ showToast("Your account is suspended — you can't save changes"); return; }
   const name = mpStripBidi(document.getElementById('plName').value).trim(); // ب-٥
   const url = document.getElementById('plUrl').value.trim();
@@ -950,7 +956,7 @@ async function savePlPlace(){
   place.area = mpFixAreaDot(mpStripBidi(document.getElementById('plArea').value).trim()); // ب-٦
   if (place.area !== (plEdit ? plAreaWas : '')){ if (place.area) place.areaBy = 'user'; else delete place.areaBy; } /* r87-4 (البند ٤): ما كتبه المستخدم في Area يُوسم فلا يستبدله الدبوس · تفريغها يعيدها للآلي */
   const __plus = String((document.getElementById('plPlusCode') || {}).value || '').trim(); const __hadPin = !!(plEdit && place.geo && typeof place.geo.lat === 'number'); const __plusSame = __hadPin && __plus.replace(/\s+/g, ' ').trim().toUpperCase() === String(plPlusWas || '').replace(/\s+/g, ' ').trim().toUpperCase(); if (__hadPin && !plGeoConfirmed && url === plUrlWas && (__plusSame || !__plus)){ plGeoConfirmed = true; plGeoResult = null; } /* r87-3 (ملاحظة المالك ١٦:١٠ البند ٣): تحرير مكان مثبَّت بلا تغيير الرابط ولا الرمز → لا خطوة دبوس ولا مساس به */ if (__plus && !plGeoConfirmed && !__plusSame){ const __pt = await tkPlusPoint(__plus); if (!__pt || __pt.err){ const __msg = (__pt && __pt.err) || 'Plus code not recognised'; showToast(__msg); plPlusErrShow(__msg + ' — nothing was saved. Fix the code or clear the field.'); return; } plPlusErrShow(''); plGeoResult = { geo: { lat: +(+__pt.lat).toFixed(5), lng: +(+__pt.lng).toFixed(5), source: 'user_paste', via: __pt.how }, openId: null }; plGeoConfirmed = true; try{ logTiming('PLUS CODE PIN · ' + cityListCityId + ' · 1 pins · source user_paste via ' + __pt.how + ' · add place · your account only'); }catch(_){} } /* r87: خانة Plus code في الإضافة/التحرير → نقطة دقيقة بلا خطوة الخريطة */
-  if (!plGeoConfirmed){ if (!plEdit && typeof TK_NAME_WARN !== 'undefined' && TK_NAME_WARN.test(name)) showToast('Heads-up: bars, nightlife, alcohol, hookah and gambling places are outside the content guidelines'); plGeoConfirmed = false; await openGeoStep(place); return; } /* r85: تحذير بالاسم بلا منع */ // ز-١-ب: خطوة الخريطة بملء الشاشة — تعود إلى الحفظ بعد التأكيد/التخطي
+  if (!plGeoConfirmed){ if (!plEdit && typeof TK_NAME_WARN !== 'undefined' && TK_NAME_WARN.test(name)) showToast('Heads-up: bars, nightlife, alcohol, hookah and gambling places are outside the content guidelines'); plGeoConfirmed = false; await openGeoStep(place); if (!plGeoConfirmed) return; } /* r100-ب: الخريطة مفتوحة → geoConfirm/geoSkip يعودان بنداء جديد؛ القناة الآلية تضع العلم ونكمل هنا */ /* r85: تحذير بالاسم بلا منع */ // ز-١-ب: خطوة الخريطة بملء الشاشة — تعود إلى الحفظ بعد التأكيد/التخطي
   if (plGeoResult && plGeoResult.geo && typeof tkDupOf === 'function'){ const __d = tkDupOf(plGeoResult.openId || null, plGeoResult.geo, plEdit ? place : null); if (__d){ const v = await tkDupSheet(__d, name); if (!v){ plGeoConfirmed = false; return; } if (v === 'mine'){ plGeoConfirmed = false; plGeoResult = null; showToast('Kept “' + (__d.p.name || '') + '” — nothing added'); closePlPlaceModal(); return; } if (v === 'replace'){ tkDupDrop(__d.p); } } } /* r96 (ق١٠-٣٠-٠٢): حارس التكرار في الإضافة والتحرير (الرمز · خطوة الخريطة) */
   plGeoConfirmed = false; if (plGeoResult){ if (plGeoResult.geo){ place.geo = plGeoResult.geo; if (plGeoResult.openId) place.openId = plGeoResult.openId; else delete place.openId; } else if (!__hadPin){ delete place.geo; delete place.openId; } plGeoResult = null; } /* r87-3: Skip على مكان مثبَّت يُبقي دبوسه وهويته — الإزالة لها «Remove pin» وحده */
   place.updatedAt = Date.now(); /* ر٧٣-أب (٢) — قرار المالك: «Latest update places» بختم زمني لكل مكان من الآن */
