@@ -862,7 +862,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
     <label class="flabel" style="display:flex;align-items:center;justify-content:space-between">Note (optional) <button type="button" class="actn" style="padding:2px 10px" onclick="plNoteBullet()" title="Start a bullet line">• list</button></label>
     <textarea id="plNote" class="modal-input" rows="3" placeholder="e.g. best pancakes before 11 — book ahead"></textarea>
     <div style="display:flex; gap:6px; margin-top:10px;">
-      <button type="button" class="btn btn-brass" style="flex:1;" onclick="savePlPlace()">Save</button>
+      <button type="button" class="btn btn-brass" id="plSaveBtn" style="flex:1;" onclick="savePlPlace()">Save</button>
       <button type="button" class="btn btn-ghost danger" id="plDeleteBtn" style="display:none;" onclick="deletePlPlaceFromModal()">🗑 Delete</button>
       <button type="button" class="btn btn-ghost" onclick="closePlPlaceModal()">Cancel</button>
     </div>
@@ -1014,7 +1014,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <input id="addrPhone" class="modal-input" placeholder="e.g. +966 5x xxx xxxx" inputmode="tel" autocomplete="off" >
       <div id="addrError" class="errline"></div>
       <div style="display:flex; gap:6px; margin-top:8px;">
-        <button class="btn btn-brass" style="flex:1;" onclick="saveAddr()">Save</button>
+        <button class="btn btn-brass" id="addrSaveBtn" style="flex:1;" onclick="saveAddr()">Save</button>
         <button class="btn btn-ghost danger" id="addrDeleteBtn" style="display:none;" onclick="addrModalDelete()">🗑 Delete</button>
         <button class="btn btn-ghost" onclick="closeModalById('addrBackdrop')">Cancel</button>
       </div>
@@ -2537,6 +2537,16 @@ async function mpSaveFailed(k, e, retry, discard){ /* يعيد 'retry' | 'discar
   if (v === 'ok' && canRetry){ await retry(); return 'retry'; }
   mpUnsavedSet(k, true); return 'keep';
 }
+/* ═══ r100-ب (ق١١-٠٣-٠٥): حارس الانشغال بالمفتاح — النقرة الثانية أثناء الحفظ تُتجاهل، والزر المعني يتعطّل ويقول «Saving…» إن طال؛ لا قفل عام ═══ */
+const mpBusy = {}; window.__mpBusy = mpBusy;
+async function mpBusyRun(key, fn, btn){ /* يعيد 'busy' إن كان المفتاح مشغولًا، وإلا نتيجة fn — المفتاح يُحرَّر في finally مهما حدث */
+  if (mpBusy[key]) return 'busy';
+  mpBusy[key] = Date.now();
+  const els = btn ? (typeof btn === 'string' ? [].slice.call(document.querySelectorAll(btn)) : [btn]) : []; const labels = els.map(function(e){ e.disabled = true; return e.innerHTML; });
+  const slow = setTimeout(function(){ if (els[0] && mpBusy[key]) els[0].textContent = 'Saving…'; }, 400);
+  try{ return await fn(); }
+  finally{ clearTimeout(slow); delete mpBusy[key]; els.forEach(function(e, i){ e.innerHTML = labels[i]; e.disabled = false; }); }
+}
 function mpSwallow(e, ctx){ // ر٦٤: بديل الابتلاع الصامت — يعدّ بعدّاد الأخطاء القائم (Other) ويطبع بوضع التصحيح
   try{ if (typeof mpTrack !== 'undefined' && mpTrack.trapError) mpTrack.trapError('Other'); }catch(_){}
   try{ console.warn('[MyPickz][swallowed]', ctx || '', (e && e.code) || (e && e.message) || e); }catch(_){}
@@ -3576,7 +3586,8 @@ function dpAddToTripWhere(planId, tripId){ const p = dpPlanById(planId); const t
   body.innerHTML = '<div id="dpWhereBody"><div style="font-size:13px; line-height:1.5;"><b dir="auto">' + escapeHtml(tripTitle(t)) + '</b> · ' + escapeHtml(cname) + ' has ' + days.length + (days.length === 1 ? ' day' : ' days') + '.</div>'
     + '<button type="button" class="tb-door" style="margin-top:8px; border-color:var(--saffron);" onclick="dpAddToTrip(\'' + attrStr(planId) + '\', \'' + attrStr(tripId) + '\', { mode: \'new\' })"><span>＋ New day after ' + escapeHtml(cname) + ' day ' + (days.length ? days[days.length - 1].d.n : '') + '</span><span>›</span></button>'
     + '<div class="dim" style="font-size:11.5px; font-weight:700; margin:12px 0 2px;">Or replace a day</div>' + days.map(function(x){ const n = tripDayEntries(x.d).length; return '<button type="button" class="tb-door" style="margin-top:6px;" onclick="dpAddToTrip(\'' + attrStr(planId) + '\', \'' + attrStr(tripId) + '\', { mode: \'replace\', dayIdx: ' + x.i + ' })"><span>Day ' + x.d.n + (x.d.date ? ' · ' + escapeHtml(tripDateLabel(x.d.date)) : '') + ' <span class="dim" style="font-weight:400; font-size:11.5px;">· ' + (n ? 'has ' + n + (n === 1 ? ' stop' : ' stops') : 'empty') + '</span></span><span>' + (n ? '⚠' : '›') + '</span></button>'; }).join('') + '</div>'; }
-async function dpAddToTrip(planId, tripId, where){ if (!tripsLoaded) await loadUserTrips(); const p = dpPlanById(planId); const t = (userTrips || []).find(function(x){ return x.id === tripId; }); if (!p || !t || !tripHasPlan(t) || !tripHasPlan(p)) return; if (currentUserSuspended){ showToast('Your account is suspended — you can’t save changes'); return; } const cid = dpCityOfPlan(p); const cname = cityNameOf(cid) || ''; where = where || { mode: 'new' };
+async function dpAddToTrip(planId, tripId, where){ return mpBusyRun('trip-' + String(tripId || ''), function(){ return dpAddToTripRun(planId, tripId, where); }); } /* r100-ب: نقرة ثانية على الرحلة نفسها أثناء النسخ تُتجاهل */
+async function dpAddToTripRun(planId, tripId, where){ if (!tripsLoaded) await loadUserTrips(); const p = dpPlanById(planId); const t = (userTrips || []).find(function(x){ return x.id === tripId; }); if (!p || !t || !tripHasPlan(t) || !tripHasPlan(p)) return; if (currentUserSuspended){ showToast('Your account is suspended — you can’t save changes'); return; } const cid = dpCityOfPlan(p); const cname = cityNameOf(cid) || ''; where = where || { mode: 'new' };
   if (where.mode === 'replace'){ const target = t.plan.days[where.dayIdx]; if (!target || target.cityId !== cid) return; const n = tripDayEntries(target).length; if (n && !(await mpConfirm('Day ' + target.n + ' has ' + n + (n === 1 ? ' stop' : ' stops') + ' — they are replaced by the day plan.', { title: 'Replace day ' + target.n + '?', ok: 'Replace', danger: true }))){ dpAddToTripWhere(planId, tripId); return; } }
   const before = JSON.stringify({ cities: t.cities, plan: t.plan, dayRoutes: t.dayRoutes || {} }); const srcDay = JSON.parse(JSON.stringify(tripPlanNormalize(JSON.parse(JSON.stringify(p.plan))).days[0])); const srcRoute = JSON.parse(JSON.stringify(((p.dayRoutes || {})['1']) || { leave: null, backBy: null, legs: {}, stays: {} })); const srcCity = (p.cities || [])[0] || {};
   const plan = tripPlanNormalize(t.plan); const oldDays = plan.days.slice(); const oldRoutes = t.dayRoutes || {}; let targetIdx;
@@ -3867,6 +3878,7 @@ function mpSheet(o){
   if (o.input) setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(_){} }, 30);
   return new Promise(function(res){ __sheetResolve = res; });
 }
+function mpSheetAbort(){ try{ if (__sheetResolve) sheetDone(null); }catch(_){} } /* r100-ب: ورقة معلّقة تُحسم بـnull (الخروج) — فلا يبقى مفتاح انشغال محجوزًا خلف ورقة لن تُجاب */
 function sheetDone(v){
   const r = __sheetResolve; __sheetResolve = null;
   const out = (v === 'ok' && __sheetHasInput) ? document.getElementById('sheetInput').value : v;
@@ -4216,7 +4228,8 @@ async function removeAddrCity(cityId){
   if (pendingCity && pendingCity.id === cityId){ pendingCity = null; delete addrData[cityId]; addrCities = addrCities.filter(c => c !== cityId); if (addrCurrentCity === cityId) addrCurrentCity = null; renderAddresses(); return; }
   openCityDeleteChooser(cityId, 'addr');
 }
-async function saveAddr(){
+async function saveAddr(){ return mpBusyRun('addr-save', saveAddrRun, '#addrSaveBtn'); } /* r100-ب: نقرة ثانية أثناء الحفظ تُتجاهل والزر معطَّل */
+async function saveAddrRun(){
   const name = document.getElementById('addrName').value.trim();
   const url = document.getElementById('addrUrl').value.trim();
   const note = document.getElementById('addrNote').value.trim();
@@ -4254,12 +4267,14 @@ async function saveAddr(){
   await __attempt();
 }
 async function deleteAddr(cityId, catId, index){
-  const entry = addrData[cityId] && addrData[cityId][catId]; if (!entry) return;
+  const entry = addrData[cityId] && addrData[cityId][catId]; if (!entry) return; const __p = (entry.places || [])[index]; if (!__p) return;
+  return mpBusyRun('addr-delete', async function(){ /* r100-ب: ورقة واحدة · الحذف بهوية العنوان لا بالفهرس */
   if (!(await mpConfirm('', { title: '🗑 Delete this address?', ok: 'Delete', danger: true }))) return; /* ب-٢-٢-أ٢ */
-  entry.places.splice(index, 1);
-  let __done = false; const __attempt = async function(){ try{ await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry); showToast('Deleted'); __done = true; return true; }catch(e){ await mpSaveFailed('addresses', e, __attempt, async function(){ addrDiscard(); }); return __done; } }; /* r100-أ: الناتج هو الحقيقة بعد كل المحاولات */
+  const entryNow = (addrData[cityId] && addrData[cityId][catId]) || entry; let __i = entryNow.places.indexOf(__p); if (__i < 0) __i = entryNow.places.findIndex(function(q){ return q && __p.id && q.id === __p.id; }); if (__i < 0){ showToast('Already removed'); renderAddresses(); return; } entryNow.places.splice(__i, 1);
+  let __done = false; const __attempt = async function(){ try{ await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entryNow); showToast('Deleted'); __done = true; return true; }catch(e){ await mpSaveFailed('addresses', e, __attempt, async function(){ addrDiscard(); }); return __done; } }; /* r100-أ: الناتج هو الحقيقة بعد كل المحاولات */
   if (!(await __attempt())){ renderAddresses(); return; }
   await loadAddresses(true);
+  });
 }
 
 // خ١-ب: معاينة شاشات ٩ و١٠ (معطَّلة حتى ٢/ب و٢/د)
@@ -4529,6 +4544,7 @@ function updateUserUI(){ /* r74b-٣: الكتلة الخفية الموروثة 
     userTrips = []; sharedTrips = []; tripsLoaded = false; currentTripId = null;
     sharedCityLists = []; myCityListData = null; myCityListLoadedFor = null;
     listBookmarksMap = null; tripSavesMap = null; viewingUserUid = null; plPanel = null; addrPanel = null;
+    mpSheetAbort(); /* r100-ب: ورقة معلّقة تُحسم فلا يبقى مفتاح انشغال محجوزًا بعد الخروج */
     document.querySelectorAll('.modal-backdrop.show').forEach(function(b){ if (b.id !== 'authBackdrop') b.classList.remove('show'); });
     openGate();
   }
@@ -4926,10 +4942,13 @@ async function plToggleBm(catId, i){
 }
 async function plDeleteRow(catId, i){
   const e = userGetEntry(catId); const pl = (e.places || [])[i]; if (!pl) return;
-  if (!(await mpConfirm('', { title: '🗑 Delete "' + (pl.name || 'this place') + '"?', ok: 'Delete', danger: true }))) return; /* ب-٢-٢-أ٢: ورقة بدل confirm */
-  removeUserPlace(catId, i);
-  renderPlacesMine();
-  plCityEmptyAsk(); /* r94 (ق١٠-٢٩-٠٩) */
+  return mpBusyRun('place-delete', async function(){ /* r100-ب: ورقة تأكيد واحدة · الحذف بهوية الكائن لا بالفهرس — نقرة ثانية بعد الحذف لا تجد شيئًا */
+    if (!(await mpConfirm('', { title: '🗑 Delete "' + (pl.name || 'this place') + '"?', ok: 'Delete', danger: true }))) return; /* ب-٢-٢-أ٢: ورقة بدل confirm */
+    const __w = removeUserPlaceObj(catId, pl); if (!__w){ showToast('Already removed'); renderPlacesMine(); return; }
+    renderPlacesMine();
+    plCityEmptyAsk(); /* r94 (ق١٠-٢٩-٠٩) */
+    await __w; /* r100-ب: المفتاح يبقى حتى تنتهي الكتابة */
+  });
 }
 async function plCityEmptyAsk(){ /* r94 (ق١٠-٢٩-٠٩ — ملاحظة المالك ١٦:٠٨): آخر مكان حُذف أو نُقل → سؤال لا حذف صامت */
   if (!currentUser || !cityListCityId || !myCityListData || (pendingCity && pendingCity.id === cityListCityId)) return; if (liveCountOf(myCityListData.categories) !== 0) return; const cityId = cityListCityId; const name = plCityName() || 'This city'; let nAddr = 0; try{ nAddr = await cityCountAddr(cityId); }catch(_){}
@@ -5427,8 +5446,8 @@ async function saveOthersPlace(ownerUid, cityId, catId, placeId){ // ز-١-ب: �
 }
 function cmOpenPersonCityMap(cityId, focusId){ const c = (viewingUserCities || []).find(function(x){ return x.id === cityId; }); const places = c ? Object.keys(c.categories || {}).flatMap(function(k){ return ((c.categories[k] || {}).places || []); }) : []; openContextMap(places, ((viewingUserData && viewingUserData.nickname) || 'User') + ' · ' + (c ? c.name : ''), focusId); }
 async function openGeoStep(place){
-  if (window.__geoAuto){ plGeoResult = window.__geoAuto === 'confirm' ? { geo: { lat: 24.7, lng: 46.7, source: 'user_pin' }, openId: null } : { geo: null, openId: null }; plGeoConfirmed = true; return savePlPlace(); } // قناة المحاكاة (لا واجهة)
-  const bd = document.getElementById('geoBackdrop'); if (!bd) { plGeoConfirmed = true; return savePlPlace(); }
+  if (window.__geoAuto){ plGeoResult = window.__geoAuto === 'confirm' ? { geo: { lat: 24.7, lng: 46.7, source: 'user_pin' }, openId: null } : { geo: null, openId: null }; plGeoConfirmed = true; return; } /* r100-ب: لا نداء متداخل — المستدعي يكمل */ // قناة المحاكاة (لا واجهة)
+  const bd = document.getElementById('geoBackdrop'); if (!bd) { plGeoConfirmed = true; return; } /* r100-ب */
   document.getElementById('geoTitle').textContent = place.name || 'Place'; document.getElementById('geoStatus').textContent = 'Finding it on the map…'; document.getElementById('geoCands').innerHTML = ''; geoPick = null; geoCands = [];
   bd.classList.add('show');
   const g = plTownGeo || await cityGeoOf(cityListCityId); // ز-١-ج-٢: مركز المدينة ونصف قطرها من المعجم · r84-3: أو مركز البلدة المجاورة حين اختار «keep under · outside» (المكان خارج نطاق المدينة فلا يُطابَق بمركزها)
@@ -5447,7 +5466,8 @@ async function openGeoStep(place){
   setTimeout(function(){ geoMap.resize(); }, 60);
 }
 function geoChoose(i){ const c = geoCands[i]; if (!c) return; geoPick = Object.assign({}, c); if (geoPin) geoPin.setLatLng([c.lat, c.lng]); if (geoMap) geoMap.setView([c.lat, c.lng], 16); document.querySelectorAll('.geo-cand').forEach(function(b, k){ b.classList.toggle('on', k === i); }); document.getElementById('geoStatus').textContent = 'Selected ' + (i + 1) + ' — confirm or drag.'; geoShowArea(c.lat, c.lng, 'Selected ' + (i + 1) + ' — confirm or drag'); }
-async function geoConfirm(){
+async function geoConfirm(){ return mpBusyRun('place-save', geoConfirmRun, '#plSaveBtn, #plDeleteBtn'); } /* r100-ب: التأكيد والبحث عن الحي والهوية والحفظ تحت مفتاح واحد — Save أثناءها يُتجاهل */
+async function geoConfirmRun(){
   if (geoBanned && !(geoPick && geoPick.dragged)){ showToast(tkGuidelineMsg()); return; } /* r85: لا تثبيت على مرشَّح ممنوع — إلا دبوسًا سحبه المستخدم بنفسه */
   if (!geoPick){ showToast('Drag the pin to the place, or skip'); return; }
   const src = geoPick.dragged ? 'user_pin' : (geoPick.keep ? ((myCityListData && plEdit && (userGetEntry(plEdit.catId).places || [])[plEdit.index] || {}).geo || {}).source || 'user_pin' : 'overture');
@@ -5455,7 +5475,7 @@ async function geoConfirm(){
   plGeoConfirmed = true; closeModalById('geoBackdrop'); if (plGeoResult && plGeoResult.geo && plView === 'map') plMapFocus = { lat: plGeoResult.geo.lat, lng: plGeoResult.geo.lng };
   try{ if (plGeoResult && plGeoResult.geo){ const ar = document.getElementById('plArea'); if (ar && (!ar.value.trim() || ar.value === plAreaAuto)){ const a = (await tkAreaFor(cityListCityId, plGeoResult.geo.lat, plGeoResult.geo.lng)).area; if (a){ ar.value = a; plAreaAuto = a; } } } }catch(e){ mpSwallow(e, 'area'); } /* r96: الدالة الواحدة */ // خ-٤: الحي من الموضع — لا يستبدل ما كتبه المستخدم
   try{ if (currentUser && plGeoResult && plGeoResult.geo){ const nm = (document.getElementById('plName') || {}).value || ''; const key = mpData.identity.keyOf(cityListCityId, nm); let prev = null; try{ prev = await mpData.identity.get(key); }catch(_){} const far = prev && typeof prev.lat === 'number' && geoDistM(prev, plGeoResult.geo) > 1000; if (!far){ const rec = { lat: plGeoResult.geo.lat, lng: plGeoResult.geo.lng, source: plGeoResult.geo.source === 'user_pin' ? 'user_pin' : 'overture', n: nm.slice(0, 120), cityId: String(cityListCityId || '').slice(0, 40), by: currentUser.uid, at: Date.now() }; if (plGeoResult.openId && /^ovt:/.test(plGeoResult.openId)) rec.openId = plGeoResult.openId.slice(0, 80); await mpData.identity.put(key, rec); } } }catch(e){ mpSwallow(e, 'identity'); } // v3.11: آخر مؤكِّد يفوز — إلا إن ابتعد > ١ كم عن المسجَّل
-  await savePlPlace();
+  await savePlPlaceRun();
 }
 function geoDistM(a, b){ const R = 6371000, t = function(x){ return x * Math.PI / 180; }; const dLat = t(b.lat - a.lat), dLng = t(b.lng - a.lng); const q = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(t(a.lat)) * Math.cos(t(b.lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2); return 2 * R * Math.asin(Math.sqrt(q)); }
 let geoAreaSeq = 0;
@@ -5472,8 +5492,10 @@ function geoBack(all){ /* r75c (البند ١٠): Back يغلق خطوة الخ�
   closeModalById('geoBackdrop'); plGeoConfirmed = false; plGeoResult = null; if (geoMap){ try{ geoMap.remove(); }catch(_){} geoMap = null; }
   const form = document.getElementById('plPlaceBackdrop'); if (all || !(form && form.classList.contains('show'))) closePlPlaceModal();
 }
-async function geoSkip(){ if (plView === 'map'){ const c = geoPick || null; if (c) plMapFocus = { lat: c.lat, lng: c.lng }; else if (geoMap && geoMap.map && geoMap.map.getCenter){ try{ const ce = geoMap.map.getCenter(); plMapFocus = { lat: ce.lat, lng: ce.lng }; }catch(_){} } } /* خ-٤: Skip يبقي الخريطة على موضع الدبوس كما ✓ */ plGeoResult = { geo: null, openId: null }; plGeoConfirmed = true; closeModalById('geoBackdrop'); await savePlPlace(); }
-async function savePlPlace(){
+async function geoSkip(){ return mpBusyRun('place-save', geoSkipRun, '#plSaveBtn, #plDeleteBtn'); } /* r100-ب */
+async function geoSkipRun(){ if (plView === 'map'){ const c = geoPick || null; if (c) plMapFocus = { lat: c.lat, lng: c.lng }; else if (geoMap && geoMap.map && geoMap.map.getCenter){ try{ const ce = geoMap.map.getCenter(); plMapFocus = { lat: ce.lat, lng: ce.lng }; }catch(_){} } } /* خ-٤: Skip يبقي الخريطة على موضع الدبوس كما ✓ */ plGeoResult = { geo: null, openId: null }; plGeoConfirmed = true; closeModalById('geoBackdrop'); await savePlPlaceRun(); }
+async function savePlPlace(){ return mpBusyRun('place-save', savePlPlaceRun, '#plSaveBtn, #plDeleteBtn'); } /* r100-ب: المفتاح يغطي الحفظ كله — نقرة ثانية تُتجاهل وزرا الحفظ والحذف معطَّلان */
+async function savePlPlaceRun(){
   if (currentUserSuspended){ showToast("Your account is suspended — you can't save changes"); return; }
   const name = mpStripBidi(document.getElementById('plName').value).trim(); // ب-٥
   const url = document.getElementById('plUrl').value.trim();
@@ -5486,7 +5508,7 @@ async function savePlPlace(){
   place.area = mpFixAreaDot(mpStripBidi(document.getElementById('plArea').value).trim()); // ب-٦
   if (place.area !== (plEdit ? plAreaWas : '')){ if (place.area) place.areaBy = 'user'; else delete place.areaBy; } /* r87-4 (البند ٤): ما كتبه المستخدم في Area يُوسم فلا يستبدله الدبوس · تفريغها يعيدها للآلي */
   const __plus = String((document.getElementById('plPlusCode') || {}).value || '').trim(); const __hadPin = !!(plEdit && place.geo && typeof place.geo.lat === 'number'); const __plusSame = __hadPin && __plus.replace(/\s+/g, ' ').trim().toUpperCase() === String(plPlusWas || '').replace(/\s+/g, ' ').trim().toUpperCase(); if (__hadPin && !plGeoConfirmed && url === plUrlWas && (__plusSame || !__plus)){ plGeoConfirmed = true; plGeoResult = null; } /* r87-3 (ملاحظة المالك ١٦:١٠ البند ٣): تحرير مكان مثبَّت بلا تغيير الرابط ولا الرمز → لا خطوة دبوس ولا مساس به */ if (__plus && !plGeoConfirmed && !__plusSame){ const __pt = await tkPlusPoint(__plus); if (!__pt || __pt.err){ const __msg = (__pt && __pt.err) || 'Plus code not recognised'; showToast(__msg); plPlusErrShow(__msg + ' — nothing was saved. Fix the code or clear the field.'); return; } plPlusErrShow(''); plGeoResult = { geo: { lat: +(+__pt.lat).toFixed(5), lng: +(+__pt.lng).toFixed(5), source: 'user_paste', via: __pt.how }, openId: null }; plGeoConfirmed = true; try{ logTiming('PLUS CODE PIN · ' + cityListCityId + ' · 1 pins · source user_paste via ' + __pt.how + ' · add place · your account only'); }catch(_){} } /* r87: خانة Plus code في الإضافة/التحرير → نقطة دقيقة بلا خطوة الخريطة */
-  if (!plGeoConfirmed){ if (!plEdit && typeof TK_NAME_WARN !== 'undefined' && TK_NAME_WARN.test(name)) showToast('Heads-up: bars, nightlife, alcohol, hookah and gambling places are outside the content guidelines'); plGeoConfirmed = false; await openGeoStep(place); return; } /* r85: تحذير بالاسم بلا منع */ // ز-١-ب: خطوة الخريطة بملء الشاشة — تعود إلى الحفظ بعد التأكيد/التخطي
+  if (!plGeoConfirmed){ if (!plEdit && typeof TK_NAME_WARN !== 'undefined' && TK_NAME_WARN.test(name)) showToast('Heads-up: bars, nightlife, alcohol, hookah and gambling places are outside the content guidelines'); plGeoConfirmed = false; await openGeoStep(place); if (!plGeoConfirmed) return; } /* r100-ب: الخريطة مفتوحة → geoConfirm/geoSkip يعودان بنداء جديد؛ القناة الآلية تضع العلم ونكمل هنا */ /* r85: تحذير بالاسم بلا منع */ // ز-١-ب: خطوة الخريطة بملء الشاشة — تعود إلى الحفظ بعد التأكيد/التخطي
   if (plGeoResult && plGeoResult.geo && typeof tkDupOf === 'function'){ const __d = tkDupOf(plGeoResult.openId || null, plGeoResult.geo, plEdit ? place : null); if (__d){ const v = await tkDupSheet(__d, name); if (!v){ plGeoConfirmed = false; return; } if (v === 'mine'){ plGeoConfirmed = false; plGeoResult = null; showToast('Kept “' + (__d.p.name || '') + '” — nothing added'); closePlPlaceModal(); return; } if (v === 'replace'){ tkDupDrop(__d.p); } } } /* r96 (ق١٠-٣٠-٠٢): حارس التكرار في الإضافة والتحرير (الرمز · خطوة الخريطة) */
   plGeoConfirmed = false; if (plGeoResult){ if (plGeoResult.geo){ place.geo = plGeoResult.geo; if (plGeoResult.openId) place.openId = plGeoResult.openId; else delete place.openId; } else if (!__hadPin){ delete place.geo; delete place.openId; } plGeoResult = null; } /* r87-3: Skip على مكان مثبَّت يُبقي دبوسه وهويته — الإزالة لها «Remove pin» وحده */
   place.updatedAt = Date.now(); /* ر٧٣-أب (٢) — قرار المالك: «Latest update places» بختم زمني لكل مكان من الآن */
@@ -5976,11 +5998,12 @@ async function saveUserListGeneral(){
 let cityListEditingKeys = new Set(); // مفاتيح "itemId#index" للأماكن اللي حاليًا في وضع تعديل
 let cityListEditBackup = {}; // نسخة أصلية لكل مكان لحظة دخول وضع التعديل — تتيح التراجع قبل الحفظ
 
+function removeUserPlaceObj(id, pl){ const e = userGetEntry(id); const i = ((e && e.places) || []).indexOf(pl); if (i < 0) return false; return removeUserPlace(id, i); } /* r100-ب: الحذف بالهوية — التوأم (مفتاح مكرّر) لا يُصاب، والمحذوف للتو لا يُحذف ثانية */
 function removeUserPlace(id, index){
   const e = userEnsurePlaces(id);
   const gone = e.places.splice(index, 1); try{ if (typeof tkRemember === 'function') tkRemember(gone); }catch(_){} /* r86-3 (البند ٣): المستورَد المحذوف بيدك يُذكر — لا يعود في إعادة الاختيار إلا بطلبك */
   [...cityListEditingKeys].forEach(k => { if (k.startsWith(id + '#')) cityListEditingKeys.delete(k); });
-  saveMyCityList();
+  return saveMyCityList(); /* r100-ب: يعيد وعد الحفظ ليُنتظر تحت مفتاح الحذف */
 }
 let updateFieldSaveTimer = null;
 /* ب-٢-٢-أ٢ (المسودة v3 · ٨): نافذة الاسم المستعار المسماة بالقشرة الليلية — القيد ظاهر (٣–٢٤) · فحص التوفر الحي عند التوقف عن الكتابة · تعيد وعدًا true/false كما كانت (مسار الإلزام عند أول دخول يبقى يكررها حتى الحفظ) */
@@ -7268,6 +7291,10 @@ async function openTripBuilder(o){ // o = { tripId?, stage?, cityId?, preselect?
   if (!currentUser){ openAuthModal(); return; }
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   const t = o.tripId ? (userTrips || []).find(function(x){ return x.id === o.tripId; }) : null;
+  if (TB && !o.preselect && !o.addCity && document.getElementById('tripBuildBackdrop').classList.contains('show')){ /* r100-ب: المنشئ مفتوح لنفس الهدف (الرحلة أو المدينة+النوع) → فتحه ثانيةً لا شيء — لا رحلتان من نقرتين */
+    const same = o.tripId ? (TB.tripId === o.tripId) : (!TB.tripId && !!o.cityId && !!(TB.cities[0] && TB.cities[0].cityId === o.cityId) && !!o.dayPlan === !!TB.dayPlan && !!o.dayTrip === !!TB.dayTrip);
+    if (same) return;
+  }
   TB = { tripId: t ? t.id : null, stage: 1, ci: 0, cities: t ? JSON.parse(JSON.stringify(t.cities || [])) : [], picked: {}, version: t ? (t.version || 'balanced') : 'balanced', plan: t && tripHasPlan(t) ? tripPlanNormalize(JSON.parse(JSON.stringify(t.plan))) : null, undo: [], moved: false, dayPlan: !!(o.dayPlan || (t && t.dayPlan)), title: t ? String(t.title || '') : '', dayTrip: !!(o.dayTrip || (t && tripHasPlan(t) && t.plan && Array.isArray(t.plan.days) && t.plan.days[0] && t.plan.days[0].mode === 'daytrip')), daySel: 0, pick: null, src: 'mine', saveTimer: null, preselect: o.preselect || null, setupSig: '' };
   if (TB.plan){ tripPlanEntries(TB.plan).concat(TB.plan.tray).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x){ const cid = (x.ref && x.ref.cityId) || t.cityId; TB.picked[cid] = TB.picked[cid] || {}; TB.picked[cid][tbKey(x.ref)] = x; }); }); TB.moved = true; }
   if (!t && o.cityId){ const c = cityListAllCities().find(function(x){ return x.id === o.cityId; }); if (c){ const nc = tbNewCity(c); if (o.dayPlan) nc.days = 1; TB.cities.push(nc); } }
@@ -7581,7 +7608,7 @@ const HELP_CONTENT = { // أ-١٢-٢ (نص المالك v2 المعتمد ١٦ �
       everywhere: '<b>Bookmark</b> what you like · <b>Save</b> a place or trip to your own world · <b>Export</b> a card or a message · <b>Share</b> a list, a trip, or a curator — publicly or with one person by name.',
       start: '<b>Start fast:</b> create your account, add a city, then paste your first Maps link — or import your saved Google Maps lists in one file.' },
     sections: [
-      { id: 'places', h: 'Places', b: "Every place lives in one city and one sub-category (the tree is ours: cafés, dishes, cuisines, shopping, parks, squares, waterfronts, landmarks, family, stay, transport). Add a place from a Maps link: name and area fill in, the category is suggested, and the pin is placed for you — correct it with one drag. If a save fails (no connection), a sheet asks Retry or Discard; a change you keep shows <b>Unsaved</b> next to My places until it saves (r100-أ). Saving writes only the categories you touched, and keeps places added from another device. Your list shows sections you have content in, with counts. Filter by category, then sub-category. Switch <b>☰ List · 🗺 Map</b>; <b>📍 Nearby</b> (beside Day plan) sorts this city's places by straight-line distance from where you are — ≤ 1 km · ≤ 3 km · Any — with a <i>Go</i> button in your navigation app. Your location is asked when you tap and never stored.<br><b>Adding a place (r93):</b> the window starts with the <b>Google Maps link</b> — paste what Maps shared (or tap 📋 Paste) and the name and area fill in; then <b>Plus code</b> (from under the address in Maps: one exact pin, and the area reads from it), then Name, then the category with <i>Fine dining · ⭐ Top place · Outside the city</i>. <b>Outside the city</b> marks a nearby town kept under this city; when a city has such towns, a row <b>Places outside …: Estepona · N</b> appears above the categories — tap a town to see its places only (list and map), tap it again for the whole city; the town chip on a card opens it too. <b>⚙</b> at the end of the row manages the city: <i>Merge into another city</i>, <i>Split out a town</i>, move one place from Edit, <i>🗑 beside a town</i> (r97: removes that folded town and its places; the rest of the city stays), and <i>Undo</i>. <b>Duplicates (r97):</b> places you have twice show as a folded row <i>▸ Duplicates · N</i> in the box above the list — <i>Same Google place</i> or <i>Same spot</i>; tap a name to open its card, then <i>Keep this</i> on the one to keep (the rest merge into it; Undo sits on the row). <b>One spot, one place (r96):</b> saving or pinning a place at a spot you already have asks <i>Keep both · Keep mine · Replace mine</i>; in a batch such rows are held with <i>Keep both · Drop this row</i>. <b>Areas (r96):</b> the area is read from the pin by one rule for every path (Paris → 7e arr. · Vienna → district · a village before its hamlet, the city or canton never); after this update a one-time <i>Re-read N pins</i> banner refreshes the areas you already have. With a town chip on, the box above the list (without a category / old category) shows that town only, and the chip says how many are in the box." },
+      { id: 'places', h: 'Places', b: "Every place lives in one city and one sub-category (the tree is ours: cafés, dishes, cuisines, shopping, parks, squares, waterfronts, landmarks, family, stay, transport). Add a place from a Maps link: name and area fill in, the category is suggested, and the pin is placed for you — correct it with one drag. If a save fails (no connection), a sheet asks Retry or Discard; a change you keep shows <b>Unsaved</b> next to My places until it saves (r100-أ). While a save or delete is running its button is disabled and a second tap is ignored — one tap, one change (r100-ب). Saving writes only the categories you touched, and keeps places added from another device. Your list shows sections you have content in, with counts. Filter by category, then sub-category. Switch <b>☰ List · 🗺 Map</b>; <b>📍 Nearby</b> (beside Day plan) sorts this city's places by straight-line distance from where you are — ≤ 1 km · ≤ 3 km · Any — with a <i>Go</i> button in your navigation app. Your location is asked when you tap and never stored.<br><b>Adding a place (r93):</b> the window starts with the <b>Google Maps link</b> — paste what Maps shared (or tap 📋 Paste) and the name and area fill in; then <b>Plus code</b> (from under the address in Maps: one exact pin, and the area reads from it), then Name, then the category with <i>Fine dining · ⭐ Top place · Outside the city</i>. <b>Outside the city</b> marks a nearby town kept under this city; when a city has such towns, a row <b>Places outside …: Estepona · N</b> appears above the categories — tap a town to see its places only (list and map), tap it again for the whole city; the town chip on a card opens it too. <b>⚙</b> at the end of the row manages the city: <i>Merge into another city</i>, <i>Split out a town</i>, move one place from Edit, <i>🗑 beside a town</i> (r97: removes that folded town and its places; the rest of the city stays), and <i>Undo</i>. <b>Duplicates (r97):</b> places you have twice show as a folded row <i>▸ Duplicates · N</i> in the box above the list — <i>Same Google place</i> or <i>Same spot</i>; tap a name to open its card, then <i>Keep this</i> on the one to keep (the rest merge into it; Undo sits on the row). <b>One spot, one place (r96):</b> saving or pinning a place at a spot you already have asks <i>Keep both · Keep mine · Replace mine</i>; in a batch such rows are held with <i>Keep both · Drop this row</i>. <b>Areas (r96):</b> the area is read from the pin by one rule for every path (Paris → 7e arr. · Vienna → district · a village before its hamlet, the city or canton never); after this update a one-time <i>Re-read N pins</i> banner refreshes the areas you already have. With a town chip on, the box above the list (without a category / old category) shows that town only, and the chip says how many are in the box." },
       { id: 'trips', h: 'Trips', b: "Build a trip in two steps: the city, the days and the places you pick — optionally arrival, departure, where you stay and what you take when it is too far to walk — then MyPickz drafts each day in four periods: morning, noon, afternoon, evening, with alternatives when several places are of the same kind and a <i>No day yet</i> tray for what did not fit. <i>Move</i> anything, switch between Calm, Balanced and Dense, undo, then approve. Prefer to place them yourself? <i>Arrange it myself</i> keeps every place in the tray and the grid asks you for each one in turn; <i>Auto-fill the rest</i> places what is left. The ▲ ▼ arrows beside a stop's number reorder it within its period; moving into another period that already has stops asks where in the order; <i>Repeat on…</i> adds a second visit to the same place. Tap <i>Trip</i> on any place card and it lands in its best slot — or in the tray. <b>Day route</b>: open an approved trip, pick a day, set when you leave and by when you want to be back; each leg shows its rough distance and a mode (walk, metro and transit, car — the default follows the distance), and <i>Navigate</i> opens your app in that mode. Write the minutes your app shows — MyPickz never estimates them — and the times of the day follow; a leg without minutes keeps the day <i>incomplete</i>, and a late return is flagged.<br><b>Day plan</b> (Places tab, beside Nearby): a one-day plan that lives in Places, not in My trips. Two kinds — <b>In the city</b> (your places in the usual rhythm) and <b>Day trip</b> (a linear route out of the city: villages, peaks, lakes, stations — stops you type or pick from My places, each leg with its transport: train, boat, cable car, cogwheel, bus, walk, car — notes, an optional stop, a fixed time). Give it a <b>Trip name</b>; open it from <i>Day plan ▸ Saved</i>; <b>⧉ Copy into a trip</b> copies the day into one of your trips as a new day or in place of one, with Undo." },
       { id: 'curators', h: 'Curators', b: "A curator's world is a showcase of their favorites, on top of their ordinary lists: cards with their own headings — <i>best time</i>, <i>what to order</i>, <i>where to sit</i> — a city card they keep updating, and <i>latest experiences</i>. Follow a curator to see what's new from them first. Browse their places and trips as they see them — read-only. Curators are invited by MyPickz or apply from their account; the badge means a space, not a rating." },
       { id: 'community', h: 'Community', b: "Other users' public lists and trips, by city — and who saved what. Filter by category and sub-category; open a list and save a place to your own — it keeps its source. Your list is private until you make it public; sharing by name with one person stays between you two." },
@@ -7608,7 +7635,7 @@ const HELP_CONTENT = { // أ-١٢-٢ (نص المالك v2 المعتمد ١٦ �
       everywhere: '<b>تمييز</b> لما تحب · <b>حفظ</b> لمكان أو رحلة إلى عالمك · <b>تصدير</b> بطاقةً أو رسالة · <b>مشاركة</b> قائمة أو رحلة أو منتقٍ — علنًا أو مع شخص بعينه بالاسم.',
       start: '<b>ابدأ بسرعة:</b> أنشئ حسابك، أضف مدينة، ثم الصق أول رابط — أو استورد قوائمك المحفوظة بخرائط جوجل بملف واحد.' },
     sections: [
-      { id: 'places', h: 'الأماكن', b: 'كل مكان بمدينة واحدة وفرعي واحد (الشجرة لنا: مقاهٍ · وجبات · مطابخ · تسوّق · حدائق · ساحات · واجهات بحرية · معالم · عائلة · إقامة · تنقل). أضف مكانًا من رابط الخرائط: يُملأ الاسم والمنطقة، ويُقترح التصنيف، ويُوضع الدبوس لك — صحّحه بسحبة. وإن فشل الحفظ (بلا اتصال) تسألك ورقة Retry أو Discard؛ والتعديل الذي تُبقيه يظهر <b>Unsaved</b> بجانب My places حتى يُحفظ (r100-أ). الحفظ يكتب التصنيفات التي مسستها فقط ويُبقي ما أضافه جهاز آخر. قائمتك تعرض الأقسام التي لك فيها محتوى بعدّاداتها. صفِّ بالتصنيف ثم الفرعي. بدّل العرض: ☰ قائمة · 🗺 خريطة؛ و«📍 Nearby» (بجوار Day plan) يرتّب أماكن المدينة بالبعد المستقيم عن موضعك — ≤ 1 km · ≤ 3 km · Any — بزر <i>Go</i> يفتح تطبيق الملاحة الذي اخترته. موقعك يُطلب عند النقر ولا يُخزَّن.<br><b>إضافة مكان (r93):</b> النافذة تبدأ بـ<b>رابط Google Maps</b> — الصق ما شاركته الخرائط (أو اضغط 📋 Paste) فيُملأ الاسم والحي؛ ثم <b>Plus code</b> (من تحت العنوان في الخرائط: دبوس دقيق، والحي يُقرأ منه)، ثم الاسم، ثم التصنيف مع <i>Fine dining · ⭐ Top place · Outside the city</i>. <b>Outside the city</b> يسِم بلدة مجاورة مضمومة تحت هذه المدينة؛ وحين يكون في المدينة بلدات يظهر صف <b>Places outside …: Estepona · N</b> فوق التصنيفات — اضغط البلدة لعرض أماكنها وحدها (قائمةً وخريطة)، واضغطها ثانيةً للمدينة كلها؛ وشريحة البلدة على البطاقة تفتحه أيضًا. <b>⚙</b> آخر الصف يدير المدينة: <i>Merge into another city</i> · <i>Split out a town</i> · نقل مكان واحد من Edit · <i>🗑 بجانب البلدة</i> (r97: يحذف البلدة المضمومة بأماكنها وتبقى بقية المدينة) · <i>Undo</i>. <b>المكرَّر (r97):</b> الأماكن التي لديك مرتين صفٌّ مطوي <i>▸ Duplicates · N</i> في الصندوق فوق القائمة — <i>Same Google place</i> أو <i>Same spot</i>؛ اضغط الاسم لفتح بطاقته ثم <i>Keep this</i> على ما تُبقيه (والبقية تُدمج فيه؛ وUndo على الصف). <b>موقع واحد مكان واحد (r96):</b> حفظ مكان أو تثبيته في موقع لديك أصلًا يسأل <i>Keep both · Keep mine · Replace mine</i>؛ وفي الدفعة تُحجز هذه الصفوف مع <i>Keep both · Drop this row</i>. <b>الحي (r96):</b> يُقرأ من الدبوس بقاعدة واحدة لكل المسارات (باريس → 7e arr. · فيينا → المقاطعة · القرية قبل النجع، ولا المدينة ولا الكانتون أبدًا)؛ وبعد هذا التحديث يظهر مرة واحدة شريط <i>Re-read N pins</i> يحدّث أحياء ما لديك. ومع شريحة بلدة مفعّلة يعرض الصندوق فوق القائمة (بلا تصنيف / تصنيف قديم) تلك البلدة وحدها، والشريحة تقول كم منها في الصندوق.' },
+      { id: 'places', h: 'الأماكن', b: 'كل مكان بمدينة واحدة وفرعي واحد (الشجرة لنا: مقاهٍ · وجبات · مطابخ · تسوّق · حدائق · ساحات · واجهات بحرية · معالم · عائلة · إقامة · تنقل). أضف مكانًا من رابط الخرائط: يُملأ الاسم والمنطقة، ويُقترح التصنيف، ويُوضع الدبوس لك — صحّحه بسحبة. وإن فشل الحفظ (بلا اتصال) تسألك ورقة Retry أو Discard؛ والتعديل الذي تُبقيه يظهر <b>Unsaved</b> بجانب My places حتى يُحفظ (r100-أ). وأثناء الحفظ أو الحذف يتعطّل الزر وتُتجاهل النقرة الثانية — نقرة واحدة، تغيير واحد (r100-ب). الحفظ يكتب التصنيفات التي مسستها فقط ويُبقي ما أضافه جهاز آخر. قائمتك تعرض الأقسام التي لك فيها محتوى بعدّاداتها. صفِّ بالتصنيف ثم الفرعي. بدّل العرض: ☰ قائمة · 🗺 خريطة؛ و«📍 Nearby» (بجوار Day plan) يرتّب أماكن المدينة بالبعد المستقيم عن موضعك — ≤ 1 km · ≤ 3 km · Any — بزر <i>Go</i> يفتح تطبيق الملاحة الذي اخترته. موقعك يُطلب عند النقر ولا يُخزَّن.<br><b>إضافة مكان (r93):</b> النافذة تبدأ بـ<b>رابط Google Maps</b> — الصق ما شاركته الخرائط (أو اضغط 📋 Paste) فيُملأ الاسم والحي؛ ثم <b>Plus code</b> (من تحت العنوان في الخرائط: دبوس دقيق، والحي يُقرأ منه)، ثم الاسم، ثم التصنيف مع <i>Fine dining · ⭐ Top place · Outside the city</i>. <b>Outside the city</b> يسِم بلدة مجاورة مضمومة تحت هذه المدينة؛ وحين يكون في المدينة بلدات يظهر صف <b>Places outside …: Estepona · N</b> فوق التصنيفات — اضغط البلدة لعرض أماكنها وحدها (قائمةً وخريطة)، واضغطها ثانيةً للمدينة كلها؛ وشريحة البلدة على البطاقة تفتحه أيضًا. <b>⚙</b> آخر الصف يدير المدينة: <i>Merge into another city</i> · <i>Split out a town</i> · نقل مكان واحد من Edit · <i>🗑 بجانب البلدة</i> (r97: يحذف البلدة المضمومة بأماكنها وتبقى بقية المدينة) · <i>Undo</i>. <b>المكرَّر (r97):</b> الأماكن التي لديك مرتين صفٌّ مطوي <i>▸ Duplicates · N</i> في الصندوق فوق القائمة — <i>Same Google place</i> أو <i>Same spot</i>؛ اضغط الاسم لفتح بطاقته ثم <i>Keep this</i> على ما تُبقيه (والبقية تُدمج فيه؛ وUndo على الصف). <b>موقع واحد مكان واحد (r96):</b> حفظ مكان أو تثبيته في موقع لديك أصلًا يسأل <i>Keep both · Keep mine · Replace mine</i>؛ وفي الدفعة تُحجز هذه الصفوف مع <i>Keep both · Drop this row</i>. <b>الحي (r96):</b> يُقرأ من الدبوس بقاعدة واحدة لكل المسارات (باريس → 7e arr. · فيينا → المقاطعة · القرية قبل النجع، ولا المدينة ولا الكانتون أبدًا)؛ وبعد هذا التحديث يظهر مرة واحدة شريط <i>Re-read N pins</i> يحدّث أحياء ما لديك. ومع شريحة بلدة مفعّلة يعرض الصندوق فوق القائمة (بلا تصنيف / تصنيف قديم) تلك البلدة وحدها، والشريحة تقول كم منها في الصندوق.' },
       { id: 'trips', h: 'الرحلات', b: 'ابنِ الرحلة بخطوتين: المدينة والأيام والأماكن التي تختارها — واختياريًّا الوصول والمغادرة ومكان الإقامة وما تركبه حين يبعد المكان عن المشي — ثم يرسم MyPickz كل يوم بأربع فترات: صباح · ظهيرة · عصر · مساء، مع بدائل حين تتعدد أماكن الصنف نفسه، وصينية «بلا يوم بعد» لما لم يتسع له البرنامج. انقل ما شئت، وبدّل بين هادئ ومتوازن ومكثّف، وتراجع، ثم اعتمد. تفضّل الترتيب بنفسك؟ «Arrange it myself» يبقي كل الأماكن في الصينية وتسألك الشبكة عن كلٍّ بدوره، و«Auto-fill the rest» يضع ما بقي. السهمان ▲ ▼ بجوار رقم المحطة يرتّبانها داخل فترتها؛ وحين تنقل إلى فترة أخرى فيها محطات تختار موضعه في الترتيب؛ و«Repeat on…» يضيف زيارة ثانية للمكان نفسه. اضغط «رحلة» على أي بطاقة مكان فيهبط في خانته الأنسب — أو في الصينية. <b>مسار اليوم</b>: افتح رحلة معتمدة واختر يومًا وحدّد متى تخرج ومتى تريد العودة؛ كل رِجل تعرض مسافتها التقريبية ووسيلتها (مشي · مترو ومواصلات · سيارة — الافتراض من المسافة)، و«ملاحة» يفتح تطبيقك بالوضع نفسه. اكتب الدقائق التي يعرضها تطبيقك — MyPickz لا يقدّرها أبدًا — فتتبعها أوقات اليوم؛ رِجل بلا دقائق تُبقي اليوم «غير مكتمل»، والعودة بعد الموعد تُعلَّم.<br><b>خطة اليوم (Day plan)</b> في تبويب الأماكن بجوار Nearby: خطة يوم واحد تعيش في الأماكن لا في My trips. نوعان — <b>In the city</b> (أماكنك بالإيقاع المعتاد) و<b>Day trip</b> (مسار خطّي خارج المدينة: قرى · قمم · بحيرات · محطات — محطات تكتبها أو تختارها من My places، ولكل رِجل وسيلتها: قطار · مركب · تلفريك · قطار جبلي · باص · مشي · سيارة — وملاحظة، ومحطة اختيارية، ووقت مثبَّت). سمِّها بـ<b>Trip name</b>، وافتحها من <i>Day plan ▸ Saved</i>، و<b>⧉ Copy into a trip</b> ينسخ اليوم إلى إحدى رحلاتك يومًا جديدًا أو بدل يوم، مع Undo.' },
       { id: 'curators', h: 'المنتقون', b: 'عالم المنتقي مساحة عرض لمفضلاته فوق قوائمه العادية: بطاقات بعناوينه — أفضل وقت · ماذا تطلب · أين تجلس — وبطاقة مدينة يحدّثها، وآخر التجارب. تابع منتقيًا ليصلك جديده أولًا. تصفّح أماكنه ورحلاته كما يراها — للعرض فقط. المنتقون يُدعون من MyPickz أو يطلبون من حسابهم؛ الشارة مساحة لا تقييم.' },
       { id: 'community', h: 'المجتمع', b: 'قوائم المستخدمين الآخرين ورحلاتهم العامة بالمدينة — ومن حفظ ماذا. صفِّ بالتصنيف والفرعي؛ افتح قائمة واحفظ مكانًا إلى قائمتك — يحتفظ بمصدره. قائمتك خاصة حتى تجعلها عامة؛ والمشاركة بالاسم مع شخص تبقى بينكما.' },
@@ -9090,7 +9117,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-window.__mpBuild = 'M2-ID-r100';
+window.__mpBuild = 'M2-ID-r101';
 /* د-٦: ملخص الشبكة سطرًا واحدًا مثبَّتًا: شهادة App Check · أول قراءة · الدخول (وتكراره) · الأخطاء · آخر خطوة بطيئة */
 let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '', sort: '', save: '' };
 /* هـ-٧: السطر الأصفر يحمل ساعته «t=52s» (تتقدم كل ثانية — إن توقفت فالخيط الرئيسي متجمد لا الشبكة) · «BLOCKED 3.2s ×1» حين يتأخر نبض الثانية (شفرة مشغولة) · نتيجة مسبارَي الشبكة حين ينتظر هدف ٨ ثوانٍ: نفس الأصل (manifest.json) وخادم Firestore بـREST (settings/app الذي تقرأه القواعد للجميع) */
@@ -9164,7 +9191,7 @@ function __fsHandle(t){
 /* د-٤: نسخة الاختبار تسجّل الأخطاء غير الملتقَطة في لوحة TIMING نفسها (الرسالة والسطر) — ليُقرأ السبب من الهاتف بلا وحدة تحكم */
 window.addEventListener('error', function(e){ try{ logTiming('[ERR] ' + (e.message || 'error') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?')); }catch(_){} });
 window.addEventListener('unhandledrejection', function(e){ try{ const r = e.reason; logTiming('[ERR] rejection: ' + ((r && (r.code || r.message)) || String(r)).slice(0, 160)); }catch(_){} }); /* ب-٢-٢-أ٢: تذييل الدرج يعرض رقم البناء */
-logTiming('BUILD: ' + window.__mpBuild + ' (r100a - honest save: Not saved sheet with Retry or Discard, Unsaved tag, merge by id before writing, only changed categories written)'); /* r93: السطر يُشتق من __mpBuild — كان نصًّا يدويًّا توقّف عند r88 (ملاحظة المالك ٢٩ أكتوبر ١٢:١٣) */
+logTiming('BUILD: ' + window.__mpBuild + ' (r100b - one tap one change: busy guard per action, delete by identity, builder opens once; r100a honest save)'); /* r93: السطر يُشتق من __mpBuild — كان نصًّا يدويًّا توقّف عند r88 (ملاحظة المالك ٢٩ أكتوبر ١٢:١٣) */
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
@@ -9214,5 +9241,5 @@ logTiming('Script started (t=0 reference)');
 })();
 </script>
 </body>
-<!-- MyPickz build · profile=test · src=706b0ff6 · parts=31 · built from src/ by scripts/build.js — do not edit this file by hand -->
+<!-- MyPickz build · profile=test · src=63bf5396 · parts=31 · built from src/ by scripts/build.js — do not edit this file by hand -->
 </html>
