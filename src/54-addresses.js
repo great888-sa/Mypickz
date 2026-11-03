@@ -409,7 +409,7 @@ async function doSignUp(){
     errEl.textContent = 'Username: 3–24 letters, numbers, _ or - only';  // ر٦٣: قيد الأحرف — يُغلق باب الحقن من جذره
     return;
   }
-  if (!email || !pass || pass.length < 8){
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !pass || pass.length < 8){ /* r98 (ما كشفته محطة doSignUp): الرسالة كانت تقول «valid email» ولا تفحص الشكل — فيصل الخطأ من المزوّد بلا رسالة واضحة */
     errEl.textContent = 'Enter a valid email and a password of 8+ characters';
     return;
   }
