@@ -308,6 +308,15 @@ const KNOWN_UNSTYLED = [];                     // ر43: أُغلق (قاعدة f
 const KNOWN_STRUCT_IN_IDENTITY = [];          // ر43: أُغلق (الحدّان نُقلا إلى كتلة البنية)
 const KNOWN_EMPTY_RULES = [];                  // ر43: أُغلق (القاعدتان الفارغتان حُذفتا)
 const KNOWN_DEAD = ['requestReauth'];          // ر42: مبنية عمدًا قبل موعدها (تأكيد الهوية — تُستدعى بدفعتي كلمة المرور والحذف المتتالي) · r78: باني شريحة «قريبًا» يبقى بلا مستهلك بعد أن صار مسار اليوم حقيقيًّا (الحارس §10 يشترط وجوده؛ القريب مني في الدفعة ج قد يستعمله)
+// ---------- §34 (r98): القائمة المعتمدة لوسوم Soon — تُعرَّف هنا لأن الحرّاس يُستدعون قبل ذيل الملف
+const KNOWN_SOON = [ /* النص الظاهر → المرحلة التي تُزيله (الخطة §٢) */
+  { re: /Available when Google sign-in arrives/, phase: 'هـ · Continue with Google' },
+  { re: /App card &amp; home-screen icon<\/span><span class="soon">المرحلة ب/, phase: 'ب · بطاقة التطبيق وأيقونة الشاشة' },
+  { re: /from Google Maps, Share → MyPickz directly <span class="soon-tag">Soon/, phase: 'ب · ت٨ share_target' },
+  { re: /soonChip\('Open now', 'Soon'/, phase: 'بلا موعد · لا ساعات عمل مخزَّنة' },
+  { re: /Arrives with stage هـ <span class="soon-tag">هـ|Continue with Google<\/span><span class="soon">هـ/, phase: 'هـ · Continue with Google (الدرج · نافذة الحساب)' },
+  { re: /على أندرويد:<\/b> من خرائط جوجل، مشاركة ← MyPickz مباشرة <span class="soon-tag">قريبًا/, phase: 'ب · ت٨ share_target (العربية)' },
+];
 const KNOWN_NO_OUTLET = ['stats_cards']; // ز-١-ج-٢ (الوثيقة الثامنة v1.17): الباقي بلا مخرج stats_cards وحده — ما فُتح مخرجه خرج من القائمة // r72p: مخارجها فُتحت بنسخة الاختبار (تحذير «opened» متوقع) — تُحذف من القائمة عند ترقية الإنتاج، لأن الفحص يشمل index.html القديم // M4.25 (١٧ سبتمبر): الخمس الجديدة مسجَّلة بوثيقة القدرات v1.14 قبل مخرجها (r72m · ر٧٢-ب · لوحة الإدارة) · نشرة التنظيف (٤ سبتمبر): كتلة favorites حُذفت من القواعد — خرجت من القائمة (الثامنة ج-١-ج أُغلق) // ر٥٢ (٣ سبتمبر): قدرات ٣٫٨ الأربع (listBookmarks · tripSaves · bookmarkCount · saveCount) فُتح مخرجها بدفعة كود الأفعال — أزيلت بمرآة الثامنة v1.4 // الوثيقة الدائمة الثامنة — قدرات بُنيت قبل موعدها
 const CAP_COLORS_OUTSIDE_IDENTITY = { [TEST]: 139, [PROD]: 149 }; // ر42 = ١٤٩ (١٤ صريحًا · ١٣٥ متغيرًا) · ر43 = ١٤٠ · ر50 = ١٣٩ (سطر الخطأ صار صنفًا بالهوية) · سقف الإنتاج يُخفَّض عند ترقيته · يُخفَّض ولا يُرفع
 const CONTROL_CLASSES = ['btn', 'chip', 'act', 'actn', 'cta', 'csel', 'pl-src', 'mp-tab', 'dr-item', 'acc-item', 'switch-btn', 'pl-actbtn', 'addr-chip', 'pl-catpick', 'city-tab', 'area-chip', 'hcard', 'remove-btn', 'bmk-btn', 'reorder-btn', 'add-place-btn', 'quick-nav-btn', 'action-btn', 'status-toggle', 'mp-burger', 'mp-idchip', 'pw-eye', 'show-more-btn', 'pclose', 'prow', 'addmini'];
@@ -660,6 +669,8 @@ function finish(){
   sortRedLinesGuard();
   undoRedLinesGuard();
   planTruthGuard();
+  handlerCoverageGuard();
+  soonGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
@@ -902,4 +913,27 @@ function sortRedLinesGuard(){
   check(/async function tkRemoveBanned\(\)[^\n]*const ok = await mpConfirm\([^\n]*if \(!ok\) return;/.test(src) && (run.match(/\.splice\(/g) || []).length === (run.match(/\.places\.push\(/g) || []).length, T + 'removal of guideline-breaking places goes through a confirmation sheet; in tkSortRun every splice is a move (paired with a push) — nothing is deleted');
   check(/const TK_CAT_BANNED = \/[^\n]*(bar|nightlife_venue|dance_club|casino|hookah_bar|adult_entertainment_venue)[^\n]*\//.test(src) && /if \(!c \|\| tkCatBanned\(c\) \|\| TK_CAT_BOX\.test\(c\)\) return null;/.test(src), T + 'banned categories (content guidelines §1) and box-only categories never map to a category of ours');
   check((src.match(/liveCountOf\(cats\)/g) || []).length >= 4 && /rep\.err = 'count mismatch — nothing saved'/.test(src), T + 'count guard before every save in the sort part (sort · confirm all · remove)');
+}
+
+// ---------- §33 (r98 · ق١١-٠٢-٠١ — «هل تختبر كل زر؟»): كل معالج واجهة في src/ (onclick · onchange · oninput) له محطة في الرحلة — الحارس يعدّ ويقارن؛ زر جديد بلا محطة يُحمرّ
+function handlerCoverageGuard(){
+  const T = '§33 every handler has a station (r98): ';
+  const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts; const names = new Set();
+  const SKIP = new Set(['document', 'event', 'this']); /* تعبيرات مضمَّنة لا دوال: event.stopPropagation() · this.classList … */
+  parts.forEach(function(p){ const src = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); const re = /on(?:click|change|input)=\\?"([A-Za-z_$][\w$]*)/g; let m; while ((m = re.exec(src))){ if (!SKIP.has(m[1])) names.add(m[1]); } });
+  const journey = fs.readFileSync(path.join(ROOT, 'tests', 'journey.js'), 'utf8');
+  const missing = [...names].filter(function(n){ return !new RegExp('\\b' + n.replace(/\$/g, '\\$') + '\\b').test(journey); });
+  check(names.size >= 330, T + 'handler inventory read from src/ (' + names.size + ')');
+  check(missing.length === 0, T + 'every handler is referenced by a station (' + (names.size - missing.length) + '/' + names.size + ')', 'no station: ' + missing.join(' · '));
+}
+
+// ---------- §34 (r98 · ق١١-٠٢-٠١ — الكنس يُستهلك بالاختبار): لا وسم Soon إلا بمرحلة مسمّاة في القائمة المعتمدة — وسم جديد أو متقادم يُحمرّ
+function soonGuard(){
+  const T = '§34 every Soon names its phase (r98): ';
+  const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts; let all = '';
+  parts.forEach(function(p){ all += fs.readFileSync(path.join(ROOT, 'src', p), 'utf8') + '\n'; });
+  const hits = []; const re = /[^\n]{0,80}(soon-tag|class="soon"|soonChip\(|showSoon\()[^\n]{0,80}/g; let m; while ((m = re.exec(all))){ hits.push(m[0]); }
+  const unknown = hits.filter(function(h){ return !KNOWN_SOON.some(function(k){ return k.re.test(h); }) && !/function soonChip|function showSoon|class="' \+ \(cls \|\| 'chip'\) \+ ' soon"|\.soon-tag\{|\.soon\{|soon-tag\b[^<]*\{|'<span class="soon-tag">' \+ escapeHtml\(step\)/.test(h); });
+  check(hits.length > 0, T + 'Soon markers read from src/ (' + hits.length + ' lines)');
+  check(unknown.length === 0, T + 'every Soon marker is on the approved list with its phase (' + KNOWN_SOON.length + ' approved)', 'unlisted: ' + unknown.map(function(h){ return h.trim().slice(0, 90); }).join(' ‖ '));
 }
