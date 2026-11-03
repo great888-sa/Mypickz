@@ -273,7 +273,8 @@ async function removeAddrCity(cityId){
   if (pendingCity && pendingCity.id === cityId){ pendingCity = null; delete addrData[cityId]; addrCities = addrCities.filter(c => c !== cityId); if (addrCurrentCity === cityId) addrCurrentCity = null; renderAddresses(); return; }
   openCityDeleteChooser(cityId, 'addr');
 }
-async function saveAddr(){
+async function saveAddr(){ return mpBusyRun('addr-save', saveAddrRun, '#addrSaveBtn'); } /* r100-ب: نقرة ثانية أثناء الحفظ تُتجاهل والزر معطَّل */
+async function saveAddrRun(){
   const name = document.getElementById('addrName').value.trim();
   const url = document.getElementById('addrUrl').value.trim();
   const note = document.getElementById('addrNote').value.trim();
@@ -311,12 +312,14 @@ async function saveAddr(){
   await __attempt();
 }
 async function deleteAddr(cityId, catId, index){
-  const entry = addrData[cityId] && addrData[cityId][catId]; if (!entry) return;
+  const entry = addrData[cityId] && addrData[cityId][catId]; if (!entry) return; const __p = (entry.places || [])[index]; if (!__p) return;
+  return mpBusyRun('addr-delete', async function(){ /* r100-ب: ورقة واحدة · الحذف بهوية العنوان لا بالفهرس */
   if (!(await mpConfirm('', { title: '🗑 Delete this address?', ok: 'Delete', danger: true }))) return; /* ب-٢-٢-أ٢ */
-  entry.places.splice(index, 1);
-  let __done = false; const __attempt = async function(){ try{ await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry); showToast('Deleted'); __done = true; return true; }catch(e){ await mpSaveFailed('addresses', e, __attempt, async function(){ addrDiscard(); }); return __done; } }; /* r100-أ: الناتج هو الحقيقة بعد كل المحاولات */
+  const entryNow = (addrData[cityId] && addrData[cityId][catId]) || entry; let __i = entryNow.places.indexOf(__p); if (__i < 0) __i = entryNow.places.findIndex(function(q){ return q && __p.id && q.id === __p.id; }); if (__i < 0){ showToast('Already removed'); renderAddresses(); return; } entryNow.places.splice(__i, 1);
+  let __done = false; const __attempt = async function(){ try{ await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entryNow); showToast('Deleted'); __done = true; return true; }catch(e){ await mpSaveFailed('addresses', e, __attempt, async function(){ addrDiscard(); }); return __done; } }; /* r100-أ: الناتج هو الحقيقة بعد كل المحاولات */
   if (!(await __attempt())){ renderAddresses(); return; }
   await loadAddresses(true);
+  });
 }
 
 // خ١-ب: معاينة شاشات ٩ و١٠ (معطَّلة حتى ٢/ب و٢/د)
