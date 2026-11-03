@@ -6,7 +6,7 @@ const m = JSON.parse(fs.readFileSync(path.join(__dirname, 'fault-matrix.json'), 
 const MODE_AR = { network: 'شبكة مقطوعة', permission: 'إذن مرفوض', partial: 'بيانات ناقصة', bad: 'إدخال فاسد', concurrency: 'تزامن', stale: 'حالة متقادمة' };
 const J_AR = { A: 'A رسالة', B: 'B بيانات', C: 'C رجوع', D: 'D أثر' };
 const byKey = {}; m.cells.forEach(c => { byKey[c.cap + '/' + c.mode] = c; });
-let out = '# MyPickz — مصفوفة الإفشال · v1.1 · r100-أ (ق١١-٠٣-٠٤) — بعد إغلاق العائلتين ١ و٥\n\n';
+let out = '# MyPickz — مصفوفة الإفشال · v1.2 · r100-ب (ق١١-٠٣-٠٥) — بعد إغلاق التزامن (العائلتان ١ و٥ في r100-أ)\n\n';
 out += '**المصدر:** تُولَّد من `tests/fault-matrix.json` الذي تكتبه محطة r99 في المسار عند كل تشغيل (`node tests/fault-matrix-doc.js`) — لا تُحرَّر باليد.\n';
 out += '**البناء:** `' + m.build + '` · **التاريخ:** ' + m.at + ' · **الخلايا:** ' + m.cells.length + ' = ' + m.groups.reduce((a, g) => a + g.caps.length, 0) + ' قدرة × ' + m.modes.length + ' أنماط · **منطبقة:** ' + (m.ok + m.reds) + ' · **خضراء:** ' + m.ok + ' · **حمراء:** ' + m.reds + ' · **غير منطبقة:** ' + m.na + '\n\n';
 out += '## كيف تقرأ\n- **الأنماط:** شبكة مقطوعة (كل نداء يرفض) · إذن مرفوض · بيانات ناقصة (المستند بلا حقوله المركّبة) · إدخال فاسد (فارغ · ٥٠٠٠ حرف · HTML · روابط غير Google) · تزامن (الفعل مرتين معًا) · حالة متقادمة (المخزن تغيّر بعد التحميل — علامة على كل مستند؛ ضياعها = كتابة عمياء).\n';
