@@ -148,6 +148,7 @@ function mpSheet(o){
   if (o.input) setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(_){} }, 30);
   return new Promise(function(res){ __sheetResolve = res; });
 }
+function mpSheetAbort(){ try{ if (__sheetResolve) sheetDone(null); }catch(_){} } /* r100-ب: ورقة معلّقة تُحسم بـnull (الخروج) — فلا يبقى مفتاح انشغال محجوزًا خلف ورقة لن تُجاب */
 function sheetDone(v){
   const r = __sheetResolve; __sheetResolve = null;
   const out = (v === 'ok' && __sheetHasInput) ? document.getElementById('sheetInput').value : v;
