@@ -309,6 +309,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
 .mp-idchip .sus{font-size:10px; font-weight:700; white-space:nowrap;}
 .fav{font-size:13px; line-height:1;}
 .errline{font-size:12px; min-height:16px; margin-top:6px;}
+.lencount{font-size:11.5px; font-weight:400; margin:4px 0 0; min-height:0;} .lencount.over{font-weight:700;} .lencount:empty{display:none;} /* r100-ج */
 .mp-empty .cta,.mp-empty .actn{display:inline-flex; width:auto; margin:8px 4px 0; font-size:12px; padding:8px 14px;}
 .psearch{width:100%; border:1px solid; border-radius:9px; padding:7px 10px; font-size:12px; margin:0 0 6px; font-family:inherit;}
 #activeTripBar.show{display:block;}
@@ -511,7 +512,8 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
   .mp-idchip.suspended .mini-av{box-shadow:0 0 0 2px var(--danger-night);}
   .mp-idchip .sus{color:var(--danger-night);}
   .fav{color:var(--ink-faint);}
-  .errline{color:var(--danger);}
+  .errline{color:var(--danger);} .modal.night .errline,.modal.night .pl-sub.errline{color:#ffb4a2;} /* r100-د: خطأ داخل النافذة الليلية بلون مقروء (كان inline) */
+  .lencount{color:var(--night-4);} .lencount.over{color:var(--danger);} .modal-input.overlimit{border-color:var(--danger);} /* r100-ج */
   .fav.on{color:var(--danger);}
   .psearch{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
   .curhead > .pn, .curhead > div:not(.row) .pn{color:var(--on-night);} /* ر٥٤: استثناء صفوف الأماكن — المحدد الجامح كان يمحو أسماءها (تباين ١٫٠٦) */
@@ -1229,7 +1231,7 @@ select.modal-input{-webkit-appearance:none; appearance:none;}
       <div class="grip"></div>
       <h4 id="sheetTitle"></h4>
       <p class="sheet-txt" id="sheetText"></p>
-      <input class="modal-input" id="sheetInput" type="text" maxlength="60" autocomplete="off" onkeydown="sheetKey(event)">
+      <input class="modal-input" id="sheetInput" type="text" autocomplete="off" onkeydown="sheetKey(event)">
       <div class="sheet-alts" id="sheetAlts"><button type="button" class="btn btn-ghost" id="sheetAlt" onclick="sheetDone('alt')">·</button><button type="button" class="btn btn-ghost" id="sheetAlt2" onclick="sheetDone('alt2')">·</button></div><!-- r75c: بديل ثانٍ اختياري (حذف المدينة: الوجه الآخر حين له محتوى) · r75d-٢: البديلان بصف واحد -->
       <div class="sheet-row"><button type="button" class="btn btn-ghost sheet-cancel" id="sheetCancel" onclick="sheetDone(null)">Cancel</button><button type="button" class="btn btn-brass" id="sheetOk" onclick="sheetDone('ok')">OK</button></div><!-- ملاحظة المالك ١٠-١٠: Cancel بجوار الفعل في صف واحد -->
     </div>
@@ -2465,7 +2467,7 @@ function hashUrl(str){
 async function togglePlaceBookmark(url, name, category, cityId, area, ownerUid, mapsUrl){
   if (!currentUser){ openAuthModal(); return; }
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
-  if (!url) return;
+  if (!url || !cityId || !(/^(id|oid):./.test(url) || isGoogleMapsUrl(url))) return; /* r100-ج: المفتاح id:/oid: أو رابط Google ومدينة؛ ناقص أو غريب (javascript:) → لا كتابة — الاسم والتصنيف قد يغيبان في مفكرة قديمة فلا يُشترطان */
   const pid = hashUrl(url);
   const map = placeBmMap();
   const was = !!map[pid];
@@ -2483,17 +2485,18 @@ async function togglePlaceBookmark(url, name, category, cityId, area, ownerUid, 
   if (currentTab === 'Curators') renderCuratorsBody(); // r72r-1: حالة المفكرة تتحدث فورًا بصفحة المنتقي
   try{
     await mpData.bookmarks.setPlace(currentUser.uid, pid, was ? null : map[pid]);
-  }catch(e){
+  }catch(e){ mpSwallow(e, 'bookmark'); /* r100-هـ */
     if (was) map[pid] = prev; else delete map[pid];   // ر٦٠: تراجع تفاؤلي — لا حالة شبح
     userListData.placeBookmarks = map;
      if (currentTab === 'Places') renderPlacesBody();
-    showToast('Could not update bookmark — ' + ((e && (e.code || e.message)) || 'unknown')); return;
+    mpErrToast('Could not update bookmark', e); return;
   }
   if (was) showUndoToast('Removed from your bookmarks', function(){ togglePlaceBookmark(url, name, category, cityId, area, ownerUid, mapsUrl); });
 }
 // مفكرة القائمة — على قائمة مدينة لشخص بعدّاد (المبدأ التاسع) — سجل + عدّاد بدفعة ذرّية واحدة (قواعد ٣٫٨)
 async function toggleListBookmark(ownerUid, cityId){
   if (!currentUser){ openAuthModal(); return; }
+  if (!ownerUid || !cityId) return; /* r100-ج */
   if (ownerUid === currentUser.uid){ showToast('This is your list — bookmarks count others, not you'); return; } // ر٦٠: المبدأ التاسع بالواجهة كما بالقواعد
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   await ensureListBookmarks();
@@ -2512,11 +2515,11 @@ async function toggleListBookmark(ownerUid, cityId){
     await mpData.bookmarks.toggleList(currentUser.uid, ownerUid, cityId, on);
     logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → OK (record+counter+mirror written)'); // ر٦٩ن: تشخيص ميداني
   }catch(e){
-    logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن
+    mpSwallow(e, 'bookmark-list'); logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن · r100-هـ
     if (on) delete listBookmarksMap[listId]; else listBookmarksMap[listId] = { listId: listId, ownerUid: ownerUid, cityId: cityId };
     if (c) c.bookmarkCount = Math.max(0, (c.bookmarkCount || 0) + (on ? -1 : 1));
     renderCommunityModal();
-    showToast('Could not update bookmark — ' + ((e && (e.code || e.message)) || 'unknown')); return;
+    mpErrToast('Could not update bookmark', e); return;
   }
   renderCommunityModal(); // ر٦٩ط: العدّاد من الخادم بعد اكتمال الكتابة (كان يُقرأ قبلها فيبدو غير مستقر)
   if (!on) showUndoToast('Removed from your bookmarks', function(){ toggleListBookmark(ownerUid, cityId); });
@@ -2537,6 +2540,22 @@ async function mpSaveFailed(k, e, retry, discard){ /* يعيد 'retry' | 'discar
   if (v === 'ok' && canRetry){ await retry(); return 'retry'; }
   mpUnsavedSet(k, true); return 'keep';
 }
+/* ═══ r100-ج (ق١١-٠٣-٠٦): حدود الطول — عدّاد يظهر عند الاقتراب (آخر ١٠٪) ورفض قبل الحفظ بسطر «N / limit characters — shorten to save»؛ لا maxlength (يقتطع اللصق صامتًا) ═══ */
+const MP_LIMITS = { name: 120, area: 80, note: 2000, pick: 200, picks: 20, report: 200, request: 300, nickname: 24, phone: 40, tripName: 80, stay: 120, tagline: 40, bio: 200, contact: 300, impression: 300, stopName: 120, stopAbout: 500, legNote: 200, sheet: 60 };
+function mpLenLine(el){ let c = el.nextElementSibling; if (!(c && c.classList && c.classList.contains('lencount'))){ c = document.createElement('div'); c.className = 'lencount'; el.insertAdjacentElement('afterend', c); } return c; }
+function mpLenShow(el, limit, atSave, capMode){ const n = String(el.value || '').length; const c = mpLenLine(el); const over = n > limit; const near = n >= Math.ceil(limit * 0.9);
+  if (!over && !near){ c.textContent = ''; c.className = 'lencount'; el.classList.remove('overlimit'); return true; }
+  c.textContent = n.toLocaleString('en') + ' / ' + limit.toLocaleString('en') + ' characters' + (over ? (capMode ? ' — only the first ' + limit + ' are kept' : ' — shorten to save') : ''); c.className = 'lencount' + (over ? ' over' : ''); el.classList.toggle('overlimit', over);
+  if (over && atSave){ const ae = document.activeElement; if (!(ae && ae.classList && ae.classList.contains('overlimit'))){ try{ el.focus(); el.scrollIntoView({ block: 'center' }); }catch(_){} } } return !over; } /* capMode: خانة تُحفظ تلقائيًا بسقف صلب — الرسالة تصدق؛ التركيز على أول خانة متجاوزة فقط */
+function mpLenWatch(id, limit){ const el = document.getElementById(id); if (!el) return; if (el.__lenLimit !== limit){ el.__lenLimit = limit; el.addEventListener('input', function(){ mpLenShow(el, limit, false); }); } mpLenShow(el, limit, false); }
+function mpLenOk(id, limit){ const el = document.getElementById(id); return el ? mpLenShow(el, limit, true) : true; } /* عند الحفظ: false = تجاوز، والسطر ظاهر والخانة مميّزة */
+function mpLinesShow(el, maxLines, maxPerLine, atSave){ const lines = String(el.value || '').split('\n'); const c = mpLenLine(el); const long = lines.findIndex(function(l){ return l.length > maxPerLine; }); const nLines = lines.filter(function(l){ return l.trim(); }).length; let msg = '';
+  if (nLines > maxLines) msg = nLines + ' / ' + maxLines + ' lines — shorten to save'; else if (long >= 0) msg = 'Line ' + (long + 1) + ' is ' + lines[long].length + ' characters — max ' + maxPerLine;
+  c.textContent = msg; c.className = 'lencount' + (msg ? ' over' : ''); el.classList.toggle('overlimit', !!msg);
+  if (msg && atSave){ const ae = document.activeElement; if (!(ae && ae.classList && ae.classList.contains('overlimit'))){ try{ el.focus(); el.scrollIntoView({ block: 'center' }); }catch(_){} } } return !msg; }
+function mpLinesWatch(id, maxLines, maxPerLine){ const el = document.getElementById(id); if (!el) return; if (el.__linesLimit !== maxLines){ el.__linesLimit = maxLines; el.addEventListener('input', function(){ mpLinesShow(el, maxLines, maxPerLine, false); }); } mpLinesShow(el, maxLines, maxPerLine, false); }
+function mpLinesOk(id, maxLines, maxPerLine){ const el = document.getElementById(id); return el ? mpLinesShow(el, maxLines, maxPerLine, true) : true; }
+function mpStripTags(s){ return String(s || '').replace(/<[^>]*>/g, ''); } /* الأسماء نص لا وسوم */
 /* ═══ r100-ب (ق١١-٠٣-٠٥): حارس الانشغال بالمفتاح — النقرة الثانية أثناء الحفظ تُتجاهل، والزر المعني يتعطّل ويقول «Saving…» إن طال؛ لا قفل عام ═══ */
 const mpBusy = {}; window.__mpBusy = mpBusy;
 async function mpBusyRun(key, fn, btn){ /* يعيد 'busy' إن كان المفتاح مشغولًا، وإلا نتيجة fn — المفتاح يُحرَّر في finally مهما حدث */
@@ -2547,6 +2566,27 @@ async function mpBusyRun(key, fn, btn){ /* يعيد 'busy' إن كان المف�
   try{ return await fn(); }
   finally{ clearTimeout(slow); delete mpBusy[key]; els.forEach(function(e, i){ e.innerHTML = labels[i]; e.disabled = false; }); }
 }
+/* ═══ r100-د (ق١١-٠٣-٠٧): رسالة مفهومة بدل الرمز الخام · قراءة تفشل = toast + أثر + ما على الشاشة يبقى ═══ */
+const MP_QUOTA_MSG = 'MyPickz is busy today — back at 11:00 Riyadh'; /* Spark: الحصة تعود منتصف الليل بتوقيت المحيط الهادئ = ١١:٠٠ الرياض شتاءً و١٠:٠٠ صيفًا (PDT) */
+function mpQuotaMsg(){ let pdt = false; try{ pdt = /PDT/.test(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', timeZoneName: 'short' }).format(new Date())); }catch(_){} return pdt ? MP_QUOTA_MSG.replace('11:00', '10:00') : MP_QUOTA_MSG; }
+function mpErrText(e){ const c = String((e && e.code) || '').replace(/^firestore\//, '').replace(/^auth\//, ''); const m = String((e && e.message) || '');
+  if (c === 'unavailable' || c === 'network-request-failed' || /offline|network/i.test(m)) return 'check your connection';
+  if (c === 'permission-denied' || c === 'unauthenticated') return "you don't have access";
+  if (c === 'resource-exhausted') return mpQuotaMsg();
+  if (c === 'deadline-exceeded' || c === 'aborted' || c === 'cancelled') return 'it took too long — try again';
+  if (c === 'not-found') return 'it no longer exists';
+  if (c === 'failed-precondition') return 'the app needs a refresh — reload the page';
+  if (c === 'too-many-requests') return 'too many attempts — wait a few minutes';
+  if (c === 'invalid-argument') return 'it is too large to save';
+  if (c === 'already-exists') return 'it already exists';
+  if (c === 'wrong-password' || c === 'invalid-credential' || c === 'user-not-found' || c === 'invalid-login-credentials') return 'the email or password is wrong';
+  if (c === 'email-already-in-use') return 'this email already has an account';
+  if (c === 'weak-password') return 'the password is too short';
+  if (c === 'invalid-email') return 'the email looks wrong';
+  return 'try again'; }
+let __mpLastToast = { t: '', at: 0 };
+function mpErrToast(prefix, e){ const t = mpErrText(e); const msg = (t.indexOf('MyPickz is busy today') === 0) ? prefix + ' · ' + t : prefix + ' — ' + t; const now = Date.now(); if (__mpLastToast.t === msg && now - __mpLastToast.at < 1500) return; __mpLastToast = { t: msg, at: now }; showToast(msg); } /* الحصة تبقى مع فعلها (المستخدم يعرف ما لم يتم) · الرسالة نفسها لا تتكرر خلال ١٫٥ ث (تحميل مزدوج) */
+function mpReadFailed(e, ctx, what){ mpSwallow(e, ctx); mpErrToast('Could not load ' + what, e); } /* القراءة الفاشلة: أثر + رسالة؛ المستدعي يُبقي ما على الشاشة */
 function mpSwallow(e, ctx){ // ر٦٤: بديل الابتلاع الصامت — يعدّ بعدّاد الأخطاء القائم (Other) ويطبع بوضع التصحيح
   try{ if (typeof mpTrack !== 'undefined' && mpTrack.trapError) mpTrack.trapError('Other'); }catch(_){}
   try{ console.warn('[MyPickz][swallowed]', ctx || '', (e && e.code) || (e && e.message) || e); }catch(_){}
@@ -2560,7 +2600,7 @@ async function toggleTripSelfBookmark(tripId){
   if (was) delete map[tripId]; else map[tripId] = true;
   renderTripsBody();
   try{ await mpData.tripSaves.setSelf(currentUser.uid, tripId, !was); mpTrack.hit('bookmark_add'); }
-  catch(e){ if (was) map[tripId] = true; else delete map[tripId]; renderTripsBody(); showToast('Could not update bookmark — ' + ((e && (e.code || e.message)) || 'unknown')); return; }
+  catch(e){ mpSwallow(e, 'bookmark-trip'); if (was) map[tripId] = true; else delete map[tripId]; renderTripsBody(); mpErrToast('Could not update bookmark', e); return; } /* r100-هـ */
   if (was) showUndoToast('Removed from your bookmarks', function(){ toggleTripSelfBookmark(tripId); });
 }
 function exportOwnTripRow(id){ currentTripId = id; viewingSharedTrip = false; openTripDetail(id).then(function(){ exportTripText(); }).catch(function(){ exportTripText(); }); }
@@ -2613,11 +2653,11 @@ async function toggleTripSave(tripId){
     await mpData.tripSaves.toggle(currentUser.uid, tripId, on);
     logTiming('SAVE trip ' + tripId + ' on=' + on + ' → OK (record+counter+mirror written)'); // ر٦٩ن
   }catch(e){
-    logTiming('SAVE trip ' + tripId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن
+    mpSwallow(e, 'trip-save'); logTiming('SAVE trip ' + tripId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن · r100-هـ
     if (on) delete tripSavesMap[tripId]; else tripSavesMap[tripId] = { tripId: tripId };
     if (typeof viewingUserUid !== 'undefined' && viewingUserUid) renderCommunityModal();
     if (currentTab === 'Trips') renderTripsBody();
-    showToast('Could not update bookmark — ' + ((e && (e.code || e.message)) || 'unknown')); return;
+    mpErrToast('Could not update bookmark', e); return;
   }
   if (currentTab === 'Community') renderCommunityModal(); // العدّاد من الخادم بعد الكتابة
   if (!on) showUndoToast('Removed from your bookmarked trips', function(){ toggleTripSave(tripId); });
@@ -2718,12 +2758,13 @@ async function resolveTripPlaces(trip){
   const plan = tripHasPlan(trip) ? trip.plan : { days: [], tray: [] };
   const all = tripPlanEntries(plan).concat(plan.tray || []); const flat = []; all.forEach(function(e){ flat.push(e); (e.alts || []).forEach(function(a){ flat.push(a); }); });
   const cityIds = {}; tripCityIds(trip).forEach(function(c){ cityIds[c] = true; }); flat.forEach(function(e){ if (e.ref && e.ref.cityId) cityIds[e.ref.cityId] = true; });
-  const myLinksByCity = {}; const isMe = !!(currentUser && trip.ownerId === currentUser.uid);
+  const myLinksByCity = {}; const isMe = !!(currentUser && trip.ownerId === currentUser.uid); let __rErr = null; /* r100-د */
   for (const cid of Object.keys(cityIds)){
-    try{ const d = await mpData.cityLists.get(trip.ownerId, cid); const links = Object.assign({}, (d && d.categories) || {}); if (isMe){ try{ Object.assign(links, await mpData.privatePlaces.get(currentUser.uid, cid)); }catch(e){} } myLinksByCity[cid] = links; }catch(e){ myLinksByCity[cid] = {}; } // ٢٦ أغسطس (٣-ب): الخاصة لصاحبها وحده
+    try{ const d = await mpData.cityLists.get(trip.ownerId, cid); const links = Object.assign({}, (d && d.categories) || {}); if (isMe){ try{ Object.assign(links, await mpData.privatePlaces.get(currentUser.uid, cid)); }catch(e){} } myLinksByCity[cid] = links; }catch(e){ myLinksByCity[cid] = {}; if (isMe || (e && e.code !== 'permission-denied')) __rErr = __rErr || e; } // ٢٦ أغسطس (٣-ب): الخاصة لصاحبها وحده
   }
   const communityLinks = {}; // uid|cityId
   for (const e of flat){ if (e.ref && e.ref.sourceType === 'community' && e.ref.sourceUid){ const k = e.ref.sourceUid + '|' + (e.ref.cityId || trip.cityId); if (communityLinks[k]) continue; try{ const d = await mpData.cityLists.get(e.ref.sourceUid, e.ref.cityId || trip.cityId); communityLinks[k] = (d && d.categories) || {}; }catch(err){ communityLinks[k] = {}; } } }
+  if (__rErr) mpReadFailed(__rErr, 'trip-resolve', 'the places of this trip'); /* r100-د: مرة واحدة — الأماكن تظهر بأسمائها من الخطة بلا تفاصيل؛ رفض الإذن على قوائم الغير صامت بالتصميم (قد تكون خاصة) */
   function resolveRef(e){
     const ref = e.ref || {}; if (ref.sourceType === 'stop') return Object.assign({}, e, { alts: [], _p: null, _available: true }); /* r92: المحطة غير المحفوظة تحمل اسمها وموضعها في الخطة نفسها */ const linksObj = ref.sourceType === 'community' ? (communityLinks[ref.sourceUid + '|' + (ref.cityId || trip.cityId)] || {}) : (myLinksByCity[ref.cityId || trip.cityId] || {});
     const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
@@ -2965,16 +3006,16 @@ let tripSourceFilter = null; // ر٧٢-أ-٢د: مرشِّح مصدر رحلات
 function tripSourceName(t){ const id = t.source && t.source.ownerId; const hit = ((curators || []).find(function(c){ return c.uid === id; }) || (communityUsers || []).find(function(c){ return c.uid === id; })); if (hit && hit.nickname) return hit.nickname; const sn = t.source && t.source.ownerName; return (sn && sn !== 'a member') ? sn : 'a member'; } // ر٧٢-أ-٢و · r72u: اسم الحساب أولًا
 async function openReport(kind, docKey){ // r72p (٤): البلاغ — سبب قصير ← reports (لا على محتواي) · r72t (M4.26 ٦): notes · app
   if (!currentUser){ openAuthModal(); return; }
-  const reason = await openInputModal(kind === 'app' ? 'Report a problem' : 'Report this ' + kind, kind === 'app' ? 'What went wrong? (≤ 200)' : 'What is wrong? (optional, ≤ 200)', '', null, { allowFree: true }); if (reason === null) return;
+  const reason = await openInputModal(kind === 'app' ? 'Report a problem' : 'Report this ' + kind, kind === 'app' ? 'What went wrong? (≤ 200)' : 'What is wrong? (optional, ≤ 200)', '', null, { allowFree: true, maxLen: MP_LIMITS.report }); if (reason === null) return;
   if (kind === 'app' && !String(reason || '').trim()){ showToast('Please describe the problem'); return; }
-  try{ await mpData.reports.create(currentUser.uid, kind, kind === 'app' ? '' : String(docKey).slice(0, 120), String(reason || '').slice(0, 200)); }catch(e){ mpSwallow(e, 'report'); showToast('Could not report · ' + ((e && e.code) || 'error')); return; }
+  try{ await mpData.reports.create(currentUser.uid, kind, kind === 'app' ? '' : String(docKey).slice(0, 120), String(reason || '').slice(0, 200)); }catch(e){ mpSwallow(e, 'report'); mpErrToast('Could not report', e); return; }
   showToast(kind === 'app' ? 'Thanks — we will look into it' : 'Thanks — reported');
 }
 async function removeMyTripCopy(srcTripId){ // r72n (٢): Saved ✓ ← تأكيد ← حذف نسختي (العدّاد على المصدر لا ينقص — بالعقد)
   const c = tripCopyOf(srcTripId); if (!c) return;
   const ok = await openConfirmModal('Remove your copy from My trips?', 'The original stays with its owner. Your edits on the copy are lost.'); if (!ok) return;
-  try{ await mpData.trips.remove(c.id); }catch(e){ mpSwallow(e, 'remove copy'); showToast('Could not remove · ' + ((e && e.code) || 'error')); return; }
-  try{ await mpData.copies.unrecord(currentUser.uid, srcTripId, 'trips'); }catch(e){ mpSwallow(e, 'unrecord'); showToast('Copy removed — counter not updated · ' + ((e && e.code) || 'error')); } // r72t · r72w: الفشل يُرى
+  try{ await mpData.trips.remove(c.id); }catch(e){ mpSwallow(e, 'remove copy'); mpErrToast('Could not remove', e); return; }
+  try{ await mpData.copies.unrecord(currentUser.uid, srcTripId, 'trips'); }catch(e){ mpSwallow(e, 'unrecord'); mpErrToast('Copy removed — counter not updated', e); } // r72t · r72w: الفشل يُرى
   userTrips = userTrips.filter(function(t){ return t.id !== c.id; }); showToast('Copy removed');
   if (HOSTED.Community && currentTab === 'Community') renderCommunityModal(); if (currentTab === 'Trips') renderTripsBody();
 }
@@ -2989,8 +3030,8 @@ async function copyOthersTrip(tripId){ // ر٧٢-أ-٢د (ق٠٩-١٥-٠٥): Sav
   if (!tripHasPlan(src)){ showToast('This trip uses the old format and cannot be saved'); return; }
   const copy = { id: 'trip_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8), title: src.title || '', cityId: src.cityId || null, cityName: src.cityName || '', cities: JSON.parse(JSON.stringify(src.cities || [])), customLabel: src.customLabel || '', public: false, sharedWith: [], sharedWithNames: {},
     plan: tripPlanNormalize(JSON.parse(JSON.stringify(src.plan))), version: src.version || 'balanced', status: 'approved', source: { tripId: src.id, ownerId: src.ownerId, ownerName: ownerName, at: Date.now() } }; // r77: النسخة تحمل الخطة والمدن
-  userTrips.push(copy); try{ await saveTrip(copy); }catch(e){ userTrips = userTrips.filter(function(t){ return t.id !== copy.id; }); mpSwallow(e, 'trip copy'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
-  try{ await mpData.copies.record(currentUser.uid, 'trip', src.id, 'trips'); }catch(e){ mpSwallow(e, 'copy record'); showToast('Could not record · ' + ((e && e.code) || 'error')); } try{ if (src.ownerId && mpIsVerified(src.ownerId)) mpTrack.statsCurator(src.ownerId, 'save'); }catch(_){} /* ب-٢-١: save اليومي للمنتقي (v3.14) */ // r72m (M4.25 ٤) · r72p (١١): الرمز على الشاشة: سجل النسخ + copyCount على المصدر بدفعة واحدة (existsAfter)
+  userTrips.push(copy); try{ await saveTrip(copy); }catch(e){ userTrips = userTrips.filter(function(t){ return t.id !== copy.id; }); mpSwallow(e, 'trip copy'); mpErrToast('Could not save', e); return; }
+  try{ await mpData.copies.record(currentUser.uid, 'trip', src.id, 'trips'); }catch(e){ mpSwallow(e, 'copy record'); mpErrToast('Could not record', e); } try{ if (src.ownerId && mpIsVerified(src.ownerId)) mpTrack.statsCurator(src.ownerId, 'save'); }catch(_){} /* ب-٢-١: save اليومي للمنتقي (v3.14) */ // r72m (M4.25 ٤) · r72p (١١): الرمز على الشاشة: سجل النسخ + copyCount على المصدر بدفعة واحدة (existsAfter)
   showToast('Saved to my trips ✓ — from ' + ownerName); if (HOSTED.Community && currentTab === 'Community') renderCommunityModal();
 }
 async function renderSavedOthersTrips(fromCurators){ // ر٧٢-أ-٢د: رحلاتي المنسوخة بإسناد، مصفّاة بمصدرها (منتقٍ / مجتمع)
@@ -3338,7 +3379,7 @@ let mpShareGroups = []; let mpShareGroupsLoaded = false; let sgView = null; let 
 function sgNorm(list){ return (Array.isArray(list) ? list : []).filter(function(g){ return g && typeof g === 'object' && g.id && g.name; }).slice(0, SG_MAX_GROUPS).map(function(g){ const seen = {}; return { id: String(g.id), name: String(g.name).slice(0, SG_NAME_MAX), members: (Array.isArray(g.members) ? g.members : []).filter(function(m){ return m && m.uid && !seen[m.uid] && (seen[m.uid] = true); }).slice(0, SG_MAX_MEMBERS).map(function(m){ return { uid: String(m.uid), nickname: String(m.nickname || 'user').slice(0, 40) }; }) }; }); }
 function sgLoadFrom(data){ mpShareGroups = sgNorm(data && data.shareGroups); mpShareGroupsLoaded = true; } // تُستدعى بعد قراءة users/{uid} عند الدخول
 async function sgEnsureLoaded(){ if (mpShareGroupsLoaded || !currentUser) return; try{ const d = await mpData.users.get(currentUser.uid); sgLoadFrom(d.exists ? d.data() : {}); }catch(e){ mpShareGroupsLoaded = false; } }
-async function sgSave(){ if (!currentUser) return false; try{ await mpData.users.merge(currentUser.uid, { shareGroups: mpShareGroups }); return true; }catch(e){ showToast('Could not save the group'); return false; } }
+async function sgSave(){ if (!currentUser) return false; try{ await mpData.users.merge(currentUser.uid, { shareGroups: mpShareGroups }); return true; }catch(e){ mpSwallow(e, 'share-group-save'); mpErrToast('Could not save the group', e); return false; } /* r100-هـ */ }
 function sgById(id){ return mpShareGroups.find(function(g){ return g.id === id; }) || null; }
 function sgTarget(){ if (shareModalKind === 'trip') return userTrips.find(function(t){ return t.id === currentTripId; }) || null; return myCityListData || null; }
 async function sgSaveTarget(target){ if (shareModalKind === 'trip') await saveTrip(target); else await saveMyCityList(); }
@@ -3368,7 +3409,7 @@ async function sgRename(id){ const g = sgById(id); if (!g) return; const name = 
 async function sgDelete(id){ const g = sgById(id); if (!g) return; if (!(await mpConfirm('Delete the group ' + g.name + '? Nothing already shared changes — only the shortcut goes.', { title: 'Delete group', ok: 'Delete', danger: true }))) return; mpShareGroups = mpShareGroups.filter(function(x){ return x.id !== id; }); sgView = null; await sgSave(); sgReopen(); }
 async function sgRemoveMember(id, uid){ const g = sgById(id); if (!g) return; g.members = g.members.filter(function(m){ return m.uid !== uid; }); await sgSave(); sgReopen(); } // لا يمس ما شُورك مع العضو من قبل (اللقطة)
 async function sgAddMember(id){ const g = sgById(id); if (!g) return; if (g.members.length >= SG_MAX_MEMBERS){ showToast('A group holds up to ' + SG_MAX_MEMBERS + ' people'); return; } const name = await openInputModal('Add to ' + g.name + ' (username)', 'Enter their exact username', ''); if (name === null) return; const key = String(name).trim().toLowerCase(); if (!key) return;
-  try{ const doc = await mpData.nicknames.get(key); if (!doc.exists){ showToast('No user found with that username'); return; } const data = doc.data(); if (data.uid === currentUser.uid){ showToast("You can't add yourself"); return; } if (g.members.some(function(m){ return m.uid === data.uid; })){ showToast('Already in this group'); return; } g.members.push({ uid: data.uid, nickname: data.nickname || String(name).trim() }); await sgSave(); sgReopen(); }catch(e){ showToast('Could not verify username'); } }
+  try{ const doc = await mpData.nicknames.get(key); if (!doc.exists){ showToast('No user found with that username'); return; } const data = doc.data(); if (data.uid === currentUser.uid){ showToast("You can't add yourself"); return; } if (g.members.some(function(m){ return m.uid === data.uid; })){ showToast('Already in this group'); return; } g.members.push({ uid: data.uid, nickname: data.nickname || String(name).trim() }); await sgSave(); sgReopen(); }catch(e){ mpSwallow(e, 'share-group'); mpErrToast('Could not verify username', e); } /* r100-هـ */ }
 async function sgShareWith(id){ const g = sgById(id); const target = sgTarget(); if (!g || !target) return; if (!g.members.length){ showToast('This group has no members yet'); sgOpen(id); return; }
   target.sharedWith = target.sharedWith || []; target.sharedWithNames = target.sharedWithNames || {};
   const missing = g.members.filter(function(m){ return m.uid !== currentUser.uid && target.sharedWith.indexOf(m.uid) < 0; });
@@ -3454,7 +3495,7 @@ async function shareTripWithSomeone(){
     await saveTrip(trip); ensureCommunityNick(); /* د-٢ */
     showToast('Shared ✓');
     renderMyTripsModal();
-  }catch(e){ showToast('Could not verify username'); }
+  }catch(e){ mpSwallow(e, 'share-trip'); mpErrToast('Could not verify username', e); } /* r100-هـ */
 }
 async function removeTripShare(uid){
   const trip = userTrips.find(t => t.id === currentTripId);
@@ -3872,7 +3913,7 @@ function mpSheet(o){
   const alt = el('sheetAlt'); alt.style.display = o.alt ? '' : 'none'; alt.textContent = o.alt || '·';
   const alt2 = el('sheetAlt2'); if (alt2){ alt2.style.display = o.alt2 ? '' : 'none'; alt2.textContent = o.alt2 || '·'; } /* r75c: 'alt2' */
   el('sheetCancel').textContent = o.cancel || 'Cancel';
-  const inp = el('sheetInput'); __sheetHasInput = !!o.input; inp.style.display = o.input ? '' : 'none'; inp.value = (o.input && o.input.value) || ''; inp.placeholder = (o.input && o.input.placeholder) || '';
+  const inp = el('sheetInput'); __sheetHasInput = !!o.input; inp.style.display = o.input ? '' : 'none'; inp.value = (o.input && o.input.value) || ''; inp.placeholder = (o.input && o.input.placeholder) || ''; if (o.input) mpLenWatch('sheetInput', MP_LIMITS.sheet); else { const lc = inp.nextElementSibling; if (lc && lc.classList.contains('lencount')) lc.textContent = ''; } /* r100-ج */
   const alts = el('sheetAlts'); if (alts) alts.style.display = (o.alt || o.alt2) ? '' : 'none'; /* r75d-٢: البديلان بصف واحد */
   el('sheetCard').style.transform = ''; el('sheetBackdrop').classList.add('show'); sheetBarsHide(true); /* r75d-٢ (ملاحظة المالك ١٢ أكتوبر): الأشرطة السفلية تختفي ما دامت الورقة مفتوحة — الورقة على حافة الشاشة بلا قياس ولا رفع (بديل sheetLift) */
   if (o.input) setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(_){} }, 30);
@@ -3880,6 +3921,7 @@ function mpSheet(o){
 }
 function mpSheetAbort(){ try{ if (__sheetResolve) sheetDone(null); }catch(_){} } /* r100-ب: ورقة معلّقة تُحسم بـnull (الخروج) — فلا يبقى مفتاح انشغال محجوزًا خلف ورقة لن تُجاب */
 function sheetDone(v){
+  if (v === 'ok' && __sheetHasInput && !mpLenOk('sheetInput', MP_LIMITS.sheet)) return; /* r100-ج: الورقة تبقى حتى يُقصَّر */
   const r = __sheetResolve; __sheetResolve = null;
   const out = (v === 'ok' && __sheetHasInput) ? document.getElementById('sheetInput').value : v;
   document.getElementById('sheetBackdrop').classList.remove('show'); sheetBarsHide(false);
@@ -4163,6 +4205,7 @@ function openAddrModal(cityId, catId, index){
   document.getElementById('addrPhone').value = existing.phone || '';
   document.getElementById('addrError').textContent = '';
   openModalById('addrBackdrop');
+  mpLenWatch('addrName', MP_LIMITS.name); mpLenWatch('addrArea', MP_LIMITS.area); mpLenWatch('addrNote', MP_LIMITS.note); mpLenWatch('addrPhone', MP_LIMITS.phone); /* r100-ج */
 }
 let cityDelCtx = null; // {cityId, from:'addr'|'places'}
 async function openCityDeleteChooser(cityId, from){ /* r75c (البند ١٠): ورقة سفلية بدل النافذة القديمة — العدّادان يُقرآن أولًا (لا يحذف أحد وهو يجهل حجم ما يفقد · قرار المالك ٣٠ أغسطس) ثم الخيارات: هذا الوجه · الوجه الآخر حين له محتوى (قرار ١ سبتمبر) · الحذف الشامل فعلًا أحمر */
@@ -4239,6 +4282,7 @@ async function saveAddrRun(){
   err.textContent = '';
   if (!name){ err.textContent = 'Enter a name'; return; }
   if (!isGoogleMapsUrl(url)){ err.textContent = 'Paste a Google Maps link'; return; }
+  if (!(mpLenOk('addrName', MP_LIMITS.name) & mpLenOk('addrArea', MP_LIMITS.area) & mpLenOk('addrNote', MP_LIMITS.note) & mpLenOk('addrPhone', MP_LIMITS.phone))) return; /* r100-ج */
   const cityId = addrModalCity, catId = addrModalCat;
   if (!cityId){ err.textContent = 'Choose a city'; return; }
   const catsMap = addrData[cityId] || (addrData[cityId] = {});
@@ -4342,7 +4386,7 @@ async function doAccountDelete(){
     delStep(3);
   }catch(e){
     btn.disabled = false; btn.textContent = label;
-    showToast('Deletion stopped: ' + ((e && e.code) || 'error') + ' — nothing else was removed');
+    showToast('Deletion stopped — ' + mpErrText(e) + ' · nothing else was removed'); /* r100-د */
   }
 }
 let delCurStep = 1;
@@ -4386,6 +4430,7 @@ async function doSignUp(){
       return;
     }
   }catch(e){
+    mpSwallow(e, 'sign-up'); /* r100-هـ */
     errEl.textContent = 'Could not verify username — try again';
     return;
   }
@@ -4462,6 +4507,7 @@ async function doSignIn(){
     closeAuthModal(true);
     showToast('Welcome ✓');
   }catch(e){
+    mpSwallow(e, 'sign-in'); /* r100-هـ */
     errEl.textContent = authErrorMessage(e);
   }
 }
@@ -4490,14 +4536,14 @@ async function doForgotPassword(){
     errEl.className = 'errline ok';
     errEl.textContent = 'Reset link sent to your email ✓ Check your inbox (and spam)';
   }catch(e){
+    mpSwallow(e, 'reset'); /* r100-هـ */
     errEl.className = 'errline';
     if ((e.code||'').includes('invalid-email')) errEl.textContent = 'Invalid email format';
     else errEl.textContent = 'Could not send — make sure the email is correct and try again';
   }
 }
 function doSignOut(){
-  mpData.auth.signOut();
-  showToast('Logged out');
+  Promise.resolve().then(function(){ return mpData.auth.signOut(); }).then(function(){ showToast('Logged out'); }).catch(function(e){ mpSwallow(e, 'sign-out'); mpErrToast('Could not sign out', e); }); /* r100-هـ: رفض الخروج لم يعد بلا معالج — أثر ورسالة */
 }
 
 
@@ -4986,6 +5032,7 @@ function plFillModal(pasteMode){
   plPasted = null; const ch = document.getElementById('plCityHint'); if (ch){ ch.style.display = 'none'; ch.innerHTML = ''; ch.dataset.kind = ''; } // أ-١٢-٤
   document.getElementById('plDeleteBtn').style.display = plEdit ? '' : 'none';
   document.getElementById('plPlaceBackdrop').classList.add('show');
+  mpLenWatch('plName', MP_LIMITS.name); mpLenWatch('plArea', MP_LIMITS.area); mpLenWatch('plNote', MP_LIMITS.note); mpLinesWatch('plPicks', MP_LIMITS.picks, MP_LIMITS.pick); /* r100-ج: العدّاد عند الاقتراب · picks يُنظَّف ويُراقَب */
   if (pasteMode && !plEdit) setTimeout(() => { const u = document.getElementById('plUrl'); if (u) u.focus(); }, 60); /* r93-٣: التركيز على خانة الرابط */
 }
 let plModalSec = null;   // r10: القسم المختار بالمرحلة الأولى
@@ -5019,6 +5066,7 @@ function plRenderModalCats(){
 }
 async function plMovePlaceTo(catId){ // ر٧٠ط (N-083): نقل المكان المحرَّر إلى تصنيف آخر فورًا
   if (!plEdit || !catId || catId === plEdit.catId) { plRenderModalCats(); return; }
+  if (!plCatsAll().some(function(c){ return c.id === catId; }) && !isPrivateCategoryId(catId)){ showToast('Pick a category from the list'); plRenderModalCats(); return; } /* r100-ج: التصنيف من الشجرة فقط — لا مستند لتصنيف وهمي */
   const from = userEnsurePlaces(plEdit.catId); const pl = (from.places || [])[plEdit.index]; if (!pl){ plRenderModalCats(); return; }
   from.places.splice(plEdit.index, 1); userEnsurePlaces(catId).places.push(pl); pl.searchKey = placeSearchKey(pl, catId); pl.updatedAt = Date.now(); delete pl.autoCat; /* r86: النقل بيدك يُؤرَّخ (Undo this import يُبقيه) ويمسح وسم الفرز الآلي */
   if (!(await saveMyCityList())) return; /* r100-أ */ const c = plCatsAll().find(function(x){ return x.id === catId; }); showToast('Moved to ' + (c ? c.name : catId) + ' ✓');
@@ -5385,7 +5433,7 @@ async function plResortUnknown(oldId, newId){ // النقل بالعدّ: قبل
   delete myCityListData.categories[oldId]; if (myCityListOldKeys.indexOf(oldId) < 0) myCityListOldKeys.push(oldId);
   const after = Object.keys(myCityListData.categories).reduce(function(a, k){ return a + ((myCityListData.categories[k] || {}).places || []).length; }, 0);
   if (after !== before){ showToast('Count mismatch — nothing saved'); await loadMyCityList(cityListCityId); renderPlacesMine(); return; }
-  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ showToast(src.length + ' place' + (src.length === 1 ? '' : 's') + ' → ' + catLabelOf(newId) + ' ✓'); }catch(e){ mpSwallow(e, 'resort'); showToast('Could not save · ' + ((e && e.code) || 'error')); }
+  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ showToast(src.length + ' place' + (src.length === 1 ? '' : 's') + ' → ' + catLabelOf(newId) + ' ✓'); }catch(e){ mpSwallow(e, 'resort'); mpErrToast('Could not save', e); }
   renderPlacesMine();
 }
 function placeCopyOf(ownerUid, cityId, catId, placeId){ // هل نسخت هذا المكان من قبل؟ (بحث بالذاكرة بقائمتي للمدينة المحمَّلة أو بسجل النسخ المحلي)
@@ -5402,7 +5450,7 @@ async function saveOthersList(ownerUid, cityId){ // ز-١-ب: نسخة القا�
   if (!allCities().find(function(c){ return c.id === cityId; })){ if (!Array.isArray(userListData.customCities)) userListData.customCities = []; if (!userListData.customCities.find(function(c){ return c.id === cityId; })){ userListData.customCities.push({ id: cityId, name: cityName, country: '' }); try{ await saveUserListGeneral(); }catch(e){} } }
   const prevCity = cityListCityId; if (cityListCityId !== cityId){ cityListCityId = cityId; await loadMyCityList(cityId); }
   let n = 0; Object.keys(d.categories).forEach(function(catId){ const e = d.categories[catId]; if (!e || e.active === false) return; const dst = userEnsurePlaces(catId); (e.places || []).forEach(function(src){ if (!src || !(src.name || src.url)) return; if (src.url && (dst.places || []).some(function(q){ return q.url === src.url; })) return; dst.active = true; const copy = { id: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: src.name || 'Place', url: src.url || '', area: src.area || '', picks: Array.isArray(src.picks) ? src.picks.slice(0, 6) : [], note: src.note || '', source: { ownerId: ownerUid, ownerName: ownerName, cityId: cityId, catId: catId, placeId: src.id || hashUrl(src.url || ''), at: Date.now() } }; if (src.geo && typeof src.geo.lat === 'number') copy.geo = { lat: src.geo.lat, lng: src.geo.lng, source: src.geo.source || 'overture' }; if (src.openId) copy.openId = src.openId; dst.places.push(copy); n++; }); });
-  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(e){ mpSwallow(e, 'save list copy'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
+  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(e){ mpSwallow(e, 'save list copy'); mpErrToast('Could not save', e); return; }
   try{ await mpData.copies.record(currentUser.uid, 'list', ownerUid + '_' + cityId, 'userCityLists'); }catch(e){ mpSwallow(e, 'copy record'); }
   myCopiedLists[ownerUid + '_' + cityId] = true; try{ mpTrack.statsList(ownerUid + '_' + cityId, 'copy_from', { daily: true }); if (mpIsVerified(ownerUid)) mpTrack.statsCurator(ownerUid, 'save'); }catch(_){} /* ب-٢-١: كان المفتاح 'copy' (خارج القائمة البيضاء → رُفض صامتًا) · save اليومي للمنتقي (v3.14) */
   showToast('Copied ' + n + ' place' + (n === 1 ? '' : 's') + ' · ' + cityName + ' — with credit to ' + ownerName + ' ✓');
@@ -5436,7 +5484,7 @@ async function saveOthersPlace(ownerUid, cityId, catId, placeId){ // ز-١-ب: �
   const copy = { id: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: src.name || 'Place', url: src.url || '', area: src.area || '', picks: Array.isArray(src.picks) ? src.picks.slice(0, 6) : [], note: src.note || '', source: { ownerId: ownerUid, ownerName: ownerName, cityId: cityId, catId: catId, placeId: placeId, at: Date.now() } };
   if (src.geo && typeof src.geo.lat === 'number') copy.geo = { lat: src.geo.lat, lng: src.geo.lng, source: src.geo.source || 'overture' }; if (src.openId) copy.openId = src.openId;
   dst.places.push(copy);
-  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(e){ mpSwallow(e, 'save copy'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
+  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(e){ mpSwallow(e, 'save copy'); mpErrToast('Could not save', e); return; }
   try{ await mpData.copies.recordOnly(currentUser.uid, 'place', ownerUid + '_' + cityId + ':' + catId + ':' + placeId); }catch(e){ mpSwallow(e, 'copy record'); }
   myCopiedPlaces[ownerUid + ':' + cityId + ':' + catId + ':' + placeId] = true;
   try{ mpTrack.statsList(ownerUid + '_' + cityId, 'copy_from', { daily: true }); if (mpIsVerified(ownerUid)) mpTrack.statsCurator(ownerUid, 'save'); }catch(_){} /* ب-٢-١ (قرار ١٠-٠٩-١١ أ): نسخ مكان يُعدّ على قائمته الأم copy_from — كان يستدعي mpTrack.statsPlace غير الموجودة فلا يكتب شيئًا */
@@ -5498,9 +5546,12 @@ async function savePlPlace(){ return mpBusyRun('place-save', savePlPlaceRun, '#p
 async function savePlPlaceRun(){
   if (currentUserSuspended){ showToast("Your account is suspended — you can't save changes"); return; }
   const name = mpStripBidi(document.getElementById('plName').value).trim(); // ب-٥
+  if (mpStripTags(name) !== name){ showToast("Names can't contain < or > tags"); return; } /* r100-ج: رفض لا تعديل صامت */
   const url = document.getElementById('plUrl').value.trim();
   if (!plModalCat){ showToast('Pick a sub-category first'); try{ catPairToggle('plModal', 'sub'); }catch(_){} return; } /* r94 (ق١٠-٢٩-٠٦): بعد اختيار قسم لمكان بتصنيف قديم يُمسح القديم — فالحفظ يطلب الفرعي ويفتحه (تحرير الحقول بلا مساس بالتصنيف يبقى ممكنًا) */
   if (!name || !url){ showToast('Name and Google Maps link are required'); return; }
+  if (!isGoogleMapsUrl(url)){ showToast('Only Google Maps links are allowed'); return; } /* r100-ج: كان الرابط غير الصالح يُحذف مع المكان كله عند الحفظ */
+  if (!(mpLenOk('plName', MP_LIMITS.name) & mpLenOk('plArea', MP_LIMITS.area) & mpLenOk('plNote', MP_LIMITS.note) & mpLinesOk('plPicks', MP_LIMITS.picks, MP_LIMITS.pick))) return; /* r100-ج: رسالة قبل الحفظ — لا اقتطاع صامت (& لا && كي تُعلَّم كل الخانات المتجاوزة) */
   // عقد المكان الجديد بحقوله الفارغة — الحقول حاضرة دائمًا ولو فارغة
   const place = plEdit ? ((userGetEntry(plEdit.catId).places || [])[plEdit.index] || {}) : {};
   place.id = place.id || ('place_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
@@ -5513,7 +5564,7 @@ async function savePlPlaceRun(){
   plGeoConfirmed = false; if (plGeoResult){ if (plGeoResult.geo){ place.geo = plGeoResult.geo; if (plGeoResult.openId) place.openId = plGeoResult.openId; else delete place.openId; } else if (!__hadPin){ delete place.geo; delete place.openId; } plGeoResult = null; } /* r87-3: Skip على مكان مثبَّت يُبقي دبوسه وهويته — الإزالة لها «Remove pin» وحده */
   place.updatedAt = Date.now(); /* ر٧٣-أب (٢) — قرار المالك: «Latest update places» بختم زمني لكل مكان من الآن */
   place.note = document.getElementById('plNote').value.trim();
-  place.picks = String(document.getElementById('plPicks').value || '').split('\n').map(function(l){ return l.trim(); }).filter(Boolean).slice(0, 12).map(function(n){ return { name: n }; }); // ر٧٠ح: البنية النهائية picks:[{name}]
+  place.picks = String(document.getElementById('plPicks').value || '').split('\n').map(function(l){ return l.trim(); }).filter(Boolean).slice(0, MP_LIMITS.picks).map(function(n){ return { name: n }; }); // ر٧٠ح: البنية النهائية picks:[{name}] · r100-ج: ٢٠ سطرًا كالحدّ المعلن
   if (!place.picks.length) delete place.picks;
   place.flags = plModalFine ? ['fine_dining'] : []; if (!place.flags.length) delete place.flags; // ر٧٠ط: العلامات
   if (plModalTown){ place.town = place.area || place.town || name; } else { delete place.town; } /* r84-2 (١٣:٢٠): «Outside the city» — town = الحي (أو اسم المكان بلا حي) · إطفاؤه يمسح الوسم */
@@ -5637,6 +5688,7 @@ async function doReauthContinue(){
     await mpData.auth.reauthWithPassword(pass);
     closeReauthModal(true);
   }catch(e){
+    mpSwallow(e, 'reauth'); /* r100-هـ */
     const code = (e && e.code) || '';
     if (code.includes('wrong-password') || code.includes('invalid-credential') || code.includes('invalid-login-credentials')) errEl.textContent = 'Incorrect password';
     else if (code.includes('too-many-requests')) errEl.textContent = 'Too many attempts — try again later';
@@ -5798,7 +5850,7 @@ async function loadMyCityList(cityId){
     // permission-denied هنا رفضٌ حقيقي (قواعد أو جلسة) لا غيابًا — يُعامل فشلًا حاجبًا للحفظ كأي خطأ آخر.
     myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, bookmarkCount:0, categories:{} };
     myCityListLoadFailed = true; myCityListLoadedFor = null; myCityListSaved = null; /* r100-أ: بلا لقطة — الحفظ التالي (إن سُمح) يكتب كاملًا */
-    myCityListLoadError = (code === 'permission-denied') ? 'permission denied (rules 3.8: absent docs read as empty — this is a real denial)' : (code || (e && e.message) || 'unknown');
+    myCityListLoadError = mpErrText(e); mpSwallow(e, 'places-load'); if (code === 'permission-denied') try{ logTiming('PLACES · load · permission denied (rules 3.8: absent docs read as empty — this is a real denial)'); }catch(_){} /* r100-د: للمستخدم سبب مفهوم؛ للتشخيص تصنيف الحارس الثالث كما كان */
     myCityListLoading = false; return;
   }
   myCityListLoadFailed = false;
@@ -5992,7 +6044,7 @@ async function saveUserListGeneral(){
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   try{
     await mpData.userLists.merge(currentUser.uid, { customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], nickname: userListData.nickname || null });
-  }catch(e){ showToast('Could not save your list'); }
+  }catch(e){ mpSwallow(e, 'user-list'); mpErrToast('Could not save your list', e); } /* r100-هـ */
 }
 
 let cityListEditingKeys = new Set(); // مفاتيح "itemId#index" للأماكن اللي حاليًا في وضع تعديل
@@ -6016,11 +6068,11 @@ function chooseNickname(){
     __nickResolve = resolve;
     dashSet(current ? '✏️ Change nickname' : '👤 Choose a nickname', null);
     body.innerHTML = '<div class="ctx" style="text-align:center;">Shown to other users instead of your email</div>'
-      + '<label class="flabel">' + (current ? 'New nickname' : 'Nickname') + ' <span class="dim">· 3–24 characters</span></label><input type="text" id="nickInput" class="modal-input" maxlength="24" autocomplete="off" value="' + attrStr(current) + '" placeholder="e.g. TheCurator" oninput="nickCheck()" onkeydown="if (event.key === \'Enter\') nickSave()">'
+      + '<label class="flabel">' + (current ? 'New nickname' : 'Nickname') + ' <span class="dim">· 3–24 characters</span></label><input type="text" id="nickInput" class="modal-input" autocomplete="off" value="' + attrStr(current) + '" placeholder="e.g. TheCurator" oninput="nickCheck()" onkeydown="if (event.key === \'Enter\') nickSave()">'
       + '<div class="errline" id="nickStatus"></div>'
       + '<div class="ctx">' + (current ? 'Changes on all your public lists and your curator page' : 'You can change it later in Settings') + '</div>'
       + '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="nickCancel()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" id="nickSaveBtn" onclick="nickSave()">Save nickname</button></div>';
-    bd.classList.add('show'); setTimeout(function(){ const i = document.getElementById('nickInput'); if (i){ try{ i.focus(); i.select(); }catch(_){} } }, 30);
+    bd.classList.add('show'); mpLenWatch('nickInput', MP_LIMITS.nickname); /* r100-ج */ setTimeout(function(){ const i = document.getElementById('nickInput'); if (i){ try{ i.focus(); i.select(); }catch(_){} } }, 30);
     if (window.MutationObserver){ const obs = new MutationObserver(function(){ if (!bd.classList.contains('show')){ obs.disconnect(); if (__nickResolve === resolve){ __nickResolve = null; resolve(false); } } }); obs.observe(bd, { attributes: true, attributeFilter: ['class'] }); } /* ✕ أو إغلاق خارجي = إلغاء */
   });
 }
@@ -6034,6 +6086,7 @@ function nickCheck(){ /* التوفر الحي بعد توقف الكتابة ٤
 }
 async function nickSave(){
   const btn = document.getElementById('nickSaveBtn'); const v = String((document.getElementById('nickInput') || {}).value || '');
+  if (!mpLenOk('nickInput', MP_LIMITS.nickname)) return; /* r100-ج */
   if (btn) btn.disabled = true;
   const ok = await saveNickname(v);
   if (btn) btn.disabled = false;
@@ -6045,6 +6098,7 @@ async function saveNickname(name){ /* منطق الحفظ القائم كما ه
   if (!clean || clean.length < 3){ showToast('Nickname must be at least 3 characters'); return false; }
   if (clean.length > 24){ showToast('Nickname must be 24 characters or fewer'); return false; }
   if (clean === current) return true;
+  if (!/^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}_.'\- ]*$/u.test(clean)){ showToast('Letters, numbers, spaces, _ . - only'); return false; } /* r100-ج: لا HTML ولا فواصل مسار في معرّف nicknames — بعد فحص «لم يتغيّر» كي لا يُرفض اسم قديم يُعاد حفظه */
   const key = clean.toLowerCase();
   try{
     const doc = await mpData.nicknames.get(key);
@@ -6061,21 +6115,21 @@ async function saveNickname(name){ /* منطق الحفظ القائم كما ه
           if (oldDoc.exists && oldDoc.data().uid === currentUser.uid){
             await mpData.nicknames.remove(oldKey);
           }
-        }catch(e){}
+        }catch(e){ mpSwallow(e, 'nickname-old'); } /* r100-هـ */
       }
     }
     userListData.nickname = clean;
     await saveUserListGeneral();
-    try{ await mpData.users.merge(currentUser.uid, { nickname: clean }); }catch(e){}
+    try{ await mpData.users.merge(currentUser.uid, { nickname: clean }); }catch(e){ mpSwallow(e, 'nickname-user'); } /* r100-هـ */
     // تحديث النسخة المكررة من الاسم بكل مستندات مدن المستخدم (تُستخدَم لاستعلام Community Lists بدون قراءات إضافية)
     try{
       await mpData.cityLists.setNicknameAll(currentUser.uid, clean);
-    }catch(e){}
+    }catch(e){ mpSwallow(e, 'nickname-lists'); } /* r100-هـ */
     await syncCommunityProfile();
     showToast('Nickname saved ✓');
     return true;
   }catch(e){
-    showToast('Could not save nickname');
+    mpSwallow(e, 'nickname'); mpErrToast('Could not save nickname', e); /* r100-هـ */
     return false;
   }
 }
@@ -6109,7 +6163,7 @@ async function syncCommunityProfileFor(uid, nickname){
   }catch(e){}
 }
 let __cmNickSynced = false; /* د-٢ (ملاحظة المالك): المستلِم يقرأ اسم المرسل من ملفه بالمجتمع — ومن لم ينشر شيئًا عامًّا لا ملف له فيظهر «user»؛ يُكتب الاسم وحده مرة بالجلسة عند أول مشاركة (الملف بلا محتوى عام لا يظهر في الاكتشاف: hasAnyPublicContent) */
-async function ensureCommunityNick(){ if (__cmNickSynced || !currentUser || !userListData || !userListData.nickname) return; try{ await mpData.communityProfiles.set(currentUser.uid, { nickname: userListData.nickname }); __cmNickSynced = true; }catch(e){} }
+async function ensureCommunityNick(){ if (__cmNickSynced || !currentUser || !userListData || !userListData.nickname) return; try{ await mpData.communityProfiles.set(currentUser.uid, { nickname: userListData.nickname }); __cmNickSynced = true; }catch(e){ mpSwallow(e, 'community-nick'); } /* r100-هـ */ }
 async function syncCommunityProfile(){
   if (!currentUser) return;
   await syncCommunityProfileFor(currentUser.uid, userListData.nickname || null);
@@ -6135,7 +6189,7 @@ async function shareCityListWithSomeone(){
     myCityListData.sharedWithNames[targetUid] = data.nickname || name.trim();
     await saveMyCityList(); ensureCommunityNick(); /* د-٢ */
     showToast('Shared ✓');
-  }catch(e){ showToast('Could not verify username'); }
+  }catch(e){ mpSwallow(e, 'share-list'); mpErrToast('Could not verify username', e); } /* r100-هـ */
 }
 async function removeCityListShare(uid){
   if (!myCityListData || !myCityListData.sharedWith) return;
@@ -6248,7 +6302,7 @@ async function cmTownRemove(cityId, town){ if (!currentUser || !cityId || !town 
 /* =========================================================
    تصفح قوائم المستخدمين الآخرين (Community Lists)
    ========================================================= */
-let communityUsers = [];
+let communityUsers = []; let communityLoadErr = null; /* r100-د */
 let communityTab = 'places';            // ر٦١ (السوق): places | trips
 let communityScreen = 'root';           // ر٦٦ (القرار ١١): root | source — كل مصدر شاشة مستقلة بزر عودة
 const communityScreenState = { places: { city: '', marked: false, sort: 'recent' }, trips: { city: '', marked: false, sort: 'recent' } }; // r72u (قرار المالك): الافتراضي recent — الشريحة نفسها قائمة الترتيبات // حالة كل شاشة تُحفظ
@@ -6274,14 +6328,14 @@ async function loadCommunityLists(){
         viewCount: d.viewCount || 0
       });
     });
-  }catch(e){ communityUsers = []; }
+  }catch(e){ mpSwallow(e, 'community-lists'); communityLoadErr = e; } /* r100-د: أثر + تسجيل الخطأ، والقائمة السابقة تبقى — من يفتح المجتمع هو من يُخبر (المستدعون الثانويون: الإيقاف والمستخدمون — لا يغطّون toast نجاحهم) */
 }
 
 async function openCommunityModal(){
   mpTrack.hit('community_open', { depth: 1 });
   if (!viewingUserUid) document.getElementById('communityBody').innerHTML = `<div class="mp-empty mini">Loading…</div>`; /* د-٥: لا تمحُ طبقة الشخص المرسومة توًّا (الفتح من قائمة مشارَكة) */
   showBackdropUnlessHosted('communityBackdrop', 'Community'); // خ١
-  const __tl = performance.now(); await loadCommunityLists(); logTiming('[CM] community lists in ' + Math.round(performance.now() - __tl) + 'ms'); /* د-٥ */
+  const __tl = performance.now(); communityLoadErr = null; await loadCommunityLists(); if (communityLoadErr) mpErrToast('Could not load the community', communityLoadErr); logTiming('[CM] community lists in ' + Math.round(performance.now() - __tl) + 'ms'); /* د-٥ · r100-د */
   // ر٦٩ي (N-043): ذاكرة آخر وضع — الجذر والتبويب والشاشة تبقى بين الزيارات (تُعاد عند الخروج فقط)
   if (typeof communityTab === 'undefined' || !communityTab) communityTab = 'places';
   renderCommunityModal();
@@ -6376,7 +6430,7 @@ async function cmSearchGo(){
       }
       viewCommunityUser(d.data().uid); return;
     }
-  }catch(e){}
+  }catch(e){ mpSwallow(e, 'search'); mpErrToast('Could not search', e); return; } /* r100-هـ: الفشل ليس «غير موجود» */
   showToast("This name doesn't exist");
 }
 function cmFillCityPick(rows){ (arguments[0] || []).forEach(function(r){ if (r && r.cityId && r.cityName) rememberCity(r.cityId, r.cityName); }); // ز-١-ج-٢ // البند ٢: مدن المحدد من المحتوى الموجود فعلًا — ر٧٠هـ: بعدّاد القوائم/الرحلات لكل مدينة
@@ -6558,11 +6612,12 @@ function openConfirmModal(title, hint){ // ر٧٢-أ-٢ب: تأكيد بهوية
     document.getElementById('inputModalError').textContent = hint || ''; document.getElementById('inputBackdrop').classList.add('show'); });
 }
 async function curToggleFollow(uid){ // ر٧٢-أ-٢: متابعة/إلغاء ذرّيًّا؛ الإفصاح مرة عند أول متابعة؛ لا متابعة للذات
-  if (!currentUser){ openAuthModal(); return; } if (uid === currentUser.uid) return;
+  if (!currentUser){ openAuthModal(); return; } if (!uid || uid === currentUser.uid) return;
+  if (!curIsFollowing(uid) && !(curators || []).some(function(c){ return c.uid === uid; }) && !(communityUsers || []).some(function(c){ return c.uid === uid; })){ let pr = null; try{ pr = await mpData.profiles.get(uid); }catch(_){} if (!pr){ showToast('User not found'); return; } } /* r100-ج: لا متابعة لمعرّف مجهول — قراءة واحدة فقط حين لا يكون في القوائم */
   const on = !curIsFollowing(uid);
   if (on && !(userListData && userListData.followDisclosed)){ const ok = await openConfirmModal('Follow this curator?', 'Following is visible to the curator — your name appears in their followers.'); if (!ok) return; userListData.followDisclosed = true; try{ await mpData.userLists.merge(currentUser.uid, { followDisclosed: true }); }catch(e){} }
   const u = (curators || []).find(function(c){ return c.uid === uid; }) || {}; const hasPublic = u.hasAnyPublicContent === true || u.verified === true; // r72m: العدّاد للموثَّقين أيضًا (M4.25 ٥)
-  try{ await mpData.follows.set(currentUser.uid, uid, on, hasPublic); }catch(e){ mpSwallow(e, 'follow'); logTiming('[CUR] follow failed uid=' + String(uid).slice(0, 6) + ' on=' + on + ' hasPublic=' + hasPublic + ' err=' + ((e && (e.code + ' ' + e.message)) || e)); showToast('Could not follow · ' + ((e && e.code) || (e && e.message) || 'unknown').toString().slice(0, 60)); return; } // ر٧٢-أ-٢ج: الرمز على الشاشة (قرار المالك)
+  try{ await mpData.follows.set(currentUser.uid, uid, on, hasPublic); }catch(e){ mpSwallow(e, 'follow'); logTiming('[CUR] follow failed uid=' + String(uid).slice(0, 6) + ' on=' + on + ' hasPublic=' + hasPublic + ' err=' + ((e && (e.code + ' ' + e.message)) || e)); mpErrToast('Could not follow', e); /* r100-د */ return; } // ر٧٢-أ-٢ج: الرمز على الشاشة (قرار المالك)
   userListData.following = (userListData.following || []).filter(function(x){ return x !== uid; }); if (on) userListData.following.push(uid);
   if (hasPublic && typeof u.followerCount === 'number') u.followerCount = Math.max(0, u.followerCount + (on ? 1 : -1)); else if (hasPublic && on) u.followerCount = 1;
   if (on) try{ mpTrack.statsCurator(uid, 'follow'); }catch(_){} // r72p
@@ -6588,16 +6643,19 @@ function profPickType(t){ profContactType = t; document.querySelectorAll('.prof-
 async function openMyProfile(){
   if (!currentUser) return; const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return; /* ب-٢-٢-أ٢ (v3 · ٥): بالقشرة الليلية — من البطاقة بالدرج أو من صفحة المنتقي */
   dashSet('✎ My profile', null); body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; bd.classList.add('show'); /* r74m (ق١٠-١٠-٠٦): القشرة تُعرض قبل قراءة الملف — وإلا لم تلتقطها آلية العودة من الدرج فغاب Back */
-  let pr = null; try{ pr = await mpData.profiles.get(currentUser.uid); }catch(e){} pr = pr || {};
+  let pr = null; try{ pr = await mpData.profiles.get(currentUser.uid); }catch(e){ mpReadFailed(e, 'my-profile', 'your profile'); body.innerHTML = '<div class="mp-empty mini">Could not load your profile — ' + escapeHtml(mpErrText(e)) + '<br><span class="dim">Nothing is changed until it loads.</span></div><button type="button" class="dash-door" onclick="openMyProfile()"><span>↻ Try again</span><span></span></button>'; return; } pr = pr || {}; /* r100-د: لا نموذج فارغ قابل للحفظ فوق ملف حقيقي */
   const ct = pr.contact ? { type: pr.contact.type, value: pr.contact.value } : contactFromUrl(pr.contactUrl || ''); profContactType = (pr.contact || pr.contactUrl) ? ct.type : 'instagram'; // r72t: contact{} أولًا ثم contactUrl انتقاليًّا
-  body.innerHTML = '<div class="ctx" style="text-align:center;">What visitors see on your curator page</div><label class="flabel">Tagline <span class="dim">· one line under your name · ≤ 40</span></label><input type="text" id="mpTagline" class="modal-input" maxlength="40" placeholder="e.g. Experiences I loved — you might too" value="' + attrStr(pr.tagline || '') + '">'
-    + '<label class="flabel">About you <span class="dim">· ≤ 200</span></label><textarea id="mpBio" class="modal-input" rows="3" maxlength="200" placeholder="e.g. Coffee first, then everything else. I write about the places I return to.">' + escapeHtml(pr.bio || '') + '</textarea>'
-    + '<label class="flabel">Contact <span class="dim">· a link or a social handle · optional</span></label><input type="text" id="mpContact" class="modal-input" maxlength="300" placeholder="@yourname or https://…" value="' + attrStr((pr.contact || pr.contactUrl) ? ct.value : '') + '">'
+  body.innerHTML = '<div class="ctx" style="text-align:center;">What visitors see on your curator page</div><label class="flabel">Tagline <span class="dim">· one line under your name · ≤ 40</span></label><input type="text" id="mpTagline" class="modal-input" placeholder="e.g. Experiences I loved — you might too" value="' + attrStr(pr.tagline || '') + '">'
+    + '<label class="flabel">About you <span class="dim">· ≤ 200</span></label><textarea id="mpBio" class="modal-input" rows="3" placeholder="e.g. Coffee first, then everything else. I write about the places I return to.">' + escapeHtml(pr.bio || '') + '</textarea>'
+    + '<label class="flabel">Contact <span class="dim">· a link or a social handle · optional</span></label><input type="text" id="mpContact" class="modal-input" placeholder="@yourname or https://…" value="' + attrStr((pr.contact || pr.contactUrl) ? ct.value : '') + '">'
     + '<div class="chiprow">' + [['instagram', 'Instagram'], ['x', 'X'], ['snapchat', 'Snapchat'], ['website', 'Website'], ['email', 'Email'], ['phone', 'Phone'], ['whatsapp', 'WhatsApp']].map(function(t){ return '<button type="button" class="chip prof-ct' + (profContactType === t[0] ? ' on' : '') + '" data-t="' + t[0] + '" onclick="profPickType(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>' // r72t (M4.26 ٤): الأنواع السبعة
     + '<label class="flabel">Follower count on my page</label><div class="chiprow"><button type="button" class="chip' + (pr.showFollowerCount !== false ? ' on' : '') + '" id="mpShowFc" onclick="this.classList.add(\'on\'); document.getElementById(\'mpHideFc\').classList.remove(\'on\')">Show</button><button type="button" class="chip' + (pr.showFollowerCount === false ? ' on' : '') + '" id="mpHideFc" onclick="this.classList.add(\'on\'); document.getElementById(\'mpShowFc\').classList.remove(\'on\')">Hide</button></div>';
+
   body.innerHTML += '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="dashBack()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" onclick="saveMyProfile()">Save</button></div>'; 
+  mpLenWatch('mpTagline', MP_LIMITS.tagline); mpLenWatch('mpBio', MP_LIMITS.bio); mpLenWatch('mpContact', MP_LIMITS.contact); /* r100-ج: بعد اكتمال innerHTML (+= يعيد بناء العقد) */
 }
 async function saveMyProfile(){
+  if (!(mpLenOk('mpTagline', MP_LIMITS.tagline) & mpLenOk('mpBio', MP_LIMITS.bio) & mpLenOk('mpContact', MP_LIMITS.contact))) return; /* r100-ج */
   const tag = (document.getElementById('mpTagline').value || '').trim().slice(0, 40), bio = (document.getElementById('mpBio').value || '').trim().slice(0, 200), cv = (document.getElementById('mpContact').value || '').trim();
   const isDirect = /^(email|phone|whatsapp)$/.test(profContactType); const val = cv.replace(/^@/, '').trim().slice(0, 120);
   if (cv && isDirect){ if (profContactType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){ showToast('Enter a valid email'); return; } if (profContactType !== 'email' && !/^\+?[\d\s-]{6,}$/.test(val)){ showToast('Enter a valid number with country code'); return; } }
@@ -6605,7 +6663,7 @@ async function saveMyProfile(){
   const patch = { showFollowerCount: !document.getElementById('mpHideFc').classList.contains('on') }; // الحقل الفارغ لا يُرسل (القاعدة ترفض النص الفارغ) — يُحذف إن كان موجودًا
   patch.tagline = tag ? tag : mpData.fieldDelete(); patch.bio = bio ? bio : mpData.fieldDelete(); patch.displayName = mpData.fieldDelete(); // r72u: تنظيف الاسم المعروض القديم
   patch.contact = cv ? { type: profContactType, value: isDirect ? val : (cv.trim().slice(0, 120)) } : mpData.fieldDelete(); patch.contactUrl = mpData.fieldDelete(); // r72t (M4.26 ٤): contact{} بدل contactUrl
-  try{ await mpData.profiles.merge(currentUser.uid, patch); }catch(e){ mpSwallow(e, 'profile save'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
+  try{ await mpData.profiles.merge(currentUser.uid, patch); }catch(e){ mpSwallow(e, 'profile save'); mpErrToast('Could not save', e); return; }
   const me = (curators || []).find(function(c){ return c.uid === currentUser.uid; }); if (me){ me.tagline = tag; me.bio = bio; me.contact = cv ? patch.contact : null; me.contactUrl = ''; me.showFollowerCount = patch.showFollowerCount; }
   showToast('Profile saved ✓'); dashBack(); if (currentTab === 'Curators') renderCuratorsBody(); /* ب-٢-٢-أ٢: الحفظ يعود طبقة (الدرج أو الإغلاق) */
 }
@@ -6682,17 +6740,19 @@ async function openCityNotesEditor(cityId){ // r72q-1: بقشرة نوافذ ا�
   if (!currentUser) return; const n = (await curLoadNotes(currentUser.uid, cityId)) || {}; const cname = (curData[currentUser.uid] && (curData[currentUser.uid].cities.find(function(c){ return c.id === cityId; }) || {}).name) || cityId;
   const ex = { bestTime: 'e.g. late September', love: 'e.g. breakfast houses · ferries at sunset', knownFor: 'e.g. fika · design', whyPrefer: 'e.g. walkable, calm, safe' };
   document.getElementById('formTitle').textContent = '✎ ' + cname + ' — your notes'; document.getElementById('formSub').textContent = 'Shown to every visitor of your ' + cname + ' page · all optional';
-  document.getElementById('formBody').innerHTML = '<label class="flabel">Your impression <span class="dim">· ≤ 300</span></label><textarea id="cnText" class="modal-input" rows="3" maxlength="300" placeholder="e.g. Quiet in May, alive in August. I come for the bakeries and the islands.">' + escapeHtml(n.text || '') + '</textarea>'
-    + CUR_NOTE_FIELDS.filter(function(f){ return f[0] !== 'returns'; }).map(function(f){ return '<label class="flabel">' + f[1] + ' <span class="dim">· ≤ ' + f[2] + '</span></label><input type="text" id="cn_' + f[0] + '" class="modal-input" maxlength="' + f[2] + '" placeholder="' + attrStr(ex[f[0]] || '') + '" value="' + attrStr(n[f[0]] || '') + '">'; }).join('')
+  document.getElementById('formBody').innerHTML = '<label class="flabel">Your impression <span class="dim">· ≤ 300</span></label><textarea id="cnText" class="modal-input" rows="3" placeholder="e.g. Quiet in May, alive in August. I come for the bakeries and the islands.">' + escapeHtml(n.text || '') + '</textarea>'
+    + CUR_NOTE_FIELDS.filter(function(f){ return f[0] !== 'returns'; }).map(function(f){ return '<label class="flabel">' + f[1] + ' <span class="dim">· ≤ ' + f[2] + '</span></label><input type="text" id="cn_' + f[0] + '" class="modal-input" placeholder="' + attrStr(ex[f[0]] || '') + '" value="' + attrStr(n[f[0]] || '') + '">'; }).join('')
     + '<label class="flabel">I return</label><div class="chiprow">' + ['yes', 'sometimes', 'no'].map(function(v){ return '<button type="button" class="chip cn-ret' + ((n.returns || '') === v ? ' on' : '') + '" data-v="' + v + '" onclick="cnPickReturns(this)">' + ({ yes: 'Yes', sometimes: 'Sometimes', no: 'Not really' })[v] + '</button>'; }).join('') + '</div>';
+  mpLenWatch('cnText', MP_LIMITS.impression); CUR_NOTE_FIELDS.forEach(function(f){ if (f[0] !== 'returns') mpLenWatch('cn_' + f[0], f[2]); }); /* r100-ج */
   formOnSave = function(){ saveCityNotes(cityId); }; document.getElementById('formBackdrop').classList.add('show');
 }
 function cnPickReturns(btn){ document.querySelectorAll('.cn-ret').forEach(function(b){ b.classList.toggle('on', b === btn && !b.classList.contains('on')); }); }
 async function saveCityNotes(cityId){
+  if (!(CUR_NOTE_FIELDS.filter(function(f){ return f[0] !== 'returns'; }).map(function(f){ return mpLenOk('cn_' + f[0], f[2]); }).concat([mpLenOk('cnText', MP_LIMITS.impression)]).every(Boolean))) return; /* r100-ج: كل الخانات تُعلَّم ثم يُرفض الحفظ */
   const data = {}; const t = (document.getElementById('cnText').value || '').trim().slice(0, 300); if (t) data.text = t;
   CUR_NOTE_FIELDS.forEach(function(f){ if (f[0] === 'returns') return; const v = (document.getElementById('cn_' + f[0]).value || '').trim().slice(0, f[2]); if (v) data[f[0]] = v; });
   const r = document.querySelector('.cn-ret.on'); if (r) data.returns = r.getAttribute('data-v');
-  try{ await mpData.cityNotes.save(currentUser.uid, cityId, data); }catch(e){ mpSwallow(e, 'notes save'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
+  try{ await mpData.cityNotes.save(currentUser.uid, cityId, data); }catch(e){ mpSwallow(e, 'notes save'); mpErrToast('Could not save', e); return; }
   delete curNotesCache[currentUser.uid + '__' + cityId]; showToast('Notes saved ✓'); closeModalById('formBackdrop'); if (currentTab === 'Curators') renderCuratorsBody();
 }
 async function curEditPlace(cityId, catId, placeId){ // ✎ Edit: نافذة المكان القائمة على مكاني بقائمتي (بعد تحميل المدينة)
@@ -6708,7 +6768,7 @@ async function curBrowse(uid, what, cityId){ // All places / All trips / Open li
   let timedOut = false;
   if (cityId && what === 'places'){ try{ await curEnsureCity(uid, cityId); }catch(_){ } if (currentUser && uid !== currentUser.uid) mpTrack.statsList(uid + '_' + cityId, 'open_curator'); } /* خ-٦: المدينة المفتوحة تُركَّب كاملة قبل تسليمها لطبقة المجتمع · ب-٢-١: فتح من صفحة المنتقي يُعدّ open_curator (لا يمرّ بـopenCommunityCityList) */
   const __loaded = (viewingUserUid === uid && viewingUserData && Array.isArray(viewingUserCities) && viewingUserCities.length) || curPrimeLayerFromCurator(uid); /* ر٧٣-أب (٢) — السبب الجذري للبطء: طبقة المجتمع كانت تعيد قراءة كل قوائم الشخص (قائمة + ٢٧ مستندًا لكل مدينة) رغم أن صفحة المنتقي حمّلتها؛ الآن تُبنى من بيانات المنتقي المحمَّلة بلا قراءة */
-  try{ if (__loaded){ viewingCommunityTripId = null; try{ await ensureListBookmarks(); await ensureTripSaves(); }catch(_){} } else await Promise.race([viewCommunityUser(uid), new Promise(function(r){ setTimeout(function(){ timedOut = true; r(); }, 15000); })]); if (cityId){ communityViewingCityId = cityId; communityUserLayer = (what === 'places') ? cityId : null; communityUserTripsCity = (what === 'trips') ? cityId : ''; } else { communityUserLayer = null; communityUserTripsCity = ''; } }catch(e){ mpSwallow(e, 'curator browse'); showToast('Could not open · ' + (((e && e.code) || (e && e.message) || 'error') + ' · step ' + vcuStep).slice(0, 70)); logTiming('[CUR] browse failed: ' + ((e && (e.code || e.message)) || e) + ' step=' + vcuStep); }
+  try{ if (__loaded){ viewingCommunityTripId = null; try{ await ensureListBookmarks(); await ensureTripSaves(); }catch(_){} } else await Promise.race([viewCommunityUser(uid), new Promise(function(r){ setTimeout(function(){ timedOut = true; r(); }, 15000); })]); if (cityId){ communityViewingCityId = cityId; communityUserLayer = (what === 'places') ? cityId : null; communityUserTripsCity = (what === 'trips') ? cityId : ''; } else { communityUserLayer = null; communityUserTripsCity = ''; } }catch(e){ mpSwallow(e, 'curator browse'); mpErrToast('Could not open', e); try{ logTiming('[CM] open failed · step ' + vcuStep); }catch(_){} /* r100-د */ logTiming('[CUR] browse failed: ' + ((e && (e.code || e.message)) || e) + ' step=' + vcuStep); }
   if (timedOut){ showToast('Slow connection · stuck at step ' + vcuStep + ' — showing what loaded'); logTiming('[CUR] browse timeout step=' + vcuStep); } // ر٧٢-أ-٢ز: لا انتظار صامتًا
   try{ switchTab('Community'); if (cityId && HOSTED.Community) renderCommunityModal(); } finally { curBrowseBusy = false; }
 }
@@ -6735,7 +6795,7 @@ function openSettings(){
 }
 async function resendVerification(){ // r72p (١٠): نداء واحد لخدمة المصادقة
   if (!currentUser){ openAuthModal(); return; }
-  try{ await mpData.auth.sendVerification(); showToast('Verification email sent — check your inbox'); }catch(e){ mpSwallow(e, 'verify'); showToast('Could not send · ' + ((e && e.code) || 'error')); }
+  try{ await mpData.auth.sendVerification(); showToast('Verification email sent — check your inbox'); }catch(e){ mpSwallow(e, 'verify'); mpErrToast('Could not send', e); }
 }
 function drToggleComing(){ const el = document.getElementById('drComing'), ar = document.getElementById('drComingArrow'); if (!el) return; const open = el.style.display === 'none'; el.style.display = open ? '' : 'none'; if (ar) ar.textContent = open ? '⌃' : '⌄'; } /* ر٧٣-أب (٢): المؤجَّل مجمَّع لا مبعثر */
 function drSyncCurator(){ // ب-٢-٢-أ٢ (المسودة v3-ج): الدرج — للمنتقي الشارة بالاسم وبند Followers بعدده؛ لغيره «⭐ Become a curator» بحالته (request · Pending · Accepted · Declined) · سطر البطاقة «N followers · My profile ›»
@@ -6768,7 +6828,7 @@ async function openMyStats(uid, backFn){ /* ب-٢-٢-ب: للمالك backFn ي�
   try{ const r = await Promise.all([mpData.profiles.get(target).catch(function(){ return null; }), mpData.cityLists.byOwner(target), mpData.trips.byOwner(target)]);
     prof = r[0]; r[1].forEach(function(d){ const x = d.data() || {}; lists.push({ id: d.id, cityId: x.cityId, name: x.cityName || x.cityId || d.id, pub: x.public === true, views: x.viewCount || 0, bm: x.bookmarkCount || 0, copies: x.copyCount || 0 }); });
     r[2].forEach(function(d){ const x = d.data() || {}; if (x.source) return; trips.push({ id: d.id, name: (x.cityName || '') + (x.customLabel ? ' — ' + x.customLabel : ''), pub: x.public === true, views: x.viewCount || 0, saves: x.saveCount || 0, copies: x.copyCount || 0 }); });
-  }catch(e){ mpSwallow(e, 'my stats'); body.innerHTML = '<div class="mp-empty mini">Could not load your stats · ' + escapeHtml((e && e.code) || 'error') + '</div><button type="button" class="dash-door" onclick="openMyStats(' + (asOwner ? "'" + attrStr(target) + "'" : '') + ')"><span>↻ Retry</span><span></span></button>'; return; }
+  }catch(e){ mpSwallow(e, 'my stats'); body.innerHTML = '<div class="mp-empty mini">Could not load your stats — ' + escapeHtml(mpErrText(e)) + '</div><button type="button" class="dash-door" onclick="openMyStats(' + (asOwner ? "'" + attrStr(target) + "'" : '') + ')"><span>↻ Retry</span><span></span></button>'; return; }
   const isCur = !!(prof && prof.verified === true); const nick = (prof && prof.nickname) || (asOwner ? target.slice(0, 8) : ((userListData && userListData.nickname) || 'You'));
   const pubL = lists.filter(function(l){ return l.pub; }), pubT = trips.filter(function(t){ return t.pub; });
   const st = await Promise.all([Promise.all(pubL.map(function(l){ return mpData.stats.listDoc(l.id); })), Promise.all(pubT.map(function(t){ return mpData.stats.tripDoc(t.id); })), isCur ? mpData.stats.curatorDays(target, 30) : Promise.resolve([])]);
@@ -6803,13 +6863,13 @@ async function openCuratorRequest(){
   let h = '<div class="ctx">A curator\'s page is a showcase of their favorites on top of their ordinary lists. The badge means a space, not a rating. Curators are invited by MyPickz or apply here.</div>'
     + '<div class="admtiles" style="grid-template-columns:1fr 1fr;"><div class="admtile"><b>' + nL + '</b><span>public lists</span></div><div class="admtile"><b>' + nT + '</b><span>public trips</span></div></div>';
   if (r){ const st = String(r.status || 'pending'); const when = r.at ? new Date(r.at).toISOString().slice(0, 10) : ''; h += '<div class="dash-door plain"><span>' + (st === 'accepted' ? '✓ Accepted — your badge is on' : st === 'declined' ? 'Request declined' : 'Request sent · Pending') + '</span><span class="num">' + (when ? 'since ' + msDayLabel(when) : '') + '</span></div><div class="ctx">' + (st === 'pending' ? 'We\'ll notify you here.' : st === 'accepted' ? 'Your curator page is live.' : 'You can ask again later.') + '</div>'; }
-  else { h += '<label class="flabel">Tell us briefly why <span class="dim" id="curReqCount">· 0/300</span></label><textarea id="curReqText" class="modal-input" rows="3" maxlength="300" placeholder="e.g. I document the cafés of Jeddah with what to order…" oninput="document.getElementById(\'curReqCount\').textContent = \'· \' + this.value.length + \'/300\';"></textarea><button type="button" class="btn btn-brass wide" style="margin-top:12px;" id="curReqSend" onclick="sendCuratorRequest()">Send request</button>'; }
-  body.innerHTML = h;
+  else { h += '<label class="flabel">Tell us briefly why </label><textarea id="curReqText" class="modal-input" rows="3" placeholder="e.g. I document the cafés of Jeddah with what to order…"></textarea><button type="button" class="btn btn-brass wide" style="margin-top:12px;" id="curReqSend" onclick="sendCuratorRequest()">Send request</button>'; }
+  body.innerHTML = h; mpLenWatch('curReqText', MP_LIMITS.request); /* r100-ج */
 }
 async function sendCuratorRequest(){
-  const ta = document.getElementById('curReqText'); const text = String((ta && ta.value) || '').trim().slice(0, 300); if (!text){ showToast('Tell us briefly why'); return; }
+  const ta = document.getElementById('curReqText'); const text = String((ta && ta.value) || '').trim(); if (!text){ showToast('Tell us briefly why'); return; } if (!mpLenOk('curReqText', MP_LIMITS.request)) return; /* r100-ج */
   const btn = document.getElementById('curReqSend'); if (btn) btn.disabled = true;
-  try{ await mpData.requests.create(currentUser.uid, text); }catch(e){ mpSwallow(e, 'request'); showToast('Could not send · ' + ((e && e.code) || 'error')); if (btn) btn.disabled = false; return; }
+  try{ await mpData.requests.create(currentUser.uid, text); }catch(e){ mpSwallow(e, 'request'); mpErrToast('Could not send', e); if (btn) btn.disabled = false; return; }
   showToast('Request sent — pending'); const el = document.getElementById('drCuratorStatus'); if (el) el.textContent = 'Pending ›'; /* الحالة ببند الدرج */
   openCuratorRequest();
 }
@@ -6822,28 +6882,28 @@ function reportAppProblem(){
   reportKind = 'broke'; const build = String(window.__mpBuild || '').replace('M2-ID-', '') || 'test';
   dashSet('⚑ Report a problem', null);
   body.innerHTML = '<label class="flabel">What kind?</label><div class="chiprow" id="repKinds" style="flex-wrap:wrap;">' + [['broke', 'Something broke'], ['data', 'Wrong data'], ['idea', 'Suggestion'], ['other', 'Other']].map(function(t){ return '<button type="button" class="chip' + (t[0] === 'broke' ? ' on' : '') + '" data-k="' + t[0] + '" onclick="reportPickKind(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>'
-    + '<label class="flabel">What went wrong? <span class="dim" id="repCount">· 0/200</span></label><textarea id="repText" class="modal-input" rows="3" maxlength="200" placeholder="e.g. The map did not open after pasting a link…" oninput="document.getElementById(\'repCount\').textContent = \'· \' + this.value.length + \'/200\';"></textarea>'
+    + '<label class="flabel">What went wrong? </label><textarea id="repText" class="modal-input" rows="3" placeholder="e.g. The map did not open after pasting a link…"></textarea>'
     + '<div class="ctx">We attach: screen «' + escapeHtml(currentTab || 'Places') + '» · build ' + escapeHtml(build) + ' · no personal data.</div>'
     + '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="dashBack()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" id="repSend" onclick="sendAppReport()">Send report</button></div>';
-  bd.classList.add('show');
+  bd.classList.add('show'); mpLenWatch('repText', MP_LIMITS.report); /* r100-ج */
 }
 async function sendAppReport(){
-  const ta = document.getElementById('repText'); const text = String((ta && ta.value) || '').trim().slice(0, 200); if (!text){ showToast('Please describe the problem'); return; }
+  const ta = document.getElementById('repText'); const text = String((ta && ta.value) || '').trim(); if (!text){ showToast('Please describe the problem'); return; } if (!mpLenOk('repText', MP_LIMITS.report)) return; /* r100-ج: رسالة قبل الحفظ */
   const kinds = { broke: 'Something broke', data: 'Wrong data', idea: 'Suggestion', other: 'Other' }; const build = String(window.__mpBuild || '').replace('M2-ID-', '') || 'test';
   const reason = '[' + (kinds[reportKind] || 'Other') + ' · ' + (currentTab || 'Places') + ' · ' + build + '] ' + text;
   const btn = document.getElementById('repSend'); if (btn) btn.disabled = true;
-  try{ await mpData.reports.create(currentUser.uid, 'app', '', reason.slice(0, 260)); }catch(e){ mpSwallow(e, 'report'); showToast('Could not report · ' + ((e && e.code) || 'error')); if (btn) btn.disabled = false; return; }
+  try{ await mpData.reports.create(currentUser.uid, 'app', '', reason.slice(0, 260)); }catch(e){ mpSwallow(e, 'report'); mpErrToast('Could not report', e); if (btn) btn.disabled = false; return; }
   showToast('Thanks — we will look into it'); dashBack();
 }
 let vcuStep = ''; // ر٧٢-أ-٢ز: آخر مرحلة بلغها فتح طبقة الشخص (للتشخيص على الجهاز)
 async function viewCommunityUser(uid){
   vcuStep = 'profile'; communityUserLayer = null;
   viewingUserUid = uid;
-  viewingUserData = null; const __tp = performance.now(); try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ mpSwallow(e, 'profile'); } logTiming('[CM] person: profile in ' + Math.round(performance.now() - __tp) + 'ms'); /* د-٥ */ // r72r-1: الملف طازج بكل فتح (المدن الجديدة تظهر) — لا من ذاكرة المجتمع
+  viewingUserData = null; const __tp = performance.now(); let __pErr = null; try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ __pErr = e; mpSwallow(e, 'profile'); } logTiming('[CM] person: profile in ' + Math.round(performance.now() - __tp) + 'ms'); /* د-٥ */ // r72r-1: الملف طازج بكل فتح (المدن الجديدة تظهر) — لا من ذاكرة المجتمع
   if (!viewingUserData) viewingUserData = communityUsers.find(u => u.uid === uid);
   if (!viewingUserData){ // ر٦٥: صاحب بطاقة لم يصل ملفه للقائمة (تحميل ناقص أو ملف حديث) — يُقرأ مفردًا بدل الانهيار
-    try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ mpSwallow(e, 'profile'); }
-    if (!viewingUserData) viewingUserData = { uid: uid, nickname: 'user', publicCityIds: [] };
+    try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ __pErr = e; mpSwallow(e, 'profile'); }
+    if (!viewingUserData){ viewingUserData = { uid: uid, nickname: 'user', publicCityIds: [] }; if (__pErr) mpErrToast('Could not load this person', __pErr); } /* r100-د: الملف الوهمي «user» يُعلَن سببه */
   }
   communityViewingCityId = null;
   viewingCommunityTripId = null;
@@ -6913,7 +6973,7 @@ async function cmEnsureCity(uid, c){ /* خ-٦: تركيب مدينة الشخص 
   c._loading = (async function(){
     try{ if (c._src){ await curEnsureCity(uid, c.id); if (c._src._full){ c.categories = c._src.categories; } }
       else { const full = await mpData.cityLists.get(uid, c.id); if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; logTiming('[CM] city composed ' + c.id + ' cats=' + Object.keys(full.categories).length); } else showToast('Could not load this list'); } }
-    catch(e){ mpSwallow(e, 'community city'); showToast('Could not load this list · ' + ((e && (e.code || e.message)) || 'error')); }
+    catch(e){ mpSwallow(e, 'community city'); mpErrToast('Could not load this list', e); } /* r100-د */
     c._full = true; c._loading = null; return c;
   })();
   return c._loading;
@@ -7332,6 +7392,7 @@ async function tbLoadPlaces(cityId, src){ // أ-٢ (القرار ٤): خمسة �
   TB_PLACES[k] = out; return out;
 }
 function tbMeta(cityId, key){ for (const k of Object.keys(TB_PLACES)){ if (k.indexOf(cityId + '|') !== 0) continue; const hit = TB_PLACES[k].find(function(p){ return p.key === key; }); if (hit) return hit; } return null; }
+function tbPickedCount(){ return Object.keys(TB.picked || {}).reduce(function(n, c){ return n + Object.keys(TB.picked[c] || {}).length; }, 0); } /* r100-ج */
 function tbPickedList(cityId){ const m = TB.picked[cityId] || {}; return Object.keys(m).sort().map(function(k){ return m[k]; }); }
 function tbFeas(n, days){ const per = days ? n / days : n; const w = per <= 0 ? '' : per <= 4 ? 'calm' : per <= 6 ? 'balanced' : per <= 9 ? 'dense' : 'too many'; return { per: Math.round(per * 10) / 10, word: w }; }
 function tbFeasLine(cityId){ const c = TB.cities.find(function(x){ return x.cityId === cityId; }); const n = tbPickedList(cityId).length; if (!n) return '<span class="dim">Pick at least one place</span>'; const f = tbFeas(n, c ? c.days : 1); return n + (n === 1 ? ' place' : ' places') + ' for ' + (c ? c.days : 1) + (c && c.days === 1 ? ' day' : ' days') + ' ≈ ' + f.per + ' a day — <b class="' + (f.word === 'too many' ? 'warn' : 'ok') + '">' + f.word + '</b>'; }
@@ -7354,7 +7415,7 @@ function tbStage1Html(){
     const a = c.arrival || {}, d = c.departure || {};
     h += '<div class="tb-grid2"><label class="flabel">' + (TB.dayPlan ? 'Start' : 'Arrival') + '<span class="tb-dt">' + (TB.dayPlan ? '' : '<input type="date" class="modal-input' + (c.dateError ? ' err' : '') + '" value="' + attrStr(a.date || '') + '" oninput="tbSetDT(\'arrival\', \'date\', this.value)" onchange="tbSetDT(\'arrival\', \'date\', this.value)">') + '<input type="time" class="modal-input" value="' + attrStr(a.time || '') + '" onchange="tbSetDT(\'arrival\', \'time\', this.value)"></span></label>'
       + '<label class="flabel">' + (TB.dayPlan ? 'Back by' : 'Departure') + '<span class="tb-dt">' + (TB.dayPlan ? '' : '<input type="date" class="modal-input' + (c.dateError ? ' err' : '') + '" value="' + attrStr(d.date || '') + '" min="' + attrStr(a.date || '') + '" oninput="tbSetDT(\'departure\', \'date\', this.value)" onchange="tbSetDT(\'departure\', \'date\', this.value)">') + '<input type="time" class="modal-input" value="' + attrStr(d.time || '') + '" onchange="tbSetDT(\'departure\', \'time\', this.value)"></span></label></div>' + (c.dateError ? '<div class="tb-feas"><span class="warn">' + escapeHtml(c.dateError) + '</span></div>' : '');
-    h += '<label class="flabel">' + (TB.dayPlan ? 'Start from' : 'Where you stay') + '</label><div class="tb-stay"><input type="text" class="modal-input" id="tbStayName" placeholder="Hotel, apartment or a friend\'s place" value="' + attrStr(c.stay && c.stay.name || '') + '" onchange="tbSetStayName(this.value)"><button type="button" class="actn" onclick="tbStayFromList()">From list</button>' + (c.stay && c.stay.geo ? '<span class="tb-pin-ok" title="Pinned — rest and day order use it">📍</span>' : '') + '</div>';
+    h += '<label class="flabel">' + (TB.dayPlan ? 'Start from' : 'Where you stay') + '</label><div class="tb-stay"><input type="text" class="modal-input" id="tbStayName" placeholder="Hotel, apartment or a friend\'s place" value="' + attrStr(c.stay && c.stay.name || '') + '" oninput="mpLenShow(this, MP_LIMITS.stay, false, true)" onchange="tbSetStayName(this.value)"><button type="button" class="actn" onclick="tbStayFromList()">From list</button>' + (c.stay && c.stay.geo ? '<span class="tb-pin-ok" title="Pinned — rest and day order use it">📍</span>' : '') + '</div>';
     h += '<label class="flabel">' + (TB.dayTrip ? 'Mostly by' : 'When it is too far to walk') + '</label><div class="chiprow">' + chip(c.fallback !== 'car', TB.dayTrip ? 'Train &amp; transit' : 'Metro &amp; transit', "tbSetFallback('transit')") + chip(c.fallback === 'car', 'Car', "tbSetFallback('car')") + '</div>';
     h += '<div class="tb-hint">Short legs are walked; this is the fallback for longer ones, and you can change any leg later in the day route. Arrival and departure times trim the first and last day; where you stay lets you add a rest between two periods in the draft.</div>';
   }
@@ -7369,14 +7430,14 @@ function tbPickCity(id){ const c = cityListAllCities().find(function(x){ return 
 async function tbAddCity(){ await addCityListCity(); if (cityListCityId && cityListAllCities().some(function(c){ return c.id === cityListCityId; })) tbPickCity(cityListCityId); }
 function tbRemoveCity(){ if (TB.cities.length <= 1) return; TB.cities.splice(TB.ci, 1); TB.ci = Math.max(0, TB.ci - 1); tbRender(); }
 function tbTogglePeriod(p){ const c = tbCity(); if (!c) return; const kept = tripCityPeriods(c); const turningOn = kept.indexOf(p) < 0; const next = !turningOn ? kept.filter(function(x){ return x !== p; }) : TRIP_PERIODS.filter(function(x){ return kept.indexOf(x) >= 0 || x === p; }); if (!next.length){ showToast('Keep at least one period'); return; } c.periods = next; if (turningOn && TB.plan) TB.periodsBack = (TB.periodsBack || []).concat([p]); tbRender(); } /* ب-٨: إعادة الإضاءة بعد البناء تُسأل عنها عند Done */ // ب-٢: واحدة على الأقل
-function tbSetDays(n){ const c = tbCity(); if (!c || c.daysLocked) return; n = parseInt(n, 10); if (!n || isNaN(n)) n = c.days; c.days = Math.max(1, Math.min(30, n)); tbRender(); }
+function tbSetDays(n){ const c = tbCity(); if (!c || c.daysLocked) return; n = parseInt(n, 10); if (isNaN(n)) n = c.days; if (n < 1){ showToast('At least 1 day'); tbRender(); return; } /* r100-ج */ c.days = Math.max(1, Math.min(30, n)); tbRender(); }
 function tbSetDT(which, field, v){ const c = tbCity(); if (!c) return; c[which] = c[which] || {}; c[which][field] = String(v || ''); if (!c[which].date && !c[which].time) c[which] = null; if (TB.dayPlan && c[which] && c[which].time && !c[which].date && which === 'arrival') c[which].date = tripTodayYmd();
   const both = !TB.dayPlan && c.arrival && c.arrival.date && c.departure && c.departure.date; const diff = both ? tripDateDiff(c.arrival.date, c.departure.date) : null; // أ-٢ · القرار ٣: التواريخ تحكم العدّاد
   c.dateError = (diff !== null && diff < 0) ? 'Departure is before arrival — the days stay as you set them' : null; // ب-٤: ترتيب مقلوب (تاريخ وُضع تلقائيًّا عند فتح الحقل ثم تغيّر الآخر) لا يقفل العدّاد على يوم واحد
   const n = (diff !== null && diff >= 0) ? tripDaysFromDates(c.arrival.date, c.departure.date) : null; const was = c.days;
   if (n){ c.days = n; c.daysLocked = true; if (n !== was) showToast('Days from the dates: ' + n + (n === 1 ? ' day' : ' days')); } else { delete c.daysLocked; }
   if (field === 'date') tbRender(); }
-function tbSetStayName(v){ const c = tbCity(); if (!c) return; v = String(v || '').trim(); c.stay = v ? Object.assign({}, c.stay || {}, { name: v, geo: (c.stay && c.stay.name === v) ? c.stay.geo : null }) : null; }
+function tbSetStayName(v){ const c = tbCity(); if (!c) return; v = String(v || '').trim().slice(0, MP_LIMITS.stay); /* r100-ج */ c.stay = v ? Object.assign({}, c.stay || {}, { name: v, geo: (c.stay && c.stay.name === v) ? c.stay.geo : null }) : null; }
 async function tbStayFromList(){ const c = tbCity(); if (!c) return; const all = (await tbLoadPlaces(c.cityId, 'stay')).filter(function(p){ return p.geo; }); const list = all.filter(function(p){ return p.sec === 'stay'; }).concat(all.filter(function(p){ return p.sec !== 'stay'; })); /* ب-٨: الإقامة أولًا ثم بقية المثبَّتة */ if (!list.length){ showToast('No pinned place in this city yet'); return; } const body = document.getElementById('tbBody'); body.innerHTML = '<p class="mp-empty mini" style="margin-bottom:10px;">Where you stay — from your pinned places</p>' + pickerPanel({ id: 'tbStay', bare: true, onPick: 'tbStayPicked', items: list.map(function(p){ return { id: p.key, name: p.name, sub: p.path }; }) }) + '<button type="button" class="btn btn-ghost wide" onclick="tbRender()">Cancel</button>'; }
 function tbStayPicked(key){ const c = tbCity(); const p = tbMeta(c.cityId, key); if (p) c.stay = { name: p.name, geo: p.geo }; tbRender(); }
 function tbSetFallback(v){ const c = tbCity(); if (c) c.fallback = v; tbRender(); }
@@ -7422,6 +7483,7 @@ function tbApplyPicks(cityId){ // أ-٢ (القرار ٥): المضاف يدخل
 /* ── البناء والإعداد والمسودة ── */
 function tbSpec(){ return { cities: TB.cities, version: TB.version, entries: [] }; }
 async function tbBuild(){
+  if (!TB.dayTrip && !tbPickedCount()){ showToast('Pick at least one place first'); return; } /* r100-ج: لا رحلة فارغة — يوم الرحلة يُبنى فارغًا ثم تُضاف محطاته في المحرّر */
   TB.manual = false; tbRebuild(); TB.stage = 2; TB.moved = false; TB.undo = []; TB.setupSig = tbSetupSig(); TB.daySel = Math.max(0, TB.plan.days.findIndex(function(d){ return tripDayEntries(d).length; })); tbEnsureTrip(); tbSave(); tbRender();
 }
 /* ═══ ج-٥ (r79-5 · قرار المالك): الصينية والتسلسل بترتيب الشجرة (القسم ثم الفرعي ثم الاسم) مجمَّعةً بعنوان الفرعي؛ وبطاقة مصغّرة في رأس ورقة النقل ═══ */
@@ -7459,7 +7521,7 @@ function tbRebuild(){ if (TB.dayTrip){ tbRebuildDayTrip(); return; } /* r92 */ c
 function tbRebuildDayTrip(){ const old = (TB.plan && TB.plan.days && TB.plan.days[0]) || null; const fresh = tripBuildPlan({ cities: TB.cities, entries: [], version: TB.version }); const d = fresh.days[0]; if (!d) { TB.plan = tripPlanNormalize(fresh); return; } d.mode = 'daytrip'; d.stops = old ? (old.stops || []).slice() : []; d.transportNote = old ? (old.transportNote || '') : ''; d.start = old ? (old.start || null) : null; TRIP_PERIODS.forEach(function(p){ d.periods[p] = []; }); fresh.days = [d]; fresh.tray = []; TB.plan = tripPlanNormalize(fresh); TB.moveCount = 0; } /* r92 (ق١٠-٢٨-٠٣): يوم الرحلة يوم واحد خطّي — إعادة الإعداد لا تُسقط المحطات */
 function tbEnsureTrip(){ let t = tbTrip(); const first = TB.cities[0] || {}; if (!t){ t = { id: generateTripId(), title: '', cityId: first.cityId || null, cityName: first.cityName || '', cities: [], plan: null, version: TB.version, status: 'draft', public: false, sharedWith: [], sharedWithNames: {} }; if (TB.dayPlan) t.dayPlan = true; userTrips.push(t); TB.tripId = t.id; } t.cities = JSON.parse(JSON.stringify(TB.cities)); t.cities.forEach(function(c){ delete c.dateError; }); /* ب-٤: حالة عرض لا تُحفظ */ t.cityId = first.cityId || null; t.cityName = first.cityName || ''; t.plan = JSON.parse(JSON.stringify(TB.plan)); t.version = TB.version; if (!t.status) t.status = 'draft'; if (TB.dayPlan) t.title = String(TB.title || '').trim().slice(0, 80); /* r93-١: اسم الخطة */ delete resolvedTripCache[t.id]; return t; }
 function tbSave(){ if (!TB) return; clearTimeout(TB.saveTimer); TB.saveTimer = setTimeout(tbSaveNow, 1000); }
-async function tbSaveNow(){ if (!TB) return; const t = tbEnsureTrip(); TB.saveTimer = null; await saveTrip(t); } // مؤقّت متأخر بعد إغلاق المنشئ لا يحفظ شيئًا
+async function tbSaveNow(){ if (!TB || (!TB.plan && !TB.tripId)) return; /* r100-ج: لا رحلة جديدة قبل البناء — رحلة قائمة تُحفظ تعديلاتها كما كان */ const t = tbEnsureTrip(); TB.saveTimer = null; await saveTrip(t); } // مؤقّت متأخر بعد إغلاق المنشئ لا يحفظ شيئًا
 function tbSnapshot(){ TB.undo.push(JSON.stringify(TB.plan)); if (TB.undo.length > 20) TB.undo.shift(); TB.moved = true; TB.moveCount = (TB.moveCount || 0) + 1; }
 function tbUndo(){ if (!TB.undo.length) return; TB.plan = tripPlanNormalize(JSON.parse(TB.undo.pop())); TB.picked = {}; tripPlanEntries(TB.plan).concat(TB.plan.tray).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x){ const cid = x.ref.cityId; TB.picked[cid] = TB.picked[cid] || {}; TB.picked[cid][tbKey(x.ref)] = x; }); }); tbSave(); tbRender(); }
 async function tbVersion(v){ if (v === TB.version && !TB.moved) return; if (TB.moved){ const ok = await mpConfirm('A new version rebuilds the draft and drops what you moved by hand.', { title: 'Switch to ' + v + '?', ok: 'Rebuild as ' + v }); if (!ok) return; } TB.version = v; tbRebuild(); TB.moved = false; TB.undo = []; tbSave(); tbRender(); }
@@ -7536,8 +7598,8 @@ function tripMoveDone(changed){ const m = __tm; __tm = null; document.getElement
 /* ═══ r92 (ق١٠-٢٨-٠٣ · «نفذ» ٢٨ أكتوبر ١٢:٥٠): يوم Day trip — محرّر خطّي: ملاحظة التنقل · الخروج والعودة · الانطلاق → المحطات (New stop · From My places) → العودة · لكل رِجل وسيلة ودقائق وملاحظة · لكل محطة مدة وعلم optional ووقت مثبَّت ═══ */
 function tbDTDay(){ return (TB && TB.plan && TB.plan.days && TB.plan.days[0] && TB.plan.days[0].mode === 'daytrip') ? TB.plan.days[0] : null; }
 function tbDTRoute(){ const d = tbDTDay(); if (!d) return null; return tripRouteDoc(tbEnsureTrip(), d); }
-function tbSetTripName(v){ if (!TB) return; TB.title = String(v || '').trim().slice(0, 80); tbSave(); } /* r93-١ (ق١٠-٢٩-٠١): Trip name يكتب title */
-function tbNameHtml(){ return TB.dayPlan ? '<label class="flabel">Trip name</label><input type="text" class="modal-input" id="tbTripName" maxlength="80" placeholder="' + (TB.dayTrip ? 'e.g. Gstaad by GoldenPass' : 'e.g. Old town & lake') + '" value="' + attrStr(TB.title || '') + '" onchange="tbSetTripName(this.value)">' : ''; }
+function tbSetTripName(v){ if (!TB) return; TB.title = String(v || '').trim().slice(0, MP_LIMITS.tripName); tbSave(); } /* r100-ج: خانة تُحفظ تلقائيًا — عدّاد + سقف صلب (لا زر Save يُرفض) */ /* r93-١ (ق١٠-٢٩-٠١): Trip name يكتب title */
+function tbNameHtml(){ return TB.dayPlan ? '<label class="flabel">Trip name</label><input type="text" class="modal-input" id="tbTripName" oninput="mpLenShow(this, MP_LIMITS.tripName, false, true)" placeholder="' + (TB.dayTrip ? 'e.g. Gstaad by GoldenPass' : 'e.g. Old town & lake') + '" value="' + attrStr(TB.title || '') + '" onchange="tbSetTripName(this.value)">' : ''; }
 function tbDTTime(field, v){ const r = tbDTRoute(); if (!r) return; r[field] = (tripMinutesOf(v) !== null) ? String(v) : null; tbSave(); tbRender(); }
 function tbDTLegMode(key, v){ const r = tbDTRoute(); if (!r) return; const L = r.legs[key] = r.legs[key] || { mode: null, minutes: null }; L.mode = TRIP_MODE_LABEL[v] ? v : null; tbSave(); tbRender(); }
 function tbDTLegMin(key, v){ const r = tbDTRoute(); if (!r) return; const L = r.legs[key] = r.legs[key] || { mode: null, minutes: null }; const n = parseInt(v, 10); L.minutes = (!isNaN(n) && n >= 0 && n <= 1440) ? n : null; tbSave(); tbRender(); }
@@ -7554,7 +7616,7 @@ function tbDayTripHtml(day){
   h += '<div class="tb-grid2"><label class="flabel">Leave<span class="tb-dt"><input type="time" class="modal-input" value="' + attrStr(route.leave || (typeof day.from === 'number' ? tripHHMM(day.from) : '')) + '" onchange="tbDTTime(\'leave\', this.value)"></span></label><label class="flabel">Back by<span class="tb-dt"><input type="time" class="modal-input" value="' + attrStr(route.backBy || (typeof day.to === 'number' ? tripHHMM(day.to) : '')) + '" onchange="tbDTTime(\'backBy\', this.value)"></span></label></div>';
   const start = tripDayStart(day, city); if (!start) h += '<div class="tb-hint">No start point yet — set <b>Start from</b> in Setup (the station, your hotel…) and the return leg appears.</div>';
   let k = 0; s.steps.forEach(function(st){
-    if (st.leg){ const L = st.leg; const isReturn = st.kind === 'end'; h += '<div class="tr-leg' + (L.missing ? ' missing' : '') + '"' + (isReturn ? ' style="border-left-style:solid;"' : '') + '><span class="tr-leg-km">' + (isReturn ? 'return' : (L.km !== null ? tripKmLabel(L.km) : '—')) + '</span><select class="modal-input" style="display:inline-block; width:auto; margin:0; padding:3px 6px; font-size:11.5px;" onchange="tbDTLegMode(\'' + attrStr(L.key) + '\', this.value)">' + TRIP_MODES.map(function(m){ return '<option value="' + m[0] + '"' + (m[0] === L.mode ? ' selected' : '') + '>' + (TRIP_MODE_ICON[m[0]] || '') + ' ' + m[1] + '</option>'; }).join('') + '</select><label class="tr-min"><input type="number" class="modal-input" min="0" max="1440" inputmode="numeric" placeholder="min" value="' + (L.missing ? '' : L.minutes) + '" onchange="tbDTLegMin(\'' + attrStr(L.key) + '\', this.value)"> min</label><input type="text" class="modal-input" style="flex:1 1 100%; margin:4px 0 0; padding:3px 8px; font-size:11.5px;" maxlength="200" placeholder="note — line, via, what to see on the way" value="' + attrStr(L.note || '') + '" onchange="tbDTLegNote(\'' + attrStr(L.key) + '\', this.value)"></div>'; }
+    if (st.leg){ const L = st.leg; const isReturn = st.kind === 'end'; h += '<div class="tr-leg' + (L.missing ? ' missing' : '') + '"' + (isReturn ? ' style="border-left-style:solid;"' : '') + '><span class="tr-leg-km">' + (isReturn ? 'return' : (L.km !== null ? tripKmLabel(L.km) : '—')) + '</span><select class="modal-input" style="display:inline-block; width:auto; margin:0; padding:3px 6px; font-size:11.5px;" onchange="tbDTLegMode(\'' + attrStr(L.key) + '\', this.value)">' + TRIP_MODES.map(function(m){ return '<option value="' + m[0] + '"' + (m[0] === L.mode ? ' selected' : '') + '>' + (TRIP_MODE_ICON[m[0]] || '') + ' ' + m[1] + '</option>'; }).join('') + '</select><label class="tr-min"><input type="number" class="modal-input" min="0" max="1440" inputmode="numeric" placeholder="min" value="' + (L.missing ? '' : L.minutes) + '" onchange="tbDTLegMin(\'' + attrStr(L.key) + '\', this.value)"> min</label><input type="text" class="modal-input" style="flex:1 1 100%; margin:4px 0 0; padding:3px 8px; font-size:11.5px;" placeholder="note — line, via, what to see on the way" value="' + attrStr(L.note || '') + '" onchange="tbDTLegNote(\'' + attrStr(L.key) + '\', this.value)"></div>'; }
     if (st.kind === 'stay') h += '<div class="tr-stay"><span>🏨 <b dir="auto">' + escapeHtml(st.name) + '</b> <span class="dim">· start</span></span><span class="tr-time">leave ' + tm(tripMinutesOf(s.leave)) + '</span></div>';
     else if (st.kind === 'end') h += '<div class="tr-stay end"><span>🏨 <b dir="auto">' + escapeHtml(st.name) + '</b></span><span class="tr-time">' + (st.arrive !== null ? 'back ' + tm(st.arrive) + (s.backBy ? (s.late ? ' · after ' + escapeHtml(s.backBy) + ' ✗' : ' · before ' + escapeHtml(s.backBy) + ' ✓') : '') : 'back —') + '</span></div>';
     else if (st.kind === 'stop'){ k++; const e = st.entry || {}; const isStop = tripIsStop(e); const kind = isStop ? tripStopKind(e.ref.kind) : null; const sub = [isStop ? kind[2].toLowerCase() : 'from My places', e.optional ? '<b>optional — if time allows</b>' : '', e.fixedAt ? 'at ' + escapeHtml(e.fixedAt) + ' (fixed)' : ''].filter(Boolean).join(' · ');
@@ -7574,9 +7636,9 @@ function tbStopRender(){ const dr = tbStopDraft; if (!dr) return; const bd = doc
     + '<label class="flabel dim">Google Maps link</label><div style="display:flex; gap:6px; align-items:center;"><input type="text" class="modal-input" id="tbStopUrl" style="flex:1; text-align:left; margin:0;" placeholder="https://maps.app.goo.gl/… — the name reads from it" value="' + attrStr(dr.url || '') + '" onpaste="tbStopOnPaste(event)" onchange="tbStopUrlChanged(this.value)"><button type="button" class="pl-actbtn" onclick="tbStopPasteUrl()" title="Paste what Google Maps shared">📋</button></div>' /* r93-٣ (ق١٠-٢٩-٠١): الخانات الأربع كنافذة Add place: الرابط · الرمز/البلدة · الاسم · النوع */
     + '<label class="flabel dim">Plus code · or a town from our list</label><div style="display:flex; gap:6px; flex-wrap:wrap;"><input type="text" class="modal-input" id="tbStopPlus" style="flex:1 1 140px; margin:0;" placeholder="paste a Plus code / pin link" autocapitalize="characters" autocorrect="off" onchange="tbStopPlusPick(this.value)"><input type="text" class="modal-input" id="tbStopTown" list="tbStopTowns" style="flex:1 1 140px; margin:0;" placeholder="or a town…" onchange="tbStopTownPick(this.value)"><datalist id="tbStopTowns">' + (dr.towns || []).slice(0, 400).map(function(c){ return '<option value="' + attrStr(c.n) + '">'; }).join('') + '</datalist></div>'
     + '<div class="dim" style="font-size:11.5px; margin-top:4px;" id="tbStopWhere">' + (dr.geo ? '📍 ' + escapeHtml(dr.where === 'kept' ? 'pinned' : dr.where) + ' · ' + dr.geo.lat.toFixed(4) + ', ' + dr.geo.lng.toFixed(4) + ' <button type="button" class="chip sm" onclick="tbStopDraft.geo = null; tbStopDraft.where = \'\'; tbStopRender()">✕ clear</button>' : 'No pin yet — a pin puts it on the trip map and gives the legs a distance.') + '</div>'
-    + '<label class="flabel dim">Name</label><input type="text" class="modal-input" id="tbStopName" maxlength="120" placeholder="reads from the link · or type it" value="' + attrStr(dr.name) + '" oninput="tbStopDraft.name = this.value">'
+    + '<label class="flabel dim">Name</label><input type="text" class="modal-input" id="tbStopName" placeholder="reads from the link · or type it" value="' + attrStr(dr.name) + '" oninput="tbStopDraft.name = this.value; mpLenShow(this, MP_LIMITS.stopName, false)">'
     + '<label class="flabel dim">Kind</label><div class="chiprow" style="flex-wrap:wrap; overflow:visible; gap:6px;">' + TRIP_STOP_KINDS.map(function(x){ return '<button type="button" class="chip' + (dr.kind === x[0] ? ' on' : '') + '" style="flex:none;" onclick="tbStopDraft.kind = \'' + x[0] + '\'; tbStopRender()">' + x[1] + ' ' + x[2] + '</button>'; }).join('') + '</div>'
-    + '<label class="flabel dim">About</label><textarea class="modal-input" id="tbStopAbout" rows="2" maxlength="500" placeholder="what it is, what to see — one or two lines" oninput="tbStopDraft.about = this.value">' + escapeHtml(dr.about) + '</textarea>'
+    + '<label class="flabel dim">About</label><textarea class="modal-input" id="tbStopAbout" rows="2" placeholder="what it is, what to see — one or two lines" oninput="tbStopDraft.about = this.value; mpLenShow(this, MP_LIMITS.stopAbout, false)">' + escapeHtml(dr.about) + '</textarea>'
     + '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:6px;"><button type="button" class="chip tog' + (dr.optional ? ' on' : '') + '" onclick="tbStopDraft.optional = !tbStopDraft.optional; tbStopRender()">Optional — if time allows</button><label class="tr-min">fixed time <input type="time" class="modal-input" value="' + attrStr(dr.fixedAt || '') + '" onchange="tbStopDraft.fixedAt = this.value"></label></div>'
     + '<button type="button" class="cta" style="display:block; width:100%; margin-top:12px;" onclick="tbStopSave()">' + (dr.id ? 'Save' : 'Add stop') + '</button><button type="button" class="btn btn-ghost" style="margin-top:8px; padding:7px 14px; font-size:12px;" onclick="tbStopDraft = null; closeModalById(\'dashBackdrop\')">Cancel</button></div>'; }
 function tbStopTownPick(v){ const dr = tbStopDraft; if (!dr) return; const n = pickerNormalize(v || ''); const row = (dr.towns || []).find(function(c){ return pickerNormalize(c.n) === n || (c.a || []).some(function(a){ return pickerNormalize(a) === n; }); }); if (row && typeof row.lat === 'number'){ dr.geo = { lat: row.lat, lng: row.lng }; dr.where = row.n; if (!dr.name.trim()) dr.name = row.n; } else if (v && v.trim()) showToast('Not in our city list — paste a Plus code instead'); tbStopRender(); }
@@ -7586,7 +7648,7 @@ function tbStopUrlChanged(v){ const dr = tbStopDraft; if (!dr) return; dr.url = 
 async function tbStopReadShare(text){ const dr = tbStopDraft; if (!dr) return; const r = parseMapsShare(text); if (!r.url){ showToast('No link found in the pasted text'); return; } dr.url = r.url; if (r.name && !dr.name.trim()) dr.name = r.name; try{ const pt = await tkPlusPoint(text); if (pt && !pt.err && typeof pt.lat === 'number' && !dr.geo){ dr.geo = { lat: +(+pt.lat).toFixed(5), lng: +(+pt.lng).toFixed(5) }; dr.where = pt.how === 'code' ? 'Plus code' : 'pin link'; } }catch(_){} tbStopRender(); if (!dr.name.trim()) await tbStopResolve(r.url); else showToast('Read ✓ — name filled'); } /* r93-٣: نص المشاركة → الرابط والاسم (والموضع إن حمله الرابط) */
 async function tbStopResolve(url){ const dr = tbStopDraft; if (!dr) return; try{ const r = await mpData.geo.resolve(url); if (r && r.name && dr === tbStopDraft && !dr.name.trim()){ dr.name = String(r.name).slice(0, 120); const el = document.getElementById('tbStopName'); if (el) el.value = dr.name; showToast('Name read from the link ✓'); } }catch(e){ mpSwallow(e, 'stop-resolve'); } } /* r93-٣: الاسم من الرابط عبر العامل (بلا مساس به) */
 async function tbStopPlusPick(v){ const dr = tbStopDraft; if (!dr || !v || !v.trim()) return; const r = await tkPlusPoint(v); if (!r || r.err){ showToast((r && r.err) || 'Nothing to read'); return; } dr.geo = { lat: +(+r.lat).toFixed(5), lng: +(+r.lng).toFixed(5) }; dr.where = r.how === 'code' ? 'Plus code' : r.how === 'link' ? 'pin link' : 'coordinates'; tbStopRender(); }
-function tbStopSave(){ const dr = tbStopDraft; const d = tbDTDay(); if (!dr || !d) return; const name = String(dr.name || '').trim(); if (!name){ showToast('Give the stop a name'); return; } tbSnapshot(); if (dr.id){ const e = d.stops.find(function(x){ return x.id === dr.id; }); if (e){ e.name = name.slice(0, 120); e.url = String(dr.url || '').trim().slice(0, 400); e.ref = { sourceType: 'stop', kind: tripStopKind(dr.kind)[0] }; e.geo = dr.geo ? { lat: dr.geo.lat, lng: dr.geo.lng } : null; e.about = String(dr.about || '').trim().slice(0, 500); e.optional = !!dr.optional; e.fixedAt = (tripMinutesOf(dr.fixedAt) !== null) ? String(dr.fixedAt) : null; } } else d.stops.push(tripNewStop({ name: name, url: dr.url, kind: dr.kind, geo: dr.geo, about: dr.about, optional: dr.optional, fixedAt: dr.fixedAt })); tbStopDraft = null; closeModalById('dashBackdrop'); tbSave(); tbRender(); try{ mpTripCount('stopsAdded', 1); }catch(_){} }
+function tbStopSave(){ const dr = tbStopDraft; const d = tbDTDay(); if (!dr || !d) return; const name = String(dr.name || '').trim(); if (!name){ showToast('Give the stop a name'); return; } if (!(mpLenOk('tbStopName', MP_LIMITS.stopName) & mpLenOk('tbStopAbout', MP_LIMITS.stopAbout))) return; /* r100-ج */ tbSnapshot(); if (dr.id){ const e = d.stops.find(function(x){ return x.id === dr.id; }); if (e){ e.name = name.slice(0, 120); e.url = String(dr.url || '').trim().slice(0, 400); e.ref = { sourceType: 'stop', kind: tripStopKind(dr.kind)[0] }; e.geo = dr.geo ? { lat: dr.geo.lat, lng: dr.geo.lng } : null; e.about = String(dr.about || '').trim().slice(0, 500); e.optional = !!dr.optional; e.fixedAt = (tripMinutesOf(dr.fixedAt) !== null) ? String(dr.fixedAt) : null; } } else d.stops.push(tripNewStop({ name: name, url: dr.url, kind: dr.kind, geo: dr.geo, about: dr.about, optional: dr.optional, fixedAt: dr.fixedAt })); tbStopDraft = null; closeModalById('dashBackdrop'); tbSave(); tbRender(); try{ mpTripCount('stopsAdded', 1); }catch(_){} }
 /* =========================================================
    دليل الاستخدام (Help Guide) — نافذة ثابتة بالعربي/الإنجليزي، أقسام قابلة للطي
    ========================================================= */
@@ -7608,7 +7670,7 @@ const HELP_CONTENT = { // أ-١٢-٢ (نص المالك v2 المعتمد ١٦ �
       everywhere: '<b>Bookmark</b> what you like · <b>Save</b> a place or trip to your own world · <b>Export</b> a card or a message · <b>Share</b> a list, a trip, or a curator — publicly or with one person by name.',
       start: '<b>Start fast:</b> create your account, add a city, then paste your first Maps link — or import your saved Google Maps lists in one file.' },
     sections: [
-      { id: 'places', h: 'Places', b: "Every place lives in one city and one sub-category (the tree is ours: cafés, dishes, cuisines, shopping, parks, squares, waterfronts, landmarks, family, stay, transport). Add a place from a Maps link: name and area fill in, the category is suggested, and the pin is placed for you — correct it with one drag. If a save fails (no connection), a sheet asks Retry or Discard; a change you keep shows <b>Unsaved</b> next to My places until it saves (r100-أ). While a save or delete is running its button is disabled and a second tap is ignored — one tap, one change (r100-ب). Saving writes only the categories you touched, and keeps places added from another device. Your list shows sections you have content in, with counts. Filter by category, then sub-category. Switch <b>☰ List · 🗺 Map</b>; <b>📍 Nearby</b> (beside Day plan) sorts this city's places by straight-line distance from where you are — ≤ 1 km · ≤ 3 km · Any — with a <i>Go</i> button in your navigation app. Your location is asked when you tap and never stored.<br><b>Adding a place (r93):</b> the window starts with the <b>Google Maps link</b> — paste what Maps shared (or tap 📋 Paste) and the name and area fill in; then <b>Plus code</b> (from under the address in Maps: one exact pin, and the area reads from it), then Name, then the category with <i>Fine dining · ⭐ Top place · Outside the city</i>. <b>Outside the city</b> marks a nearby town kept under this city; when a city has such towns, a row <b>Places outside …: Estepona · N</b> appears above the categories — tap a town to see its places only (list and map), tap it again for the whole city; the town chip on a card opens it too. <b>⚙</b> at the end of the row manages the city: <i>Merge into another city</i>, <i>Split out a town</i>, move one place from Edit, <i>🗑 beside a town</i> (r97: removes that folded town and its places; the rest of the city stays), and <i>Undo</i>. <b>Duplicates (r97):</b> places you have twice show as a folded row <i>▸ Duplicates · N</i> in the box above the list — <i>Same Google place</i> or <i>Same spot</i>; tap a name to open its card, then <i>Keep this</i> on the one to keep (the rest merge into it; Undo sits on the row). <b>One spot, one place (r96):</b> saving or pinning a place at a spot you already have asks <i>Keep both · Keep mine · Replace mine</i>; in a batch such rows are held with <i>Keep both · Drop this row</i>. <b>Areas (r96):</b> the area is read from the pin by one rule for every path (Paris → 7e arr. · Vienna → district · a village before its hamlet, the city or canton never); after this update a one-time <i>Re-read N pins</i> banner refreshes the areas you already have. With a town chip on, the box above the list (without a category / old category) shows that town only, and the chip says how many are in the box." },
+      { id: 'places', h: 'Places', b: "Every place lives in one city and one sub-category (the tree is ours: cafés, dishes, cuisines, shopping, parks, squares, waterfronts, landmarks, family, stay, transport). Add a place from a Maps link: name and area fill in, the category is suggested, and the pin is placed for you — correct it with one drag. If a save fails (no connection), a sheet asks Retry or Discard; a change you keep shows <b>Unsaved</b> next to My places until it saves (r100-أ). While a save or delete is running its button is disabled and a second tap is ignored — one tap, one change (r100-ب). Text fields have limits (name 120 · note 2,000 · nickname 24): a counter appears as you near the limit, and Save asks you to shorten rather than cutting your text (r100-ج). When something can't load or save, the message says why in plain words — check your connection, you don't have access, try again — and what was on screen stays; if the free daily quota runs out you'll see <b>MyPickz is busy today — back at 11:00 Riyadh</b> (r100-د). A private daily backup of all data is taken at 11:30 Riyadh (r100-و). Saving writes only the categories you touched, and keeps places added from another device. Your list shows sections you have content in, with counts. Filter by category, then sub-category. Switch <b>☰ List · 🗺 Map</b>; <b>📍 Nearby</b> (beside Day plan) sorts this city's places by straight-line distance from where you are — ≤ 1 km · ≤ 3 km · Any — with a <i>Go</i> button in your navigation app. Your location is asked when you tap and never stored.<br><b>Adding a place (r93):</b> the window starts with the <b>Google Maps link</b> — paste what Maps shared (or tap 📋 Paste) and the name and area fill in; then <b>Plus code</b> (from under the address in Maps: one exact pin, and the area reads from it), then Name, then the category with <i>Fine dining · ⭐ Top place · Outside the city</i>. <b>Outside the city</b> marks a nearby town kept under this city; when a city has such towns, a row <b>Places outside …: Estepona · N</b> appears above the categories — tap a town to see its places only (list and map), tap it again for the whole city; the town chip on a card opens it too. <b>⚙</b> at the end of the row manages the city: <i>Merge into another city</i>, <i>Split out a town</i>, move one place from Edit, <i>🗑 beside a town</i> (r97: removes that folded town and its places; the rest of the city stays), and <i>Undo</i>. <b>Duplicates (r97):</b> places you have twice show as a folded row <i>▸ Duplicates · N</i> in the box above the list — <i>Same Google place</i> or <i>Same spot</i>; tap a name to open its card, then <i>Keep this</i> on the one to keep (the rest merge into it; Undo sits on the row). <b>One spot, one place (r96):</b> saving or pinning a place at a spot you already have asks <i>Keep both · Keep mine · Replace mine</i>; in a batch such rows are held with <i>Keep both · Drop this row</i>. <b>Areas (r96):</b> the area is read from the pin by one rule for every path (Paris → 7e arr. · Vienna → district · a village before its hamlet, the city or canton never); after this update a one-time <i>Re-read N pins</i> banner refreshes the areas you already have. With a town chip on, the box above the list (without a category / old category) shows that town only, and the chip says how many are in the box." },
       { id: 'trips', h: 'Trips', b: "Build a trip in two steps: the city, the days and the places you pick — optionally arrival, departure, where you stay and what you take when it is too far to walk — then MyPickz drafts each day in four periods: morning, noon, afternoon, evening, with alternatives when several places are of the same kind and a <i>No day yet</i> tray for what did not fit. <i>Move</i> anything, switch between Calm, Balanced and Dense, undo, then approve. Prefer to place them yourself? <i>Arrange it myself</i> keeps every place in the tray and the grid asks you for each one in turn; <i>Auto-fill the rest</i> places what is left. The ▲ ▼ arrows beside a stop's number reorder it within its period; moving into another period that already has stops asks where in the order; <i>Repeat on…</i> adds a second visit to the same place. Tap <i>Trip</i> on any place card and it lands in its best slot — or in the tray. <b>Day route</b>: open an approved trip, pick a day, set when you leave and by when you want to be back; each leg shows its rough distance and a mode (walk, metro and transit, car — the default follows the distance), and <i>Navigate</i> opens your app in that mode. Write the minutes your app shows — MyPickz never estimates them — and the times of the day follow; a leg without minutes keeps the day <i>incomplete</i>, and a late return is flagged.<br><b>Day plan</b> (Places tab, beside Nearby): a one-day plan that lives in Places, not in My trips. Two kinds — <b>In the city</b> (your places in the usual rhythm) and <b>Day trip</b> (a linear route out of the city: villages, peaks, lakes, stations — stops you type or pick from My places, each leg with its transport: train, boat, cable car, cogwheel, bus, walk, car — notes, an optional stop, a fixed time). Give it a <b>Trip name</b>; open it from <i>Day plan ▸ Saved</i>; <b>⧉ Copy into a trip</b> copies the day into one of your trips as a new day or in place of one, with Undo." },
       { id: 'curators', h: 'Curators', b: "A curator's world is a showcase of their favorites, on top of their ordinary lists: cards with their own headings — <i>best time</i>, <i>what to order</i>, <i>where to sit</i> — a city card they keep updating, and <i>latest experiences</i>. Follow a curator to see what's new from them first. Browse their places and trips as they see them — read-only. Curators are invited by MyPickz or apply from their account; the badge means a space, not a rating." },
       { id: 'community', h: 'Community', b: "Other users' public lists and trips, by city — and who saved what. Filter by category and sub-category; open a list and save a place to your own — it keeps its source. Your list is private until you make it public; sharing by name with one person stays between you two." },
@@ -7635,7 +7697,7 @@ const HELP_CONTENT = { // أ-١٢-٢ (نص المالك v2 المعتمد ١٦ �
       everywhere: '<b>تمييز</b> لما تحب · <b>حفظ</b> لمكان أو رحلة إلى عالمك · <b>تصدير</b> بطاقةً أو رسالة · <b>مشاركة</b> قائمة أو رحلة أو منتقٍ — علنًا أو مع شخص بعينه بالاسم.',
       start: '<b>ابدأ بسرعة:</b> أنشئ حسابك، أضف مدينة، ثم الصق أول رابط — أو استورد قوائمك المحفوظة بخرائط جوجل بملف واحد.' },
     sections: [
-      { id: 'places', h: 'الأماكن', b: 'كل مكان بمدينة واحدة وفرعي واحد (الشجرة لنا: مقاهٍ · وجبات · مطابخ · تسوّق · حدائق · ساحات · واجهات بحرية · معالم · عائلة · إقامة · تنقل). أضف مكانًا من رابط الخرائط: يُملأ الاسم والمنطقة، ويُقترح التصنيف، ويُوضع الدبوس لك — صحّحه بسحبة. وإن فشل الحفظ (بلا اتصال) تسألك ورقة Retry أو Discard؛ والتعديل الذي تُبقيه يظهر <b>Unsaved</b> بجانب My places حتى يُحفظ (r100-أ). وأثناء الحفظ أو الحذف يتعطّل الزر وتُتجاهل النقرة الثانية — نقرة واحدة، تغيير واحد (r100-ب). الحفظ يكتب التصنيفات التي مسستها فقط ويُبقي ما أضافه جهاز آخر. قائمتك تعرض الأقسام التي لك فيها محتوى بعدّاداتها. صفِّ بالتصنيف ثم الفرعي. بدّل العرض: ☰ قائمة · 🗺 خريطة؛ و«📍 Nearby» (بجوار Day plan) يرتّب أماكن المدينة بالبعد المستقيم عن موضعك — ≤ 1 km · ≤ 3 km · Any — بزر <i>Go</i> يفتح تطبيق الملاحة الذي اخترته. موقعك يُطلب عند النقر ولا يُخزَّن.<br><b>إضافة مكان (r93):</b> النافذة تبدأ بـ<b>رابط Google Maps</b> — الصق ما شاركته الخرائط (أو اضغط 📋 Paste) فيُملأ الاسم والحي؛ ثم <b>Plus code</b> (من تحت العنوان في الخرائط: دبوس دقيق، والحي يُقرأ منه)، ثم الاسم، ثم التصنيف مع <i>Fine dining · ⭐ Top place · Outside the city</i>. <b>Outside the city</b> يسِم بلدة مجاورة مضمومة تحت هذه المدينة؛ وحين يكون في المدينة بلدات يظهر صف <b>Places outside …: Estepona · N</b> فوق التصنيفات — اضغط البلدة لعرض أماكنها وحدها (قائمةً وخريطة)، واضغطها ثانيةً للمدينة كلها؛ وشريحة البلدة على البطاقة تفتحه أيضًا. <b>⚙</b> آخر الصف يدير المدينة: <i>Merge into another city</i> · <i>Split out a town</i> · نقل مكان واحد من Edit · <i>🗑 بجانب البلدة</i> (r97: يحذف البلدة المضمومة بأماكنها وتبقى بقية المدينة) · <i>Undo</i>. <b>المكرَّر (r97):</b> الأماكن التي لديك مرتين صفٌّ مطوي <i>▸ Duplicates · N</i> في الصندوق فوق القائمة — <i>Same Google place</i> أو <i>Same spot</i>؛ اضغط الاسم لفتح بطاقته ثم <i>Keep this</i> على ما تُبقيه (والبقية تُدمج فيه؛ وUndo على الصف). <b>موقع واحد مكان واحد (r96):</b> حفظ مكان أو تثبيته في موقع لديك أصلًا يسأل <i>Keep both · Keep mine · Replace mine</i>؛ وفي الدفعة تُحجز هذه الصفوف مع <i>Keep both · Drop this row</i>. <b>الحي (r96):</b> يُقرأ من الدبوس بقاعدة واحدة لكل المسارات (باريس → 7e arr. · فيينا → المقاطعة · القرية قبل النجع، ولا المدينة ولا الكانتون أبدًا)؛ وبعد هذا التحديث يظهر مرة واحدة شريط <i>Re-read N pins</i> يحدّث أحياء ما لديك. ومع شريحة بلدة مفعّلة يعرض الصندوق فوق القائمة (بلا تصنيف / تصنيف قديم) تلك البلدة وحدها، والشريحة تقول كم منها في الصندوق.' },
+      { id: 'places', h: 'الأماكن', b: 'كل مكان بمدينة واحدة وفرعي واحد (الشجرة لنا: مقاهٍ · وجبات · مطابخ · تسوّق · حدائق · ساحات · واجهات بحرية · معالم · عائلة · إقامة · تنقل). أضف مكانًا من رابط الخرائط: يُملأ الاسم والمنطقة، ويُقترح التصنيف، ويُوضع الدبوس لك — صحّحه بسحبة. وإن فشل الحفظ (بلا اتصال) تسألك ورقة Retry أو Discard؛ والتعديل الذي تُبقيه يظهر <b>Unsaved</b> بجانب My places حتى يُحفظ (r100-أ). وأثناء الحفظ أو الحذف يتعطّل الزر وتُتجاهل النقرة الثانية — نقرة واحدة، تغيير واحد (r100-ب). وللخانات حدود (الاسم ١٢٠ · الملاحظة ٢٠٠٠ · الاسم المستعار ٢٤): يظهر عدّاد حين تقترب من الحد، وSave يطلب الاختصار بدل أن يقصّ نصك (r100-ج). وحين يتعذّر تحميل شيء أو حفظه تقول الرسالة السبب بكلمات واضحة — تحقق من الاتصال · لا صلاحية · حاول مجددًا — ويبقى ما على الشاشة؛ وإن نفدت الحصة اليومية المجانية ترى <b>MyPickz is busy today — back at 11:00 Riyadh</b> (r100-د). ونسخة احتياطية خاصة من كل البيانات تُؤخذ يوميًا ١١:٣٠ الرياض (r100-و). الحفظ يكتب التصنيفات التي مسستها فقط ويُبقي ما أضافه جهاز آخر. قائمتك تعرض الأقسام التي لك فيها محتوى بعدّاداتها. صفِّ بالتصنيف ثم الفرعي. بدّل العرض: ☰ قائمة · 🗺 خريطة؛ و«📍 Nearby» (بجوار Day plan) يرتّب أماكن المدينة بالبعد المستقيم عن موضعك — ≤ 1 km · ≤ 3 km · Any — بزر <i>Go</i> يفتح تطبيق الملاحة الذي اخترته. موقعك يُطلب عند النقر ولا يُخزَّن.<br><b>إضافة مكان (r93):</b> النافذة تبدأ بـ<b>رابط Google Maps</b> — الصق ما شاركته الخرائط (أو اضغط 📋 Paste) فيُملأ الاسم والحي؛ ثم <b>Plus code</b> (من تحت العنوان في الخرائط: دبوس دقيق، والحي يُقرأ منه)، ثم الاسم، ثم التصنيف مع <i>Fine dining · ⭐ Top place · Outside the city</i>. <b>Outside the city</b> يسِم بلدة مجاورة مضمومة تحت هذه المدينة؛ وحين يكون في المدينة بلدات يظهر صف <b>Places outside …: Estepona · N</b> فوق التصنيفات — اضغط البلدة لعرض أماكنها وحدها (قائمةً وخريطة)، واضغطها ثانيةً للمدينة كلها؛ وشريحة البلدة على البطاقة تفتحه أيضًا. <b>⚙</b> آخر الصف يدير المدينة: <i>Merge into another city</i> · <i>Split out a town</i> · نقل مكان واحد من Edit · <i>🗑 بجانب البلدة</i> (r97: يحذف البلدة المضمومة بأماكنها وتبقى بقية المدينة) · <i>Undo</i>. <b>المكرَّر (r97):</b> الأماكن التي لديك مرتين صفٌّ مطوي <i>▸ Duplicates · N</i> في الصندوق فوق القائمة — <i>Same Google place</i> أو <i>Same spot</i>؛ اضغط الاسم لفتح بطاقته ثم <i>Keep this</i> على ما تُبقيه (والبقية تُدمج فيه؛ وUndo على الصف). <b>موقع واحد مكان واحد (r96):</b> حفظ مكان أو تثبيته في موقع لديك أصلًا يسأل <i>Keep both · Keep mine · Replace mine</i>؛ وفي الدفعة تُحجز هذه الصفوف مع <i>Keep both · Drop this row</i>. <b>الحي (r96):</b> يُقرأ من الدبوس بقاعدة واحدة لكل المسارات (باريس → 7e arr. · فيينا → المقاطعة · القرية قبل النجع، ولا المدينة ولا الكانتون أبدًا)؛ وبعد هذا التحديث يظهر مرة واحدة شريط <i>Re-read N pins</i> يحدّث أحياء ما لديك. ومع شريحة بلدة مفعّلة يعرض الصندوق فوق القائمة (بلا تصنيف / تصنيف قديم) تلك البلدة وحدها، والشريحة تقول كم منها في الصندوق.' },
       { id: 'trips', h: 'الرحلات', b: 'ابنِ الرحلة بخطوتين: المدينة والأيام والأماكن التي تختارها — واختياريًّا الوصول والمغادرة ومكان الإقامة وما تركبه حين يبعد المكان عن المشي — ثم يرسم MyPickz كل يوم بأربع فترات: صباح · ظهيرة · عصر · مساء، مع بدائل حين تتعدد أماكن الصنف نفسه، وصينية «بلا يوم بعد» لما لم يتسع له البرنامج. انقل ما شئت، وبدّل بين هادئ ومتوازن ومكثّف، وتراجع، ثم اعتمد. تفضّل الترتيب بنفسك؟ «Arrange it myself» يبقي كل الأماكن في الصينية وتسألك الشبكة عن كلٍّ بدوره، و«Auto-fill the rest» يضع ما بقي. السهمان ▲ ▼ بجوار رقم المحطة يرتّبانها داخل فترتها؛ وحين تنقل إلى فترة أخرى فيها محطات تختار موضعه في الترتيب؛ و«Repeat on…» يضيف زيارة ثانية للمكان نفسه. اضغط «رحلة» على أي بطاقة مكان فيهبط في خانته الأنسب — أو في الصينية. <b>مسار اليوم</b>: افتح رحلة معتمدة واختر يومًا وحدّد متى تخرج ومتى تريد العودة؛ كل رِجل تعرض مسافتها التقريبية ووسيلتها (مشي · مترو ومواصلات · سيارة — الافتراض من المسافة)، و«ملاحة» يفتح تطبيقك بالوضع نفسه. اكتب الدقائق التي يعرضها تطبيقك — MyPickz لا يقدّرها أبدًا — فتتبعها أوقات اليوم؛ رِجل بلا دقائق تُبقي اليوم «غير مكتمل»، والعودة بعد الموعد تُعلَّم.<br><b>خطة اليوم (Day plan)</b> في تبويب الأماكن بجوار Nearby: خطة يوم واحد تعيش في الأماكن لا في My trips. نوعان — <b>In the city</b> (أماكنك بالإيقاع المعتاد) و<b>Day trip</b> (مسار خطّي خارج المدينة: قرى · قمم · بحيرات · محطات — محطات تكتبها أو تختارها من My places، ولكل رِجل وسيلتها: قطار · مركب · تلفريك · قطار جبلي · باص · مشي · سيارة — وملاحظة، ومحطة اختيارية، ووقت مثبَّت). سمِّها بـ<b>Trip name</b>، وافتحها من <i>Day plan ▸ Saved</i>، و<b>⧉ Copy into a trip</b> ينسخ اليوم إلى إحدى رحلاتك يومًا جديدًا أو بدل يوم، مع Undo.' },
       { id: 'curators', h: 'المنتقون', b: 'عالم المنتقي مساحة عرض لمفضلاته فوق قوائمه العادية: بطاقات بعناوينه — أفضل وقت · ماذا تطلب · أين تجلس — وبطاقة مدينة يحدّثها، وآخر التجارب. تابع منتقيًا ليصلك جديده أولًا. تصفّح أماكنه ورحلاته كما يراها — للعرض فقط. المنتقون يُدعون من MyPickz أو يطلبون من حسابهم؛ الشارة مساحة لا تقييم.' },
       { id: 'community', h: 'المجتمع', b: 'قوائم المستخدمين الآخرين ورحلاتهم العامة بالمدينة — ومن حفظ ماذا. صفِّ بالتصنيف والفرعي؛ افتح قائمة واحفظ مكانًا إلى قائمتك — يحتفظ بمصدره. قائمتك خاصة حتى تجعلها عامة؛ والمشاركة بالاسم مع شخص تبقى بينكما.' },
@@ -7704,6 +7766,7 @@ function openSymbols(){ /* r87-2 (كلمة المالك ١٢:٥٥ · ١٣:٠٤):
     + row('top', 'Top', 'Marks it as one of your top places.')
     + '<div class="dim" style="font-size:12px; margin:12px 0 6px;">The two states of a place</div>'
     + row('<b style="font-size:12px;">✓</b>', 'Pinned', 'It has a spot on your MyPickz map — from your Takeout file, from a match in our map data you accepted, from someone who pinned the same place before, or from your own Plus code / map tap. Its Plus code shows under the address (More).')
+    + row('<span class="lencount over" style="display:inline;">118 / 120 characters</span>', 'Character limit', 'Shows under a text field as you near its limit; over the limit, Save asks you to shorten (r100-ج)')
     + row('<b class="unsaved" style="font-size:12px;">Unsaved</b>', 'Not saved yet', 'A change that could not be saved (r100-أ): the sheet offered Retry or Discard and you kept it on screen. Save again when you are online, or Discard it — nothing is lost on the server.')
     + row('<b style="font-size:12px;">·</b>', 'Not pinned yet', 'It is on your list with its Google link, but has no spot on your map yet. Nothing is pinned without your tap. A pin matters only for day plans, Nearby and the map.')
     + '<div class="dim" style="font-size:12px; margin:12px 0 6px;">Where things live</div><div style="font-size:13px; line-height:1.5;"><b>List</b> — your places by category; the box above it holds what still needs a category or a pin (r98b: no status lines under My places).<br><b>Map</b> — your pins; the Pins panel (suggested pins to accept, look-alikes to pick, not pinned yet) shows only while something is left to pin.</div>'
@@ -7862,7 +7925,7 @@ async function openAdminRequests(){ // r72p (٥) — ب-٢-٢-ب (v2-ب · ٣): 
 async function adminDecideRequest(uid, status){
   if (!isOwner) return;
   if (status === 'declined' && !(await mpConfirm('The person keeps their account; they can ask again later.', { title: '⭐ Decline this request?', ok: 'Decline', danger: true }))) return; /* ب-٢-٢-ب: Decline بورقة تأكيد */
-  try{ await mpData.requests.setStatus(uid, status); if (status === 'accepted'){ await mpData.profiles.merge(uid, { verified: true }); curators = null; } }catch(e){ mpSwallow(e, 'decide'); showToast('Could not update · ' + ((e && e.code) || 'error')); return; }
+  try{ await mpData.requests.setStatus(uid, status); if (status === 'accepted'){ await mpData.profiles.merge(uid, { verified: true }); curators = null; } }catch(e){ mpSwallow(e, 'decide'); mpErrToast('Could not update', e); return; }
   showToast(status === 'accepted' ? 'Accepted — curator badge set ✓' : 'Declined'); openAdminRequests();
 }
 /* ب-٢-٢-ب (v2-ب · ٥): البلاغات — الأحدث أولًا · مرشِّح بالنوع · بلاغ app يُعرض بنوع المشكلة والشاشة والبناء من مقدمة نصه [Type · Screen · build] · by بالاسم · Dismiss بورقة */
@@ -7921,7 +7984,7 @@ async function openUsersModal(){
   try{
     allUsersCache = await mpData.users.all();
     try{ const susSet = await mpData.suspensions.allIds(); allUsersCache.forEach(u => { u.suspended = susSet.has(u.uid); }); }catch(e){ /* v3: مصدر الحقيقة suspensions — قبل نشرها يبقى الحقل القديم */ }
-  }catch(e){ allUsersCache = []; body.innerHTML = '<div class="mp-empty mini">Could not load users</div><button type="button" class="dash-door" onclick="openUsersModal()"><span>↻ Retry</span><span></span></button>'; return; }
+  }catch(e){ mpSwallow(e, 'admin-users'); allUsersCache = []; body.innerHTML = '<div class="mp-empty mini">Could not load users — ' + escapeHtml(mpErrText(e)) + '</div><button type="button" class="dash-door" onclick="openUsersModal()"><span>↻ Retry</span><span></span></button>'; return; }
   await loadCommunityLists();
   communityUsers.forEach(cu => { const u = allUsersCache.find(x => x.uid === cu.uid); if (u && !u.nickname && cu.nickname){ u.nickname = cu.nickname; mpData.users.merge(cu.uid, { nickname: cu.nickname }).catch(()=>{}); } }); // إصلاح تلقائي للاسم الناقص من القائمة العامة
   try{ curators = await mpData.profiles.curators(200); }catch(e){ curators = curators || []; }
@@ -8076,6 +8139,7 @@ async function copyUsersReport(){
 }
 
 async function toggleSuspendUser(uid){
+  if (!uid || !currentUser || uid === currentUser.uid){ if (uid && currentUser && uid === currentUser.uid) showToast("You can't suspend yourself"); return; } /* r100-ج */
   const u = allUsersCache.find(x => x.uid === uid);
   if (!u) return;
   const newVal = !u.suspended;
@@ -8117,6 +8181,7 @@ function openInputModal(title, placeholder, initialValue, options, opts){
   return new Promise((resolve) => {
     modalResolve = resolve;
     inputModalFree = !!(opts && opts.allowFree); // ر٧٠د: قائمة اقتراح لا قيد (المعجم) — الحر مقبول
+    inputModalMax = (opts && opts.maxLen) || 0; /* r100-ج */
     document.getElementById('inputModalTitle').textContent = title;
     const f = document.getElementById('inputModalField');
     const s = document.getElementById('inputModalSelect');
@@ -8167,6 +8232,7 @@ async function gazFindCity(countryName, name){ // ز-١-ج-٢: الصف بالم
 function gazEntryToCity(row, countryName){ const o = { id: String(row.id), name: row.n, country: countryName }; if (typeof row.lat === 'number'){ o.lat = row.lat; o.lng = row.lng; } if (row.r) o.r = row.r; if (row.ar) o.nameAr = row.ar; if (row.island) o.island = true; return o; }
 let inputModalOptions = null;
 let inputModalFree = false;
+let inputModalMax = 0; /* r100-ج: حد الطول للنافذة الحالية (0 = بلا) */
 let inputModalTouched = false;
 function inputModalFilter(){
   const l = document.getElementById('inputModalList'); if (!l || !inputModalOptions) return;
@@ -8188,6 +8254,7 @@ function inputModalPick(v){
 function confirmInputModal(){
   const f = document.getElementById('inputModalField');
   let val = f.value;
+  if (inputModalMax && String(val || '').length > inputModalMax){ document.getElementById('inputModalError').textContent = String(val).length.toLocaleString('en') + ' / ' + inputModalMax + ' characters — shorten to save'; return; } /* r100-ج */
   if (inputModalOptions){
     // ر٧٠د (إصلاح انحدار r70b2): الخيارات نصوص أو كائنات {name} — المطابقة بالتطبيع؛ ومع المعجم (inputModalFree) يُقبل النص الحر للمدينة الغائبة
     const key = pickerNormalize(val);
@@ -8385,7 +8452,7 @@ function tkWords(s){ return String(s || '').normalize('NFD').replace(/[\u0300-\u
 function tkSubOf(loc, city, cands){ let sub = null, subS = Infinity; const dBest = tkKm(loc, city); tkNear(loc, cands.subGrid || {}).forEach(function(c){ if (!c.absorbedBy || c.absorbedBy.id !== city.id) return; const d = tkKm(loc, c); const s = d / c.rr; if (s <= 1 && d < dBest && s < subS){ sub = c; subS = s; } }); return sub; } /* r84-4: الحيّ فقط إن كان المكان أقرب إلى مركز الحيّ منه إلى مركز المدينة */
 
 /* ── IM1 · الورقة (بالقشرة الموحَّدة dash) ── */
-function tkOpenImport(){ const bd = document.getElementById('dashBackdrop'); if (!bd) return; bd.classList.add('show'); dashSet('📥 Import from Google Maps', null); if (tkState.phase === 'intro' || !tkState.plan) tkState.phase = 'intro'; tkRender(); }
+function tkOpenImport(){ const bd = document.getElementById('dashBackdrop'); if (!bd) return; bd.classList.add('show'); dashSet('📥 Import from Google Maps', null); if (tkState.phase === 'intro' || !tkState.plan){ tkState.phase = 'intro'; tkState.err = ''; } tkRender(); } /* r100-د: رسالة الملف السابق لا تلازم الفتح التالي */
 function tkWaiting(){ try{ return localStorage.getItem('mp_tk_waiting') || ''; }catch(_){ return ''; } }
 function tkMarkWaiting(){ try{ localStorage.setItem('mp_tk_waiting', String(Date.now())); }catch(_){} tkRender(); if (typeof renderPlacesMine === 'function') try{ renderPlacesMine(); }catch(_){} }
 function tkClearWaiting(){ try{ localStorage.removeItem('mp_tk_waiting'); }catch(_){} }
@@ -8399,7 +8466,7 @@ function tkIntroHtml(){ const w = tkWaiting(); const signed = !!currentUser; /* 
     + '<div class="dim" style="font-size:11.5px; margin-top:6px; text-align:center;">🔒 Nothing leaves your phone — the file is read here, nothing is uploaded, nothing is read from Google.</div>'
     + (signed ? tkLastHtml() : '') /* r86: الاستئناف · المنتظِرة · آخر استيراد (Undo · Receipt) */
     + (w ? '<button type="button" class="btn btn-ghost" style="margin-top:10px; padding:7px 14px; font-size:12px;" onclick="tkMeanwhile()">Meanwhile, paste one place</button>' : '')
-    + (tkState.err ? '<div class="pl-sub" style="color:#ffb4a2; margin-top:8px;">' + escapeHtml(tkState.err) + '</div>' : '');
+    + (tkState.err ? '<div class="pl-sub errline" style="margin-top:8px;">' + escapeHtml(tkState.err) + '</div>' : '');
 }
 function tkRender(){ const body = document.getElementById('dashBody'); if (!body) return; let h = '';
   if (tkState.phase === 'intro') h = tkIntroHtml(); else if (tkState.phase === 'reading') h = '<div style="font-size:13px;">Reading your file… ' + escapeHtml(tkState.progress || '') + '</div>'; else if (tkState.phase === 'plan') h = tkPlanHtml(); else if (tkState.phase === 'commit') h = '<div style="font-size:13px;">Importing… ' + escapeHtml(tkState.progress || '') + '</div>'; else if (tkState.phase === 'done') h = tkResultHtml(); else if (tkState.phase === 'undo') h = tkUndoHtml(); else if (tkState.phase === 'undone') h = tkUndoneHtml(); /* r86-3 (البند ٤) */
@@ -8407,10 +8474,14 @@ function tkRender(){ const body = document.getElementById('dashBody'); if (!body
 }
 async function tkFilesChosen(files){ if (!files || !files.length) return; tkState.err = ''; tkState.phase = 'reading'; tkState.progress = ''; tkRender();
   tkResumeClear(); tkState.fileName = ''; tkState.fileHash = ''; tkState.fileSize = 0; /* r86 (IM8): ملف آخر يمسح الاستئناف · البصمة sha-256 للمحتوى (للإيصال والاستئناف) */
-  try{ const entries = []; const names = []; let size = 0; const bufs = []; for (let i = 0; i < files.length; i++){ const f = files[i]; const nm = String(f.name || ''); names.push(nm); size += f.size || 0; const buf = await f.arrayBuffer(); bufs.push(buf); if (/\.zip$/i.test(nm)){ const inner = await tkUnzip(buf); inner.forEach(function(e){ entries.push(e); }); } else { entries.push({ name: nm, text: new TextDecoder().decode(buf) }); } }
+  try{ const entries = []; const names = []; let size = 0; const bufs = []; for (let i = 0; i < files.length; i++){ const f = files[i]; const nm = String(f.name || ''); names.push(nm); size += f.size || 0; const buf = await f.arrayBuffer(); if (!buf || !buf.byteLength){ bufs.push(buf); continue; } /* r100-د: الملف الفارغ يُتخطّى — إن كانت كلها فارغة تأتي الرسالة أدناه */ bufs.push(buf); if (/\.zip$/i.test(nm)){ let inner = []; try{ inner = await tkUnzip(buf); }catch(ze){ throw Object.assign(new Error('This .zip could not be read — download it again from Google Takeout'), { tkUser: true }); } inner.forEach(function(e){ entries.push(e); }); } else { entries.push({ name: nm, text: new TextDecoder().decode(buf) }); } }
     tkState.fileName = names.join(' + '); tkState.fileSize = size; tkState.fileHash = await tkSha256(bufs);
-    const plan = await tkBuildPlan(entries, function(p){ tkState.progress = p; tkRender(); }); tkState.plan = plan; tkState.phase = 'plan'; tkClearWaiting(); tkRender();
-  }catch(e){ mpSwallow(e, 'import'); tkState.err = 'Could not read this file · ' + ((e && e.message) || 'error'); tkState.phase = 'intro'; tkRender(); }
+    /* r100-د (import.filesBad): ملف فارغ · ليس تصدير Takeout · لا أماكن فيه — رسالة واضحة قبل الخطة */
+    const __user = function(m){ const err = new Error(m); err.tkUser = true; return err; };
+    if (!bufs.some(function(b){ return b && b.byteLength; })) throw __user('This file is empty — choose the .zip you downloaded from Google Takeout' + (names.some(function(n){ return !/\.zip$/i.test(n); }) ? ', or a CSV from it' : ''));
+    if (!entries.some(function(e){ return tkWanted(e.name); })) throw __user("No CSV files found under Saved in this file — in Takeout choose Maps › Saved (the .zip), or pick the CSV files from its Saved folder");
+    const plan = await tkBuildPlan(entries, function(p){ tkState.progress = p; tkRender(); }); if (!(plan.rows > 0) && !((plan.waiting || []).length)) throw __user('No places found in this file — is it the Takeout export of Maps › Saved?'); tkState.plan = plan; tkState.phase = 'plan'; tkClearWaiting(); tkRender();
+  }catch(e){ mpSwallow(e, 'import'); tkState.err = (e && e.tkUser) ? e.message : ('Could not read this file — ' + mpErrText(e)); tkState.phase = 'intro'; tkRender(); } /* r100-د: سبب مفهوم */
 }
 
 function tkTownKey(name){ return pickerNormalize(String(name || '').replace(/^\d{4,5}\s+/, '').replace(/\s*\([^)]*\)\s*$/, '')); }
@@ -8437,7 +8508,7 @@ async function tkBuildPlan(entries, onProgress){
   }
   uniq.forEach(function(r){ if (r.city) return; if (!r.cc){ if (r.ccNear) r.cc = r.ccNear.cc; else if (r.ccGuess && r.ccGuess.length) r.cc = r.ccGuess[0]; } /* دولة الصف الخارج = دولة أقرب مدينة نسبيًّا بين الدول المخمَّنة (لا أصغر حدود — حدود إيران تغطي شرق السعودية) */ other.n++; const k = r.cc ? (tkCountryName(r.cc) || r.cc) : 'unknown country'; other.byCountry[k] = (other.byCountry[k] || 0) + 1; });
   // IM7 · التكرار بثلاث درجات مع مستندات المدن القائمة (قراءة لكل مدينة عندك — الخطة تحتاجها والحفظ يعيد استعمالها)
-  const ids = Object.keys(byCity); for (let i = 0; i < ids.length; i++){ const c = byCity[ids[i]]; if (!c.isNew && currentUser){ try{ if (myCityListLoadedFor === c.id && myCityListData) c.existing = { fromMemory: true, categories: myCityListData.categories || {}, meta: { public: myCityListData.public === true, sharedWith: myCityListData.sharedWith || [], sharedWithNames: myCityListData.sharedWithNames || {}, bookmarkCount: myCityListData.bookmarkCount || 0 } }; else { const d = await mpData.cityLists.get(currentUser.uid, c.id); c.existing = d ? { categories: d.categories || {}, meta: { public: d.public === true, sharedWith: d.sharedWith || [], sharedWithNames: d.sharedWithNames || {}, bookmarkCount: d.bookmarkCount || 0 } } : null; } }catch(e){ mpSwallow(e, 'import-read'); c.readFailed = true; c.on = false; } }
+  const ids = Object.keys(byCity); for (let i = 0; i < ids.length; i++){ const c = byCity[ids[i]]; if (!c.isNew && currentUser){ try{ if (myCityListLoadedFor === c.id && myCityListData) c.existing = { fromMemory: true, categories: myCityListData.categories || {}, meta: { public: myCityListData.public === true, sharedWith: myCityListData.sharedWith || [], sharedWithNames: myCityListData.sharedWithNames || {}, bookmarkCount: myCityListData.bookmarkCount || 0 } }; else { const d = await mpData.cityLists.get(currentUser.uid, c.id); c.existing = d ? { categories: d.categories || {}, meta: { public: d.public === true, sharedWith: d.sharedWith || [], sharedWithNames: d.sharedWithNames || {}, bookmarkCount: d.bookmarkCount || 0 } } : null; } }catch(e){ mpSwallow(e, 'import-read'); c.readFailed = true; c.readWhy = mpErrText(e); c.on = false; } }
   }
   tkState.gidIndex = {}; const gidIndexOf = function(c, cats, node){ Object.keys(cats || {}).forEach(function(g){ ((cats[g] || {}).places || []).forEach(function(q){ if (!q) return; const ent = { p: q, catId: g, cityId: c.id, cityName: c.name, node: node }; if (q.gid) tkState.gidIndex['g:' + String(q.gid)] = ent; if (q.url) tkState.gidIndex['u:' + String(q.url).trim()] = ent; }); }); };
   ids.forEach(function(k){ const c = byCity[k]; gidIndexOf(c, (c.existing && c.existing.categories) || {}, c); });
@@ -8516,7 +8587,7 @@ function tkIncludesHtml(c){ const subs = Object.keys(c.subs || {}).map(function(
   return '<details style="margin-top:3px;"><summary class="dim" style="cursor:pointer; font-size:11.5px;">includes ' + subs.slice(0, 3).map(function(x){ return escapeHtml(x.name) + ' ' + x.n; }).join(' · ') + (subs.length > 3 ? ' +' + (subs.length - 3) : '') + '</summary>' + subs.map(function(x){ return '<div style="display:flex; align-items:center; gap:8px; padding:3px 0 3px 10px;"><span style="flex:1; font-size:12px;" dir="auto">' + escapeHtml(x.name) + ' <span class="dim">· ' + x.n + '</span></span><button type="button" class="chip" style="font-size:10.5px; padding:2px 8px;" onclick="tkSplit(\'' + attrStr(c.id) + '\', \'' + attrStr(x.id) + '\')">split out</button></div>'; }).join('') + '</details>';
 }
 /* r84-3 (ملاحظتا المالك ١٥:٤٠ و١٥:٥٧): وسوم الحالة نصًّا خافتًا على سطر الاسم — لا شرائح (كانت بحجم زر ٣٠ نقطة فتراكب الاسم) · «as island» · «in your cities» · كلٌّ بتلميح يشرحه */
-function tkTagsHtml(c){ const t = []; if (c.island) t.push('<span title="The whole island counts as one destination — every place on it goes under this name">as island</span>'); if (c.mine) t.push('<span title="Already one of your cities — the places are added to it">in your cities</span>'); else if (!(c.virtual && !c.rows.length)) t.push('<span title="Will be created as a new city in your list">new city</span>'); if (c.fromSplit) t.push('<span title="Taken out of its city by you — undo below">split out</span>');
+function tkTagsHtml(c){ const t = []; if (c.readFailed) t.push('<span class="errline" style="display:inline;" title="Your list for this city could not be read, so it is left out of this import — choose the file again later">could not read your list — ' + escapeHtml(c.readWhy || 'try again') + '</span>'); /* r100-د */ if (c.island) t.push('<span title="The whole island counts as one destination — every place on it goes under this name">as island</span>'); if (c.mine) t.push('<span title="Already one of your cities — the places are added to it">in your cities</span>'); else if (!(c.virtual && !c.rows.length)) t.push('<span title="Will be created as a new city in your list">new city</span>'); if (c.fromSplit) t.push('<span title="Taken out of its city by you — undo below">split out</span>');
   return t.length ? ' <span class="dim" style="font-size:11px; font-weight:600;">· ' + t.join(' · ') + '</span>' : ''; }
 function tkMapHref(c){ return mpMapsHref({ name: c.name, url: '' }, { id: 'tk', name: c.country || '', country: '' }, (typeof c.lat === 'number' && typeof c.lng === 'number') ? { lat: c.lat, lng: c.lng } : null); } /* r86-1 (البند ١٣): بإحداثية مركز المدينة من المعجم — هوليوود فلوريدا لا كاليفورنيا */ /* المرجع لا يطابق مدينة عندي (id «tk») فيُقرأ اسمًا: الاستعلام = «المدينة, الدولة» بلا تكرار */ /* r84-3 (مقترح المالك): رابط بحث رسمي بالاسم والدولة — الدالة الواحدة mpMapsHref (غ-١) · يُبنى عند العرض ولا يُخزَّن */
 function tkMapLink(c){ return '<a class="dim" href="' + attrStr(tkMapHref(c)) + '" target="_blank" rel="noopener" style="font-size:11px; text-decoration:underline; white-space:nowrap;" title="See ' + attrStr(c.name) + ' in Google Maps">map ↗</a>'; }
@@ -8584,7 +8655,7 @@ async function tkCommit(){ const plan = tkState.plan; if (!plan || tkState.busy 
       if (!added && !(c.gidWrites || []).length && !(c.upgrades || []).length && !(c.addrWrites || []).length){ res.perCity.push({ id: c.id, name: c.name, added: 0, dup: c.dup, similar: c.similar, upgraded: 0 }); continue; } /* r86: مدينة بلا جديد لكن فيها ترقيات تُحفظ */
       const meta = (c.existing && c.existing.meta) || { public: false, sharedWith: [], sharedWithNames: {}, bookmarkCount: 0 };
       try{ await mpData.cityLists.save(currentUser.uid, c.id, Object.assign({}, meta, { ownerId: currentUser.uid, cityId: c.id, cityName: c.name, nickname: userListData.nickname || null, categories: cats, catsV: CATS_VERSION })); }
-      catch(e){ mpSwallow(e, 'import-save'); res.failed.push(c.name); continue; }
+      catch(e){ mpSwallow(e, 'import-save'); res.failed.push(c.name + ' (' + mpErrText(e) + ')'); continue; } /* r100-د */
       if (myCityListLoadedFor === c.id && myCityListData){ myCityListData.categories = cats; plSnapSaved(); /* r100-أ: الذاكرة تطابق ما كُتب الآن */ } try{ if (typeof tkSortState !== 'undefined') delete tkSortState[c.id]; Object.keys(plSuggestCache).forEach(function(k){ if (k.indexOf(c.id + '|') === 0) delete plSuggestCache[k]; }); }catch(_){} /* r86-2: المدينة المحدَّثة تُطابَق من جديد (بالعنوان) */ counts[c.id] = after; res.cities++; res.added += added; res.dup += c.dup; res.similar += c.similar; res.upgraded += c.upgraded || 0; res.perCity.push({ id: c.id, name: c.name, added: added, dup: c.dup, similar: c.similar, upgraded: c.upgraded || 0 }); tkResumeMark(plan, c.id);
     }
     if ((plan.waiting || []).length){ try{ await tkWaitingSave(plan.waiting); res.waiting = plan.waiting.length; }catch(e){ mpSwallow(e, 'import-waiting'); } } /* r86 (IM-X3) */
@@ -8635,7 +8706,7 @@ function tkWaitingReady(){ const w = Array.isArray(userListData && userListData.
 async function tkWaitingPlace(){ const ready = tkWaitingReady(); if (!ready.length || !currentUser) return; const byCountry = {}; ready.forEach(function(x){ (byCountry[x.country] = byCountry[x.country] || []).push(x); });
   const entries = []; Object.keys(byCountry).forEach(function(cn){ const city = cityListAllCities().filter(function(c){ return c.country === cn; })[0]; if (!city) return; const text = 'Title,Note,URL,Tags,Comment\n' + byCountry[cn].map(function(x){ return '"' + String(x.name).replace(/"/g, '""') + '",,"' + x.url + '",,'; }).join('\n') + '\n'; entries.push({ name: 'Takeout/Saved/Saved.csv', text: text, forceCity: city.id }); }); /* تدخل مجموعة «Saved» كما كانت ستدخل من JSON */
   tkState.err = ''; tkState.phase = 'reading'; tkState.progress = ''; tkRender();
-  try{ const plan = await tkBuildPlan(entries, function(p){ tkState.progress = p; tkRender(); }); plan.fromWaiting = ready; tkState.plan = plan; tkState.phase = 'plan'; tkRender(); }catch(e){ mpSwallow(e, 'waiting'); tkState.err = 'Could not place the waiting places · ' + ((e && e.message) || 'error'); tkState.phase = 'intro'; tkRender(); } }
+  try{ const plan = await tkBuildPlan(entries, function(p){ tkState.progress = p; tkRender(); }); plan.fromWaiting = ready; tkState.plan = plan; tkState.phase = 'plan'; tkRender(); }catch(e){ mpSwallow(e, 'waiting'); tkState.err = 'Could not place the waiting places — ' + mpErrText(e); /* r100-د */ tkState.phase = 'intro'; tkRender(); } }
 /* ── r86 (IM14) Undo this import: الحدّ الفاصل — يبقى ما ثُبّت دبوسه · ما عُدّل بعد الاستيراد · ما نُقل بيدك · ما دخل رحلة · Top/Picks؛ يزول المستورَد الذي لم تمسّه يدك · وحزمة gid/url2 التي كتبها هذا الاستيراد على القديم · والمدينة التي أنشأها إن فرغت ── */
 function tkTripRefIds(){ const ids = {}; const walk = function(o, d){ if (!o || typeof o !== 'object' || d > 12) return; if (Array.isArray(o)){ o.forEach(function(x){ walk(x, d + 1); }); return; } if (o.sourceType === 'mylist' && o.placeId) ids[o.placeId] = true; Object.keys(o).forEach(function(k){ walk(o[k], d + 1); }); }; (typeof userTrips !== 'undefined' ? userTrips || [] : []).forEach(function(t){ walk(t, 0); }); return ids; }
 function tkTouched(p, tripIds){ if (p.geo && typeof p.geo.lat === 'number') return 'pinned'; if ((p.updatedAt || 0) > (p.importedAt || 0)) return 'edited'; if (p.topPlace || (p.picks && p.picks.length)) return 'edited'; if (p.id && tripIds[p.id]) return 'trip'; return ''; }
@@ -8664,7 +8735,7 @@ function tkUndoCancel(){ tkState.phase = tkState.undoBack || 'intro'; tkState.un
 async function tkUndoGo(){ const last = tkLast(), u = tkState.undoPlan; if (!last || !u || tkState.busy) return; await tkUndoRun(last, u); }
 function tkUndoFromBox(){ const bd = document.getElementById('dashBackdrop'); if (!bd) return; bd.classList.add('show'); dashSet('📥 Import from Google Maps', null); tkState.phase = 'intro'; tkUndoOpen(); } /* r86-3 (البند ٤): من زر الصندوق مباشرة */
 function tkUndoneHtml(){ const res = tkState.undoResult || {}; return '<div class="pl-guide-h" style="text-align:center;">↶ Undone</div><div style="text-align:center; font-size:13px;"><b>' + (res.removed || 0) + ' place' + (res.removed === 1 ? '' : 's') + ' removed</b>' + (res.kept ? ' · ' + res.kept + ' kept (you worked on them)' : '') + (res.citiesRemoved ? ' · ' + res.citiesRemoved + ' empty cit' + (res.citiesRemoved === 1 ? 'y' : 'ies') + ' removed' : '') + (res.gidCleared ? ' · ' + res.gidCleared + ' map id' + (res.gidCleared === 1 ? '' : 's') + '/address' + (res.gidCleared === 1 ? '' : 'es') + ' cleared' : '') + '</div>'
-    + ((res.failed || []).length ? '<div class="pl-sub" style="color:#ffb4a2; margin-top:6px;">Not undone: ' + escapeHtml(res.failed.join(' · ')) + '</div>' : '')
+    + ((res.failed || []).length ? '<div class="pl-sub errline" style="margin-top:6px;">Not undone: ' + escapeHtml(res.failed.join(' · ')) + '</div>' : '')
     + '<div class="dim" style="font-size:11.5px; text-align:center; margin-top:6px;">Your places are as they were before that import. Places you had removed by hand stay removed.</div>'
     + '<button type="button" class="cta" style="display:block; width:100%; margin-top:12px;" onclick="closeModalById(\'dashBackdrop\')">Done</button><button type="button" class="btn btn-ghost" style="margin-top:8px; padding:7px 14px; font-size:12px;" onclick="tkState.phase = \'intro\'; tkRender()">Choose another file</button>'; } /* r86-3 (البند ٤): شاشة ختام لا شاشة ملف */
 async function tkUndoRun(last, u){ if (tkState.busy) return; tkState.busy = true; tkState.phase = 'commit'; tkState.progress = 'undoing…'; tkRender(); const res = { removed: 0, kept: u.keeps, gidCleared: 0, citiesRemoved: 0, failed: [] }; const counts = {}; const zero = []; const gone = [];
@@ -8699,7 +8770,7 @@ function tkLastHtml(){ const last = tkLast(); const r = tkResumeLoad(); const w 
 function tkImportLine(){ try{ const c = JSON.parse(localStorage.getItem('mp_import_runs') || '{}'); if (!c.runs) return 'Imports on this device: none yet'; return 'Imports on this device: ' + c.runs + ' · last: ' + c.last.rows + ' rows → ' + c.last.cities + ' cities · ' + c.last.added + ' new · ' + c.last.dup + ' already here' + (c.last.upgraded ? ' · ' + c.last.upgraded + ' upgraded' : '') + (c.last.x && c.last.x.decoderOff ? ' · decoder self-check FAILED' : '') + (c.last.undone ? ' · undone (' + c.last.undone.removed + ' removed · ' + c.last.undone.kept + ' kept)' : '') + (tkResumeLoad() ? ' · resume pending' : '') + ' · waiting for their city: ' + ((userListData && Array.isArray(userListData.waiting)) ? userListData.waiting.length : 0); }catch(_){ return 'Imports: n/a'; } }
 function tkResultHtml(){ const r = tkState.result, p = tkState.plan; if (!r) return ''; const first = r.perCity.filter(function(c){ return c.added > 0; })[0];
   let h = '<div class="pl-guide-h" style="text-align:center;">Your Google Maps, now in MyPickz</div><div style="text-align:center; font-size:13px;"><b>' + r.cities + ' cit' + (r.cities === 1 ? 'y' : 'ies') + ' · ' + r.added + ' places</b>' + (r.created ? ' · ' + r.created + ' cit' + (r.created === 1 ? 'y' : 'ies') + ' created' : '') + (r.upgraded ? ' · ' + r.upgraded + ' older place' + (r.upgraded === 1 ? '' : 's') + ' upgraded' : '') + (r.addr ? ' · ' + r.addr + ' address' + (r.addr === 1 ? '' : 'es') + ' added' : '') + (r.loc ? ' · ' + r.loc + ' location' + (r.loc === 1 ? '' : 's') + ' kept for matching' : '') + (r.dup ? ' · ' + r.dup + ' already here' : '') + (r.similar ? ' · ' + r.similar + ' similar (marked)' : '') + (r.resumed ? ' · ' + r.resumed + ' saved before the stop' : '') + (r.waiting ? ' · ' + r.waiting + ' waiting for their city' : '') + '</div>';
-  if (r.failed.length) h += '<div class="pl-sub" style="color:#ffb4a2;">Not saved: ' + escapeHtml(r.failed.join(' · ')) + ' — choose the file again to retry those.</div>';
+  if (r.failed.length) h += '<div class="pl-sub errline">Not saved: ' + escapeHtml(r.failed.join(' · ')) + ' — choose the file again to retry those.</div>';
   h += '<div class="dim" style="font-size:11.5px; text-align:center;">Each city shows them under “Imported from Google Maps” until you sort them. Nothing was read from Google; each place keeps the file’s location in its link for matching — pins come only from our map data.</div>';
   if (first) h += '<button type="button" class="cta" style="display:block; width:100%; margin-top:10px;" onclick="tkStartWith(\'' + attrStr(first.id) + '\')">Start with ' + escapeHtml(first.name) + ' · ' + first.added + ' to sort</button>';
   h += '<div class="chiprow" style="margin-top:8px; justify-content:center;"><button type="button" class="chip" onclick="tkReceipt()">Receipt</button><button type="button" class="chip" onclick="tkUndoOpen()">Undo this import…</button></div>'; /* r86 · r86-3: مباشرة إلى شاشة التأكيد */
@@ -8988,7 +9059,7 @@ function tkPinFromGoogleOpen(key){ const p = tkPlaceByKey(key); if (!p){ showToa
 function tkPlusSketchSvg(){ return '<svg viewBox="0 0 320 96" width="100%" height="96" aria-hidden="true" style="display:block; margin:0 0 10px; border-radius:10px; background:var(--ivory-bright);"><rect x="12" y="8" width="296" height="80" rx="10" fill="#fff" stroke="#d9d2c3"/><rect x="24" y="18" width="110" height="9" rx="4" fill="#2b3a4e"/><rect x="24" y="34" width="190" height="7" rx="3" fill="#8a8f98"/><text x="24" y="60" font-family="Cairo,sans-serif" font-size="9" fill="#8a8f98">Plus code</text><rect x="24" y="66" width="120" height="14" rx="4" fill="#fff" stroke="#E29A2E"/><text x="30" y="77" font-family="monospace" font-size="10" fill="#132335">GV74+C3 London</text><rect x="236" y="62" width="60" height="20" rx="10" fill="#E29A2E"/><text x="248" y="76" font-family="Cairo,sans-serif" font-size="10" font-weight="700" fill="#132335">Copied</text><path d="M 150 73 L 230 73" stroke="#E29A2E" stroke-width="1.5" stroke-dasharray="3 3"/></svg>'; } /* r87-2 (كلمة المالك ١١:٤٩): رسم أصلي مصغّر — سطر العنوان ثم سطر Plus code وإشارة النسخ */
 function tkPinSuggestHtml(key, p){ const sg = plSuggestCache[key]; if (!sg || typeof sg.lat !== 'number') return ''; const alts = (sg.probable && sg.alts && sg.alts.length) ? sg.alts : [{ id: sg.openId, name: sg.cname || '', lat: sg.lat, lng: sg.lng, addr: ((sg.alts || []).filter(function(a){ return a.id && a.id === sg.openId; })[0] || {}).addr || '', cat: sg.cat || '' }]; return '<div style="border:1px solid var(--saffron); border-radius:12px; padding:8px 10px; margin:0 0 10px;"><div style="font-size:12.5px; font-weight:700; margin-bottom:4px;">' + (alts.length === 1 ? 'We found a match in our data' : 'We found ' + alts.length + ' look-alikes in our data') + '</div>' + alts.slice(0, 3).map(function(a, i){ return '<div style="display:flex; gap:8px; align-items:center; margin:4px 0;"><span style="flex:1; min-width:0; font-size:12.5px; line-height:1.35;" dir="auto"><b>' + escapeHtml(a.name || '') + '</b>' + (a.addr ? ' <span class="dim">· ' + escapeHtml(String(a.addr).slice(0, 60)) + '</span>' : '') + '<br><span class="dim" style="font-size:11px;" dir="ltr">Plus code ' + escapeHtml(tkPlusOf(a)) + '</span></span><button type="button" class="chip on" style="flex:none;" onclick="tkPinSuggested(\'' + attrStr(key) + '\', ' + i + ')">Pin this ✓</button></div>'; }).join('') + '<div class="dim" style="font-size:11px; margin-top:4px;">Same Plus code as Google shows under the address? Then it’s the one. Not it? Get the exact code below.</div></div>'; } /* r87-2 (قرار المالك ١٣:١٦ البند ١): الاقتراح أولًا في ورقة Pin — رمزه بجانبه للمقارنة */
 function tkDupKeepBoth(key){ tkDupAllow[key] = true; delete tkDupHold[key]; tkConfirmSkip[key] = false; delete tkConfirmSkip[key]; if (typeof tkConfirmRender === 'function') tkConfirmRender(); else showToast('Included — tap Pin again'); } /* r96: «Keep both» يرفع الحجز لهذا الصف */
-async function tkPinSuggested(key, i){ const p = tkPlaceByKey(key); const sg = plSuggestCache[key]; if (!p || !sg || typeof sg.lat !== 'number'){ showToast('No suggestion for this place'); return; } const alts = (sg.probable && sg.alts && sg.alts.length) ? sg.alts : [{ id: sg.openId, name: sg.cname || '', lat: sg.lat, lng: sg.lng, cat: sg.cat || '' }]; const a = alts[i] || alts[0]; if (!a || typeof a.lat !== 'number') return; if (tkCatBanned(a.cat)){ showToast(tkGuidelineMsg()); return; } if (!tkDupAllow[key]){ const __d = tkDupOf(a.id || null, { lat: a.lat, lng: a.lng }, p); if (__d){ const v = await tkDupSheet(__d, p.name); if (!v) return; if (v === 'mine'){ tkDupDrop(p); delete plSuggestCache[key]; try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(_){} showToast('Dropped · kept “' + (__d.p.name || '') + '”'); closeModalById('dashBackdrop'); renderPlacesMine(); tkPinReturn(); return; } if (v === 'replace'){ tkDupDrop(__d.p); } } } /* r96 (ق١٠-٣٠-٠٢) */ const prevSg = sg; const geoSg = { lat: a.lat, lng: a.lng, source: 'overture', openId: a.id || null }; p.geo = tkPinGeo(p, geoSg); if (a.id) p.openId = a.id; else delete p.openId; delete plSuggestCache[key]; try{ await tkAreaRefresh(p); }catch(e){ mpSwallow(e, 'area'); } try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(e){ mpSwallow(e, 'pin-suggested'); delete p.geo; delete p.openId; plSuggestCache[key] = prevSg; showToast('Could not save'); return; } if (a.id && p.gid && currentUser) tkIdentityWrite([{ key: tkIdentityKeyGid(p.gid), rec: { lat: +(+a.lat).toFixed(5), lng: +(+a.lng).toFixed(5), source: 'overture', openId: String(a.id).slice(0, 80), n: String(p.name || '').slice(0, 120), cityId: String(cityListCityId || '').slice(0, 40) } }]); tkUndoLast = { city: cityListCityId, items: [{ p: p, sg: prevSg }], at: Date.now(), tier: 'pick' }; showToast('Pinned ✓ · ' + (a.name || 'match')); try{ logTiming('PIN REVIEW · ' + cityListCityId + ' · 1 pins · from the pin sheet · ' + (a.id ? '1 identities shared' : 'no identity')); }catch(_){} closeModalById('dashBackdrop'); renderPlacesMine(); if (!tkAfterPinCat(key)) tkPinReturn(); } /* r87-2: قبول الاقتراح من ورقة Pin — كما في القوائم: موضع الملف إن قرب (tkPinGeo) · الهوية تُكتب · Undo · r87-3: ثم التصنيف إن لزم */
+async function tkPinSuggested(key, i){ const p = tkPlaceByKey(key); const sg = plSuggestCache[key]; if (!p || !sg || typeof sg.lat !== 'number'){ showToast('No suggestion for this place'); return; } const alts = (sg.probable && sg.alts && sg.alts.length) ? sg.alts : [{ id: sg.openId, name: sg.cname || '', lat: sg.lat, lng: sg.lng, cat: sg.cat || '' }]; if (!(i >= 0 && i < alts.length)) return; /* r100-ج: فهرس خارج المدى لا يثبّت شيئًا */ const a = alts[i] || alts[0]; if (!a || typeof a.lat !== 'number') return; if (tkCatBanned(a.cat)){ showToast(tkGuidelineMsg()); return; } if (!tkDupAllow[key]){ const __d = tkDupOf(a.id || null, { lat: a.lat, lng: a.lng }, p); if (__d){ const v = await tkDupSheet(__d, p.name); if (!v) return; if (v === 'mine'){ tkDupDrop(p); delete plSuggestCache[key]; try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(_){} showToast('Dropped · kept “' + (__d.p.name || '') + '”'); closeModalById('dashBackdrop'); renderPlacesMine(); tkPinReturn(); return; } if (v === 'replace'){ tkDupDrop(__d.p); } } } /* r96 (ق١٠-٣٠-٠٢) */ const prevSg = sg; const geoSg = { lat: a.lat, lng: a.lng, source: 'overture', openId: a.id || null }; p.geo = tkPinGeo(p, geoSg); if (a.id) p.openId = a.id; else delete p.openId; delete plSuggestCache[key]; try{ await tkAreaRefresh(p); }catch(e){ mpSwallow(e, 'area'); } try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(e){ mpSwallow(e, 'pin-suggested'); delete p.geo; delete p.openId; plSuggestCache[key] = prevSg; showToast('Could not save'); return; } if (a.id && p.gid && currentUser) tkIdentityWrite([{ key: tkIdentityKeyGid(p.gid), rec: { lat: +(+a.lat).toFixed(5), lng: +(+a.lng).toFixed(5), source: 'overture', openId: String(a.id).slice(0, 80), n: String(p.name || '').slice(0, 120), cityId: String(cityListCityId || '').slice(0, 40) } }]); tkUndoLast = { city: cityListCityId, items: [{ p: p, sg: prevSg }], at: Date.now(), tier: 'pick' }; showToast('Pinned ✓ · ' + (a.name || 'match')); try{ logTiming('PIN REVIEW · ' + cityListCityId + ' · 1 pins · from the pin sheet · ' + (a.id ? '1 identities shared' : 'no identity')); }catch(_){} closeModalById('dashBackdrop'); renderPlacesMine(); if (!tkAfterPinCat(key)) tkPinReturn(); } /* r87-2: قبول الاقتراح من ورقة Pin — كما في القوائم: موضع الملف إن قرب (tkPinGeo) · الهوية تُكتب · Undo · r87-3: ثم التصنيف إن لزم */
 function tkPinAwaitSet(key){ tkPinAwait = { key: key, at: Date.now() }; }
 async function tkPinFromGooglePaste(key){ let text = ''; try{ text = await navigator.clipboard.readText(); }catch(e){ showToast('Could not read the clipboard — tap the Plus code in Google Maps first, or type it in the box'); return; } return tkPinFromGoogleApply(key, text); }
 function tkPinFromGoogleField(key){ const el = document.getElementById('tkPlusField'); return tkPinFromGoogleApply(key, el ? el.value : ''); }
@@ -9117,11 +9188,11 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-window.__mpBuild = 'M2-ID-r101';
+window.__mpBuild = 'M2-ID-r105';
 /* د-٦: ملخص الشبكة سطرًا واحدًا مثبَّتًا: شهادة App Check · أول قراءة · الدخول (وتكراره) · الأخطاء · آخر خطوة بطيئة */
 let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '', sort: '', save: '' };
 /* هـ-٧: السطر الأصفر يحمل ساعته «t=52s» (تتقدم كل ثانية — إن توقفت فالخيط الرئيسي متجمد لا الشبكة) · «BLOCKED 3.2s ×1» حين يتأخر نبض الثانية (شفرة مشغولة) · نتيجة مسبارَي الشبكة حين ينتظر هدف ٨ ثوانٍ: نفس الأصل (manifest.json) وخادم Firestore بـREST (settings/app الذي تقرأه القواعد للجميع) */
-function __netRender(){ const el = __netLineEl; if (!el) return; el.textContent = 'NET · t=' + Math.round((performance.now() - __timingStart) / 1000) + 's · AppCheck ' + (__net.check || '…') + ' · transport ' + (__net.transport || '?') + ' · keep-alive ' + (__net.keep || '…') + ' · first read ' + (__net.first || '…') + ' · auth @' + (__net.auth.join(', ') || '…') + (__net.imp ? ' · IMPORT ' + __net.imp : '') + (__net.sort ? ' · ' + __net.sort : '') + (__net.save ? ' · SAVE ' + __net.save : '') + (__net.errs ? ' · errors ' + __net.errs : '') + (__net.blocked ? ' · BLOCKED ' + __net.blocked : '') + (__net.wait ? ' · WAITING: ' + __net.wait : '') + (__net.slow ? ' · slow: ' + __net.slow : ''); }
+function __netRender(){ const el = __netLineEl; if (!el) return; el.textContent = 'NET · t=' + Math.round((performance.now() - __timingStart) / 1000) + 's · AppCheck ' + (__net.check || '…') + ' · transport ' + (__net.transport || '?') + ' · keep-alive ' + (__net.keep || '…') + ' · first read ' + (__net.first || '…') + ' · auth @' + (__net.auth.join(', ') || '…') + (__net.imp ? ' · IMPORT ' + __net.imp : '') + (__net.sort ? ' · ' + __net.sort : '') + (__net.save ? ' · SAVE ' + __net.save : '') + (__net.errs ? ' · errors ' + __net.errs : '') + (mpQuotaHook.done ? ' · ' + mpQuotaLine() : '') + (__net.blocked ? ' · BLOCKED ' + __net.blocked : '') + (__net.wait ? ' · WAITING: ' + __net.wait : '') + (__net.slow ? ' · slow: ' + __net.slow : ''); }
 function __netNote(label, elapsed){
   if (/^BUILD:/.test(label)) return; /* هـ-٦: سطر البناء يذكر «first Firestore read» في نصه فكان يلوّث الحقل حتى تأتي القراءة الحقيقية */
   if (/App Check token in/.test(label)) __net.check = label.replace(/.*token in /, '') ; else if (/App Check token FAILED/.test(label)) __net.check = 'FAILED'; else if (/App Check OFF/.test(label)) __net.check = 'OFF';
@@ -9136,7 +9207,23 @@ function __netNote(label, elapsed){
   const m = /in (\d+)ms/.exec(label); if (m && +m[1] > 4000) __net.slow = label.replace(/^\[\w+\] /, '');
   __netRender();
 }
-function __mpFsDebug(fb){ try{ if (fb && fb.firestore && typeof fb.firestore.setLogLevel === 'function') fb.firestore.setLogLevel('debug'); }catch(_){} }
+function __mpFsDebug(fb){ try{ if (fb && fb.firestore && typeof fb.firestore.setLogLevel === 'function') fb.firestore.setLogLevel('debug'); }catch(_){} try{ mpQuotaHook(fb && fb.firestore); }catch(_){} }
+/* ═══ r100-و (ق١١-٠٣-٠٩): عدّاد الحصة — قراءات/كتابات هذا الجهاز في يوم الحصة (منتصف الليل بتوقيت المحيط الهادئ = ١١:٠٠ الرياض شتاءً · ١٠:٠٠ صيفًا) مقابل Spark ٥٠k/٢٠k · يُحفظ في localStorage ويُعرض في سطر NET ═══ */
+const MP_QUOTA = { reads: 50000, writes: 20000 };
+function mpQuotaDayKey(){ try{ return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }catch(_){ return new Date().toISOString().slice(0, 10); } } /* تاريخ المحيط الهادئ = مفتاح يوم الحصة */
+function mpQuotaResetLabel(){ let pdt = false; try{ pdt = /PDT/.test(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', timeZoneName: 'short' }).format(new Date())); }catch(_){} return (pdt ? '10:00' : '11:00') + ' Riyadh'; }
+const mpQuota = { day: '', reads: 0, writes: 0 }; window.__mpQuota = mpQuota;
+function mpQuotaLoad(){ const day = mpQuotaDayKey(); try{ const j = JSON.parse(localStorage.getItem('mp_quota') || 'null'); if (j && j.day === day){ mpQuota.day = day; mpQuota.reads = j.reads || 0; mpQuota.writes = j.writes || 0; return; } }catch(_){} mpQuota.day = day; mpQuota.reads = 0; mpQuota.writes = 0; }
+let __quotaSaveT = null; function mpQuotaSave(){ if (__quotaSaveT) return; __quotaSaveT = setTimeout(function(){ __quotaSaveT = null; try{ localStorage.setItem('mp_quota', JSON.stringify(mpQuota)); }catch(_){} }, 500); }
+function mpQuotaAdd(kind, n){ if (mpQuota.day !== mpQuotaDayKey()) mpQuotaLoad(); mpQuota[kind] += (n > 0 ? n : 1); mpQuotaSave(); try{ __netRender(); }catch(_){} }
+/* ملاحظة القياس: onSnapshot لا يُحتسب (مستمع الإعدادات الدائم) · كتابات الدفعة تُعدّ عند الاستدعاء لا عند commit · تبويبان مفتوحان يتبادلان الكتابة — العدّاد أرضية تقريبية لهذا الجهاز */
+function mpQuotaLine(){ const pr = Math.round(100 * mpQuota.reads / MP_QUOTA.reads), pw = Math.round(100 * mpQuota.writes / MP_QUOTA.writes); return 'quota (this device) R ' + mpQuota.reads + '/' + MP_QUOTA.reads + ' (' + pr + '%) · W ' + mpQuota.writes + '/' + MP_QUOTA.writes + ' (' + pw + '%) · resets ' + mpQuotaResetLabel(); }
+function mpQuotaHook(fs){ /* يلفّ get للمستند والاستعلام (القراءات = عدد المستندات العائدة، وأقلّه ١) وset/update/delete للمستند والدفعة (كتابة لكل عملية) — نسخة الاختبار فقط */
+  if (!fs || mpQuotaHook.done) return false; mpQuotaHook.done = true; mpQuotaLoad();
+  const wrapGet = function(proto, isQuery){ if (!proto || typeof proto.get !== 'function') return; const g = proto.get; proto.get = function(){ const p = g.apply(this, arguments); if (p && typeof p.then === 'function'){ p.then(function(s){ mpQuotaAdd('reads', isQuery && s && typeof s.size === 'number' ? Math.max(1, s.size) : 1); }, function(){}); } return p; }; }; /* القراءة المرفوضة لا تُحتسب (لا تُفوتَر) */
+  const wrapWrite = function(proto){ if (!proto) return; ['set', 'update', 'delete'].forEach(function(m){ if (typeof proto[m] !== 'function') return; const f = proto[m]; proto[m] = function(){ mpQuotaAdd('writes', 1); return f.apply(this, arguments); }; }); };
+  wrapGet(fs.DocumentReference && fs.DocumentReference.prototype, false); wrapGet(fs.Query && fs.Query.prototype, true); wrapWrite(fs.DocumentReference && fs.DocumentReference.prototype); wrapWrite(fs.WriteBatch && fs.WriteBatch.prototype); wrapWrite(fs.Transaction && fs.Transaction.prototype); wrapGet(fs.Transaction && fs.Transaction.prototype, false);
+  return true; }
 /* هـ-٢/هـ-٦: سجل Firestore الداخلي مضغوطًا وبأرقام الأهداف (الصيغة من مصدر المكتبة: addTarget{query|documents,targetId} · targetChange{targetChangeType,targetIds} · removeTarget):
    «+T48 doc userCityLists/…_paris» عند الإضافة · «CURRENT T48 · 3 docs · 0.3s» عند الجواب (أصفر إن تجاوز ٤ ثوانٍ) · «−T48» عند الإزالة · كشف الوسيط العازل (detected buffering proxy) · فتح القناة وإغلاقها وأخطاؤها · التراجع (Backing off) · «Backend didn't respond».
    هدف بلا جواب ٨ ثوانٍ يُكتب سطرًا ويُرفع إلى السطر الأصفر «WAITING: T46 query communityProfiles 8s» حتى يُجاب — فلا حاجة لتمرير ولا لتخمين أي قراءة توقفت */
@@ -9191,7 +9278,7 @@ function __fsHandle(t){
 /* د-٤: نسخة الاختبار تسجّل الأخطاء غير الملتقَطة في لوحة TIMING نفسها (الرسالة والسطر) — ليُقرأ السبب من الهاتف بلا وحدة تحكم */
 window.addEventListener('error', function(e){ try{ logTiming('[ERR] ' + (e.message || 'error') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?')); }catch(_){} });
 window.addEventListener('unhandledrejection', function(e){ try{ const r = e.reason; logTiming('[ERR] rejection: ' + ((r && (r.code || r.message)) || String(r)).slice(0, 160)); }catch(_){} }); /* ب-٢-٢-أ٢: تذييل الدرج يعرض رقم البناء */
-logTiming('BUILD: ' + window.__mpBuild + ' (r100b - one tap one change: busy guard per action, delete by identity, builder opens once; r100a honest save)'); /* r93: السطر يُشتق من __mpBuild — كان نصًّا يدويًّا توقّف عند r88 (ملاحظة المالك ٢٩ أكتوبر ١٢:١٣) */
+logTiming('BUILD: ' + window.__mpBuild + ' (r100f - quota counter in Diag, daily backup worker; r100e - every failure leaves a trace in Diag, sign-out rejection handled, a failed search is not reported as missing; r100d - plain-words failure messages: reads that failed say so and keep the screen, no raw error codes, quota message, bad Takeout file messages; r100c input guards; r100b one tap one change; r100a honest save)'); /* r93: السطر يُشتق من __mpBuild — كان نصًّا يدويًّا توقّف عند r88 (ملاحظة المالك ٢٩ أكتوبر ١٢:١٣) */
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
@@ -9241,5 +9328,5 @@ logTiming('Script started (t=0 reference)');
 })();
 </script>
 </body>
-<!-- MyPickz build · profile=test · src=63bf5396 · parts=31 · built from src/ by scripts/build.js — do not edit this file by hand -->
+<!-- MyPickz build · profile=test · src=f3fbd887 · parts=31 · built from src/ by scripts/build.js — do not edit this file by hand -->
 </html>
