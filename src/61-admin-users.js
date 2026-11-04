@@ -78,7 +78,7 @@ async function openAdminRequests(){ // r72p (٥) — ب-٢-٢-ب (v2-ب · ٣): 
 async function adminDecideRequest(uid, status){
   if (!isOwner) return;
   if (status === 'declined' && !(await mpConfirm('The person keeps their account; they can ask again later.', { title: '⭐ Decline this request?', ok: 'Decline', danger: true }))) return; /* ب-٢-٢-ب: Decline بورقة تأكيد */
-  try{ await mpData.requests.setStatus(uid, status); if (status === 'accepted'){ await mpData.profiles.merge(uid, { verified: true }); curators = null; } }catch(e){ mpSwallow(e, 'decide'); showToast('Could not update · ' + ((e && e.code) || 'error')); return; }
+  try{ await mpData.requests.setStatus(uid, status); if (status === 'accepted'){ await mpData.profiles.merge(uid, { verified: true }); curators = null; } }catch(e){ mpSwallow(e, 'decide'); mpErrToast('Could not update', e); return; }
   showToast(status === 'accepted' ? 'Accepted — curator badge set ✓' : 'Declined'); openAdminRequests();
 }
 /* ب-٢-٢-ب (v2-ب · ٥): البلاغات — الأحدث أولًا · مرشِّح بالنوع · بلاغ app يُعرض بنوع المشكلة والشاشة والبناء من مقدمة نصه [Type · Screen · build] · by بالاسم · Dismiss بورقة */
@@ -137,7 +137,7 @@ async function openUsersModal(){
   try{
     allUsersCache = await mpData.users.all();
     try{ const susSet = await mpData.suspensions.allIds(); allUsersCache.forEach(u => { u.suspended = susSet.has(u.uid); }); }catch(e){ /* v3: مصدر الحقيقة suspensions — قبل نشرها يبقى الحقل القديم */ }
-  }catch(e){ allUsersCache = []; body.innerHTML = '<div class="mp-empty mini">Could not load users</div><button type="button" class="dash-door" onclick="openUsersModal()"><span>↻ Retry</span><span></span></button>'; return; }
+  }catch(e){ mpSwallow(e, 'admin-users'); allUsersCache = []; body.innerHTML = '<div class="mp-empty mini">Could not load users — ' + escapeHtml(mpErrText(e)) + '</div><button type="button" class="dash-door" onclick="openUsersModal()"><span>↻ Retry</span><span></span></button>'; return; }
   await loadCommunityLists();
   communityUsers.forEach(cu => { const u = allUsersCache.find(x => x.uid === cu.uid); if (u && !u.nickname && cu.nickname){ u.nickname = cu.nickname; mpData.users.merge(cu.uid, { nickname: cu.nickname }).catch(()=>{}); } }); // إصلاح تلقائي للاسم الناقص من القائمة العامة
   try{ curators = await mpData.profiles.curators(200); }catch(e){ curators = curators || []; }
