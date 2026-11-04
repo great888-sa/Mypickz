@@ -8,6 +8,7 @@ function openInputModal(title, placeholder, initialValue, options, opts){
   return new Promise((resolve) => {
     modalResolve = resolve;
     inputModalFree = !!(opts && opts.allowFree); // ر٧٠د: قائمة اقتراح لا قيد (المعجم) — الحر مقبول
+    inputModalMax = (opts && opts.maxLen) || 0; /* r100-ج */
     document.getElementById('inputModalTitle').textContent = title;
     const f = document.getElementById('inputModalField');
     const s = document.getElementById('inputModalSelect');
@@ -58,6 +59,7 @@ async function gazFindCity(countryName, name){ // ز-١-ج-٢: الصف بالم
 function gazEntryToCity(row, countryName){ const o = { id: String(row.id), name: row.n, country: countryName }; if (typeof row.lat === 'number'){ o.lat = row.lat; o.lng = row.lng; } if (row.r) o.r = row.r; if (row.ar) o.nameAr = row.ar; if (row.island) o.island = true; return o; }
 let inputModalOptions = null;
 let inputModalFree = false;
+let inputModalMax = 0; /* r100-ج: حد الطول للنافذة الحالية (0 = بلا) */
 let inputModalTouched = false;
 function inputModalFilter(){
   const l = document.getElementById('inputModalList'); if (!l || !inputModalOptions) return;
@@ -79,6 +81,7 @@ function inputModalPick(v){
 function confirmInputModal(){
   const f = document.getElementById('inputModalField');
   let val = f.value;
+  if (inputModalMax && String(val || '').length > inputModalMax){ document.getElementById('inputModalError').textContent = String(val).length.toLocaleString('en') + ' / ' + inputModalMax + ' characters — shorten to save'; return; } /* r100-ج */
   if (inputModalOptions){
     // ر٧٠د (إصلاح انحدار r70b2): الخيارات نصوص أو كائنات {name} — المطابقة بالتطبيع؛ ومع المعجم (inputModalFree) يُقبل النص الحر للمدينة الغائبة
     const key = pickerNormalize(val);
