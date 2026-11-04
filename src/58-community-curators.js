@@ -1,7 +1,7 @@
 /* =========================================================
    تصفح قوائم المستخدمين الآخرين (Community Lists)
    ========================================================= */
-let communityUsers = [];
+let communityUsers = []; let communityLoadErr = null; /* r100-د */
 let communityTab = 'places';            // ر٦١ (السوق): places | trips
 let communityScreen = 'root';           // ر٦٦ (القرار ١١): root | source — كل مصدر شاشة مستقلة بزر عودة
 const communityScreenState = { places: { city: '', marked: false, sort: 'recent' }, trips: { city: '', marked: false, sort: 'recent' } }; // r72u (قرار المالك): الافتراضي recent — الشريحة نفسها قائمة الترتيبات // حالة كل شاشة تُحفظ
@@ -27,14 +27,14 @@ async function loadCommunityLists(){
         viewCount: d.viewCount || 0
       });
     });
-  }catch(e){ communityUsers = []; }
+  }catch(e){ mpSwallow(e, 'community-lists'); communityLoadErr = e; } /* r100-د: أثر + تسجيل الخطأ، والقائمة السابقة تبقى — من يفتح المجتمع هو من يُخبر (المستدعون الثانويون: الإيقاف والمستخدمون — لا يغطّون toast نجاحهم) */
 }
 
 async function openCommunityModal(){
   mpTrack.hit('community_open', { depth: 1 });
   if (!viewingUserUid) document.getElementById('communityBody').innerHTML = `<div class="mp-empty mini">Loading…</div>`; /* د-٥: لا تمحُ طبقة الشخص المرسومة توًّا (الفتح من قائمة مشارَكة) */
   showBackdropUnlessHosted('communityBackdrop', 'Community'); // خ١
-  const __tl = performance.now(); await loadCommunityLists(); logTiming('[CM] community lists in ' + Math.round(performance.now() - __tl) + 'ms'); /* د-٥ */
+  const __tl = performance.now(); communityLoadErr = null; await loadCommunityLists(); if (communityLoadErr) mpErrToast('Could not load the community', communityLoadErr); logTiming('[CM] community lists in ' + Math.round(performance.now() - __tl) + 'ms'); /* د-٥ · r100-د */
   // ر٦٩ي (N-043): ذاكرة آخر وضع — الجذر والتبويب والشاشة تبقى بين الزيارات (تُعاد عند الخروج فقط)
   if (typeof communityTab === 'undefined' || !communityTab) communityTab = 'places';
   renderCommunityModal();
@@ -129,7 +129,7 @@ async function cmSearchGo(){
       }
       viewCommunityUser(d.data().uid); return;
     }
-  }catch(e){}
+  }catch(e){ mpSwallow(e, 'search'); mpErrToast('Could not search', e); return; } /* r100-هـ: الفشل ليس «غير موجود» */
   showToast("This name doesn't exist");
 }
 function cmFillCityPick(rows){ (arguments[0] || []).forEach(function(r){ if (r && r.cityId && r.cityName) rememberCity(r.cityId, r.cityName); }); // ز-١-ج-٢ // البند ٢: مدن المحدد من المحتوى الموجود فعلًا — ر٧٠هـ: بعدّاد القوائم/الرحلات لكل مدينة
@@ -311,11 +311,12 @@ function openConfirmModal(title, hint){ // ر٧٢-أ-٢ب: تأكيد بهوية
     document.getElementById('inputModalError').textContent = hint || ''; document.getElementById('inputBackdrop').classList.add('show'); });
 }
 async function curToggleFollow(uid){ // ر٧٢-أ-٢: متابعة/إلغاء ذرّيًّا؛ الإفصاح مرة عند أول متابعة؛ لا متابعة للذات
-  if (!currentUser){ openAuthModal(); return; } if (uid === currentUser.uid) return;
+  if (!currentUser){ openAuthModal(); return; } if (!uid || uid === currentUser.uid) return;
+  if (!curIsFollowing(uid) && !(curators || []).some(function(c){ return c.uid === uid; }) && !(communityUsers || []).some(function(c){ return c.uid === uid; })){ let pr = null; try{ pr = await mpData.profiles.get(uid); }catch(_){} if (!pr){ showToast('User not found'); return; } } /* r100-ج: لا متابعة لمعرّف مجهول — قراءة واحدة فقط حين لا يكون في القوائم */
   const on = !curIsFollowing(uid);
   if (on && !(userListData && userListData.followDisclosed)){ const ok = await openConfirmModal('Follow this curator?', 'Following is visible to the curator — your name appears in their followers.'); if (!ok) return; userListData.followDisclosed = true; try{ await mpData.userLists.merge(currentUser.uid, { followDisclosed: true }); }catch(e){} }
   const u = (curators || []).find(function(c){ return c.uid === uid; }) || {}; const hasPublic = u.hasAnyPublicContent === true || u.verified === true; // r72m: العدّاد للموثَّقين أيضًا (M4.25 ٥)
-  try{ await mpData.follows.set(currentUser.uid, uid, on, hasPublic); }catch(e){ mpSwallow(e, 'follow'); logTiming('[CUR] follow failed uid=' + String(uid).slice(0, 6) + ' on=' + on + ' hasPublic=' + hasPublic + ' err=' + ((e && (e.code + ' ' + e.message)) || e)); showToast('Could not follow · ' + ((e && e.code) || (e && e.message) || 'unknown').toString().slice(0, 60)); return; } // ر٧٢-أ-٢ج: الرمز على الشاشة (قرار المالك)
+  try{ await mpData.follows.set(currentUser.uid, uid, on, hasPublic); }catch(e){ mpSwallow(e, 'follow'); logTiming('[CUR] follow failed uid=' + String(uid).slice(0, 6) + ' on=' + on + ' hasPublic=' + hasPublic + ' err=' + ((e && (e.code + ' ' + e.message)) || e)); mpErrToast('Could not follow', e); /* r100-د */ return; } // ر٧٢-أ-٢ج: الرمز على الشاشة (قرار المالك)
   userListData.following = (userListData.following || []).filter(function(x){ return x !== uid; }); if (on) userListData.following.push(uid);
   if (hasPublic && typeof u.followerCount === 'number') u.followerCount = Math.max(0, u.followerCount + (on ? 1 : -1)); else if (hasPublic && on) u.followerCount = 1;
   if (on) try{ mpTrack.statsCurator(uid, 'follow'); }catch(_){} // r72p
@@ -341,16 +342,19 @@ function profPickType(t){ profContactType = t; document.querySelectorAll('.prof-
 async function openMyProfile(){
   if (!currentUser) return; const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return; /* ب-٢-٢-أ٢ (v3 · ٥): بالقشرة الليلية — من البطاقة بالدرج أو من صفحة المنتقي */
   dashSet('✎ My profile', null); body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; bd.classList.add('show'); /* r74m (ق١٠-١٠-٠٦): القشرة تُعرض قبل قراءة الملف — وإلا لم تلتقطها آلية العودة من الدرج فغاب Back */
-  let pr = null; try{ pr = await mpData.profiles.get(currentUser.uid); }catch(e){} pr = pr || {};
+  let pr = null; try{ pr = await mpData.profiles.get(currentUser.uid); }catch(e){ mpReadFailed(e, 'my-profile', 'your profile'); body.innerHTML = '<div class="mp-empty mini">Could not load your profile — ' + escapeHtml(mpErrText(e)) + '<br><span class="dim">Nothing is changed until it loads.</span></div><button type="button" class="dash-door" onclick="openMyProfile()"><span>↻ Try again</span><span></span></button>'; return; } pr = pr || {}; /* r100-د: لا نموذج فارغ قابل للحفظ فوق ملف حقيقي */
   const ct = pr.contact ? { type: pr.contact.type, value: pr.contact.value } : contactFromUrl(pr.contactUrl || ''); profContactType = (pr.contact || pr.contactUrl) ? ct.type : 'instagram'; // r72t: contact{} أولًا ثم contactUrl انتقاليًّا
-  body.innerHTML = '<div class="ctx" style="text-align:center;">What visitors see on your curator page</div><label class="flabel">Tagline <span class="dim">· one line under your name · ≤ 40</span></label><input type="text" id="mpTagline" class="modal-input" maxlength="40" placeholder="e.g. Experiences I loved — you might too" value="' + attrStr(pr.tagline || '') + '">'
-    + '<label class="flabel">About you <span class="dim">· ≤ 200</span></label><textarea id="mpBio" class="modal-input" rows="3" maxlength="200" placeholder="e.g. Coffee first, then everything else. I write about the places I return to.">' + escapeHtml(pr.bio || '') + '</textarea>'
-    + '<label class="flabel">Contact <span class="dim">· a link or a social handle · optional</span></label><input type="text" id="mpContact" class="modal-input" maxlength="300" placeholder="@yourname or https://…" value="' + attrStr((pr.contact || pr.contactUrl) ? ct.value : '') + '">'
+  body.innerHTML = '<div class="ctx" style="text-align:center;">What visitors see on your curator page</div><label class="flabel">Tagline <span class="dim">· one line under your name · ≤ 40</span></label><input type="text" id="mpTagline" class="modal-input" placeholder="e.g. Experiences I loved — you might too" value="' + attrStr(pr.tagline || '') + '">'
+    + '<label class="flabel">About you <span class="dim">· ≤ 200</span></label><textarea id="mpBio" class="modal-input" rows="3" placeholder="e.g. Coffee first, then everything else. I write about the places I return to.">' + escapeHtml(pr.bio || '') + '</textarea>'
+    + '<label class="flabel">Contact <span class="dim">· a link or a social handle · optional</span></label><input type="text" id="mpContact" class="modal-input" placeholder="@yourname or https://…" value="' + attrStr((pr.contact || pr.contactUrl) ? ct.value : '') + '">'
     + '<div class="chiprow">' + [['instagram', 'Instagram'], ['x', 'X'], ['snapchat', 'Snapchat'], ['website', 'Website'], ['email', 'Email'], ['phone', 'Phone'], ['whatsapp', 'WhatsApp']].map(function(t){ return '<button type="button" class="chip prof-ct' + (profContactType === t[0] ? ' on' : '') + '" data-t="' + t[0] + '" onclick="profPickType(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>' // r72t (M4.26 ٤): الأنواع السبعة
     + '<label class="flabel">Follower count on my page</label><div class="chiprow"><button type="button" class="chip' + (pr.showFollowerCount !== false ? ' on' : '') + '" id="mpShowFc" onclick="this.classList.add(\'on\'); document.getElementById(\'mpHideFc\').classList.remove(\'on\')">Show</button><button type="button" class="chip' + (pr.showFollowerCount === false ? ' on' : '') + '" id="mpHideFc" onclick="this.classList.add(\'on\'); document.getElementById(\'mpShowFc\').classList.remove(\'on\')">Hide</button></div>';
+
   body.innerHTML += '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="dashBack()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" onclick="saveMyProfile()">Save</button></div>'; 
+  mpLenWatch('mpTagline', MP_LIMITS.tagline); mpLenWatch('mpBio', MP_LIMITS.bio); mpLenWatch('mpContact', MP_LIMITS.contact); /* r100-ج: بعد اكتمال innerHTML (+= يعيد بناء العقد) */
 }
 async function saveMyProfile(){
+  if (!(mpLenOk('mpTagline', MP_LIMITS.tagline) & mpLenOk('mpBio', MP_LIMITS.bio) & mpLenOk('mpContact', MP_LIMITS.contact))) return; /* r100-ج */
   const tag = (document.getElementById('mpTagline').value || '').trim().slice(0, 40), bio = (document.getElementById('mpBio').value || '').trim().slice(0, 200), cv = (document.getElementById('mpContact').value || '').trim();
   const isDirect = /^(email|phone|whatsapp)$/.test(profContactType); const val = cv.replace(/^@/, '').trim().slice(0, 120);
   if (cv && isDirect){ if (profContactType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){ showToast('Enter a valid email'); return; } if (profContactType !== 'email' && !/^\+?[\d\s-]{6,}$/.test(val)){ showToast('Enter a valid number with country code'); return; } }
@@ -358,7 +362,7 @@ async function saveMyProfile(){
   const patch = { showFollowerCount: !document.getElementById('mpHideFc').classList.contains('on') }; // الحقل الفارغ لا يُرسل (القاعدة ترفض النص الفارغ) — يُحذف إن كان موجودًا
   patch.tagline = tag ? tag : mpData.fieldDelete(); patch.bio = bio ? bio : mpData.fieldDelete(); patch.displayName = mpData.fieldDelete(); // r72u: تنظيف الاسم المعروض القديم
   patch.contact = cv ? { type: profContactType, value: isDirect ? val : (cv.trim().slice(0, 120)) } : mpData.fieldDelete(); patch.contactUrl = mpData.fieldDelete(); // r72t (M4.26 ٤): contact{} بدل contactUrl
-  try{ await mpData.profiles.merge(currentUser.uid, patch); }catch(e){ mpSwallow(e, 'profile save'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
+  try{ await mpData.profiles.merge(currentUser.uid, patch); }catch(e){ mpSwallow(e, 'profile save'); mpErrToast('Could not save', e); return; }
   const me = (curators || []).find(function(c){ return c.uid === currentUser.uid; }); if (me){ me.tagline = tag; me.bio = bio; me.contact = cv ? patch.contact : null; me.contactUrl = ''; me.showFollowerCount = patch.showFollowerCount; }
   showToast('Profile saved ✓'); dashBack(); if (currentTab === 'Curators') renderCuratorsBody(); /* ب-٢-٢-أ٢: الحفظ يعود طبقة (الدرج أو الإغلاق) */
 }
@@ -435,17 +439,19 @@ async function openCityNotesEditor(cityId){ // r72q-1: بقشرة نوافذ ا�
   if (!currentUser) return; const n = (await curLoadNotes(currentUser.uid, cityId)) || {}; const cname = (curData[currentUser.uid] && (curData[currentUser.uid].cities.find(function(c){ return c.id === cityId; }) || {}).name) || cityId;
   const ex = { bestTime: 'e.g. late September', love: 'e.g. breakfast houses · ferries at sunset', knownFor: 'e.g. fika · design', whyPrefer: 'e.g. walkable, calm, safe' };
   document.getElementById('formTitle').textContent = '✎ ' + cname + ' — your notes'; document.getElementById('formSub').textContent = 'Shown to every visitor of your ' + cname + ' page · all optional';
-  document.getElementById('formBody').innerHTML = '<label class="flabel">Your impression <span class="dim">· ≤ 300</span></label><textarea id="cnText" class="modal-input" rows="3" maxlength="300" placeholder="e.g. Quiet in May, alive in August. I come for the bakeries and the islands.">' + escapeHtml(n.text || '') + '</textarea>'
-    + CUR_NOTE_FIELDS.filter(function(f){ return f[0] !== 'returns'; }).map(function(f){ return '<label class="flabel">' + f[1] + ' <span class="dim">· ≤ ' + f[2] + '</span></label><input type="text" id="cn_' + f[0] + '" class="modal-input" maxlength="' + f[2] + '" placeholder="' + attrStr(ex[f[0]] || '') + '" value="' + attrStr(n[f[0]] || '') + '">'; }).join('')
+  document.getElementById('formBody').innerHTML = '<label class="flabel">Your impression <span class="dim">· ≤ 300</span></label><textarea id="cnText" class="modal-input" rows="3" placeholder="e.g. Quiet in May, alive in August. I come for the bakeries and the islands.">' + escapeHtml(n.text || '') + '</textarea>'
+    + CUR_NOTE_FIELDS.filter(function(f){ return f[0] !== 'returns'; }).map(function(f){ return '<label class="flabel">' + f[1] + ' <span class="dim">· ≤ ' + f[2] + '</span></label><input type="text" id="cn_' + f[0] + '" class="modal-input" placeholder="' + attrStr(ex[f[0]] || '') + '" value="' + attrStr(n[f[0]] || '') + '">'; }).join('')
     + '<label class="flabel">I return</label><div class="chiprow">' + ['yes', 'sometimes', 'no'].map(function(v){ return '<button type="button" class="chip cn-ret' + ((n.returns || '') === v ? ' on' : '') + '" data-v="' + v + '" onclick="cnPickReturns(this)">' + ({ yes: 'Yes', sometimes: 'Sometimes', no: 'Not really' })[v] + '</button>'; }).join('') + '</div>';
+  mpLenWatch('cnText', MP_LIMITS.impression); CUR_NOTE_FIELDS.forEach(function(f){ if (f[0] !== 'returns') mpLenWatch('cn_' + f[0], f[2]); }); /* r100-ج */
   formOnSave = function(){ saveCityNotes(cityId); }; document.getElementById('formBackdrop').classList.add('show');
 }
 function cnPickReturns(btn){ document.querySelectorAll('.cn-ret').forEach(function(b){ b.classList.toggle('on', b === btn && !b.classList.contains('on')); }); }
 async function saveCityNotes(cityId){
+  if (!(CUR_NOTE_FIELDS.filter(function(f){ return f[0] !== 'returns'; }).map(function(f){ return mpLenOk('cn_' + f[0], f[2]); }).concat([mpLenOk('cnText', MP_LIMITS.impression)]).every(Boolean))) return; /* r100-ج: كل الخانات تُعلَّم ثم يُرفض الحفظ */
   const data = {}; const t = (document.getElementById('cnText').value || '').trim().slice(0, 300); if (t) data.text = t;
   CUR_NOTE_FIELDS.forEach(function(f){ if (f[0] === 'returns') return; const v = (document.getElementById('cn_' + f[0]).value || '').trim().slice(0, f[2]); if (v) data[f[0]] = v; });
   const r = document.querySelector('.cn-ret.on'); if (r) data.returns = r.getAttribute('data-v');
-  try{ await mpData.cityNotes.save(currentUser.uid, cityId, data); }catch(e){ mpSwallow(e, 'notes save'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
+  try{ await mpData.cityNotes.save(currentUser.uid, cityId, data); }catch(e){ mpSwallow(e, 'notes save'); mpErrToast('Could not save', e); return; }
   delete curNotesCache[currentUser.uid + '__' + cityId]; showToast('Notes saved ✓'); closeModalById('formBackdrop'); if (currentTab === 'Curators') renderCuratorsBody();
 }
 async function curEditPlace(cityId, catId, placeId){ // ✎ Edit: نافذة المكان القائمة على مكاني بقائمتي (بعد تحميل المدينة)
@@ -461,7 +467,7 @@ async function curBrowse(uid, what, cityId){ // All places / All trips / Open li
   let timedOut = false;
   if (cityId && what === 'places'){ try{ await curEnsureCity(uid, cityId); }catch(_){ } if (currentUser && uid !== currentUser.uid) mpTrack.statsList(uid + '_' + cityId, 'open_curator'); } /* خ-٦: المدينة المفتوحة تُركَّب كاملة قبل تسليمها لطبقة المجتمع · ب-٢-١: فتح من صفحة المنتقي يُعدّ open_curator (لا يمرّ بـopenCommunityCityList) */
   const __loaded = (viewingUserUid === uid && viewingUserData && Array.isArray(viewingUserCities) && viewingUserCities.length) || curPrimeLayerFromCurator(uid); /* ر٧٣-أب (٢) — السبب الجذري للبطء: طبقة المجتمع كانت تعيد قراءة كل قوائم الشخص (قائمة + ٢٧ مستندًا لكل مدينة) رغم أن صفحة المنتقي حمّلتها؛ الآن تُبنى من بيانات المنتقي المحمَّلة بلا قراءة */
-  try{ if (__loaded){ viewingCommunityTripId = null; try{ await ensureListBookmarks(); await ensureTripSaves(); }catch(_){} } else await Promise.race([viewCommunityUser(uid), new Promise(function(r){ setTimeout(function(){ timedOut = true; r(); }, 15000); })]); if (cityId){ communityViewingCityId = cityId; communityUserLayer = (what === 'places') ? cityId : null; communityUserTripsCity = (what === 'trips') ? cityId : ''; } else { communityUserLayer = null; communityUserTripsCity = ''; } }catch(e){ mpSwallow(e, 'curator browse'); showToast('Could not open · ' + (((e && e.code) || (e && e.message) || 'error') + ' · step ' + vcuStep).slice(0, 70)); logTiming('[CUR] browse failed: ' + ((e && (e.code || e.message)) || e) + ' step=' + vcuStep); }
+  try{ if (__loaded){ viewingCommunityTripId = null; try{ await ensureListBookmarks(); await ensureTripSaves(); }catch(_){} } else await Promise.race([viewCommunityUser(uid), new Promise(function(r){ setTimeout(function(){ timedOut = true; r(); }, 15000); })]); if (cityId){ communityViewingCityId = cityId; communityUserLayer = (what === 'places') ? cityId : null; communityUserTripsCity = (what === 'trips') ? cityId : ''; } else { communityUserLayer = null; communityUserTripsCity = ''; } }catch(e){ mpSwallow(e, 'curator browse'); mpErrToast('Could not open', e); try{ logTiming('[CM] open failed · step ' + vcuStep); }catch(_){} /* r100-د */ logTiming('[CUR] browse failed: ' + ((e && (e.code || e.message)) || e) + ' step=' + vcuStep); }
   if (timedOut){ showToast('Slow connection · stuck at step ' + vcuStep + ' — showing what loaded'); logTiming('[CUR] browse timeout step=' + vcuStep); } // ر٧٢-أ-٢ز: لا انتظار صامتًا
   try{ switchTab('Community'); if (cityId && HOSTED.Community) renderCommunityModal(); } finally { curBrowseBusy = false; }
 }
@@ -488,7 +494,7 @@ function openSettings(){
 }
 async function resendVerification(){ // r72p (١٠): نداء واحد لخدمة المصادقة
   if (!currentUser){ openAuthModal(); return; }
-  try{ await mpData.auth.sendVerification(); showToast('Verification email sent — check your inbox'); }catch(e){ mpSwallow(e, 'verify'); showToast('Could not send · ' + ((e && e.code) || 'error')); }
+  try{ await mpData.auth.sendVerification(); showToast('Verification email sent — check your inbox'); }catch(e){ mpSwallow(e, 'verify'); mpErrToast('Could not send', e); }
 }
 function drToggleComing(){ const el = document.getElementById('drComing'), ar = document.getElementById('drComingArrow'); if (!el) return; const open = el.style.display === 'none'; el.style.display = open ? '' : 'none'; if (ar) ar.textContent = open ? '⌃' : '⌄'; } /* ر٧٣-أب (٢): المؤجَّل مجمَّع لا مبعثر */
 function drSyncCurator(){ // ب-٢-٢-أ٢ (المسودة v3-ج): الدرج — للمنتقي الشارة بالاسم وبند Followers بعدده؛ لغيره «⭐ Become a curator» بحالته (request · Pending · Accepted · Declined) · سطر البطاقة «N followers · My profile ›»
@@ -521,7 +527,7 @@ async function openMyStats(uid, backFn){ /* ب-٢-٢-ب: للمالك backFn ي�
   try{ const r = await Promise.all([mpData.profiles.get(target).catch(function(){ return null; }), mpData.cityLists.byOwner(target), mpData.trips.byOwner(target)]);
     prof = r[0]; r[1].forEach(function(d){ const x = d.data() || {}; lists.push({ id: d.id, cityId: x.cityId, name: x.cityName || x.cityId || d.id, pub: x.public === true, views: x.viewCount || 0, bm: x.bookmarkCount || 0, copies: x.copyCount || 0 }); });
     r[2].forEach(function(d){ const x = d.data() || {}; if (x.source) return; trips.push({ id: d.id, name: (x.cityName || '') + (x.customLabel ? ' — ' + x.customLabel : ''), pub: x.public === true, views: x.viewCount || 0, saves: x.saveCount || 0, copies: x.copyCount || 0 }); });
-  }catch(e){ mpSwallow(e, 'my stats'); body.innerHTML = '<div class="mp-empty mini">Could not load your stats · ' + escapeHtml((e && e.code) || 'error') + '</div><button type="button" class="dash-door" onclick="openMyStats(' + (asOwner ? "'" + attrStr(target) + "'" : '') + ')"><span>↻ Retry</span><span></span></button>'; return; }
+  }catch(e){ mpSwallow(e, 'my stats'); body.innerHTML = '<div class="mp-empty mini">Could not load your stats — ' + escapeHtml(mpErrText(e)) + '</div><button type="button" class="dash-door" onclick="openMyStats(' + (asOwner ? "'" + attrStr(target) + "'" : '') + ')"><span>↻ Retry</span><span></span></button>'; return; }
   const isCur = !!(prof && prof.verified === true); const nick = (prof && prof.nickname) || (asOwner ? target.slice(0, 8) : ((userListData && userListData.nickname) || 'You'));
   const pubL = lists.filter(function(l){ return l.pub; }), pubT = trips.filter(function(t){ return t.pub; });
   const st = await Promise.all([Promise.all(pubL.map(function(l){ return mpData.stats.listDoc(l.id); })), Promise.all(pubT.map(function(t){ return mpData.stats.tripDoc(t.id); })), isCur ? mpData.stats.curatorDays(target, 30) : Promise.resolve([])]);
@@ -556,13 +562,13 @@ async function openCuratorRequest(){
   let h = '<div class="ctx">A curator\'s page is a showcase of their favorites on top of their ordinary lists. The badge means a space, not a rating. Curators are invited by MyPickz or apply here.</div>'
     + '<div class="admtiles" style="grid-template-columns:1fr 1fr;"><div class="admtile"><b>' + nL + '</b><span>public lists</span></div><div class="admtile"><b>' + nT + '</b><span>public trips</span></div></div>';
   if (r){ const st = String(r.status || 'pending'); const when = r.at ? new Date(r.at).toISOString().slice(0, 10) : ''; h += '<div class="dash-door plain"><span>' + (st === 'accepted' ? '✓ Accepted — your badge is on' : st === 'declined' ? 'Request declined' : 'Request sent · Pending') + '</span><span class="num">' + (when ? 'since ' + msDayLabel(when) : '') + '</span></div><div class="ctx">' + (st === 'pending' ? 'We\'ll notify you here.' : st === 'accepted' ? 'Your curator page is live.' : 'You can ask again later.') + '</div>'; }
-  else { h += '<label class="flabel">Tell us briefly why <span class="dim" id="curReqCount">· 0/300</span></label><textarea id="curReqText" class="modal-input" rows="3" maxlength="300" placeholder="e.g. I document the cafés of Jeddah with what to order…" oninput="document.getElementById(\'curReqCount\').textContent = \'· \' + this.value.length + \'/300\';"></textarea><button type="button" class="btn btn-brass wide" style="margin-top:12px;" id="curReqSend" onclick="sendCuratorRequest()">Send request</button>'; }
-  body.innerHTML = h;
+  else { h += '<label class="flabel">Tell us briefly why </label><textarea id="curReqText" class="modal-input" rows="3" placeholder="e.g. I document the cafés of Jeddah with what to order…"></textarea><button type="button" class="btn btn-brass wide" style="margin-top:12px;" id="curReqSend" onclick="sendCuratorRequest()">Send request</button>'; }
+  body.innerHTML = h; mpLenWatch('curReqText', MP_LIMITS.request); /* r100-ج */
 }
 async function sendCuratorRequest(){
-  const ta = document.getElementById('curReqText'); const text = String((ta && ta.value) || '').trim().slice(0, 300); if (!text){ showToast('Tell us briefly why'); return; }
+  const ta = document.getElementById('curReqText'); const text = String((ta && ta.value) || '').trim(); if (!text){ showToast('Tell us briefly why'); return; } if (!mpLenOk('curReqText', MP_LIMITS.request)) return; /* r100-ج */
   const btn = document.getElementById('curReqSend'); if (btn) btn.disabled = true;
-  try{ await mpData.requests.create(currentUser.uid, text); }catch(e){ mpSwallow(e, 'request'); showToast('Could not send · ' + ((e && e.code) || 'error')); if (btn) btn.disabled = false; return; }
+  try{ await mpData.requests.create(currentUser.uid, text); }catch(e){ mpSwallow(e, 'request'); mpErrToast('Could not send', e); if (btn) btn.disabled = false; return; }
   showToast('Request sent — pending'); const el = document.getElementById('drCuratorStatus'); if (el) el.textContent = 'Pending ›'; /* الحالة ببند الدرج */
   openCuratorRequest();
 }
@@ -575,28 +581,28 @@ function reportAppProblem(){
   reportKind = 'broke'; const build = String(window.__mpBuild || '').replace('M2-ID-', '') || 'test';
   dashSet('⚑ Report a problem', null);
   body.innerHTML = '<label class="flabel">What kind?</label><div class="chiprow" id="repKinds" style="flex-wrap:wrap;">' + [['broke', 'Something broke'], ['data', 'Wrong data'], ['idea', 'Suggestion'], ['other', 'Other']].map(function(t){ return '<button type="button" class="chip' + (t[0] === 'broke' ? ' on' : '') + '" data-k="' + t[0] + '" onclick="reportPickKind(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>'
-    + '<label class="flabel">What went wrong? <span class="dim" id="repCount">· 0/200</span></label><textarea id="repText" class="modal-input" rows="3" maxlength="200" placeholder="e.g. The map did not open after pasting a link…" oninput="document.getElementById(\'repCount\').textContent = \'· \' + this.value.length + \'/200\';"></textarea>'
+    + '<label class="flabel">What went wrong? </label><textarea id="repText" class="modal-input" rows="3" placeholder="e.g. The map did not open after pasting a link…"></textarea>'
     + '<div class="ctx">We attach: screen «' + escapeHtml(currentTab || 'Places') + '» · build ' + escapeHtml(build) + ' · no personal data.</div>'
     + '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="dashBack()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" id="repSend" onclick="sendAppReport()">Send report</button></div>';
-  bd.classList.add('show');
+  bd.classList.add('show'); mpLenWatch('repText', MP_LIMITS.report); /* r100-ج */
 }
 async function sendAppReport(){
-  const ta = document.getElementById('repText'); const text = String((ta && ta.value) || '').trim().slice(0, 200); if (!text){ showToast('Please describe the problem'); return; }
+  const ta = document.getElementById('repText'); const text = String((ta && ta.value) || '').trim(); if (!text){ showToast('Please describe the problem'); return; } if (!mpLenOk('repText', MP_LIMITS.report)) return; /* r100-ج: رسالة قبل الحفظ */
   const kinds = { broke: 'Something broke', data: 'Wrong data', idea: 'Suggestion', other: 'Other' }; const build = String(window.__mpBuild || '').replace('M2-ID-', '') || 'test';
   const reason = '[' + (kinds[reportKind] || 'Other') + ' · ' + (currentTab || 'Places') + ' · ' + build + '] ' + text;
   const btn = document.getElementById('repSend'); if (btn) btn.disabled = true;
-  try{ await mpData.reports.create(currentUser.uid, 'app', '', reason.slice(0, 260)); }catch(e){ mpSwallow(e, 'report'); showToast('Could not report · ' + ((e && e.code) || 'error')); if (btn) btn.disabled = false; return; }
+  try{ await mpData.reports.create(currentUser.uid, 'app', '', reason.slice(0, 260)); }catch(e){ mpSwallow(e, 'report'); mpErrToast('Could not report', e); if (btn) btn.disabled = false; return; }
   showToast('Thanks — we will look into it'); dashBack();
 }
 let vcuStep = ''; // ر٧٢-أ-٢ز: آخر مرحلة بلغها فتح طبقة الشخص (للتشخيص على الجهاز)
 async function viewCommunityUser(uid){
   vcuStep = 'profile'; communityUserLayer = null;
   viewingUserUid = uid;
-  viewingUserData = null; const __tp = performance.now(); try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ mpSwallow(e, 'profile'); } logTiming('[CM] person: profile in ' + Math.round(performance.now() - __tp) + 'ms'); /* د-٥ */ // r72r-1: الملف طازج بكل فتح (المدن الجديدة تظهر) — لا من ذاكرة المجتمع
+  viewingUserData = null; const __tp = performance.now(); let __pErr = null; try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ __pErr = e; mpSwallow(e, 'profile'); } logTiming('[CM] person: profile in ' + Math.round(performance.now() - __tp) + 'ms'); /* د-٥ */ // r72r-1: الملف طازج بكل فتح (المدن الجديدة تظهر) — لا من ذاكرة المجتمع
   if (!viewingUserData) viewingUserData = communityUsers.find(u => u.uid === uid);
   if (!viewingUserData){ // ر٦٥: صاحب بطاقة لم يصل ملفه للقائمة (تحميل ناقص أو ملف حديث) — يُقرأ مفردًا بدل الانهيار
-    try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ mpSwallow(e, 'profile'); }
-    if (!viewingUserData) viewingUserData = { uid: uid, nickname: 'user', publicCityIds: [] };
+    try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ __pErr = e; mpSwallow(e, 'profile'); }
+    if (!viewingUserData){ viewingUserData = { uid: uid, nickname: 'user', publicCityIds: [] }; if (__pErr) mpErrToast('Could not load this person', __pErr); } /* r100-د: الملف الوهمي «user» يُعلَن سببه */
   }
   communityViewingCityId = null;
   viewingCommunityTripId = null;
@@ -666,7 +672,7 @@ async function cmEnsureCity(uid, c){ /* خ-٦: تركيب مدينة الشخص 
   c._loading = (async function(){
     try{ if (c._src){ await curEnsureCity(uid, c.id); if (c._src._full){ c.categories = c._src.categories; } }
       else { const full = await mpData.cityLists.get(uid, c.id); if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; logTiming('[CM] city composed ' + c.id + ' cats=' + Object.keys(full.categories).length); } else showToast('Could not load this list'); } }
-    catch(e){ mpSwallow(e, 'community city'); showToast('Could not load this list · ' + ((e && (e.code || e.message)) || 'error')); }
+    catch(e){ mpSwallow(e, 'community city'); mpErrToast('Could not load this list', e); } /* r100-د */
     c._full = true; c._loading = null; return c;
   })();
   return c._loading;
