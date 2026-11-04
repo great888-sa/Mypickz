@@ -208,6 +208,7 @@ function openAddrModal(cityId, catId, index){
   document.getElementById('addrPhone').value = existing.phone || '';
   document.getElementById('addrError').textContent = '';
   openModalById('addrBackdrop');
+  mpLenWatch('addrName', MP_LIMITS.name); mpLenWatch('addrArea', MP_LIMITS.area); mpLenWatch('addrNote', MP_LIMITS.note); mpLenWatch('addrPhone', MP_LIMITS.phone); /* r100-ج */
 }
 let cityDelCtx = null; // {cityId, from:'addr'|'places'}
 async function openCityDeleteChooser(cityId, from){ /* r75c (البند ١٠): ورقة سفلية بدل النافذة القديمة — العدّادان يُقرآن أولًا (لا يحذف أحد وهو يجهل حجم ما يفقد · قرار المالك ٣٠ أغسطس) ثم الخيارات: هذا الوجه · الوجه الآخر حين له محتوى (قرار ١ سبتمبر) · الحذف الشامل فعلًا أحمر */
@@ -284,6 +285,7 @@ async function saveAddrRun(){
   err.textContent = '';
   if (!name){ err.textContent = 'Enter a name'; return; }
   if (!isGoogleMapsUrl(url)){ err.textContent = 'Paste a Google Maps link'; return; }
+  if (!(mpLenOk('addrName', MP_LIMITS.name) & mpLenOk('addrArea', MP_LIMITS.area) & mpLenOk('addrNote', MP_LIMITS.note) & mpLenOk('addrPhone', MP_LIMITS.phone))) return; /* r100-ج */
   const cityId = addrModalCity, catId = addrModalCat;
   if (!cityId){ err.textContent = 'Choose a city'; return; }
   const catsMap = addrData[cityId] || (addrData[cityId] = {});
@@ -387,7 +389,7 @@ async function doAccountDelete(){
     delStep(3);
   }catch(e){
     btn.disabled = false; btn.textContent = label;
-    showToast('Deletion stopped: ' + ((e && e.code) || 'error') + ' — nothing else was removed');
+    showToast('Deletion stopped — ' + mpErrText(e) + ' · nothing else was removed'); /* r100-د */
   }
 }
 let delCurStep = 1;
@@ -431,6 +433,7 @@ async function doSignUp(){
       return;
     }
   }catch(e){
+    mpSwallow(e, 'sign-up'); /* r100-هـ */
     errEl.textContent = 'Could not verify username — try again';
     return;
   }
