@@ -142,7 +142,7 @@ function mpSheet(o){
   const alt = el('sheetAlt'); alt.style.display = o.alt ? '' : 'none'; alt.textContent = o.alt || '·';
   const alt2 = el('sheetAlt2'); if (alt2){ alt2.style.display = o.alt2 ? '' : 'none'; alt2.textContent = o.alt2 || '·'; } /* r75c: 'alt2' */
   el('sheetCancel').textContent = o.cancel || 'Cancel';
-  const inp = el('sheetInput'); __sheetHasInput = !!o.input; inp.style.display = o.input ? '' : 'none'; inp.value = (o.input && o.input.value) || ''; inp.placeholder = (o.input && o.input.placeholder) || '';
+  const inp = el('sheetInput'); __sheetHasInput = !!o.input; inp.style.display = o.input ? '' : 'none'; inp.value = (o.input && o.input.value) || ''; inp.placeholder = (o.input && o.input.placeholder) || ''; if (o.input) mpLenWatch('sheetInput', MP_LIMITS.sheet); else { const lc = inp.nextElementSibling; if (lc && lc.classList.contains('lencount')) lc.textContent = ''; } /* r100-ج */
   const alts = el('sheetAlts'); if (alts) alts.style.display = (o.alt || o.alt2) ? '' : 'none'; /* r75d-٢: البديلان بصف واحد */
   el('sheetCard').style.transform = ''; el('sheetBackdrop').classList.add('show'); sheetBarsHide(true); /* r75d-٢ (ملاحظة المالك ١٢ أكتوبر): الأشرطة السفلية تختفي ما دامت الورقة مفتوحة — الورقة على حافة الشاشة بلا قياس ولا رفع (بديل sheetLift) */
   if (o.input) setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(_){} }, 30);
@@ -150,6 +150,7 @@ function mpSheet(o){
 }
 function mpSheetAbort(){ try{ if (__sheetResolve) sheetDone(null); }catch(_){} } /* r100-ب: ورقة معلّقة تُحسم بـnull (الخروج) — فلا يبقى مفتاح انشغال محجوزًا خلف ورقة لن تُجاب */
 function sheetDone(v){
+  if (v === 'ok' && __sheetHasInput && !mpLenOk('sheetInput', MP_LIMITS.sheet)) return; /* r100-ج: الورقة تبقى حتى يُقصَّر */
   const r = __sheetResolve; __sheetResolve = null;
   const out = (v === 'ok' && __sheetHasInput) ? document.getElementById('sheetInput').value : v;
   document.getElementById('sheetBackdrop').classList.remove('show'); sheetBarsHide(false);
