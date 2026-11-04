@@ -93,12 +93,13 @@ async function resolveTripPlaces(trip){
   const plan = tripHasPlan(trip) ? trip.plan : { days: [], tray: [] };
   const all = tripPlanEntries(plan).concat(plan.tray || []); const flat = []; all.forEach(function(e){ flat.push(e); (e.alts || []).forEach(function(a){ flat.push(a); }); });
   const cityIds = {}; tripCityIds(trip).forEach(function(c){ cityIds[c] = true; }); flat.forEach(function(e){ if (e.ref && e.ref.cityId) cityIds[e.ref.cityId] = true; });
-  const myLinksByCity = {}; const isMe = !!(currentUser && trip.ownerId === currentUser.uid);
+  const myLinksByCity = {}; const isMe = !!(currentUser && trip.ownerId === currentUser.uid); let __rErr = null; /* r100-د */
   for (const cid of Object.keys(cityIds)){
-    try{ const d = await mpData.cityLists.get(trip.ownerId, cid); const links = Object.assign({}, (d && d.categories) || {}); if (isMe){ try{ Object.assign(links, await mpData.privatePlaces.get(currentUser.uid, cid)); }catch(e){} } myLinksByCity[cid] = links; }catch(e){ myLinksByCity[cid] = {}; } // ٢٦ أغسطس (٣-ب): الخاصة لصاحبها وحده
+    try{ const d = await mpData.cityLists.get(trip.ownerId, cid); const links = Object.assign({}, (d && d.categories) || {}); if (isMe){ try{ Object.assign(links, await mpData.privatePlaces.get(currentUser.uid, cid)); }catch(e){} } myLinksByCity[cid] = links; }catch(e){ myLinksByCity[cid] = {}; if (isMe || (e && e.code !== 'permission-denied')) __rErr = __rErr || e; } // ٢٦ أغسطس (٣-ب): الخاصة لصاحبها وحده
   }
   const communityLinks = {}; // uid|cityId
   for (const e of flat){ if (e.ref && e.ref.sourceType === 'community' && e.ref.sourceUid){ const k = e.ref.sourceUid + '|' + (e.ref.cityId || trip.cityId); if (communityLinks[k]) continue; try{ const d = await mpData.cityLists.get(e.ref.sourceUid, e.ref.cityId || trip.cityId); communityLinks[k] = (d && d.categories) || {}; }catch(err){ communityLinks[k] = {}; } } }
+  if (__rErr) mpReadFailed(__rErr, 'trip-resolve', 'the places of this trip'); /* r100-د: مرة واحدة — الأماكن تظهر بأسمائها من الخطة بلا تفاصيل؛ رفض الإذن على قوائم الغير صامت بالتصميم (قد تكون خاصة) */
   function resolveRef(e){
     const ref = e.ref || {}; if (ref.sourceType === 'stop') return Object.assign({}, e, { alts: [], _p: null, _available: true }); /* r92: المحطة غير المحفوظة تحمل اسمها وموضعها في الخطة نفسها */ const linksObj = ref.sourceType === 'community' ? (communityLinks[ref.sourceUid + '|' + (ref.cityId || trip.cityId)] || {}) : (myLinksByCity[ref.cityId || trip.cityId] || {});
     const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
