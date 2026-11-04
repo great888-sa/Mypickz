@@ -1,0 +1,32 @@
+# MyPickz — workers/backup/wrangler.toml
+# r100-و (ق١١-٠٣-٠٩ · استثناء المالك الصريح ٤ نوفمبر ١٢:١٧ — الخيار أ): نسخة احتياطية يومية من Firestore إلى R2
+# worker مستقل: لا يمسّ عامل الأماكن ولا النبضة · يقرأ فقط (حساب خدمة بدور Cloud Datastore Viewer) · يكتب إلى دلو خاص
+name = "mypickz-backup"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+workers_dev = false
+
+# نقطة الحالة (عدّادات وتواريخ فقط — لا بيانات)
+routes = [
+  { pattern = "backup.mypickz.app", custom_domain = true }
+]
+
+# يوميًا ٠٨:٣٠ UTC = ١١:٣٠ الرياض — أول يوم الحصة (منتصف الليل بالمحيط الهادئ = ٠٨:٠٠ UTC شتاءً · ٠٧:٠٠ صيفًا) فلا يزاحم يومًا مستهلَكًا
+[triggers]
+crons = ["30 8 * * *"]
+
+# Workers Paid (الحساب عليها): سقف CPU للجولة — JSON لمجموعات كبيرة
+[limits]
+cpu_ms = 60000
+
+# الدلو الخاص للنسخ — يُنشأ مرة من سير النشر (wrangler r2 bucket create)
+[[r2_buckets]]
+binding = "BACKUPS"
+bucket_name = "mypickz-backups"
+
+# بريد الإنذار — الوجهة تُحقَن وقت النشر (ALERT_TO) كالنبضة
+[[send_email]]
+name = "EMAIL"
+
+# الأسرار (تُحقَن من GitHub Secrets وقت النشر — لا شيء بالمستودع):
+#   FIREBASE_SA_KEY  — JSON حساب الخدمة (دور Cloud Datastore Viewer فقط)
