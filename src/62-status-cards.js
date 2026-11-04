@@ -135,6 +135,7 @@ async function copyUsersReport(){
 }
 
 async function toggleSuspendUser(uid){
+  if (!uid || !currentUser || uid === currentUser.uid){ if (uid && currentUser && uid === currentUser.uid) showToast("You can't suspend yourself"); return; } /* r100-ج */
   const u = allUsersCache.find(x => x.uid === uid);
   if (!u) return;
   const newVal = !u.suspended;
