@@ -434,6 +434,7 @@ function plFillModal(pasteMode){
   plPasted = null; const ch = document.getElementById('plCityHint'); if (ch){ ch.style.display = 'none'; ch.innerHTML = ''; ch.dataset.kind = ''; } // أ-١٢-٤
   document.getElementById('plDeleteBtn').style.display = plEdit ? '' : 'none';
   document.getElementById('plPlaceBackdrop').classList.add('show');
+  mpLenWatch('plName', MP_LIMITS.name); mpLenWatch('plArea', MP_LIMITS.area); mpLenWatch('plNote', MP_LIMITS.note); mpLinesWatch('plPicks', MP_LIMITS.picks, MP_LIMITS.pick); /* r100-ج: العدّاد عند الاقتراب · picks يُنظَّف ويُراقَب */
   if (pasteMode && !plEdit) setTimeout(() => { const u = document.getElementById('plUrl'); if (u) u.focus(); }, 60); /* r93-٣: التركيز على خانة الرابط */
 }
 let plModalSec = null;   // r10: القسم المختار بالمرحلة الأولى
@@ -467,6 +468,7 @@ function plRenderModalCats(){
 }
 async function plMovePlaceTo(catId){ // ر٧٠ط (N-083): نقل المكان المحرَّر إلى تصنيف آخر فورًا
   if (!plEdit || !catId || catId === plEdit.catId) { plRenderModalCats(); return; }
+  if (!plCatsAll().some(function(c){ return c.id === catId; }) && !isPrivateCategoryId(catId)){ showToast('Pick a category from the list'); plRenderModalCats(); return; } /* r100-ج: التصنيف من الشجرة فقط — لا مستند لتصنيف وهمي */
   const from = userEnsurePlaces(plEdit.catId); const pl = (from.places || [])[plEdit.index]; if (!pl){ plRenderModalCats(); return; }
   from.places.splice(plEdit.index, 1); userEnsurePlaces(catId).places.push(pl); pl.searchKey = placeSearchKey(pl, catId); pl.updatedAt = Date.now(); delete pl.autoCat; /* r86: النقل بيدك يُؤرَّخ (Undo this import يُبقيه) ويمسح وسم الفرز الآلي */
   if (!(await saveMyCityList())) return; /* r100-أ */ const c = plCatsAll().find(function(x){ return x.id === catId; }); showToast('Moved to ' + (c ? c.name : catId) + ' ✓');
@@ -833,7 +835,7 @@ async function plResortUnknown(oldId, newId){ // النقل بالعدّ: قبل
   delete myCityListData.categories[oldId]; if (myCityListOldKeys.indexOf(oldId) < 0) myCityListOldKeys.push(oldId);
   const after = Object.keys(myCityListData.categories).reduce(function(a, k){ return a + ((myCityListData.categories[k] || {}).places || []).length; }, 0);
   if (after !== before){ showToast('Count mismatch — nothing saved'); await loadMyCityList(cityListCityId); renderPlacesMine(); return; }
-  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ showToast(src.length + ' place' + (src.length === 1 ? '' : 's') + ' → ' + catLabelOf(newId) + ' ✓'); }catch(e){ mpSwallow(e, 'resort'); showToast('Could not save · ' + ((e && e.code) || 'error')); }
+  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ showToast(src.length + ' place' + (src.length === 1 ? '' : 's') + ' → ' + catLabelOf(newId) + ' ✓'); }catch(e){ mpSwallow(e, 'resort'); mpErrToast('Could not save', e); }
   renderPlacesMine();
 }
 function placeCopyOf(ownerUid, cityId, catId, placeId){ // هل نسخت هذا المكان من قبل؟ (بحث بالذاكرة بقائمتي للمدينة المحمَّلة أو بسجل النسخ المحلي)
@@ -850,7 +852,7 @@ async function saveOthersList(ownerUid, cityId){ // ز-١-ب: نسخة القا�
   if (!allCities().find(function(c){ return c.id === cityId; })){ if (!Array.isArray(userListData.customCities)) userListData.customCities = []; if (!userListData.customCities.find(function(c){ return c.id === cityId; })){ userListData.customCities.push({ id: cityId, name: cityName, country: '' }); try{ await saveUserListGeneral(); }catch(e){} } }
   const prevCity = cityListCityId; if (cityListCityId !== cityId){ cityListCityId = cityId; await loadMyCityList(cityId); }
   let n = 0; Object.keys(d.categories).forEach(function(catId){ const e = d.categories[catId]; if (!e || e.active === false) return; const dst = userEnsurePlaces(catId); (e.places || []).forEach(function(src){ if (!src || !(src.name || src.url)) return; if (src.url && (dst.places || []).some(function(q){ return q.url === src.url; })) return; dst.active = true; const copy = { id: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: src.name || 'Place', url: src.url || '', area: src.area || '', picks: Array.isArray(src.picks) ? src.picks.slice(0, 6) : [], note: src.note || '', source: { ownerId: ownerUid, ownerName: ownerName, cityId: cityId, catId: catId, placeId: src.id || hashUrl(src.url || ''), at: Date.now() } }; if (src.geo && typeof src.geo.lat === 'number') copy.geo = { lat: src.geo.lat, lng: src.geo.lng, source: src.geo.source || 'overture' }; if (src.openId) copy.openId = src.openId; dst.places.push(copy); n++; }); });
-  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(e){ mpSwallow(e, 'save list copy'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
+  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(e){ mpSwallow(e, 'save list copy'); mpErrToast('Could not save', e); return; }
   try{ await mpData.copies.record(currentUser.uid, 'list', ownerUid + '_' + cityId, 'userCityLists'); }catch(e){ mpSwallow(e, 'copy record'); }
   myCopiedLists[ownerUid + '_' + cityId] = true; try{ mpTrack.statsList(ownerUid + '_' + cityId, 'copy_from', { daily: true }); if (mpIsVerified(ownerUid)) mpTrack.statsCurator(ownerUid, 'save'); }catch(_){} /* ب-٢-١: كان المفتاح 'copy' (خارج القائمة البيضاء → رُفض صامتًا) · save اليومي للمنتقي (v3.14) */
   showToast('Copied ' + n + ' place' + (n === 1 ? '' : 's') + ' · ' + cityName + ' — with credit to ' + ownerName + ' ✓');
@@ -884,7 +886,7 @@ async function saveOthersPlace(ownerUid, cityId, catId, placeId){ // ز-١-ب: �
   const copy = { id: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: src.name || 'Place', url: src.url || '', area: src.area || '', picks: Array.isArray(src.picks) ? src.picks.slice(0, 6) : [], note: src.note || '', source: { ownerId: ownerUid, ownerName: ownerName, cityId: cityId, catId: catId, placeId: placeId, at: Date.now() } };
   if (src.geo && typeof src.geo.lat === 'number') copy.geo = { lat: src.geo.lat, lng: src.geo.lng, source: src.geo.source || 'overture' }; if (src.openId) copy.openId = src.openId;
   dst.places.push(copy);
-  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(e){ mpSwallow(e, 'save copy'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
+  try{ if (!(await saveMyCityList())) throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */ }catch(e){ mpSwallow(e, 'save copy'); mpErrToast('Could not save', e); return; }
   try{ await mpData.copies.recordOnly(currentUser.uid, 'place', ownerUid + '_' + cityId + ':' + catId + ':' + placeId); }catch(e){ mpSwallow(e, 'copy record'); }
   myCopiedPlaces[ownerUid + ':' + cityId + ':' + catId + ':' + placeId] = true;
   try{ mpTrack.statsList(ownerUid + '_' + cityId, 'copy_from', { daily: true }); if (mpIsVerified(ownerUid)) mpTrack.statsCurator(ownerUid, 'save'); }catch(_){} /* ب-٢-١ (قرار ١٠-٠٩-١١ أ): نسخ مكان يُعدّ على قائمته الأم copy_from — كان يستدعي mpTrack.statsPlace غير الموجودة فلا يكتب شيئًا */
@@ -946,9 +948,12 @@ async function savePlPlace(){ return mpBusyRun('place-save', savePlPlaceRun, '#p
 async function savePlPlaceRun(){
   if (currentUserSuspended){ showToast("Your account is suspended — you can't save changes"); return; }
   const name = mpStripBidi(document.getElementById('plName').value).trim(); // ب-٥
+  if (mpStripTags(name) !== name){ showToast("Names can't contain < or > tags"); return; } /* r100-ج: رفض لا تعديل صامت */
   const url = document.getElementById('plUrl').value.trim();
   if (!plModalCat){ showToast('Pick a sub-category first'); try{ catPairToggle('plModal', 'sub'); }catch(_){} return; } /* r94 (ق١٠-٢٩-٠٦): بعد اختيار قسم لمكان بتصنيف قديم يُمسح القديم — فالحفظ يطلب الفرعي ويفتحه (تحرير الحقول بلا مساس بالتصنيف يبقى ممكنًا) */
   if (!name || !url){ showToast('Name and Google Maps link are required'); return; }
+  if (!isGoogleMapsUrl(url)){ showToast('Only Google Maps links are allowed'); return; } /* r100-ج: كان الرابط غير الصالح يُحذف مع المكان كله عند الحفظ */
+  if (!(mpLenOk('plName', MP_LIMITS.name) & mpLenOk('plArea', MP_LIMITS.area) & mpLenOk('plNote', MP_LIMITS.note) & mpLinesOk('plPicks', MP_LIMITS.picks, MP_LIMITS.pick))) return; /* r100-ج: رسالة قبل الحفظ — لا اقتطاع صامت (& لا && كي تُعلَّم كل الخانات المتجاوزة) */
   // عقد المكان الجديد بحقوله الفارغة — الحقول حاضرة دائمًا ولو فارغة
   const place = plEdit ? ((userGetEntry(plEdit.catId).places || [])[plEdit.index] || {}) : {};
   place.id = place.id || ('place_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
@@ -961,7 +966,7 @@ async function savePlPlaceRun(){
   plGeoConfirmed = false; if (plGeoResult){ if (plGeoResult.geo){ place.geo = plGeoResult.geo; if (plGeoResult.openId) place.openId = plGeoResult.openId; else delete place.openId; } else if (!__hadPin){ delete place.geo; delete place.openId; } plGeoResult = null; } /* r87-3: Skip على مكان مثبَّت يُبقي دبوسه وهويته — الإزالة لها «Remove pin» وحده */
   place.updatedAt = Date.now(); /* ر٧٣-أب (٢) — قرار المالك: «Latest update places» بختم زمني لكل مكان من الآن */
   place.note = document.getElementById('plNote').value.trim();
-  place.picks = String(document.getElementById('plPicks').value || '').split('\n').map(function(l){ return l.trim(); }).filter(Boolean).slice(0, 12).map(function(n){ return { name: n }; }); // ر٧٠ح: البنية النهائية picks:[{name}]
+  place.picks = String(document.getElementById('plPicks').value || '').split('\n').map(function(l){ return l.trim(); }).filter(Boolean).slice(0, MP_LIMITS.picks).map(function(n){ return { name: n }; }); // ر٧٠ح: البنية النهائية picks:[{name}] · r100-ج: ٢٠ سطرًا كالحدّ المعلن
   if (!place.picks.length) delete place.picks;
   place.flags = plModalFine ? ['fine_dining'] : []; if (!place.flags.length) delete place.flags; // ر٧٠ط: العلامات
   if (plModalTown){ place.town = place.area || place.town || name; } else { delete place.town; } /* r84-2 (١٣:٢٠): «Outside the city» — town = الحي (أو اسم المكان بلا حي) · إطفاؤه يمسح الوسم */
@@ -1085,6 +1090,7 @@ async function doReauthContinue(){
     await mpData.auth.reauthWithPassword(pass);
     closeReauthModal(true);
   }catch(e){
+    mpSwallow(e, 'reauth'); /* r100-هـ */
     const code = (e && e.code) || '';
     if (code.includes('wrong-password') || code.includes('invalid-credential') || code.includes('invalid-login-credentials')) errEl.textContent = 'Incorrect password';
     else if (code.includes('too-many-requests')) errEl.textContent = 'Too many attempts — try again later';
