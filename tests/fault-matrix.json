@@ -1,6 +1,6 @@
 {
- "build": "M2-ID-r101",
- "at": "2026-11-03",
+ "build": "M2-ID-r105",
+ "at": "2026-11-04",
  "modes": [
   "network",
   "permission",
@@ -334,10 +334,10 @@
   {
    "cap": "places.open",
    "mode": "network",
-   "v": "R:AD",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "⚠️ Could not load this cityNothing is saved until it loads, so your places stay safe. (check your connection)"
    },
    "group": "places",
    "kind": "read"
@@ -345,10 +345,10 @@
   {
    "cap": "places.open",
    "mode": "permission",
-   "v": "R:AD",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "⚠️ Could not load this cityNothing is saved until it loads, so your places stay safe. (you don't have access)"
    },
    "group": "places",
    "kind": "read"
@@ -434,15 +434,10 @@
   {
    "cap": "places.add",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
-     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
-    ],
-    "text": "Name and Google Maps link are required | Saved to My List · Faultville ✓ | Only Google Maps links are allowed — removed 1 invalid link(s) | Saved to My List · F"
+    "text": "Name and Google Maps link are required | Names can't contain < or > tags | Only Google Maps links are allowed"
    },
    "group": "places",
    "kind": "write"
@@ -516,15 +511,10 @@
   {
    "cap": "places.edit",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
-     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
-    ],
-    "text": "Name and Google Maps link are required | Only Google Maps links are allowed — removed 1 invalid link(s) | Saved to My List · Faultville ✓"
+    "text": "Name and Google Maps link are required | Only Google Maps links are allowed"
    },
    "group": "places",
    "kind": "write"
@@ -681,15 +671,10 @@
   {
    "cap": "places.moveCat",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
-     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
-     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_no_such_cat"
-    ],
-    "text": "Moved to no_such_cat ✓"
+    "text": "Pick a category from the list"
    },
    "group": "places",
    "kind": "write"
@@ -811,10 +796,10 @@
   {
    "cap": "places.bookmark",
    "mode": "network",
-   "v": "R:AD",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not update bookmark — unavailable"
+    "text": "Could not update bookmark — check your connection"
    },
    "group": "places",
    "kind": "write"
@@ -822,10 +807,10 @@
   {
    "cap": "places.bookmark",
    "mode": "permission",
-   "v": "R:AD",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not update bookmark — permission-denied"
+    "text": "Could not update bookmark — you don't have access"
    },
    "group": "places",
    "kind": "write"
@@ -847,12 +832,9 @@
   {
    "cap": "places.bookmark",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
-    ],
     "text": ""
    },
    "group": "places",
@@ -864,9 +846,6 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
-    ],
     "text": ""
    },
    "group": "places",
@@ -1200,8 +1179,8 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Not saved | Not saved",
-    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+    "text": "Pick at least one place first",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
    },
    "group": "trips",
    "kind": "write"
@@ -1212,8 +1191,8 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Not saved | Not saved",
-    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+    "text": "Pick at least one place first",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
    },
    "group": "trips",
    "kind": "write"
@@ -1224,10 +1203,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "trips/trip_1793732798667_mushu"
-    ],
-    "text": ""
+    "text": "Pick at least one place first"
    },
    "group": "trips",
    "kind": "write"
@@ -1235,15 +1211,10 @@
   {
    "cap": "trips.build",
    "mode": "bad",
-   "v": "R:AB",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "trips/trip_1793732799487_vklsj",
-     "trips/trip_1793732799573_2nnio",
-     "trips/trip_1793732799668_gtklv"
-    ],
-    "text": ""
+    "text": "At least 1 day | Pick at least one place first"
    },
    "group": "trips",
    "kind": "write"
@@ -1254,10 +1225,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "trips/trip_1793732800477_j9g7m"
-    ],
-    "text": ""
+    "text": "Pick at least one place first | Pick at least one place first"
    },
    "group": "trips",
    "kind": "write"
@@ -1268,10 +1236,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "trips/trip_1793732801291_vutdr"
-    ],
-    "text": ""
+    "text": "Pick at least one place first"
    },
    "group": "trips",
    "kind": "write"
@@ -1279,10 +1244,10 @@
   {
    "cap": "trips.open",
    "mode": "network",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load the places of this trip — check your connection"
    },
    "group": "trips",
    "kind": "read"
@@ -1290,10 +1255,10 @@
   {
    "cap": "trips.open",
    "mode": "permission",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load the places of this trip — you don't have access"
    },
    "group": "trips",
    "kind": "read"
@@ -1336,7 +1301,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Not saved | Not saved",
+    "text": "Could not load the places of this trip — check your connection | Not saved | Not saved",
     "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
    },
    "group": "trips",
@@ -1348,7 +1313,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Not saved | Not saved",
+    "text": "Could not load the places of this trip — you don't have access | Not saved | Not saved",
     "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
    },
    "group": "trips",
@@ -1410,10 +1375,10 @@
   {
    "cap": "trips.share",
    "mode": "network",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not verify username"
+    "text": "Could not verify username — check your connection"
    },
    "group": "trips",
    "kind": "write"
@@ -1421,10 +1386,10 @@
   {
    "cap": "trips.share",
    "mode": "permission",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not verify username"
+    "text": "Could not verify username — you don't have access"
    },
    "group": "trips",
    "kind": "write"
@@ -1435,7 +1400,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "No user found with that username"
+    "text": "You can't share a trip with yourself"
    },
    "group": "trips",
    "kind": "write"
@@ -1443,17 +1408,6 @@
   {
    "cap": "trips.share",
    "mode": "bad",
-   "v": "ok",
-   "why": "",
-   "detail": {
-    "text": "No user found with that username | No user found with that username | No user found with that username"
-   },
-   "group": "trips",
-   "kind": "write"
-  },
-  {
-   "cap": "trips.share",
-   "mode": "concurrency",
    "v": "ok",
    "why": "",
    "detail": {
@@ -1464,11 +1418,18 @@
   },
   {
    "cap": "trips.share",
+   "mode": "concurrency",
+   "na": "الفعل يمرّ بنافذة إدخال واحدة — فتحها مرتين معًا مستحيل من الواجهة (كانت خضراء في r99 بنافذة مزيّفة تسرّبت من محطة ١٦هـ)",
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.share",
    "mode": "stale",
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "No user found with that username"
+    "text": "You can't share a trip with yourself"
    },
    "group": "trips",
    "kind": "write"
@@ -1554,8 +1515,8 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Not saved | Not saved",
-    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+    "text": "Pick at least one place first",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
    },
    "group": "trips",
    "kind": "write"
@@ -1566,8 +1527,8 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Not saved | Not saved",
-    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+    "text": "Pick at least one place first",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
    },
    "group": "trips",
    "kind": "write"
@@ -1578,10 +1539,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "trips/trip_1793732822108_8v8ph"
-    ],
-    "text": ""
+    "text": "Pick at least one place first"
    },
    "group": "trips",
    "kind": "write"
@@ -1599,10 +1557,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "trips/trip_1793732822945_oo6kh"
-    ],
-    "text": ""
+    "text": "Pick at least one place first | Pick at least one place first"
    },
    "group": "trips",
    "kind": "write"
@@ -1613,10 +1568,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "trips/trip_1793732823759_nrbio"
-    ],
-    "text": ""
+    "text": "Pick at least one place first"
    },
    "group": "trips",
    "kind": "write"
@@ -1627,7 +1579,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Fault Day → Fault Trip · day 2 ✓ | Not saved | Not saved",
+    "text": "Fault Day → Fault Trip · day 2 ✓ | Could not load the places of this trip — check your connection | Not saved | Not saved",
     "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
    },
    "group": "trips",
@@ -1639,7 +1591,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Fault Day → Fault Trip · day 2 ✓ | Not saved | Not saved",
+    "text": "Fault Day → Fault Trip · day 2 ✓ | Could not load the places of this trip — you don't have access | Not saved | Not saved",
     "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
    },
    "group": "trips",
@@ -1701,10 +1653,10 @@
   {
    "cap": "import.files",
    "mode": "network",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "could not read your list — check your connection"
    },
    "group": "import",
    "kind": "read"
@@ -1712,10 +1664,10 @@
   {
    "cap": "import.files",
    "mode": "permission",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "could not read your list — you don't have access"
    },
    "group": "import",
    "kind": "read"
@@ -1776,10 +1728,10 @@
   {
    "cap": "import.filesBad",
    "mode": "bad",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "No places found in this file — is it the Takeout export of Maps › Saved?"
    },
    "group": "import",
    "kind": "read"
@@ -1804,7 +1756,7 @@
    "v": "R:B",
    "why": "memory diverged from store (ghost state)",
    "detail": {
-    "text": "Could not save your list"
+    "text": "Could not save your list — check your connection | Not saved: Paris (check your connection) · Mallorca (check your connection) — choose the file again to retry "
    },
    "group": "import",
    "kind": "write"
@@ -1812,10 +1764,10 @@
   {
    "cap": "import.commit",
    "mode": "permission",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Not saved: Paris (you don't have access) · Mallorca (you don't have access) — choose the file again to retry those."
    },
    "group": "import",
    "kind": "write"
@@ -1988,14 +1940,10 @@
   {
    "cap": "import.pinSuggested",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
-     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
-    ],
-    "text": "No suggestion for this place | Pinned ✓ · Second Cafe"
+    "text": "No suggestion for this place"
    },
    "group": "import",
    "kind": "write"
@@ -2090,10 +2038,10 @@
   {
    "cap": "community.root",
    "mode": "network",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load the community — check your connection"
    },
    "group": "community",
    "kind": "read"
@@ -2101,10 +2049,10 @@
   {
    "cap": "community.root",
    "mode": "permission",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load the community — you don't have access"
    },
    "group": "community",
    "kind": "read"
@@ -2144,10 +2092,10 @@
   {
    "cap": "community.user",
    "mode": "network",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load this person — check your connection"
    },
    "group": "community",
    "kind": "read"
@@ -2155,10 +2103,10 @@
   {
    "cap": "community.user",
    "mode": "permission",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load this person — you don't have access"
    },
    "group": "community",
    "kind": "read"
@@ -2201,10 +2149,10 @@
   {
    "cap": "community.search",
    "mode": "network",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "This name doesn't exist"
+    "text": "Could not search — check your connection"
    },
    "group": "community",
    "kind": "read"
@@ -2212,10 +2160,10 @@
   {
    "cap": "community.search",
    "mode": "permission",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "This name doesn't exist"
+    "text": "Could not search — you don't have access"
    },
    "group": "community",
    "kind": "read"
@@ -2297,14 +2245,9 @@
   {
    "cap": "community.bookmarkList",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "listBookmarks/uBBBBBBBBBBBBBBBBBBBBBBBBBBB___",
-     "userCityLists/_"
-    ],
     "text": "This is your list — bookmarks count others, not you | This is your list — bookmarks count others, not you"
    },
    "group": "community",
@@ -2370,15 +2313,10 @@
   {
    "cap": "community.follow",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "follows/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_",
-     "follows/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_no-such-uid"
-    ],
-    "text": "Following ✓ | Following ✓"
+    "text": "User not found"
    },
    "group": "community",
    "kind": "write"
@@ -2464,10 +2402,10 @@
   {
    "cap": "curators.page",
    "mode": "network",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load this person — check your connection"
    },
    "group": "curators",
    "kind": "read"
@@ -2475,10 +2413,10 @@
   {
    "cap": "curators.page",
    "mode": "permission",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load this person — you don't have access"
    },
    "group": "curators",
    "kind": "read"
@@ -2521,10 +2459,10 @@
   {
    "cap": "curators.request",
    "mode": "network",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not send · unavailable"
+    "text": "Could not send — check your connection"
    },
    "group": "curators",
    "kind": "write"
@@ -2532,10 +2470,10 @@
   {
    "cap": "curators.request",
    "mode": "permission",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not send · permission-denied"
+    "text": "Could not send — you don't have access"
    },
    "group": "curators",
    "kind": "write"
@@ -2742,10 +2680,10 @@
   {
    "cap": "curators.reportUser",
    "mode": "network",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not report · unavailable"
+    "text": "Could not report — check your connection"
    },
    "group": "curators",
    "kind": "write"
@@ -2753,10 +2691,10 @@
   {
    "cap": "curators.reportUser",
    "mode": "permission",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not report · permission-denied"
+    "text": "Could not report — you don't have access"
    },
    "group": "curators",
    "kind": "write"
@@ -2768,7 +2706,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793732889217_xhvx2n"
+     "reports/r_1793786853299_dq19bb"
     ],
     "text": "Thanks — reported"
    },
@@ -2778,13 +2716,10 @@
   {
    "cap": "curators.reportUser",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "reports/r_1793732890115_6k2k6v"
-    ],
-    "text": "Thanks — reported"
+    "text": ""
    },
    "group": "curators",
    "kind": "write"
@@ -2792,15 +2727,7 @@
   {
    "cap": "curators.reportUser",
    "mode": "concurrency",
-   "v": "ok",
-   "why": "",
-   "detail": {
-    "changed": [
-     "reports/r_1793732891002_8j9lc4",
-     "reports/r_1793732891002_67djd3"
-    ],
-    "text": "Thanks — reported | Thanks — reported"
-   },
+   "na": "الفعل يمرّ بنافذة إدخال واحدة — فتحها مرتين معًا مستحيل من الواجهة (كانت خضراء في r99 بنافذة مزيّفة تسرّبت من محطة ١٦هـ)",
    "group": "curators",
    "kind": "write"
   },
@@ -2811,7 +2738,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793732891884_2lful4"
+     "reports/r_1793786855121_fdpd7s"
     ],
     "text": "Thanks — reported"
    },
@@ -2914,13 +2841,10 @@
   {
    "cap": "addresses.add",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "userPrivatePlaces/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmAd"
-    ],
-    "text": "Saved ✓"
+    "text": "Paste a Google Maps link"
    },
    "group": "addresses",
    "kind": "write"
@@ -3189,7 +3113,7 @@
   {
    "cap": "account.signIn",
    "mode": "network",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
     "text": "Something went wrong, try again"
@@ -3200,7 +3124,7 @@
   {
    "cap": "account.signIn",
    "mode": "permission",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
     "text": "Something went wrong, try again"
@@ -3247,7 +3171,7 @@
   {
    "cap": "account.signUp",
    "mode": "network",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
     "text": "Could not verify username — try again"
@@ -3258,7 +3182,7 @@
   {
    "cap": "account.signUp",
    "mode": "permission",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
     "text": "Could not verify username — try again"
@@ -3275,7 +3199,7 @@
     "changed": [
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnick1793732916135",
+     "nicknames/faultnick1793786879659",
      "stats/users"
     ],
     "text": "Account created ✓"
@@ -3304,7 +3228,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1793732917689"
+     "nicknames/faultnick1793786881255"
     ],
     "text": "Account created ✓ | Account created ✓"
    },
@@ -3321,7 +3245,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1793732918393"
+     "nicknames/faultnick1793786882085"
     ],
     "text": "Account created ✓"
    },
@@ -3331,7 +3255,7 @@
   {
    "cap": "account.reset",
    "mode": "network",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
     "text": "Could not send — make sure the email is correct and try again"
@@ -3342,7 +3266,7 @@
   {
    "cap": "account.reset",
    "mode": "permission",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
     "text": "Could not send — make sure the email is correct and try again"
@@ -3389,10 +3313,10 @@
   {
    "cap": "account.nickname",
    "mode": "network",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not save nickname"
+    "text": "Could not save nickname — check your connection"
    },
    "group": "account",
    "kind": "write"
@@ -3400,10 +3324,10 @@
   {
    "cap": "account.nickname",
    "mode": "permission",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not save nickname"
+    "text": "Could not save nickname — you don't have access"
    },
    "group": "account",
    "kind": "write"
@@ -3418,8 +3342,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew23067",
-     "nicknames/faultnick1793732918393"
+     "nicknames/faultnew86830",
+     "nicknames/faultnick1793786882085"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3429,18 +3353,10 @@
   {
    "cap": "account.nickname",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/<b>bad</b>",
-     "nicknames/takennick",
-     "nicknames/faultnick1793732918393"
-    ],
-    "text": "Nickname must be at least 3 characters | Nickname saved ✓ | Nickname must be 24 characters or fewer | Nickname saved ✓"
+    "text": "Nickname must be at least 3 characters | This nickname is already taken — try another | Nickname must be 24 characters or fewer | Letters, numbers, spaces, _ . "
    },
    "group": "account",
    "kind": "write"
@@ -3455,8 +3371,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew24544",
-     "nicknames/faultnick1793732918393"
+     "nicknames/faultnew88310",
+     "nicknames/faultnick1793786882085"
     ],
     "text": "Nickname saved ✓ | Nickname saved ✓"
    },
@@ -3473,8 +3389,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew25151",
-     "nicknames/faultnick1793732918393"
+     "nicknames/faultnew88948",
+     "nicknames/faultnick1793786882085"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3484,11 +3400,10 @@
   {
    "cap": "account.signOut",
    "mode": "network",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
-    "unhandled": "unavailable",
-    "text": "Logged out"
+    "text": "Could not sign out — check your connection"
    },
    "group": "account",
    "kind": "write"
@@ -3496,11 +3411,10 @@
   {
    "cap": "account.signOut",
    "mode": "permission",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
-    "unhandled": "permission-denied",
-    "text": "Logged out"
+    "text": "Could not sign out — you don't have access"
    },
    "group": "account",
    "kind": "write"
@@ -3536,7 +3450,7 @@
   {
    "cap": "account.delete",
    "mode": "network",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
     "thrown": "hang",
@@ -3549,7 +3463,7 @@
   {
    "cap": "account.delete",
    "mode": "permission",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
     "thrown": "hang",
@@ -3590,10 +3504,10 @@
   {
    "cap": "admin.users",
    "mode": "network",
-   "v": "R:AD",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load users — check your connection"
    },
    "group": "admin",
    "kind": "read"
@@ -3601,10 +3515,10 @@
   {
    "cap": "admin.users",
    "mode": "permission",
-   "v": "R:AD",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load users — you don't have access"
    },
    "group": "admin",
    "kind": "read"
@@ -3644,10 +3558,11 @@
   {
    "cap": "admin.suspend",
    "mode": "network",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not update user | ⛔ Suspend faultfriend?"
+    "text": "You can't suspend yourself",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
    },
    "group": "admin",
    "kind": "write"
@@ -3655,10 +3570,11 @@
   {
    "cap": "admin.suspend",
    "mode": "permission",
-   "v": "R:D",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not update user | ⛔ Suspend faultfriend?"
+    "text": "You can't suspend yourself",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
    },
    "group": "admin",
    "kind": "write"
@@ -3669,11 +3585,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "suspensions/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
-    ],
-    "text": "Could not update user | ⛔ Suspend faultfriend?"
+    "text": "You can't suspend yourself"
    },
    "group": "admin",
    "kind": "write"
@@ -3681,13 +3593,10 @@
   {
    "cap": "admin.suspend",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "suspensions/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
-    ],
-    "text": "Could not update user | ⛔ Suspend faultfriend?"
+    "text": "You can't suspend yourself"
    },
    "group": "admin",
    "kind": "write"
@@ -3698,10 +3607,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "suspensions/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
-    ],
-    "text": "Could not update user | Could not update user | ⛔ Suspend faultfriend? | ⛔ Suspend faultfriend?"
+    "text": "You can't suspend yourself | You can't suspend yourself"
    },
    "group": "admin",
    "kind": "write"
@@ -3712,10 +3618,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "suspensions/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
-    ],
-    "text": "Could not update user | ⛔ Suspend faultfriend?"
+    "text": "You can't suspend yourself"
    },
    "group": "admin",
    "kind": "write"
@@ -3779,10 +3682,10 @@
   {
    "cap": "drawer.profile",
    "mode": "network",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load your profile — check your connection | Could not load your stats — check your connection"
    },
    "group": "drawer",
    "kind": "read"
@@ -3790,10 +3693,10 @@
   {
    "cap": "drawer.profile",
    "mode": "permission",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load your profile — you don't have access | Could not load your stats — you don't have access"
    },
    "group": "drawer",
    "kind": "read"
@@ -3804,7 +3707,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "No public trips yet — make a trip public to see its views and saves here"
    },
    "group": "drawer",
    "kind": "read"
@@ -3833,10 +3736,10 @@
   {
    "cap": "drawer.report",
    "mode": "network",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not report · unavailable"
+    "text": "Could not report — check your connection"
    },
    "group": "drawer",
    "kind": "write"
@@ -3844,10 +3747,10 @@
   {
    "cap": "drawer.report",
    "mode": "permission",
-   "v": "R:A",
+   "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not report · permission-denied"
+    "text": "Could not report — you don't have access"
    },
    "group": "drawer",
    "kind": "write"
@@ -3859,7 +3762,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793732954399_ilvnwt"
+     "reports/r_1793786924461_uohk9i"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -3869,13 +3772,10 @@
   {
    "cap": "drawer.report",
    "mode": "bad",
-   "v": "R:B",
-   "why": "bad input reached the store",
+   "v": "ok",
+   "why": "",
    "detail": {
-    "changed": [
-     "reports/r_1793732955460_udsn2w"
-    ],
-    "text": "Please describe the problem | Thanks — we will look into it"
+    "text": "Please describe the problem"
    },
    "group": "drawer",
    "kind": "write"
@@ -3887,8 +3787,8 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793732956421_jxckuy",
-     "reports/r_1793732956421_vv7vv5"
+     "reports/r_1793786926550_t5j60q",
+     "reports/r_1793786926550_21tex7"
     ],
     "text": "Thanks — we will look into it | Thanks — we will look into it"
    },
@@ -3902,7 +3802,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793732957397_skcew0"
+     "reports/r_1793786927555_bqbwg3"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -4012,7 +3912,7 @@
    "kind": "read"
   }
  ],
- "reds": 59,
- "ok": 187,
- "na": 72
+ "reds": 2,
+ "ok": 242,
+ "na": 74
 }
