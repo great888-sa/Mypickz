@@ -143,7 +143,7 @@ async function loadMyCityList(cityId){
     // permission-denied هنا رفضٌ حقيقي (قواعد أو جلسة) لا غيابًا — يُعامل فشلًا حاجبًا للحفظ كأي خطأ آخر.
     myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, bookmarkCount:0, categories:{} };
     myCityListLoadFailed = true; myCityListLoadedFor = null; myCityListSaved = null; /* r100-أ: بلا لقطة — الحفظ التالي (إن سُمح) يكتب كاملًا */
-    myCityListLoadError = (code === 'permission-denied') ? 'permission denied (rules 3.8: absent docs read as empty — this is a real denial)' : (code || (e && e.message) || 'unknown');
+    myCityListLoadError = mpErrText(e); mpSwallow(e, 'places-load'); if (code === 'permission-denied') try{ logTiming('PLACES · load · permission denied (rules 3.8: absent docs read as empty — this is a real denial)'); }catch(_){} /* r100-د: للمستخدم سبب مفهوم؛ للتشخيص تصنيف الحارس الثالث كما كان */
     myCityListLoading = false; return;
   }
   myCityListLoadFailed = false;
@@ -337,7 +337,7 @@ async function saveUserListGeneral(){
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   try{
     await mpData.userLists.merge(currentUser.uid, { customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], nickname: userListData.nickname || null });
-  }catch(e){ showToast('Could not save your list'); }
+  }catch(e){ mpSwallow(e, 'user-list'); mpErrToast('Could not save your list', e); } /* r100-هـ */
 }
 
 let cityListEditingKeys = new Set(); // مفاتيح "itemId#index" للأماكن اللي حاليًا في وضع تعديل
@@ -361,11 +361,11 @@ function chooseNickname(){
     __nickResolve = resolve;
     dashSet(current ? '✏️ Change nickname' : '👤 Choose a nickname', null);
     body.innerHTML = '<div class="ctx" style="text-align:center;">Shown to other users instead of your email</div>'
-      + '<label class="flabel">' + (current ? 'New nickname' : 'Nickname') + ' <span class="dim">· 3–24 characters</span></label><input type="text" id="nickInput" class="modal-input" maxlength="24" autocomplete="off" value="' + attrStr(current) + '" placeholder="e.g. TheCurator" oninput="nickCheck()" onkeydown="if (event.key === \'Enter\') nickSave()">'
+      + '<label class="flabel">' + (current ? 'New nickname' : 'Nickname') + ' <span class="dim">· 3–24 characters</span></label><input type="text" id="nickInput" class="modal-input" autocomplete="off" value="' + attrStr(current) + '" placeholder="e.g. TheCurator" oninput="nickCheck()" onkeydown="if (event.key === \'Enter\') nickSave()">'
       + '<div class="errline" id="nickStatus"></div>'
       + '<div class="ctx">' + (current ? 'Changes on all your public lists and your curator page' : 'You can change it later in Settings') + '</div>'
       + '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" class="btn btn-ghost" style="flex:1" onclick="nickCancel()">Cancel</button><button type="button" class="btn btn-brass" style="flex:1" id="nickSaveBtn" onclick="nickSave()">Save nickname</button></div>';
-    bd.classList.add('show'); setTimeout(function(){ const i = document.getElementById('nickInput'); if (i){ try{ i.focus(); i.select(); }catch(_){} } }, 30);
+    bd.classList.add('show'); mpLenWatch('nickInput', MP_LIMITS.nickname); /* r100-ج */ setTimeout(function(){ const i = document.getElementById('nickInput'); if (i){ try{ i.focus(); i.select(); }catch(_){} } }, 30);
     if (window.MutationObserver){ const obs = new MutationObserver(function(){ if (!bd.classList.contains('show')){ obs.disconnect(); if (__nickResolve === resolve){ __nickResolve = null; resolve(false); } } }); obs.observe(bd, { attributes: true, attributeFilter: ['class'] }); } /* ✕ أو إغلاق خارجي = إلغاء */
   });
 }
@@ -379,6 +379,7 @@ function nickCheck(){ /* التوفر الحي بعد توقف الكتابة ٤
 }
 async function nickSave(){
   const btn = document.getElementById('nickSaveBtn'); const v = String((document.getElementById('nickInput') || {}).value || '');
+  if (!mpLenOk('nickInput', MP_LIMITS.nickname)) return; /* r100-ج */
   if (btn) btn.disabled = true;
   const ok = await saveNickname(v);
   if (btn) btn.disabled = false;
@@ -390,6 +391,7 @@ async function saveNickname(name){ /* منطق الحفظ القائم كما ه
   if (!clean || clean.length < 3){ showToast('Nickname must be at least 3 characters'); return false; }
   if (clean.length > 24){ showToast('Nickname must be 24 characters or fewer'); return false; }
   if (clean === current) return true;
+  if (!/^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}_.'\- ]*$/u.test(clean)){ showToast('Letters, numbers, spaces, _ . - only'); return false; } /* r100-ج: لا HTML ولا فواصل مسار في معرّف nicknames — بعد فحص «لم يتغيّر» كي لا يُرفض اسم قديم يُعاد حفظه */
   const key = clean.toLowerCase();
   try{
     const doc = await mpData.nicknames.get(key);
@@ -406,21 +408,21 @@ async function saveNickname(name){ /* منطق الحفظ القائم كما ه
           if (oldDoc.exists && oldDoc.data().uid === currentUser.uid){
             await mpData.nicknames.remove(oldKey);
           }
-        }catch(e){}
+        }catch(e){ mpSwallow(e, 'nickname-old'); } /* r100-هـ */
       }
     }
     userListData.nickname = clean;
     await saveUserListGeneral();
-    try{ await mpData.users.merge(currentUser.uid, { nickname: clean }); }catch(e){}
+    try{ await mpData.users.merge(currentUser.uid, { nickname: clean }); }catch(e){ mpSwallow(e, 'nickname-user'); } /* r100-هـ */
     // تحديث النسخة المكررة من الاسم بكل مستندات مدن المستخدم (تُستخدَم لاستعلام Community Lists بدون قراءات إضافية)
     try{
       await mpData.cityLists.setNicknameAll(currentUser.uid, clean);
-    }catch(e){}
+    }catch(e){ mpSwallow(e, 'nickname-lists'); } /* r100-هـ */
     await syncCommunityProfile();
     showToast('Nickname saved ✓');
     return true;
   }catch(e){
-    showToast('Could not save nickname');
+    mpSwallow(e, 'nickname'); mpErrToast('Could not save nickname', e); /* r100-هـ */
     return false;
   }
 }
@@ -454,7 +456,7 @@ async function syncCommunityProfileFor(uid, nickname){
   }catch(e){}
 }
 let __cmNickSynced = false; /* د-٢ (ملاحظة المالك): المستلِم يقرأ اسم المرسل من ملفه بالمجتمع — ومن لم ينشر شيئًا عامًّا لا ملف له فيظهر «user»؛ يُكتب الاسم وحده مرة بالجلسة عند أول مشاركة (الملف بلا محتوى عام لا يظهر في الاكتشاف: hasAnyPublicContent) */
-async function ensureCommunityNick(){ if (__cmNickSynced || !currentUser || !userListData || !userListData.nickname) return; try{ await mpData.communityProfiles.set(currentUser.uid, { nickname: userListData.nickname }); __cmNickSynced = true; }catch(e){} }
+async function ensureCommunityNick(){ if (__cmNickSynced || !currentUser || !userListData || !userListData.nickname) return; try{ await mpData.communityProfiles.set(currentUser.uid, { nickname: userListData.nickname }); __cmNickSynced = true; }catch(e){ mpSwallow(e, 'community-nick'); } /* r100-هـ */ }
 async function syncCommunityProfile(){
   if (!currentUser) return;
   await syncCommunityProfileFor(currentUser.uid, userListData.nickname || null);
@@ -480,7 +482,7 @@ async function shareCityListWithSomeone(){
     myCityListData.sharedWithNames[targetUid] = data.nickname || name.trim();
     await saveMyCityList(); ensureCommunityNick(); /* د-٢ */
     showToast('Shared ✓');
-  }catch(e){ showToast('Could not verify username'); }
+  }catch(e){ mpSwallow(e, 'share-list'); mpErrToast('Could not verify username', e); } /* r100-هـ */
 }
 async function removeCityListShare(uid){
   if (!myCityListData || !myCityListData.sharedWith) return;
