@@ -33,6 +33,7 @@ async function doSignIn(){
     closeAuthModal(true);
     showToast('Welcome ✓');
   }catch(e){
+    mpSwallow(e, 'sign-in'); /* r100-هـ */
     errEl.textContent = authErrorMessage(e);
   }
 }
@@ -61,14 +62,14 @@ async function doForgotPassword(){
     errEl.className = 'errline ok';
     errEl.textContent = 'Reset link sent to your email ✓ Check your inbox (and spam)';
   }catch(e){
+    mpSwallow(e, 'reset'); /* r100-هـ */
     errEl.className = 'errline';
     if ((e.code||'').includes('invalid-email')) errEl.textContent = 'Invalid email format';
     else errEl.textContent = 'Could not send — make sure the email is correct and try again';
   }
 }
 function doSignOut(){
-  mpData.auth.signOut();
-  showToast('Logged out');
+  Promise.resolve().then(function(){ return mpData.auth.signOut(); }).then(function(){ showToast('Logged out'); }).catch(function(e){ mpSwallow(e, 'sign-out'); mpErrToast('Could not sign out', e); }); /* r100-هـ: رفض الخروج لم يعد بلا معالج — أثر ورسالة */
 }
 
 
