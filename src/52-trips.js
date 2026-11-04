@@ -86,16 +86,16 @@ let tripSourceFilter = null; // ر٧٢-أ-٢د: مرشِّح مصدر رحلات
 function tripSourceName(t){ const id = t.source && t.source.ownerId; const hit = ((curators || []).find(function(c){ return c.uid === id; }) || (communityUsers || []).find(function(c){ return c.uid === id; })); if (hit && hit.nickname) return hit.nickname; const sn = t.source && t.source.ownerName; return (sn && sn !== 'a member') ? sn : 'a member'; } // ر٧٢-أ-٢و · r72u: اسم الحساب أولًا
 async function openReport(kind, docKey){ // r72p (٤): البلاغ — سبب قصير ← reports (لا على محتواي) · r72t (M4.26 ٦): notes · app
   if (!currentUser){ openAuthModal(); return; }
-  const reason = await openInputModal(kind === 'app' ? 'Report a problem' : 'Report this ' + kind, kind === 'app' ? 'What went wrong? (≤ 200)' : 'What is wrong? (optional, ≤ 200)', '', null, { allowFree: true }); if (reason === null) return;
+  const reason = await openInputModal(kind === 'app' ? 'Report a problem' : 'Report this ' + kind, kind === 'app' ? 'What went wrong? (≤ 200)' : 'What is wrong? (optional, ≤ 200)', '', null, { allowFree: true, maxLen: MP_LIMITS.report }); if (reason === null) return;
   if (kind === 'app' && !String(reason || '').trim()){ showToast('Please describe the problem'); return; }
-  try{ await mpData.reports.create(currentUser.uid, kind, kind === 'app' ? '' : String(docKey).slice(0, 120), String(reason || '').slice(0, 200)); }catch(e){ mpSwallow(e, 'report'); showToast('Could not report · ' + ((e && e.code) || 'error')); return; }
+  try{ await mpData.reports.create(currentUser.uid, kind, kind === 'app' ? '' : String(docKey).slice(0, 120), String(reason || '').slice(0, 200)); }catch(e){ mpSwallow(e, 'report'); mpErrToast('Could not report', e); return; }
   showToast(kind === 'app' ? 'Thanks — we will look into it' : 'Thanks — reported');
 }
 async function removeMyTripCopy(srcTripId){ // r72n (٢): Saved ✓ ← تأكيد ← حذف نسختي (العدّاد على المصدر لا ينقص — بالعقد)
   const c = tripCopyOf(srcTripId); if (!c) return;
   const ok = await openConfirmModal('Remove your copy from My trips?', 'The original stays with its owner. Your edits on the copy are lost.'); if (!ok) return;
-  try{ await mpData.trips.remove(c.id); }catch(e){ mpSwallow(e, 'remove copy'); showToast('Could not remove · ' + ((e && e.code) || 'error')); return; }
-  try{ await mpData.copies.unrecord(currentUser.uid, srcTripId, 'trips'); }catch(e){ mpSwallow(e, 'unrecord'); showToast('Copy removed — counter not updated · ' + ((e && e.code) || 'error')); } // r72t · r72w: الفشل يُرى
+  try{ await mpData.trips.remove(c.id); }catch(e){ mpSwallow(e, 'remove copy'); mpErrToast('Could not remove', e); return; }
+  try{ await mpData.copies.unrecord(currentUser.uid, srcTripId, 'trips'); }catch(e){ mpSwallow(e, 'unrecord'); mpErrToast('Copy removed — counter not updated', e); } // r72t · r72w: الفشل يُرى
   userTrips = userTrips.filter(function(t){ return t.id !== c.id; }); showToast('Copy removed');
   if (HOSTED.Community && currentTab === 'Community') renderCommunityModal(); if (currentTab === 'Trips') renderTripsBody();
 }
@@ -110,8 +110,8 @@ async function copyOthersTrip(tripId){ // ر٧٢-أ-٢د (ق٠٩-١٥-٠٥): Sav
   if (!tripHasPlan(src)){ showToast('This trip uses the old format and cannot be saved'); return; }
   const copy = { id: 'trip_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8), title: src.title || '', cityId: src.cityId || null, cityName: src.cityName || '', cities: JSON.parse(JSON.stringify(src.cities || [])), customLabel: src.customLabel || '', public: false, sharedWith: [], sharedWithNames: {},
     plan: tripPlanNormalize(JSON.parse(JSON.stringify(src.plan))), version: src.version || 'balanced', status: 'approved', source: { tripId: src.id, ownerId: src.ownerId, ownerName: ownerName, at: Date.now() } }; // r77: النسخة تحمل الخطة والمدن
-  userTrips.push(copy); try{ await saveTrip(copy); }catch(e){ userTrips = userTrips.filter(function(t){ return t.id !== copy.id; }); mpSwallow(e, 'trip copy'); showToast('Could not save · ' + ((e && e.code) || 'error')); return; }
-  try{ await mpData.copies.record(currentUser.uid, 'trip', src.id, 'trips'); }catch(e){ mpSwallow(e, 'copy record'); showToast('Could not record · ' + ((e && e.code) || 'error')); } try{ if (src.ownerId && mpIsVerified(src.ownerId)) mpTrack.statsCurator(src.ownerId, 'save'); }catch(_){} /* ب-٢-١: save اليومي للمنتقي (v3.14) */ // r72m (M4.25 ٤) · r72p (١١): الرمز على الشاشة: سجل النسخ + copyCount على المصدر بدفعة واحدة (existsAfter)
+  userTrips.push(copy); try{ await saveTrip(copy); }catch(e){ userTrips = userTrips.filter(function(t){ return t.id !== copy.id; }); mpSwallow(e, 'trip copy'); mpErrToast('Could not save', e); return; }
+  try{ await mpData.copies.record(currentUser.uid, 'trip', src.id, 'trips'); }catch(e){ mpSwallow(e, 'copy record'); mpErrToast('Could not record', e); } try{ if (src.ownerId && mpIsVerified(src.ownerId)) mpTrack.statsCurator(src.ownerId, 'save'); }catch(_){} /* ب-٢-١: save اليومي للمنتقي (v3.14) */ // r72m (M4.25 ٤) · r72p (١١): الرمز على الشاشة: سجل النسخ + copyCount على المصدر بدفعة واحدة (existsAfter)
   showToast('Saved to my trips ✓ — from ' + ownerName); if (HOSTED.Community && currentTab === 'Community') renderCommunityModal();
 }
 async function renderSavedOthersTrips(fromCurators){ // ر٧٢-أ-٢د: رحلاتي المنسوخة بإسناد، مصفّاة بمصدرها (منتقٍ / مجتمع)
@@ -459,7 +459,7 @@ let mpShareGroups = []; let mpShareGroupsLoaded = false; let sgView = null; let 
 function sgNorm(list){ return (Array.isArray(list) ? list : []).filter(function(g){ return g && typeof g === 'object' && g.id && g.name; }).slice(0, SG_MAX_GROUPS).map(function(g){ const seen = {}; return { id: String(g.id), name: String(g.name).slice(0, SG_NAME_MAX), members: (Array.isArray(g.members) ? g.members : []).filter(function(m){ return m && m.uid && !seen[m.uid] && (seen[m.uid] = true); }).slice(0, SG_MAX_MEMBERS).map(function(m){ return { uid: String(m.uid), nickname: String(m.nickname || 'user').slice(0, 40) }; }) }; }); }
 function sgLoadFrom(data){ mpShareGroups = sgNorm(data && data.shareGroups); mpShareGroupsLoaded = true; } // تُستدعى بعد قراءة users/{uid} عند الدخول
 async function sgEnsureLoaded(){ if (mpShareGroupsLoaded || !currentUser) return; try{ const d = await mpData.users.get(currentUser.uid); sgLoadFrom(d.exists ? d.data() : {}); }catch(e){ mpShareGroupsLoaded = false; } }
-async function sgSave(){ if (!currentUser) return false; try{ await mpData.users.merge(currentUser.uid, { shareGroups: mpShareGroups }); return true; }catch(e){ showToast('Could not save the group'); return false; } }
+async function sgSave(){ if (!currentUser) return false; try{ await mpData.users.merge(currentUser.uid, { shareGroups: mpShareGroups }); return true; }catch(e){ mpSwallow(e, 'share-group-save'); mpErrToast('Could not save the group', e); return false; } /* r100-هـ */ }
 function sgById(id){ return mpShareGroups.find(function(g){ return g.id === id; }) || null; }
 function sgTarget(){ if (shareModalKind === 'trip') return userTrips.find(function(t){ return t.id === currentTripId; }) || null; return myCityListData || null; }
 async function sgSaveTarget(target){ if (shareModalKind === 'trip') await saveTrip(target); else await saveMyCityList(); }
@@ -489,7 +489,7 @@ async function sgRename(id){ const g = sgById(id); if (!g) return; const name = 
 async function sgDelete(id){ const g = sgById(id); if (!g) return; if (!(await mpConfirm('Delete the group ' + g.name + '? Nothing already shared changes — only the shortcut goes.', { title: 'Delete group', ok: 'Delete', danger: true }))) return; mpShareGroups = mpShareGroups.filter(function(x){ return x.id !== id; }); sgView = null; await sgSave(); sgReopen(); }
 async function sgRemoveMember(id, uid){ const g = sgById(id); if (!g) return; g.members = g.members.filter(function(m){ return m.uid !== uid; }); await sgSave(); sgReopen(); } // لا يمس ما شُورك مع العضو من قبل (اللقطة)
 async function sgAddMember(id){ const g = sgById(id); if (!g) return; if (g.members.length >= SG_MAX_MEMBERS){ showToast('A group holds up to ' + SG_MAX_MEMBERS + ' people'); return; } const name = await openInputModal('Add to ' + g.name + ' (username)', 'Enter their exact username', ''); if (name === null) return; const key = String(name).trim().toLowerCase(); if (!key) return;
-  try{ const doc = await mpData.nicknames.get(key); if (!doc.exists){ showToast('No user found with that username'); return; } const data = doc.data(); if (data.uid === currentUser.uid){ showToast("You can't add yourself"); return; } if (g.members.some(function(m){ return m.uid === data.uid; })){ showToast('Already in this group'); return; } g.members.push({ uid: data.uid, nickname: data.nickname || String(name).trim() }); await sgSave(); sgReopen(); }catch(e){ showToast('Could not verify username'); } }
+  try{ const doc = await mpData.nicknames.get(key); if (!doc.exists){ showToast('No user found with that username'); return; } const data = doc.data(); if (data.uid === currentUser.uid){ showToast("You can't add yourself"); return; } if (g.members.some(function(m){ return m.uid === data.uid; })){ showToast('Already in this group'); return; } g.members.push({ uid: data.uid, nickname: data.nickname || String(name).trim() }); await sgSave(); sgReopen(); }catch(e){ mpSwallow(e, 'share-group'); mpErrToast('Could not verify username', e); } /* r100-هـ */ }
 async function sgShareWith(id){ const g = sgById(id); const target = sgTarget(); if (!g || !target) return; if (!g.members.length){ showToast('This group has no members yet'); sgOpen(id); return; }
   target.sharedWith = target.sharedWith || []; target.sharedWithNames = target.sharedWithNames || {};
   const missing = g.members.filter(function(m){ return m.uid !== currentUser.uid && target.sharedWith.indexOf(m.uid) < 0; });
@@ -575,7 +575,7 @@ async function shareTripWithSomeone(){
     await saveTrip(trip); ensureCommunityNick(); /* د-٢ */
     showToast('Shared ✓');
     renderMyTripsModal();
-  }catch(e){ showToast('Could not verify username'); }
+  }catch(e){ mpSwallow(e, 'share-trip'); mpErrToast('Could not verify username', e); } /* r100-هـ */
 }
 async function removeTripShare(uid){
   const trip = userTrips.find(t => t.id === currentTripId);
