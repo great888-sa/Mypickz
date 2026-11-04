@@ -39,7 +39,8 @@
   .mp-idchip.suspended .mini-av{box-shadow:0 0 0 2px var(--danger-night);}
   .mp-idchip .sus{color:var(--danger-night);}
   .fav{color:var(--ink-faint);}
-  .errline{color:var(--danger);}
+  .errline{color:var(--danger);} .modal.night .errline,.modal.night .pl-sub.errline{color:#ffb4a2;} /* r100-د: خطأ داخل النافذة الليلية بلون مقروء (كان inline) */
+  .lencount{color:var(--night-4);} .lencount.over{color:var(--danger);} .modal-input.overlimit{border-color:var(--danger);} /* r100-ج */
   .fav.on{color:var(--danger);}
   .psearch{background:var(--ivory-bright); border-color:var(--line-ivory); color:var(--ink);}
   .curhead > .pn, .curhead > div:not(.row) .pn{color:var(--on-night);} /* ر٥٤: استثناء صفوف الأماكن — المحدد الجامح كان يمحو أسماءها (تباين ١٫٠٦) */
