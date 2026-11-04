@@ -279,7 +279,7 @@ function hashUrl(str){
 async function togglePlaceBookmark(url, name, category, cityId, area, ownerUid, mapsUrl){
   if (!currentUser){ openAuthModal(); return; }
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
-  if (!url) return;
+  if (!url || !cityId || !(/^(id|oid):./.test(url) || isGoogleMapsUrl(url))) return; /* r100-ج: المفتاح id:/oid: أو رابط Google ومدينة؛ ناقص أو غريب (javascript:) → لا كتابة — الاسم والتصنيف قد يغيبان في مفكرة قديمة فلا يُشترطان */
   const pid = hashUrl(url);
   const map = placeBmMap();
   const was = !!map[pid];
@@ -297,17 +297,18 @@ async function togglePlaceBookmark(url, name, category, cityId, area, ownerUid, 
   if (currentTab === 'Curators') renderCuratorsBody(); // r72r-1: حالة المفكرة تتحدث فورًا بصفحة المنتقي
   try{
     await mpData.bookmarks.setPlace(currentUser.uid, pid, was ? null : map[pid]);
-  }catch(e){
+  }catch(e){ mpSwallow(e, 'bookmark'); /* r100-هـ */
     if (was) map[pid] = prev; else delete map[pid];   // ر٦٠: تراجع تفاؤلي — لا حالة شبح
     userListData.placeBookmarks = map;
      if (currentTab === 'Places') renderPlacesBody();
-    showToast('Could not update bookmark — ' + ((e && (e.code || e.message)) || 'unknown')); return;
+    mpErrToast('Could not update bookmark', e); return;
   }
   if (was) showUndoToast('Removed from your bookmarks', function(){ togglePlaceBookmark(url, name, category, cityId, area, ownerUid, mapsUrl); });
 }
 // مفكرة القائمة — على قائمة مدينة لشخص بعدّاد (المبدأ التاسع) — سجل + عدّاد بدفعة ذرّية واحدة (قواعد ٣٫٨)
 async function toggleListBookmark(ownerUid, cityId){
   if (!currentUser){ openAuthModal(); return; }
+  if (!ownerUid || !cityId) return; /* r100-ج */
   if (ownerUid === currentUser.uid){ showToast('This is your list — bookmarks count others, not you'); return; } // ر٦٠: المبدأ التاسع بالواجهة كما بالقواعد
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   await ensureListBookmarks();
@@ -326,11 +327,11 @@ async function toggleListBookmark(ownerUid, cityId){
     await mpData.bookmarks.toggleList(currentUser.uid, ownerUid, cityId, on);
     logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → OK (record+counter+mirror written)'); // ر٦٩ن: تشخيص ميداني
   }catch(e){
-    logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن
+    mpSwallow(e, 'bookmark-list'); logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن · r100-هـ
     if (on) delete listBookmarksMap[listId]; else listBookmarksMap[listId] = { listId: listId, ownerUid: ownerUid, cityId: cityId };
     if (c) c.bookmarkCount = Math.max(0, (c.bookmarkCount || 0) + (on ? -1 : 1));
     renderCommunityModal();
-    showToast('Could not update bookmark — ' + ((e && (e.code || e.message)) || 'unknown')); return;
+    mpErrToast('Could not update bookmark', e); return;
   }
   renderCommunityModal(); // ر٦٩ط: العدّاد من الخادم بعد اكتمال الكتابة (كان يُقرأ قبلها فيبدو غير مستقر)
   if (!on) showUndoToast('Removed from your bookmarks', function(){ toggleListBookmark(ownerUid, cityId); });
@@ -351,6 +352,22 @@ async function mpSaveFailed(k, e, retry, discard){ /* يعيد 'retry' | 'discar
   if (v === 'ok' && canRetry){ await retry(); return 'retry'; }
   mpUnsavedSet(k, true); return 'keep';
 }
+/* ═══ r100-ج (ق١١-٠٣-٠٦): حدود الطول — عدّاد يظهر عند الاقتراب (آخر ١٠٪) ورفض قبل الحفظ بسطر «N / limit characters — shorten to save»؛ لا maxlength (يقتطع اللصق صامتًا) ═══ */
+const MP_LIMITS = { name: 120, area: 80, note: 2000, pick: 200, picks: 20, report: 200, request: 300, nickname: 24, phone: 40, tripName: 80, stay: 120, tagline: 40, bio: 200, contact: 300, impression: 300, stopName: 120, stopAbout: 500, legNote: 200, sheet: 60 };
+function mpLenLine(el){ let c = el.nextElementSibling; if (!(c && c.classList && c.classList.contains('lencount'))){ c = document.createElement('div'); c.className = 'lencount'; el.insertAdjacentElement('afterend', c); } return c; }
+function mpLenShow(el, limit, atSave, capMode){ const n = String(el.value || '').length; const c = mpLenLine(el); const over = n > limit; const near = n >= Math.ceil(limit * 0.9);
+  if (!over && !near){ c.textContent = ''; c.className = 'lencount'; el.classList.remove('overlimit'); return true; }
+  c.textContent = n.toLocaleString('en') + ' / ' + limit.toLocaleString('en') + ' characters' + (over ? (capMode ? ' — only the first ' + limit + ' are kept' : ' — shorten to save') : ''); c.className = 'lencount' + (over ? ' over' : ''); el.classList.toggle('overlimit', over);
+  if (over && atSave){ const ae = document.activeElement; if (!(ae && ae.classList && ae.classList.contains('overlimit'))){ try{ el.focus(); el.scrollIntoView({ block: 'center' }); }catch(_){} } } return !over; } /* capMode: خانة تُحفظ تلقائيًا بسقف صلب — الرسالة تصدق؛ التركيز على أول خانة متجاوزة فقط */
+function mpLenWatch(id, limit){ const el = document.getElementById(id); if (!el) return; if (el.__lenLimit !== limit){ el.__lenLimit = limit; el.addEventListener('input', function(){ mpLenShow(el, limit, false); }); } mpLenShow(el, limit, false); }
+function mpLenOk(id, limit){ const el = document.getElementById(id); return el ? mpLenShow(el, limit, true) : true; } /* عند الحفظ: false = تجاوز، والسطر ظاهر والخانة مميّزة */
+function mpLinesShow(el, maxLines, maxPerLine, atSave){ const lines = String(el.value || '').split('\n'); const c = mpLenLine(el); const long = lines.findIndex(function(l){ return l.length > maxPerLine; }); const nLines = lines.filter(function(l){ return l.trim(); }).length; let msg = '';
+  if (nLines > maxLines) msg = nLines + ' / ' + maxLines + ' lines — shorten to save'; else if (long >= 0) msg = 'Line ' + (long + 1) + ' is ' + lines[long].length + ' characters — max ' + maxPerLine;
+  c.textContent = msg; c.className = 'lencount' + (msg ? ' over' : ''); el.classList.toggle('overlimit', !!msg);
+  if (msg && atSave){ const ae = document.activeElement; if (!(ae && ae.classList && ae.classList.contains('overlimit'))){ try{ el.focus(); el.scrollIntoView({ block: 'center' }); }catch(_){} } } return !msg; }
+function mpLinesWatch(id, maxLines, maxPerLine){ const el = document.getElementById(id); if (!el) return; if (el.__linesLimit !== maxLines){ el.__linesLimit = maxLines; el.addEventListener('input', function(){ mpLinesShow(el, maxLines, maxPerLine, false); }); } mpLinesShow(el, maxLines, maxPerLine, false); }
+function mpLinesOk(id, maxLines, maxPerLine){ const el = document.getElementById(id); return el ? mpLinesShow(el, maxLines, maxPerLine, true) : true; }
+function mpStripTags(s){ return String(s || '').replace(/<[^>]*>/g, ''); } /* الأسماء نص لا وسوم */
 /* ═══ r100-ب (ق١١-٠٣-٠٥): حارس الانشغال بالمفتاح — النقرة الثانية أثناء الحفظ تُتجاهل، والزر المعني يتعطّل ويقول «Saving…» إن طال؛ لا قفل عام ═══ */
 const mpBusy = {}; window.__mpBusy = mpBusy;
 async function mpBusyRun(key, fn, btn){ /* يعيد 'busy' إن كان المفتاح مشغولًا، وإلا نتيجة fn — المفتاح يُحرَّر في finally مهما حدث */
@@ -361,6 +378,27 @@ async function mpBusyRun(key, fn, btn){ /* يعيد 'busy' إن كان المف�
   try{ return await fn(); }
   finally{ clearTimeout(slow); delete mpBusy[key]; els.forEach(function(e, i){ e.innerHTML = labels[i]; e.disabled = false; }); }
 }
+/* ═══ r100-د (ق١١-٠٣-٠٧): رسالة مفهومة بدل الرمز الخام · قراءة تفشل = toast + أثر + ما على الشاشة يبقى ═══ */
+const MP_QUOTA_MSG = 'MyPickz is busy today — back at 11:00 Riyadh'; /* Spark: الحصة تعود منتصف الليل بتوقيت المحيط الهادئ = ١١:٠٠ الرياض شتاءً و١٠:٠٠ صيفًا (PDT) */
+function mpQuotaMsg(){ let pdt = false; try{ pdt = /PDT/.test(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', timeZoneName: 'short' }).format(new Date())); }catch(_){} return pdt ? MP_QUOTA_MSG.replace('11:00', '10:00') : MP_QUOTA_MSG; }
+function mpErrText(e){ const c = String((e && e.code) || '').replace(/^firestore\//, '').replace(/^auth\//, ''); const m = String((e && e.message) || '');
+  if (c === 'unavailable' || c === 'network-request-failed' || /offline|network/i.test(m)) return 'check your connection';
+  if (c === 'permission-denied' || c === 'unauthenticated') return "you don't have access";
+  if (c === 'resource-exhausted') return mpQuotaMsg();
+  if (c === 'deadline-exceeded' || c === 'aborted' || c === 'cancelled') return 'it took too long — try again';
+  if (c === 'not-found') return 'it no longer exists';
+  if (c === 'failed-precondition') return 'the app needs a refresh — reload the page';
+  if (c === 'too-many-requests') return 'too many attempts — wait a few minutes';
+  if (c === 'invalid-argument') return 'it is too large to save';
+  if (c === 'already-exists') return 'it already exists';
+  if (c === 'wrong-password' || c === 'invalid-credential' || c === 'user-not-found' || c === 'invalid-login-credentials') return 'the email or password is wrong';
+  if (c === 'email-already-in-use') return 'this email already has an account';
+  if (c === 'weak-password') return 'the password is too short';
+  if (c === 'invalid-email') return 'the email looks wrong';
+  return 'try again'; }
+let __mpLastToast = { t: '', at: 0 };
+function mpErrToast(prefix, e){ const t = mpErrText(e); const msg = (t.indexOf('MyPickz is busy today') === 0) ? prefix + ' · ' + t : prefix + ' — ' + t; const now = Date.now(); if (__mpLastToast.t === msg && now - __mpLastToast.at < 1500) return; __mpLastToast = { t: msg, at: now }; showToast(msg); } /* الحصة تبقى مع فعلها (المستخدم يعرف ما لم يتم) · الرسالة نفسها لا تتكرر خلال ١٫٥ ث (تحميل مزدوج) */
+function mpReadFailed(e, ctx, what){ mpSwallow(e, ctx); mpErrToast('Could not load ' + what, e); } /* القراءة الفاشلة: أثر + رسالة؛ المستدعي يُبقي ما على الشاشة */
 function mpSwallow(e, ctx){ // ر٦٤: بديل الابتلاع الصامت — يعدّ بعدّاد الأخطاء القائم (Other) ويطبع بوضع التصحيح
   try{ if (typeof mpTrack !== 'undefined' && mpTrack.trapError) mpTrack.trapError('Other'); }catch(_){}
   try{ console.warn('[MyPickz][swallowed]', ctx || '', (e && e.code) || (e && e.message) || e); }catch(_){}
@@ -374,7 +412,7 @@ async function toggleTripSelfBookmark(tripId){
   if (was) delete map[tripId]; else map[tripId] = true;
   renderTripsBody();
   try{ await mpData.tripSaves.setSelf(currentUser.uid, tripId, !was); mpTrack.hit('bookmark_add'); }
-  catch(e){ if (was) map[tripId] = true; else delete map[tripId]; renderTripsBody(); showToast('Could not update bookmark — ' + ((e && (e.code || e.message)) || 'unknown')); return; }
+  catch(e){ mpSwallow(e, 'bookmark-trip'); if (was) map[tripId] = true; else delete map[tripId]; renderTripsBody(); mpErrToast('Could not update bookmark', e); return; } /* r100-هـ */
   if (was) showUndoToast('Removed from your bookmarks', function(){ toggleTripSelfBookmark(tripId); });
 }
 function exportOwnTripRow(id){ currentTripId = id; viewingSharedTrip = false; openTripDetail(id).then(function(){ exportTripText(); }).catch(function(){ exportTripText(); }); }
@@ -427,11 +465,11 @@ async function toggleTripSave(tripId){
     await mpData.tripSaves.toggle(currentUser.uid, tripId, on);
     logTiming('SAVE trip ' + tripId + ' on=' + on + ' → OK (record+counter+mirror written)'); // ر٦٩ن
   }catch(e){
-    logTiming('SAVE trip ' + tripId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن
+    mpSwallow(e, 'trip-save'); logTiming('SAVE trip ' + tripId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن · r100-هـ
     if (on) delete tripSavesMap[tripId]; else tripSavesMap[tripId] = { tripId: tripId };
     if (typeof viewingUserUid !== 'undefined' && viewingUserUid) renderCommunityModal();
     if (currentTab === 'Trips') renderTripsBody();
-    showToast('Could not update bookmark — ' + ((e && (e.code || e.message)) || 'unknown')); return;
+    mpErrToast('Could not update bookmark', e); return;
   }
   if (currentTab === 'Community') renderCommunityModal(); // العدّاد من الخادم بعد الكتابة
   if (!on) showUndoToast('Removed from your bookmarked trips', function(){ toggleTripSave(tripId); });
