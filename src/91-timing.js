@@ -33,11 +33,11 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-window.__mpBuild = 'M2-ID-r101';
+window.__mpBuild = 'M2-ID-r105';
 /* د-٦: ملخص الشبكة سطرًا واحدًا مثبَّتًا: شهادة App Check · أول قراءة · الدخول (وتكراره) · الأخطاء · آخر خطوة بطيئة */
 let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '', sort: '', save: '' };
 /* هـ-٧: السطر الأصفر يحمل ساعته «t=52s» (تتقدم كل ثانية — إن توقفت فالخيط الرئيسي متجمد لا الشبكة) · «BLOCKED 3.2s ×1» حين يتأخر نبض الثانية (شفرة مشغولة) · نتيجة مسبارَي الشبكة حين ينتظر هدف ٨ ثوانٍ: نفس الأصل (manifest.json) وخادم Firestore بـREST (settings/app الذي تقرأه القواعد للجميع) */
-function __netRender(){ const el = __netLineEl; if (!el) return; el.textContent = 'NET · t=' + Math.round((performance.now() - __timingStart) / 1000) + 's · AppCheck ' + (__net.check || '…') + ' · transport ' + (__net.transport || '?') + ' · keep-alive ' + (__net.keep || '…') + ' · first read ' + (__net.first || '…') + ' · auth @' + (__net.auth.join(', ') || '…') + (__net.imp ? ' · IMPORT ' + __net.imp : '') + (__net.sort ? ' · ' + __net.sort : '') + (__net.save ? ' · SAVE ' + __net.save : '') + (__net.errs ? ' · errors ' + __net.errs : '') + (__net.blocked ? ' · BLOCKED ' + __net.blocked : '') + (__net.wait ? ' · WAITING: ' + __net.wait : '') + (__net.slow ? ' · slow: ' + __net.slow : ''); }
+function __netRender(){ const el = __netLineEl; if (!el) return; el.textContent = 'NET · t=' + Math.round((performance.now() - __timingStart) / 1000) + 's · AppCheck ' + (__net.check || '…') + ' · transport ' + (__net.transport || '?') + ' · keep-alive ' + (__net.keep || '…') + ' · first read ' + (__net.first || '…') + ' · auth @' + (__net.auth.join(', ') || '…') + (__net.imp ? ' · IMPORT ' + __net.imp : '') + (__net.sort ? ' · ' + __net.sort : '') + (__net.save ? ' · SAVE ' + __net.save : '') + (__net.errs ? ' · errors ' + __net.errs : '') + (mpQuotaHook.done ? ' · ' + mpQuotaLine() : '') + (__net.blocked ? ' · BLOCKED ' + __net.blocked : '') + (__net.wait ? ' · WAITING: ' + __net.wait : '') + (__net.slow ? ' · slow: ' + __net.slow : ''); }
 function __netNote(label, elapsed){
   if (/^BUILD:/.test(label)) return; /* هـ-٦: سطر البناء يذكر «first Firestore read» في نصه فكان يلوّث الحقل حتى تأتي القراءة الحقيقية */
   if (/App Check token in/.test(label)) __net.check = label.replace(/.*token in /, '') ; else if (/App Check token FAILED/.test(label)) __net.check = 'FAILED'; else if (/App Check OFF/.test(label)) __net.check = 'OFF';
@@ -52,7 +52,23 @@ function __netNote(label, elapsed){
   const m = /in (\d+)ms/.exec(label); if (m && +m[1] > 4000) __net.slow = label.replace(/^\[\w+\] /, '');
   __netRender();
 }
-function __mpFsDebug(fb){ try{ if (fb && fb.firestore && typeof fb.firestore.setLogLevel === 'function') fb.firestore.setLogLevel('debug'); }catch(_){} }
+function __mpFsDebug(fb){ try{ if (fb && fb.firestore && typeof fb.firestore.setLogLevel === 'function') fb.firestore.setLogLevel('debug'); }catch(_){} try{ mpQuotaHook(fb && fb.firestore); }catch(_){} }
+/* ═══ r100-و (ق١١-٠٣-٠٩): عدّاد الحصة — قراءات/كتابات هذا الجهاز في يوم الحصة (منتصف الليل بتوقيت المحيط الهادئ = ١١:٠٠ الرياض شتاءً · ١٠:٠٠ صيفًا) مقابل Spark ٥٠k/٢٠k · يُحفظ في localStorage ويُعرض في سطر NET ═══ */
+const MP_QUOTA = { reads: 50000, writes: 20000 };
+function mpQuotaDayKey(){ try{ return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }catch(_){ return new Date().toISOString().slice(0, 10); } } /* تاريخ المحيط الهادئ = مفتاح يوم الحصة */
+function mpQuotaResetLabel(){ let pdt = false; try{ pdt = /PDT/.test(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', timeZoneName: 'short' }).format(new Date())); }catch(_){} return (pdt ? '10:00' : '11:00') + ' Riyadh'; }
+const mpQuota = { day: '', reads: 0, writes: 0 }; window.__mpQuota = mpQuota;
+function mpQuotaLoad(){ const day = mpQuotaDayKey(); try{ const j = JSON.parse(localStorage.getItem('mp_quota') || 'null'); if (j && j.day === day){ mpQuota.day = day; mpQuota.reads = j.reads || 0; mpQuota.writes = j.writes || 0; return; } }catch(_){} mpQuota.day = day; mpQuota.reads = 0; mpQuota.writes = 0; }
+let __quotaSaveT = null; function mpQuotaSave(){ if (__quotaSaveT) return; __quotaSaveT = setTimeout(function(){ __quotaSaveT = null; try{ localStorage.setItem('mp_quota', JSON.stringify(mpQuota)); }catch(_){} }, 500); }
+function mpQuotaAdd(kind, n){ if (mpQuota.day !== mpQuotaDayKey()) mpQuotaLoad(); mpQuota[kind] += (n > 0 ? n : 1); mpQuotaSave(); try{ __netRender(); }catch(_){} }
+/* ملاحظة القياس: onSnapshot لا يُحتسب (مستمع الإعدادات الدائم) · كتابات الدفعة تُعدّ عند الاستدعاء لا عند commit · تبويبان مفتوحان يتبادلان الكتابة — العدّاد أرضية تقريبية لهذا الجهاز */
+function mpQuotaLine(){ const pr = Math.round(100 * mpQuota.reads / MP_QUOTA.reads), pw = Math.round(100 * mpQuota.writes / MP_QUOTA.writes); return 'quota (this device) R ' + mpQuota.reads + '/' + MP_QUOTA.reads + ' (' + pr + '%) · W ' + mpQuota.writes + '/' + MP_QUOTA.writes + ' (' + pw + '%) · resets ' + mpQuotaResetLabel(); }
+function mpQuotaHook(fs){ /* يلفّ get للمستند والاستعلام (القراءات = عدد المستندات العائدة، وأقلّه ١) وset/update/delete للمستند والدفعة (كتابة لكل عملية) — نسخة الاختبار فقط */
+  if (!fs || mpQuotaHook.done) return false; mpQuotaHook.done = true; mpQuotaLoad();
+  const wrapGet = function(proto, isQuery){ if (!proto || typeof proto.get !== 'function') return; const g = proto.get; proto.get = function(){ const p = g.apply(this, arguments); if (p && typeof p.then === 'function'){ p.then(function(s){ mpQuotaAdd('reads', isQuery && s && typeof s.size === 'number' ? Math.max(1, s.size) : 1); }, function(){}); } return p; }; }; /* القراءة المرفوضة لا تُحتسب (لا تُفوتَر) */
+  const wrapWrite = function(proto){ if (!proto) return; ['set', 'update', 'delete'].forEach(function(m){ if (typeof proto[m] !== 'function') return; const f = proto[m]; proto[m] = function(){ mpQuotaAdd('writes', 1); return f.apply(this, arguments); }; }); };
+  wrapGet(fs.DocumentReference && fs.DocumentReference.prototype, false); wrapGet(fs.Query && fs.Query.prototype, true); wrapWrite(fs.DocumentReference && fs.DocumentReference.prototype); wrapWrite(fs.WriteBatch && fs.WriteBatch.prototype); wrapWrite(fs.Transaction && fs.Transaction.prototype); wrapGet(fs.Transaction && fs.Transaction.prototype, false);
+  return true; }
 /* هـ-٢/هـ-٦: سجل Firestore الداخلي مضغوطًا وبأرقام الأهداف (الصيغة من مصدر المكتبة: addTarget{query|documents,targetId} · targetChange{targetChangeType,targetIds} · removeTarget):
    «+T48 doc userCityLists/…_paris» عند الإضافة · «CURRENT T48 · 3 docs · 0.3s» عند الجواب (أصفر إن تجاوز ٤ ثوانٍ) · «−T48» عند الإزالة · كشف الوسيط العازل (detected buffering proxy) · فتح القناة وإغلاقها وأخطاؤها · التراجع (Backing off) · «Backend didn't respond».
    هدف بلا جواب ٨ ثوانٍ يُكتب سطرًا ويُرفع إلى السطر الأصفر «WAITING: T46 query communityProfiles 8s» حتى يُجاب — فلا حاجة لتمرير ولا لتخمين أي قراءة توقفت */
@@ -107,7 +123,7 @@ function __fsHandle(t){
 /* د-٤: نسخة الاختبار تسجّل الأخطاء غير الملتقَطة في لوحة TIMING نفسها (الرسالة والسطر) — ليُقرأ السبب من الهاتف بلا وحدة تحكم */
 window.addEventListener('error', function(e){ try{ logTiming('[ERR] ' + (e.message || 'error') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?')); }catch(_){} });
 window.addEventListener('unhandledrejection', function(e){ try{ const r = e.reason; logTiming('[ERR] rejection: ' + ((r && (r.code || r.message)) || String(r)).slice(0, 160)); }catch(_){} }); /* ب-٢-٢-أ٢: تذييل الدرج يعرض رقم البناء */
-logTiming('BUILD: ' + window.__mpBuild + ' (r100b - one tap one change: busy guard per action, delete by identity, builder opens once; r100a honest save)'); /* r93: السطر يُشتق من __mpBuild — كان نصًّا يدويًّا توقّف عند r88 (ملاحظة المالك ٢٩ أكتوبر ١٢:١٣) */
+logTiming('BUILD: ' + window.__mpBuild + ' (r100f - quota counter in Diag, daily backup worker; r100e - every failure leaves a trace in Diag, sign-out rejection handled, a failed search is not reported as missing; r100d - plain-words failure messages: reads that failed say so and keep the screen, no raw error codes, quota message, bad Takeout file messages; r100c input guards; r100b one tap one change; r100a honest save)'); /* r93: السطر يُشتق من __mpBuild — كان نصًّا يدويًّا توقّف عند r88 (ملاحظة المالك ٢٩ أكتوبر ١٢:١٣) */
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
