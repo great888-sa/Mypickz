@@ -33,7 +33,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-window.__mpBuild = 'M2-ID-r106';
+window.__mpBuild = 'M2-ID-r108';
 /* د-٦: ملخص الشبكة سطرًا واحدًا مثبَّتًا: شهادة App Check · أول قراءة · الدخول (وتكراره) · الأخطاء · آخر خطوة بطيئة */
 let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '', sort: '', save: '' };
 /* هـ-٧: السطر الأصفر يحمل ساعته «t=52s» (تتقدم كل ثانية — إن توقفت فالخيط الرئيسي متجمد لا الشبكة) · «BLOCKED 3.2s ×1» حين يتأخر نبض الثانية (شفرة مشغولة) · نتيجة مسبارَي الشبكة حين ينتظر هدف ٨ ثوانٍ: نفس الأصل (manifest.json) وخادم Firestore بـREST (settings/app الذي تقرأه القواعد للجميع) */
@@ -123,7 +123,7 @@ function __fsHandle(t){
 /* د-٤: نسخة الاختبار تسجّل الأخطاء غير الملتقَطة في لوحة TIMING نفسها (الرسالة والسطر) — ليُقرأ السبب من الهاتف بلا وحدة تحكم */
 window.addEventListener('error', function(e){ try{ logTiming('[ERR] ' + (e.message || 'error') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?')); }catch(_){} });
 window.addEventListener('unhandledrejection', function(e){ try{ const r = e.reason; logTiming('[ERR] rejection: ' + ((r && (r.code || r.message)) || String(r)).slice(0, 160)); }catch(_){} }); /* ب-٢-٢-أ٢: تذييل الدرج يعرض رقم البناء */
-logTiming('BUILD: ' + window.__mpBuild + ' (r101b - day trip: two doors to add stops, category and note on list places, save only after the first stop, plan-a-day line in Places; r101a - nearby cities in the places picker, 1 h 30 by car; r100f - quota counter in Diag, daily backup worker; r100e - every failure leaves a trace in Diag, sign-out rejection handled, a failed search is not reported as missing; r100d - plain-words failure messages: reads that failed say so and keep the screen, no raw error codes, quota message, bad Takeout file messages; r100c input guards; r100b one tap one change; r100a honest save)'); /* r93: السطر يُشتق من __mpBuild — كان نصًّا يدويًّا توقّف عند r88 (ملاحظة المالك ٢٩ أكتوبر ١٢:١٣) */
+logTiming('BUILD: ' + window.__mpBuild + ' (r103 - day plans follow their city list (public/shared), viewer chips and read-only stops without start or times, never in trip feeds; r102 - short Plus code decoded around its town with a 40 km guard, Stay and Transportation pickable, stop name opens the place card with category and note and pins follow the list, saved day plans as chips; r101b - day trip: two doors to add stops, category and note on list places, save only after the first stop, plan-a-day line in Places; r101a - nearby cities in the places picker, 1 h 30 by car; r100f - quota counter in Diag, daily backup worker; r100e - every failure leaves a trace in Diag, sign-out rejection handled, a failed search is not reported as missing; r100d - plain-words failure messages: reads that failed say so and keep the screen, no raw error codes, quota message, bad Takeout file messages; r100c input guards; r100b one tap one change; r100a honest save)'); /* r93: السطر يُشتق من __mpBuild — كان نصًّا يدويًّا توقّف عند r88 (ملاحظة المالك ٢٩ أكتوبر ١٢:١٣) */
 mpTrack._diag = logTiming; // نسخة الاختبار فقط — عدّاد p99 التشخيصي لكتابات الجلسة
 logTiming('Script started (t=0 reference)');
 
