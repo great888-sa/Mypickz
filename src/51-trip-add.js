@@ -45,6 +45,7 @@ async function loadUserTrips(){
   userTrips.forEach(tripNormalize); sharedTrips.forEach(tripNormalize);
   userTrips.forEach(tripSnap); mpSaveOk('trips'); /* r100-أ */
   tripsLoaded = true;
+  try{ if (typeof dpReconcile === 'function') await dpReconcile(); }catch(_){} /* r103 */
   if (typeof plRow4Refresh === 'function') plRow4Refresh(); /* r98b (ق١١-٠٣-٠١): عدّاد Day plan — الصف قد يكون رُسم قبل اكتمال التحميل */
 }
 function tripNormalize(t){ if (!t) return t; if (t.plan) tripPlanNormalize(t.plan); if (t.dayPlan && !t.title && t.plan && t.plan.days && t.plan.days[0] && t.plan.days[0].transportNote){ t.title = String(t.plan.days[0].transportNote).trim().slice(0, 80); t.plan.days[0].transportNote = ''; } /* r93-١: ما كُتب في Transport note (r92) يصير اسم الخطة */ if (!Array.isArray(t.cities)) t.cities = t.cityId ? [{ cityId: t.cityId, cityName: t.cityName || '', days: tripHasPlan(t) ? Math.max(1, t.plan.days.filter(function(d){ return d.kind === 'full'; }).length) : 1, stay: null, arrival: null, departure: null, fallback: 'transit' }] : []; t.cities = t.cities.map(function(c){ return (typeof c === 'string') ? { cityId: c, cityName: c, days: 1, stay: null, arrival: null, departure: null, fallback: 'transit' } : c; }); if (!t.version) t.version = 'balanced'; if (!t.status) t.status = tripHasPlan(t) ? 'approved' : 'draft'; if (t.dayRoutes && (typeof t.dayRoutes !== 'object' || Array.isArray(t.dayRoutes))) t.dayRoutes = {}; if (t.dayRoutes) tripRoutesPrune(t); return t; } // r78: مسار اليوم يُقرأ مقلَّمًا (أرجل فقدت طرفًا تسقط)
@@ -104,7 +105,7 @@ async function resolveTripPlaces(trip){
     const ref = e.ref || {}; if (ref.sourceType === 'stop') return Object.assign({}, e, { alts: [], _p: null, _available: true }); /* r92: المحطة غير المحفوظة تحمل اسمها وموضعها في الخطة نفسها */ const linksObj = ref.sourceType === 'community' ? (communityLinks[ref.sourceUid + '|' + (ref.cityId || trip.cityId)] || {}) : (myLinksByCity[ref.cityId || trip.cityId] || {});
     const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
     if (!place) console.warn('[MyPickz][trip-resolve] unavailable', JSON.stringify(ref)); // ر٦٠ · عدسة التشخيص
-    return Object.assign({}, e, { alts: (e.alts || []).map(resolveRef), _p: place || null, _available: !!place });
+    const liveGeo = (place && place.geo && typeof place.geo.lat === 'number' && typeof place.geo.lng === 'number') ? { lat: place.geo.lat, lng: place.geo.lng } : null; /* r102-ج (ق١١-٠٥-٠١): دبوس المكان الحالي في قائمته يسبق الدبوس المنسوخ لحظة الاختيار — تصحيح الدبوس يصل المسافات بلا إعادة اختيار */ return Object.assign({}, e, { geo: liveGeo || e.geo || null, alts: (e.alts || []).map(resolveRef), _p: place || null, _available: !!place });
   }
   return { days: plan.days.map(function(d){ const out = Object.assign({}, d, { periods: {} }); TRIP_PERIODS.forEach(function(p){ out.periods[p] = (d.periods[p] || []).map(resolveRef); }); out.stops = (d.stops || []).map(resolveRef); return out; }), tray: (plan.tray || []).map(resolveRef) }; /* r92: محطات يوم الرحلة تُحلّ أيضًا */
 }
