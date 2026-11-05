@@ -112,7 +112,7 @@ function tripBuildPlan(spec){ // spec = { cities:[{cityId, days, stay:{geo}|null
   const fresh = (spec.entries || []).map(function(e){ return Object.assign({}, e, { ref: Object.assign({}, e.ref || {}), geo: e.geo ? { lat: e.geo.lat, lng: e.geo.lng } : null, alts: [], alert: e.alert || '' }); }); // لا يعدّل مدخلات المستدعي — نسخة نظيفة بلا بدائل
   (spec.cities || []).forEach(function(city, ci){
     const dayIdx = []; plan.days.forEach(function(d, i){ if (d.cityId === city.cityId) dayIdx.push(i); });
-    const mine = fresh.filter(function(e){ const c = e.ref && e.ref.cityId; return c ? c === city.cityId : ci === 0; });
+    const mine = fresh.filter(function(e){ const c = e.ref && (e.ref.via || e.ref.cityId); return c ? c === city.cityId : ci === 0; }); /* r101-أ: مكان مدينة قريبة يُبنى في أيام مدينة الرحلة (via) */
     const pinned = mine.filter(function(e){ return !!e.geo && tripEntryRole(e).role !== 'none'; }); mine.filter(function(e){ return !e.geo || tripEntryRole(e).role === 'none'; }).sort(tripById).forEach(function(e){ plan.tray.push(e); });
     if (!dayIdx.length){ pinned.sort(tripById).forEach(function(e){ plan.tray.push(e); }); return; }
     const pockets = tripPockets(pinned, TRIP_RHYTHM.pocketKm[city.fallback === 'car' ? 'car' : 'transit']);
@@ -144,7 +144,7 @@ function tripBuildPlan(spec){ // spec = { cities:[{cityId, days, stay:{geo}|null
   return plan;
 }
 function tripSuggestSlot(plan, e, spec){ // الإضافة من بطاقة المكان (البيان ٦-٢): الدور → الفترات · الإحداثيات → اليوم الأقرب جيبًا · الجدول → هل تتسع؛ وإلا null = الصينية
-  if (!e.geo) return null; const version = (spec && spec.version) || 'balanced'; const cityId = e.ref && e.ref.cityId; const city = ((spec && spec.cities) || []).find(function(c){ return c.cityId === cityId; }) || ((spec && spec.cities) || [])[0];
+  if (!e.geo) return null; const version = (spec && spec.version) || 'balanced'; const cityId = e.ref && (e.ref.via || e.ref.cityId); /* r101-أ */ const city = ((spec && spec.cities) || []).find(function(c){ return c.cityId === cityId; }) || ((spec && spec.cities) || [])[0];
   const cands = []; (plan.days || []).forEach(function(d, i){ if (city && d.cityId !== city.cityId) return; const c = tripDayCentroid(d) || (city && city.stay && city.stay.geo) || null; const dist = tripKm(e.geo, c); cands.push({ i: i, dist: (dist === null) ? 1e9 : dist }); });
   cands.sort(function(a, b){ return (a.dist - b.dist) || (a.i - b.i); });
   for (let k = 0; k < cands.length; k++){ const t = tripTryPlace(plan.days[cands[k].i], e, version, false); if (t) return { dayIdx: cands[k].i, period: t.period, alt: null, excursion: !!t.excursion }; } // ب-٣: محطةً في يوم بلا الصنف أولًا
