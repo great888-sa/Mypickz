@@ -229,7 +229,8 @@ function plHeadSet(mode){ /* r74m: الرأس الثابت — 'city' الصفو
   if (add) add.style.display = mode === 'city' ? '' : 'none';
   if (row){ row.classList.toggle('c3', mode === 'city'); row.classList.toggle('c2', mode !== 'city'); }
 }
-function plRow4Refresh(){ const el = document.querySelector('#plBody .plrow4'); if (!el) return; const t = document.createElement('div'); t.innerHTML = plRow4Html(); if (t.firstChild) el.replaceWith(t.firstChild); } /* r98b: الرحلات قد تُحمَّل بعد رسم الصف — يُعاد رسم الصف وحده */
+function plRow4Refresh(){ const el = document.querySelector('#plBody .plrow4'); if (!el) return; const old = document.querySelector('#plBody .pl-dpnudge'); if (old) old.remove(); const t = document.createElement('div'); t.innerHTML = plRow4Html() + plDayPlanNudgeHtml(); const nodes = Array.from(t.childNodes); if (nodes.length) el.replaceWith.apply(el, nodes); } /* r101-ب: سطر الإرشاد يتبع الصف */
+function plDayPlanNudgeHtml(){ if (!currentUser || typeof tripsLoaded === 'undefined' || !tripsLoaded || typeof plDayPlansSaved !== 'function' || !cityListCityId) return ''; const n = Number(((userListData || {}).cityPlaceCounts || {})[cityListCityId]) || 0; if (n < 3 || plDayPlansSaved().length) return ''; return '<button type="button" class="chip pl-dpnudge" style="margin:0 0 6px; white-space:normal; text-align:left; line-height:1.3;" onclick="plDayPlanOpen()">🗓 You have ' + n + ' places here — plan a day →</button>'; } /* r101-ب (ق١١-٠٤-٠٢ · ملاحظة المالك ٥): سطر واحد فوق My places حين تملك المدينة ٣ أماكن فأكثر ولا خطة يوم فيها — يختفي بأول خطة لا بزر */ /* r98b: الرحلات قد تُحمَّل بعد رسم الصف — يُعاد رسم الصف وحده */
 function plRow4Html(){ /* r74m: الصف الرابع (غير ثابت) — تخطيط اليوم (بابه هنا وجسمه بحزمة الرحلات) · التصدير · العلنية · المشاركة بالاسم */
   const d = myCityListData || {}; const nShared = (d.sharedWith || []).length;
   return '<div class="plrow4">'
@@ -290,7 +291,7 @@ function renderPlacesMine(){
   const countriesAll = cityListAllCountries();
   plHeadSet('city'); /* الصفوف ١–٣ بالرأس الثابت */
   { const __own = []; Object.keys(myCityListData.categories || {}).forEach(function(k){ ((myCityListData.categories[k] || {}).places || []).forEach(function(p){ if (p && p.source && p.source.ownerId && !(p.source.ownerId in plOwnerCache)) __own.push(p.source.ownerId); }); }); if (__own.length) plEnsureOwners(__own).then(function(did){ if (did && placesSource === 'mine') renderPlacesMine(); }); } /* r74m-٢: سطر From بالاسم الحي — يُجلب مرة ثم يُعاد الرسم */
-  const __pm = !!(plView === 'map' && plPinMove && plPinMovePlace()); let outerHtml = catPairHost('plFilter') + (__pm ? '' : plRow4Html() + '<div class="ctx" id="plCtx"><b>My places</b>' + mpUnsavedTag('places') + '</div>' + plImportNudgeHtml()); /* r87-2 (كلمة المالك ١٢:٥٥): سطران — الملف · On map */ /* r75b: بوضع النقل لا صف رابع ولا سطر سياق — التركيز على الخريطة */
+  const __pm = !!(plView === 'map' && plPinMove && plPinMovePlace()); let outerHtml = catPairHost('plFilter') + (__pm ? '' : plRow4Html() + plDayPlanNudgeHtml() + '<div class="ctx" id="plCtx"><b>My places</b>' + mpUnsavedTag('places') + '</div>' + plImportNudgeHtml()); /* r87-2 (كلمة المالك ١٢:٥٥): سطران — الملف · On map */ /* r75b: بوضع النقل لا صف رابع ولا سطر سياق — التركيز على الخريطة */
 
   /* ر٧٠ب (N-011 · ق٠٩-٠٧-٠٥): اللوحات الثلاث بلوحة الاختيار المشتركة — الدول (بعلمها N-067) · المدن (عدّاد ثابت · المختارة بنقطة · الحذف بوضع التحرير على مدني الخاصة · ＋ Add city أسفل النتائج) · التصنيفات (＋ على كل تصنيف بما فيه الفارغ) */
   if (plPanel === 'countries'){
