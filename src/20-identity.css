@@ -299,7 +299,7 @@
   /* ═══ r77 (حزمة الرحلات · الدفعة أ): ليلي للمنشئ والورقة والعرض · عاجي للبطاقات والحقول · لا تعبئة زعفرانية إلا للفعّال والفعل الأساسي ═══ */
   .tb-steps span{background:var(--line-night);} .tb-steps span.on{background:var(--saffron);}
   .tb-note{background:var(--surf); border-color:var(--line-strong); color:var(--night-2);}
-  .tb-door{background:var(--surf); border-color:var(--saffron); color:var(--on-night);} .tb-door-n{color:var(--saffron);}
+  .tb-door{background:var(--surf); border-color:var(--saffron); color:var(--on-night);} .tb-door-n{color:var(--saffron);} .tb-door-s{color:var(--night-4);}
   .tb-feas{color:var(--night-3);} .tb-feas .ok{color:var(--saffron);} .tb-feas .warn{color:var(--danger-night);} .tb-hint{color:var(--night-4);} .tb-pin-ok{color:var(--saffron);}
   .tb-feasbar{background:var(--bar); border-color:var(--line-strong); color:var(--on-night);} .tb-feasbar span{color:var(--saffron);}
   .tb-pick,.modal.night .tb-pick{background:var(--ivory-bright); border-color:var(--sand-line); color:var(--ink);} .modal.night .tb-pick b{color:var(--ink);} .tb-pick-t span{color:var(--copper);} .tb-pick input{accent-color:var(--saffron);} .tb-pick .warn{color:var(--danger);} .modal.night #plPlusErr{color:var(--danger-night);} /* r94 (ق١٠-٢٩-٠٨): سطر خطأ الرمز بلون الخطر الليلي */
