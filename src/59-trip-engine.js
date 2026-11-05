@@ -22,7 +22,7 @@ const TRIP_RHYTHM = { // ═══ جدول الإيقاع (البيان v1.2 ·
     nature: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 180 }, beaches: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 180 },
     landmarks: { role: 'sight', periods: ['morning', 'afternoon'], minutes: 90 }, tours_venues: { role: 'sight', periods: ['morning', 'afternoon'], minutes: 120 },
     theme_parks: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 240 }, zoos_aquariums: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 180 },
-    stay: { role: 'none', periods: [], minutes: 0 }, transportation: { role: 'none', periods: [], minutes: 0 }
+    stay: { role: 'visit', periods: ['morning', 'midday', 'afternoon', 'evening'], minutes: 60 }, transportation: { role: 'visit', periods: ['morning', 'midday', 'afternoon', 'evening'], minutes: 15 } /* r102-ب (ق١١-٠٥-٠١): منتجع فيه مقهى أو غولف يُزار كمقهى (ساعة) · محطة أو موقف أو مطار ربع ساعة — كانا 'none' خارج الاختيار */
   },
   defaultRole: { role: 'visit', periods: ['morning', 'midday', 'afternoon', 'evening'], minutes: 60 },
   walkKm: 1.2, pocketKm: { transit: 1.5, car: 8 }, detour: { walk: 1.3, transit: 1.3, car: 1.4, train: 1.3, boat: 1.1, cable: 1.0, cog: 1.2, bus: 1.4 },
@@ -170,7 +170,7 @@ const TRIP_MODE_ICON = { walk: '🚶', transit: '🚇', car: '🚗', train: '�
 const TRIP_STOP_KINDS = [['town', '🏘', 'Village / town'], ['peak', '⛰', 'Peak / viewpoint'], ['water', '💧', 'Lake / waterfall'], ['station', '🚉', 'Station / port / lift'], ['parking', '🅿', 'Parking'], ['trail', '🥾', 'Trail'], ['other', '📍', 'Other']]; /* r92 (ق١٠-٢٨-٠٣): أنواع المحطة غير المحفوظة */
 function tripStopKind(k){ return TRIP_STOP_KINDS.find(function(x){ return x[0] === k; }) || TRIP_STOP_KINDS[TRIP_STOP_KINDS.length - 1]; }
 function tripIsStop(e){ return !!(e && e.ref && e.ref.sourceType === 'stop'); }
-function tripNewStop(p){ const e = tripNewEntry({ ref: { sourceType: 'stop', kind: tripStopKind(p.kind)[0] }, name: String(p.name || 'Stop').slice(0, 120), geo: p.geo, sec: '' }); e.id = 's' + e.id.slice(1); if (p.url) e.url = String(p.url).trim().slice(0, 400); e.about = String(p.about || '').slice(0, 500); e.optional = !!p.optional; e.fixedAt = (tripMinutesOf(p.fixedAt) !== null) ? String(p.fixedAt) : null; return e; } /* المعرّف من tripNewEntry وحدها (التثبيت ٤) */
+function tripNewStop(p){ const e = tripNewEntry({ ref: { sourceType: 'stop', kind: tripStopKind(p.kind)[0] }, name: String(p.name || 'Stop').slice(0, 120), geo: p.geo, sec: '' }); e.id = 's' + e.id.slice(1); if (p.url && /^https?:\/\//i.test(String(p.url).trim())) e.url = String(p.url).trim().slice(0, 400); /* r102-ج (المراجعة): http(s) فقط */ e.about = String(p.about || '').slice(0, 500); e.optional = !!p.optional; e.fixedAt = (tripMinutesOf(p.fixedAt) !== null) ? String(p.fixedAt) : null; return e; } /* المعرّف من tripNewEntry وحدها (التثبيت ٤) */
 const TRIP_NAV_APPS = [['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']];
 function tripLegKey(fromId, toId){ return fromId + '>' + toId; }
 function tripRouteOf(trip, day){ const r = (trip && trip.dayRoutes && day && trip.dayRoutes[String(day.n)]) || {}; return { leave: r.leave || null, backBy: r.backBy || null, legs: r.legs || {}, stays: r.stays || {} }; }
