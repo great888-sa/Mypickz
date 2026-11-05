@@ -148,6 +148,7 @@ async function loadMyCityList(cityId){
   }
   myCityListLoadFailed = false;
   myCityListLoadedFor = cityId; myCityListLoading = false;
+  try{ if (typeof dpReconcile === 'function') await dpReconcile(); }catch(_){} /* r103: خطط ما قبل r103 أو مزامنة مقطوعة تلحق بالقائمة مرة بالجلسة */
 }
 
 // حفظ بيانات المدينة الحالية بـMy List — مستند مستقل، مو الملف الشامل القديم
@@ -282,6 +283,7 @@ async function removeCityListCity(cityId, opts){
   if (!city) return; // حماية: يسمح فقط بحذف المدن اللي أضافها المستخدم نفسه
   if (!(opts && opts.confirmed) && !(await mpConfirm('Any places saved under it will be lost. This cannot be undone.', { title: '🗑 Delete "' + city.name + '"?', ok: 'Delete city', danger: true }))) return; /* ب-٢-٢-أ٢ */
   userListData.customCities = (userListData.customCities || []).filter(c => c.id !== cityId);
+  try{ if (typeof dpPrivatize === 'function') await dpPrivatize(cityId); }catch(e){ mpSwallow(e, 'dayplans-sync'); } /* r103 (المراجعة): حذف القائمة (أو دمجها) يعيد خططها خاصة */
   try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){} // خ٥/م٢-ب: عبر النواة
   if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
   if (cityListCityId === cityId){
@@ -480,14 +482,16 @@ async function shareCityListWithSomeone(){
     if (myCityListData.sharedWith.includes(targetUid)){ showToast('Already shared with this user'); return; }
     myCityListData.sharedWith.push(targetUid);
     myCityListData.sharedWithNames[targetUid] = data.nickname || name.trim();
-    await saveMyCityList(); ensureCommunityNick(); /* د-٢ */
+    const __ok = await saveMyCityList(); ensureCommunityNick(); /* د-٢ */
+    if (__ok !== false){ try{ if (typeof dpSyncWithList === 'function') await dpSyncWithList(cityListCityId); }catch(e){ mpSwallow(e, 'dayplans-sync'); } } /* r103 */
     showToast('Shared ✓');
   }catch(e){ mpSwallow(e, 'share-list'); mpErrToast('Could not verify username', e); } /* r100-هـ */
 }
 async function removeCityListShare(uid){
   if (!myCityListData || !myCityListData.sharedWith) return;
-  myCityListData.sharedWith = myCityListData.sharedWith.filter(u => u !== uid);
-  await saveMyCityList();
+  myCityListData.sharedWith = myCityListData.sharedWith.filter(u => u !== uid); if (myCityListData.sharedWithNames) delete myCityListData.sharedWithNames[uid]; /* r103 (المراجعة): الاسم يُمحى مع المعرّف */
+  const __ok = await saveMyCityList();
+  if (__ok !== false){ try{ if (typeof dpSyncWithList === 'function') await dpSyncWithList(cityListCityId); }catch(e){ mpSwallow(e, 'dayplans-sync'); } } /* r103 */
 }
 
 async function toggleCityListPublic(){
@@ -500,8 +504,9 @@ async function toggleCityListPublic(){
   }
   myCityListData.public = !myCityListData.public;
   if (myCityListData.public) mpTrack.hit('reserved_2'); // ر٦٣: نشر عام
-  await saveMyCityList();
+  const __ok = await saveMyCityList();
   await syncCommunityProfile();
+  if (__ok !== false){ try{ if (typeof dpSyncWithList === 'function') await dpSyncWithList(cityListCityId); }catch(e){ mpSwallow(e, 'dayplans-sync'); } } /* r103: خطط اليوم تتبع القائمة — بعد كتابة ناجحة فقط (المراجعة) */
 }
 
 async function selectCityListCity(cityId){
