@@ -117,6 +117,7 @@ function updateUserUI(){ /* r74b-٣: الكتلة الخفية الموروثة 
     sharedCityLists = []; myCityListData = null; myCityListLoadedFor = null;
     listBookmarksMap = null; tripSavesMap = null; viewingUserUid = null; plPanel = null; addrPanel = null;
     mpSheetAbort(); /* r100-ب: ورقة معلّقة تُحسم فلا يبقى مفتاح انشغال محجوزًا بعد الخروج */
+    if (typeof TB !== 'undefined' && TB){ clearTimeout(TB.saveTimer); TB = null; } /* r101-ب (المراجعة المستقلة): منشئ مفتوح لا يحفظ بعد الخروج */
     document.querySelectorAll('.modal-backdrop.show').forEach(function(b){ if (b.id !== 'authBackdrop') b.classList.remove('show'); });
     openGate();
   }
