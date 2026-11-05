@@ -1,6 +1,6 @@
 {
- "build": "M2-ID-r106",
- "at": "2026-11-04",
+ "build": "M2-ID-r108",
+ "at": "2026-11-05",
  "modes": [
   "network",
   "permission",
@@ -2706,7 +2706,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793825192178_lzhyqw"
+     "reports/r_1793888269089_bmgqbg"
     ],
     "text": "Thanks — reported"
    },
@@ -2738,7 +2738,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793825194000_lryd1m"
+     "reports/r_1793888270921_wa2wed"
     ],
     "text": "Thanks — reported"
    },
@@ -3199,7 +3199,7 @@
     "changed": [
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnick1793825218736",
+     "nicknames/faultnick1793888295387",
      "stats/users"
     ],
     "text": "Account created ✓"
@@ -3228,7 +3228,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1793825220300"
+     "nicknames/faultnick1793888296966"
     ],
     "text": "Account created ✓ | Account created ✓"
    },
@@ -3245,7 +3245,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1793825221009"
+     "nicknames/faultnick1793888297669"
     ],
     "text": "Account created ✓"
    },
@@ -3342,8 +3342,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew25717",
-     "nicknames/faultnick1793825221009"
+     "nicknames/faultnew02366",
+     "nicknames/faultnick1793888297669"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3371,8 +3371,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew27189",
-     "nicknames/faultnick1793825221009"
+     "nicknames/faultnew03827",
+     "nicknames/faultnick1793888297669"
     ],
     "text": "Nickname saved ✓ | Nickname saved ✓"
    },
@@ -3389,8 +3389,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew27848",
-     "nicknames/faultnick1793825221009"
+     "nicknames/faultnew04440",
+     "nicknames/faultnick1793888297669"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3762,7 +3762,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793825263499_suguwr"
+     "reports/r_1793888339962_c86ytp"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -3787,8 +3787,8 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793825265605_tgjkrg",
-     "reports/r_1793825265605_o5ghnl"
+     "reports/r_1793888342007_n2985k",
+     "reports/r_1793888342007_9ipioo"
     ],
     "text": "Thanks — we will look into it | Thanks — we will look into it"
    },
@@ -3802,7 +3802,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793825266585_i871dj"
+     "reports/r_1793888342997_81jglq"
     ],
     "text": "Thanks — we will look into it"
    },
