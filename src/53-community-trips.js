@@ -43,7 +43,7 @@ function renderCommunityTripDetail(wrap){ // r77: رحلة الآخرين بال
     TRIP_PERIODS.forEach(function(p){ const arr = day.periods[p] || []; if (!arr.length) return; let __tcards = '';
       arr.forEach(function(e){ [e].concat(e.alts || []).forEach(function(x, k){
         if (!x._available){ __tcards += `<div class="row triprow dim">⚠️ This place is no longer available</div>`; return; }
-        const ref = x._ref || x.ref || {}; const pl = x._p || {}; const ouid = ref.sourceUid || viewingUserUid || ''; const sCat = String(ref.subcatId || ''); const cityNm = ((trip.cities || []).find(function(c){ return c.cityId === (ref.cityId || trip.cityId); }) || {}).cityName || trip.cityName || '';
+        const ref = x._ref || x.ref || {}; const pl = x._p || {}; const ouid = ref.sourceUid || viewingUserUid || ''; const sCat = String(ref.subcatId || ''); const cityNm = ((trip.cities || []).find(function(c){ return c.cityId === (ref.cityId || trip.cityId); }) || {}).cityName || ref.cityName || trip.cityName || ''; /* r101-أ: مكان من مدينة قريبة يحمل اسمها */
         __tcards += (k ? '<div class="pc-lab" style="margin:0 0 2px 6px;">or</div>' : '') + othersPlaceRowHtml({ id: ref.placeId || pl.id || hashUrl(pl.url || ''), name: pl.name || x.name || 'Place', url: pl.url, area: pl.area, picks: pl.picks, note: pl.note, geo: pl.geo }, { uid: ouid, nickname: (viewingUserData && viewingUserData.nickname) || 'a user' }, { id: ref.cityId || trip.cityId || '', name: cityNm }, sCat, ref.cityId || trip.cityId || '') + (x.alert ? '<div class="pc-lab" style="margin:-2px 0 8px 6px;">Alert · <span class="pc-val">' + escapeHtml(x.alert) + '</span></div>' : '');
       }); });
       html += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', __tcards, 'stop'); });
