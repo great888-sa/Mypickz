@@ -1,22 +1,22 @@
 /* ===== عرض رحلات مستخدم آخر (Community Lists → تبويب Trips، Public فقط) — قراءة فقط ===== */
-let communityUserTrips = [];
+let communityUserTrips = []; let communityUserDayPlans = []; /* r103: خطط اليوم العامة لصاحب الملف — لصفحات مدنه لا لقائمة رحلاته */
 let viewingCommunityTripId = null;
 
 async function loadCommunityUserTrips(uid){
   try{
     const __rows = await mpData.trips.publicByOwner(uid); const snap = { forEach: function(fn){ __rows.forEach(function(r){ fn({ id: r.id, data: function(){ return r; } }); }); }, empty: __rows.length === 0, size: __rows.length };
-    communityUserTrips = [];
-    snap.forEach(doc => { const d = doc.data(); if (d && d.dayPlan) return; communityUserTrips.push({ id: doc.id, ...d }); }); /* r92 (ق١٠-٢٨-٠٦): خطة اليوم لا تُعرض في المجتمع */
-  }catch(e){ communityUserTrips = []; }
+    communityUserTrips = []; communityUserDayPlans = [];
+    snap.forEach(doc => { const d = doc.data(); if (d && d.dayPlan){ communityUserDayPlans.push({ id: doc.id, ...d }); return; } communityUserTrips.push({ id: doc.id, ...d }); }); /* r92 (ق١٠-٢٨-٠٦): خطة اليوم لا تُعرض في قائمة الرحلات · r103: تُحفظ جانبًا لشرائح مدينتها */
+  }catch(e){ communityUserTrips = []; communityUserDayPlans = []; }
 }
 async function openCommunityTrip(tripId){
   try{ const __t = (cmCache.trips && cmCache.trips[tripId]) || (communityUserTrips || []).find(function(t){ return t.id === tripId; }); if (__t && currentUser && __t.ownerId !== currentUser.uid) mpData.trips.bumpView(tripId).catch(function(){}); }catch(_){} // r72t (M4.26 ٣)
   mpTrack.statsTrip(tripId, 'view_total');
   viewingCommunityTripId = tripId;
-  let trip = communityUserTrips.find(t => t.id === tripId) || cmCache.trips[tripId]; // ر٦٩ذ: من السوق مباشرة
+  let trip = communityUserTrips.find(t => t.id === tripId) || (communityUserDayPlans || []).find(t => t.id === tripId) || (typeof sharedTrips !== 'undefined' ? (sharedTrips || []).find(t => t.id === tripId) : null) || cmCache.trips[tripId]; // ر٦٩ذ: من السوق مباشرة · r103: خطة يوم من الشرائح (عامة أو مشارَكة معي)
   if (!trip){ try{ trip = await mpData.trips.get(tripId); }catch(e){} }
   if (!trip){ showToast('This trip is no longer available'); return; }
-  if (!communityUserTrips.find(t => t.id === tripId)) communityUserTrips.push(trip);
+  if (!communityUserTrips.find(t => t.id === tripId)){ if (trip.dayPlan){ if (!(communityUserDayPlans || []).some(t => t.id === tripId)) communityUserDayPlans.push(trip); } else communityUserTrips.push(trip); } /* r103: خطة اليوم لا تدخل قائمة رحلات الشخص */
   if (!viewingUserUid){ cmDirect = true; viewingUserUid = trip.ownerId; viewingUserData = (communityUsers || []).find(u => u.uid === trip.ownerId) || { uid: trip.ownerId, nickname: trip.ownerName || 'user', publicCityIds: [] }; viewingUserCities = []; } // ر٦٩غ: الفتح من السوق مباشرة — عرض الرحلة يعيش بطبقة صاحبها
   const wrap = document.getElementById('communityBody');
   wrap.innerHTML = `<div class="mp-empty mini">Loading…</div>`;
@@ -31,12 +31,13 @@ async function openCommunityTrip(tripId){
 function backFromCommunityTrip(){ viewingCommunityTripId = null; if (cmDirect){ cmDirect = false; viewingUserUid = null; communityUserLayer = null; } renderCommunityModal(); } // ر٦٩غ: الرجوع إلى حيث فُتحت
 
 function renderCommunityTripDetail(wrap){ // r77: رحلة الآخرين بالخطة — قراءة فقط (الأيام · الفترات · البدائل)
-  const trip = communityUserTrips.find(t => t.id === viewingCommunityTripId);
+  const trip = communityUserTrips.find(t => t.id === viewingCommunityTripId) || (communityUserDayPlans || []).find(t => t.id === viewingCommunityTripId) || (typeof sharedTrips !== 'undefined' ? (sharedTrips || []).find(t => t.id === viewingCommunityTripId) : null); /* r103 */
   if (!trip){ viewingCommunityTripId = null; renderCommunityModal(); return; }
   const resolved = resolvedTripCache['community_'+trip.id] || { days: [], tray: [] };
   let html = `<button type="button" class="backchip" onclick="backFromCommunityTrip()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back</button>
   <h4 style="text-align:center; margin:4px 0 4px; font-family:'Cairo',sans-serif;" dir="auto">${escapeHtml(tripTitle(trip))}</h4><div class="ctx" style="text-align:center; margin-bottom:8px;">${escapeHtml(tripMetaLine(trip))}</div>`;
   if (!tripHasPlan(trip)){ wrap.innerHTML = html + '<div class="mp-empty mini">This trip uses the old format.</div>'; return; }
+  if (trip.dayPlan){ const d0 = (resolved.days || [])[0]; wrap.innerHTML = html + '<div class="ctx" style="margin:0 0 6px;">' + (tripIsDayTrip(trip) ? '🚞 Day trip' : '🏙 In the city') + ' · ' + escapeHtml(trip.cityName || '') + ' <span class="dim">· stops only — start point and times are the owner\'s</span></div>' + (d0 ? dpViewerDayHtml(trip, d0) : '<div class="mp-empty mini">No stops in this plan.</div>'); return; } /* r103: خطة يوم عند المشاهد — المحطات بلا انطلاق ولا أوقات */
   (resolved.days || []).forEach(function(day){
     const es = tripDayEntries(day); if (!es.length) return;
     html += `<div class="dayhead"><span class="daynum">${day.n}</span><span class="daytitle">${escapeHtml(tripDayLabel(day).toUpperCase())}${day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : ''}</span><span class="dayline"></span></div>`;
