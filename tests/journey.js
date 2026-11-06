@@ -14,7 +14,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 /* ═══════════ ١ · مصفوفة القدرات المعلنة (قواعد M4.24 × منافذ الكود) ═══════════ */
 const CAPS = [
   'auth.session', 'users.register', 'nicknames.claim', 'userLists.default',
-  'cityLists.create', 'cityLists.publish', 'cityLists.selfSaveKeepsCounters',
+  'cityLists.create', 'cityLists.publish', 'cityLists.selfSaveKeepsCounters', 'cityLists.visibility',
   'place.identityByUrl', 'bookmark.place.on', 'bookmark.place.off.undo',
   'bookmark.list.on.batch3', 'bookmark.list.counter', 'bookmark.list.mirror',
   'bookmark.list.selfRejected.rollback', 'bookmark.list.off.undo', 'bookmark.list.browser', 'bookmark.list.degraded',
@@ -167,6 +167,21 @@ function faultGate(kind){ const m = globalThis.__faultMode; if (!m) return; glob
 function faultStrip(d){ if (!d || typeof d !== 'object' || globalThis.__faultMode !== 'partial') return d; const o = {}; Object.keys(d).forEach(function(k){ const v = d[k]; if (v === null || typeof v !== 'object') o[k] = v; }); return o; }
 const writeLog = []; /* r100-أ: سجل الكتابات — عدّ الكتابات لكل حفظ */
 const readLog = []; /* خ-٦: سجل القراءات — مستند (col/id) أو استعلام (Q:col) — لمحطات «تحميل المدينة عند فتحها» */
+/* r104 (ق١١-٠٦-٠١): قاعدة قراءة مستندات التصنيفات لغير المالك كما في firestore.rules — الثغرة التي أخفت عطل مونترو: كان المشاهد في الحارس يقرأ كل شيء.
+   المستند: يُقرأ لصاحبه ولمالك التطبيق وللموقّع إن حمل public أو كان ضمن sharedWith · الاستعلام لغير المالك يُرفض إن لم يُقيَّد بـpublic == true أو sharedWith array-contains uid (Firestore يرفض الاستعلام الذي قد يعيد مستندًا غير مقروء). */
+function appOwnerUid(){ const a = store.get('settings/app'); return (a && a.ownerUid) || null; }
+function readHook(col, id){
+  if (col !== 'userCityListCats') return; const uid = actorUid(); const d = store.get(col + '/' + id); if (!d) return; /* الغائب يُقرأ «غير موجود» لصاحب البادئة (قواعد ٣٫٨) */
+  if (!uid) deny('userCityListCats: قراءة بلا توقيع'); if (uid === d.ownerId || uid === appOwnerUid() || id.split('_')[0] === uid) return;
+  if (d.public === true || (Array.isArray(d.sharedWith) && d.sharedWith.indexOf(uid) >= 0)) return;
+  deny('userCityListCats: ' + id + ' ليس عامًّا ولا مشارَكًا مع ' + uid);
+}
+function queryHook(col, filters){
+  if (col !== 'userCityListCats') return; const uid = actorUid(); if (!uid) deny('userCityListCats: استعلام بلا توقيع'); if (uid === appOwnerUid()) return;
+  const own = filters.some(function(x){ return x[0] === 'ownerId' && x[1] === '==' && x[2] === uid; }); if (own) return;
+  const pub = filters.some(function(x){ return x[0] === 'public' && x[1] === '==' && x[2] === true; }); const sh = filters.some(function(x){ return x[0] === 'sharedWith' && x[1] === 'array-contains' && x[2] === uid; });
+  if (!pub && !sh) deny('userCityListCats: استعلام على قوائم الآخرين بلا قيد public/sharedWith');
+}
 function makeSnap(col, id){
   const key = col + '/' + id; const d = store.get(key);
   return { id, exists: !!d, data: () => faultStrip(clone(d)) };
@@ -174,7 +189,7 @@ function makeSnap(col, id){
 function docRef(col, id){
   return {
     id,
-    get: async () => { faultGate('get ' + col); readLog.push(col + '/' + id); return makeSnap(col, id); },
+    get: async () => { faultGate('get ' + col); readLog.push(col + '/' + id); readHook(col, id); return makeSnap(col, id); },
     set: async (data, opts) => { faultGate('set ' + col); writeLog.push('set ' + col + '/' + id); const op = { type: 'set', col, id, data, merge: !!(opts && opts.merge) }; rulesHook(op); applyOp(op); },
     update: async (data) => { faultGate('update ' + col); writeLog.push('update ' + col + '/' + id); const op = { type: 'update', col, id, data }; rulesHook(op); applyOp(op); },
     delete: async () => { faultGate('delete ' + col); writeLog.push('delete ' + col + '/' + id); const op = { type: 'delete', col, id }; rulesHook(op); applyOp(op); },
@@ -187,7 +202,7 @@ function colRef(col, filters){
     where: (f, opc, v) => colRef(col, filters.concat([[f, opc, v]])),
     orderBy: () => api, limit: () => api, startAt: () => api, endAt: () => api,
     get: async () => {
-      faultGate('query ' + col); readLog.push('Q:' + col);
+      faultGate('query ' + col); readLog.push('Q:' + col); queryHook(col, filters);
       const rows = [];
       for (const [key, d] of store){
         if (!key.startsWith(col + '/')) continue;
@@ -196,6 +211,7 @@ function colRef(col, filters){
         for (const [f, opc, v] of filters){
           const val = f === '__name__' ? id : d[f];
           if (opc === '==' && val !== v) ok = false;
+          if (opc === 'array-contains' && !(Array.isArray(val) && val.indexOf(v) >= 0)) ok = false; /* r104: كما في Firestore */
           if (opc === '>=' && !(String(val) >= v)) ok = false;
           if (opc === '<=' && !(String(val) <= v)) ok = false;
         }
@@ -3297,7 +3313,7 @@ function citiesSeed(){
     const o = JSON.parse(r);
     ok('r100-أ · الورقة (Retry · Discard · Keep on screen) · Retry مرة ثم Keep · Unsaved في السياق وwindow.__mpUnsaved · المخزن لم يتغير · Discard يعيد القديم ويمسح الوسم · لا «Saved ✓» بعد فشل والنافذة تُغلق · الدمج: البعيد يبقى · المحذوف لا يعود · المعدَّل هناك يُؤخذ · المعدَّل هنا يفوز · المدخل والكائن نفسهما · التوائم كما هي · الكتابة: coffee وحده + الأم · الرحلات: Discard يعيد ويزيل الجديد · Keep يوسم · النجاح يمسح · الحذف الفاشل لا يُخفي · العناوين: Discard · Retry لا يكرّر · الوسم · القراءة الفاشلة لا تمسح وتُخبر · Help EN/AR · Symbols',
       JSON.stringify(o.fail) === '[true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true]' && JSON.stringify(o.merge) === '[true,true,true,true,true,true,true]' && JSON.stringify(o.writes) === JSON.stringify(['coffee', 1]) && JSON.stringify(o.twins) === '[true]' && JSON.stringify(o.add) === '[true,true]' /* الإضافة من النافذة (index غير معرَّف) تصل المخزن */ && JSON.stringify(o.trips) === '[true,true,true,true,true,true,true,true,true,true,true,true,true]' && JSON.stringify(o.addr) === '[true,true,true,true,true,true,true,true,true,true]' && JSON.stringify(o.help) === '[true,true,true]', r);
-    const srcOk = tplCount("const mpUnsaved = { places: false, trips: false, addresses: false };", 1).ok && tplCount("async function mpSaveFailed(k, e, retry, discard){", 1).ok && tplCount("function plMergeCat(local, remote, saved){", 1).ok && tplCount("if (local) local.places = out;", 1).ok && tplCount("function plSnapSaved(){ if (myCityListOldKeys.length || myCityListCatsDirty){ myCityListSaved = null; return; }", 1).ok && tplCount("onlyCats ? { onlyCats: onlyCats } : undefined", 1).ok && tplCount("if (only && only.indexOf(k) < 0) return;", 1).ok && tplCount("await mpSaveFailed('places', e, function(){ return saveMyCityList(); }", 1).ok && tplCount("mpErrToast('Could not save your list', e)", 1) /* r100-هـ */.ok /* يبقى في saveUserListGeneral (مستند المستخدم — خارج نطاق r100-أ) */ && tplCount("}catch(e){ showToast('Could not save trip'); }", 0).ok && tplCount("async function tripDiscard(trip){", 1).ok && tplCount("function addrDiscard(){", 1).ok && tplCount("if (!readFailed) addrSnap(); else showToast('Could not load your addresses — showing what was on screen');", 1).ok && tplCount("mpUnsavedTag('places')", 1).ok && tplCount("mpUnsavedTag('addresses')", 1).ok && tplCount("mpUnsavedTag('trips')", 1).ok && tplCount("myCityListData.categories = cats; plSnapSaved();", 2).ok && tplCount("if (catId != null && index != null){ plEdit = { catId: catId, index: index }; plModalCat = catId; }", 1).ok && tplCount("if (!(await saveMyCityList())){ closePlPlaceModal(); renderPlacesMine(); return; }", 1).ok && tplCount("throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */", 22).ok && tplCount("if (await saveMyCityList()) showToast(__msg);", 1).ok && tplCount("if (!(await saveMyCityList())) return; /* r100-أ */", 1).ok;
+    const srcOk = tplCount("const mpUnsaved = { places: false, trips: false, addresses: false };", 1).ok && tplCount("async function mpSaveFailed(k, e, retry, discard){", 1).ok && tplCount("function plMergeCat(local, remote, saved){", 1).ok && tplCount("if (local) local.places = out;", 1).ok && tplCount("function plSnapSaved(){ if (myCityListOldKeys.length || myCityListCatsDirty){ myCityListSaved = null; return; }", 1).ok && tplCount("onlyCats ? { onlyCats: onlyCats, syncVis: visChanged } : undefined", 1).ok && tplCount("if (only && only.indexOf(k) < 0) return;", 1).ok && tplCount("await mpSaveFailed('places', e, function(){ return saveMyCityList(); }", 1).ok && tplCount("mpErrToast('Could not save your list', e)", 1) /* r100-هـ */.ok /* يبقى في saveUserListGeneral (مستند المستخدم — خارج نطاق r100-أ) */ && tplCount("}catch(e){ showToast('Could not save trip'); }", 0).ok && tplCount("async function tripDiscard(trip){", 1).ok && tplCount("function addrDiscard(){", 1).ok && tplCount("if (!readFailed) addrSnap(); else showToast('Could not load your addresses — showing what was on screen');", 1).ok && tplCount("mpUnsavedTag('places')", 1).ok && tplCount("mpUnsavedTag('addresses')", 1).ok && tplCount("mpUnsavedTag('trips')", 1).ok && tplCount("myCityListData.categories = cats; plSnapSaved();", 2).ok && tplCount("if (catId != null && index != null){ plEdit = { catId: catId, index: index }; plModalCat = catId; }", 1).ok && tplCount("if (!(await saveMyCityList())){ closePlPlaceModal(); renderPlacesMine(); return; }", 1).ok && tplCount("throw Object.assign(new Error('not saved'), { code: 'not-saved' }); /* r100-أ */", 22).ok && tplCount("if (await saveMyCityList()) showToast(__msg);", 1).ok && tplCount("if (!(await saveMyCityList())) return; /* r100-أ */", 1).ok;
     ok('r100-أ · المصدر: أدوات الحفظ الصادق في 50-ui · الدمج في مكانه · اللقطة تُلغى عند الترحيل · onlyCats في mpData · لا toast الفشل القديمة · Discard للرحلات والعناوين · القراءة الفاشلة · الوسم في الثلاث · الاستيراد يحدّث اللقطة', srcOk, '');
   }, []);
 
@@ -3541,6 +3557,59 @@ function citiesSeed(){
     B.x("userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'dpA' && c.id !== 'dpB'; }); Object.keys(TB_PLACES).forEach(function(k){ if (k.indexOf('dp') === 0) delete TB_PLACES[k]; }); userTrips = (userTrips || []).filter(function(t){ return " + trips0 + ".indexOf(t.id) >= 0; }); TB = null; currentTripId = null; document.getElementById('tripBuildBackdrop').classList.remove('show'); var pv = " + prev + "; cityListCityId = pv.c; cityListCountry = pv.k; myCityListLoadedFor = null; myCityListData = null;"); await B.x("(async function(){ if (cityListCityId) await loadMyCityList(cityListCityId); })()");
     B.x("switchTab(" + JSON.stringify(JSON.parse(prev).tab) + ")");
   }, []);
+
+  await must('r104 · (١) 🌐 والمشاركة بالاسم يختمان كل مستندات التصنيفات في الدفعة نفسها (السبب الجذري لعطل مونترو: r100-أ كتب الأم وحدها) · (٢) العلاج الذاتي عند تحميل قائمتي · (٣) المشاهد يقرأ القائمة العامة كاملة ولا يقرأ الخاصة · (٤) رسالة صادقة حين تدّعي الأم أماكن ولا يُقرأ تصنيف · Help', async () => {
+    const uid = B.x('currentUser.uid'); const prev = B.x("JSON.stringify({ tab: currentTab, c: cityListCityId, k: cityListCountry, nick: userListData.nickname || null })"); const auth0 = authStub.currentUser;
+    const kA = 'userCityListCats/' + uid + '_visA_' + CAT1, kB = 'userCityListCats/' + uid + '_visA_' + CAT2, kP = 'userCityLists/' + uid + '_visA';
+    B.x("userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'visA'; }).concat([{ id: 'visA', name: 'Visitown', country: 'Testland', lat: 46.5, lng: 6.9 }]); if (!userListData.nickname) userListData.nickname = 'visowner'; cityListCityId = 'visA'; cityListCountry = 'Testland'; myCityListLoadedFor = 'visA'; myCityListSaved = null; myCityListSavedVis = null; myCityListOldKeys = []; myCityListCatsDirty = false;");
+    B.set('myCityListData', { public: false, sharedWith: [], sharedWithNames: {}, bookmarkCount: 0, categories: { [CAT1]: { active: true, places: [{ id: 'v1', name: 'Vis Cafe', url: 'https://maps.app.goo.gl/vis1', area: 'Centre' }, { id: 'v2', name: 'Vis Bakery', url: 'https://maps.app.goo.gl/vis2' }] }, [CAT2]: { active: true, places: [{ id: 'v3', name: 'Vis Bistro', url: 'https://maps.app.goo.gl/vis3' }] } } });
+    await B.x('saveMyCityList()'); /* كتابة كاملة أولى (بلا لقطة) */
+    B.x("myCityListLoadedFor = null"); await B.x("loadMyCityList('visA')"); /* كما يفعل المستخدم: المدينة محمَّلة من المخزن ولقطتها موجودة → الحفظ التالي جزئي */
+    const vis = function(){ const a = store.get(kA) || {}, b = store.get(kB) || {}, p = store.get(kP) || {}; return { p: p.public === true, a: a.public === true, b: b.public === true, ps: (p.sharedWith || []).join(','), as: (a.sharedWith || []).join(','), bs: (b.sharedWith || []).join(','), an: (a.places || []).length, bn: (b.places || []).length }; };
+    const v0 = vis(); const t0 = captured.timing.length;
+    /* ١ · 🌐 */ await B.x('toggleCityListPublic()'); const v1 = vis(); const l1 = captured.timing.slice(t0).join('\n');
+    ok('r104 · (١) قبل 🌐 كل شيء خاص · بعده الأم والتصنيفان عامة والأماكن محفوظة (دمج لا استبدال) · سطر SAVE · visibility → public · cats 2 في الشريط',
+      v0.p === false && v0.a === false && v0.b === false && v1.p === true && v1.a === true && v1.b === true && v1.an === 2 && v1.bn === 1 && /SAVE · visA · cats changed 0\/2/.test(l1) && /SAVE · visA · visibility → public · shared 0 · cats 2/.test(l1), JSON.stringify([v0, v1]) + ' ' + l1.slice(-200));
+    /* ٢ · المشاركة بالاسم وإلغاؤها · ثم خاصة */ B.x("myCityListData.sharedWith = ['uFRIEND']; myCityListData.sharedWithNames = { uFRIEND: 'Friend' }"); await B.x('saveMyCityList()'); const v2 = vis();
+    await B.x("removeCityListShare('uFRIEND')"); const v3 = vis(); await B.x('toggleCityListPublic()'); const v4 = vis();
+    ok('r104 · (١) المشاركة بالاسم تصل إلى التصنيفين · إلغاؤها يمحوها منهما · إلغاء 🌐 يعيدهما خاصين (الوجه الثاني: لا تصنيف يبقى مقروءًا بعد الإخفاء)',
+      v2.ps === 'uFRIEND' && v2.as === 'uFRIEND' && v2.bs === 'uFRIEND' && v3.ps === '' && v3.as === '' && v3.bs === '' && v4.p === false && v4.a === false && v4.b === false, JSON.stringify([v2, v3, v4]));
+    /* ٣ · لا كتابة رؤية بلا تغيير */ const w0 = writeLog.length; const q0 = readLog.length; B.x("myCityListData.categories[" + JSON.stringify(CAT1) + "].places[0].note = 'edited'"); await B.x('saveMyCityList()'); const wl = writeLog.slice(w0).filter(function(x){ return x.indexOf('userCityList') >= 0; });
+    ok('r104 · (١) تعديل مكان بلا تغيير رؤية: يُكتب التصنيف المتغيّر والأم فقط (لا ختم للتصنيف الآخر ولا استعلام)', wl.length === 2 && wl.some(function(x){ return x === 'set userCityListCats/' + uid + '_visA_' + CAT1; }) && !wl.some(function(x){ return x.indexOf('_visA_' + CAT2) >= 0; }) && readLog.slice(q0).indexOf('Q:userCityListCats') < 0, JSON.stringify(wl) + ' reads=' + JSON.stringify(readLog.slice(q0)));
+    /* ٤ · العلاج الذاتي: إصابة كما خلّفها r100-أ (الأم عامة · التصنيفات خاصة · أحدهما مشارَك بغير الأم) */ const pd = store.get(kP); pd.public = true; pd.sharedWith = ['uFRIEND']; store.set(kP, pd); const ad = store.get(kA); ad.public = false; ad.sharedWith = []; store.set(kA, ad); const bd = store.get(kB); bd.public = true; bd.sharedWith = ['uSTRANGER']; store.set(kB, bd);
+    const t1 = captured.timing.length; B.x("myCityListLoadedFor = null"); await B.x("loadMyCityList('visA')"); const v5 = vis(); const l5 = captured.timing.slice(t1).join('\n');
+    ok('r104 · (٢) تحميل قائمتي يصلح التصنيفين إلى علمَي الأم (عام · مشارَك مع uFRIEND) في مكانهما من القراءة نفسها · سطر LIST · visA · visibility repaired 2 cat(s)',
+      v5.p === true && v5.a === true && v5.b === true && v5.as === 'uFRIEND' && v5.bs === 'uFRIEND' && v5.an === 2 && v5.bn === 1 && /LIST · visA · visibility repaired 2 cat\(s\) · public · shared 1/.test(l5), JSON.stringify(v5) + ' ' + l5.slice(-160));
+    const t2 = captured.timing.length; B.x("myCityListLoadedFor = null"); await B.x("loadMyCityList('visA')"); const l6 = captured.timing.slice(t2).join('\n');
+    ok('r104 · (٢) التحميل التالي لا يصلح شيئًا (لا سطر repaired) — العلاج يكتب عند الخلاف فقط', !/visibility repaired/.test(l6), l6.slice(-120));
+    /* ٥ · المشاهد (توقيع حقيقي في المنصة: قاعدة القراءة تُطبَّق) */ authStub.currentUser = makeAuthUser('uVIEWER'); const cu0 = B.x('currentUser'); B.set('currentUser', authStub.currentUser);
+    const r5 = await B.x("(async function(){ var o = {}; try{ var full = await mpData.cityLists.get(" + JSON.stringify(uid) + ", 'visA'); o.cats = Object.keys(full.categories || {}).length; o.unreadable = full._unreadable === true; o.stale = !!full._visStale; }catch(e){ o.err = String(e && e.code || e); } return JSON.stringify(o); })()");
+    const o5 = JSON.parse(r5);
+    ok('r104 · (٣) المشاهد يقرأ القائمة العامة كاملة (تصنيفان) · لا علم إصلاح يعود لغير المالك', o5.cats === 2 && o5.unreadable === false && o5.stale === false && !o5.err, r5);
+    /* مشارَك بالاسم مع بقايا علم عام على التصنيفات (الأم خاصة): يقرأ ما شورك معه ولا يعود له علم إصلاح — الإصلاح للمالك وحده */ { const pd0 = store.get(kP); pd0.public = false; pd0.sharedWith = ['uVIEWER']; store.set(kP, pd0); const ad0 = store.get(kA); ad0.public = true; ad0.sharedWith = ['uVIEWER']; store.set(kA, ad0); const bd0 = store.get(kB); bd0.public = true; bd0.sharedWith = ['uVIEWER']; store.set(kB, bd0); }
+    const r5b = await B.x("(async function(){ var o = {}; try{ var full = await mpData.cityLists.get(" + JSON.stringify(uid) + ", 'visA'); o.cats = Object.keys(full.categories || {}).length; o.stale = !!full._visStale; }catch(e){ o.err = String(e && e.code || e); } return JSON.stringify(o); })()");
+    const o5b = JSON.parse(r5b);
+    ok('r104 · (٣) المشارَك معه بالاسم يقرأ التصنيفين المشارَكين رغم خلاف علمهما العام مع الأم · ولا يعود له علم إصلاح (الكشف للمالك وحده)', o5b.cats === 2 && o5b.stale === false && !o5b.err, r5b);
+    { const pd1 = store.get(kP); pd1.public = true; pd1.sharedWith = []; store.set(kP, pd1); const ad1 = store.get(kA); ad1.public = true; ad1.sharedWith = []; store.set(kA, ad1); const bd1 = store.get(kB); bd1.public = true; bd1.sharedWith = []; store.set(kB, bd1); }
+    /* الإصابة من جديد: الأم عامة · التصنيفات خاصة (قبل أن يفتح المالك قائمته) */ const ad2 = store.get(kA); ad2.public = false; ad2.sharedWith = []; store.set(kA, ad2); const bd2 = store.get(kB); bd2.public = false; bd2.sharedWith = []; store.set(kB, bd2);
+    const d0 = denyLog.length; const r6 = await B.x("(async function(){ var o = {}; try{ var full = await mpData.cityLists.get(" + JSON.stringify(uid) + ", 'visA'); o.cats = Object.keys(full.categories || {}).length; o.unreadable = full._unreadable === true; o.idx = (full.index || []).length; }catch(e){ o.err = String(e && e.code || e); } try{ await mpData.cityLists.catDoc(" + JSON.stringify(uid) + ", 'visA', " + JSON.stringify(CAT1) + "); o.docRead = true; }catch(e){ o.docRead = String(e && e.code || e); } return JSON.stringify(o); })()");
+    const o6 = JSON.parse(r6);
+    ok('r104 · (٣) الإصابة عند المشاهد: الاستعلام المقيَّد يعود صفرًا بلا خطأ (كما في مونترو: compose · 0 cats) والأم تحمل ٣ أماكن بفهرسها · القراءة المباشرة لمستند تصنيف خاص تُرفض permission-denied (قاعدة الحارس الجديدة)',
+      o6.cats === 0 && o6.unreadable === true && o6.idx === 3 && o6.docRead === 'permission-denied' && denyLog.length === d0 + 1, r6 + ' deny=' + (denyLog.length - d0));
+    /* ٦ · رسالة المشاهد في الطبقة الثالثة */ const r7 = await B.x("(async function(){ var o = {}; var vu0 = viewingUserUid, vd0 = viewingUserData, vc0 = viewingUserCities, cl0 = communityUserLayer, cv0 = communityViewingCityId, ct0 = viewingCommunityTripId, fm0 = cmFilterMain, fs0 = cmFilterSub; try{ viewingUserUid = " + JSON.stringify(uid) + "; viewingUserData = { uid: " + JSON.stringify(uid) + ", nickname: 'Owner', publicCityIds: ['visA'] }; var c = { id: 'visA', name: 'Visitown', categories: {}, count: 3 }; viewingUserCities = [c]; communityUserLayer = 'visA'; communityViewingCityId = 'visA'; viewingCommunityTripId = null; cmFilterMain = ''; cmFilterSub = ''; await cmEnsureCity(" + JSON.stringify(uid) + ", c); var w = document.createElement('div'); renderCommunityUserList(w); var h = w.innerHTML; o.unread = h.indexOf('Couldn\\'t read this list\\'s places') >= 0 && h.indexOf('cmUnreadable') >= 0 && h.indexOf('No active places') < 0; o.hint = h.indexOf('opening their list once repairs it') >= 0; /* الحالة السليمة */ var c2 = { id: 'visA', name: 'Visitown', categories: {}, count: 3 }; var kk = ['" + kA.replace('userCityListCats/', '') + "', '" + kB.replace('userCityListCats/', '') + "']; o.ids = kk; }catch(e){ o.err = String(e && e.stack || e); } viewingUserUid = vu0; viewingUserData = vd0; viewingUserCities = vc0; communityUserLayer = cl0; communityViewingCityId = cv0; viewingCommunityTripId = ct0; cmFilterMain = fm0; cmFilterSub = fs0; return JSON.stringify(o); })()");
+    const o7 = JSON.parse(r7);
+    ok('r104 · (٤) صفحة المدينة عند المشاهد: «Couldn\'t read this list\'s places» مع سطر السبب — لا «No active places» الكاذبة', !o7.err && o7.unread === true && o7.hint === true, r7.slice(0, 300));
+    /* السليمة: بعد إصلاح الخادم تظهر الأماكن لا الرسالة */ const ad3 = store.get(kA); ad3.public = true; store.set(kA, ad3); const bd3 = store.get(kB); bd3.public = true; store.set(kB, bd3);
+    const r8 = await B.x("(async function(){ var o = {}; var vu0 = viewingUserUid, vd0 = viewingUserData, vc0 = viewingUserCities, cl0 = communityUserLayer, cv0 = communityViewingCityId, ct0 = viewingCommunityTripId; try{ viewingUserUid = " + JSON.stringify(uid) + "; viewingUserData = { uid: " + JSON.stringify(uid) + ", nickname: 'Owner', publicCityIds: ['visA'] }; var c = { id: 'visA', name: 'Visitown', categories: {}, count: 3 }; viewingUserCities = [c]; communityUserLayer = 'visA'; communityViewingCityId = 'visA'; viewingCommunityTripId = null; await cmEnsureCity(" + JSON.stringify(uid) + ", c); var w = document.createElement('div'); renderCommunityUserList(w); var h = w.innerHTML; o.places = (h.indexOf('Vis Cafe') >= 0 || h.indexOf('3 place') >= 0) /* القسم قد يُرسم مطويًّا بعدّه */ && h.indexOf('cmUnreadable') < 0 && h.indexOf('No active places') < 0; o.h = h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 260); o.cats = Object.keys(c.categories || {}).length; }catch(e){ o.err = String(e && e.stack || e); } viewingUserUid = vu0; viewingUserData = vd0; viewingUserCities = vc0; communityUserLayer = cl0; communityViewingCityId = cv0; viewingCommunityTripId = ct0; return JSON.stringify(o); })()");
+    const o8 = JSON.parse(r8);
+    ok('r104 · (٤) القائمة السليمة عند المشاهد: الأماكن الثلاثة بلا رسالة', !o8.err && o8.places === true, r8.slice(0, 200));
+    /* ٧ · Help */ const hp = B.x("JSON.stringify([HELP_CONTENT.en.sections.find(function(x){ return x.id === 'places'; }).b.indexOf('(r104)') >= 0 && HELP_CONTENT.en.sections.find(function(x){ return x.id === 'places'; }).b.indexOf('Couldn\\'t read this list\\'s places') >= 0, HELP_CONTENT.ar.sections.find(function(x){ return x.id === 'places'; }).b.indexOf('(r104)') >= 0 && HELP_CONTENT.ar.sections.find(function(x){ return x.id === 'places'; }).b.indexOf('visibility repaired') >= 0])");
+    ok('r104 · Help EN/AR: الفقرة تشرح أن كل فرعي يحمل علامته وأن 🌐 يختم الجميع وأن الفتح يصلح', hp === '[true,true]', hp);
+    ok('r104 · المصدر (المراجعة المستقلة): الكتابة الكاملة بأثر رجعي لمعرّفات الأماكن تمرّر علمَي الرؤية من الأم (كانت تعيد كل التصنيفات خاصة)', tplCount("public: myCityListData.public === true, sharedWith: myCityListData.sharedWith || [], categories: myCityListData.categories }).catch(()=>{});", 1).ok && tplCount("opts.syncVis && only", 1).ok && tplCount("repairVisibility: async function(docIds, isPublic, shared)", 1).ok, '');
+    /* تنظيف */ authStub.currentUser = auth0; B.set('currentUser', cu0); [kA, kB, kP].forEach(function(k){ store.delete(k); }); for (const k of Array.from(store.keys())){ if (k.indexOf('_visA') >= 0) store.delete(k); }
+    B.x("userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'visA'; }); if (userListData.nickname === 'visowner') userListData.nickname = " + JSON.stringify(JSON.parse(prev).nick) + "; myCityListLoadedFor = null; myCityListData = null; myCityListSaved = null; myCityListSavedVis = null; cityListCityId = " + JSON.stringify(JSON.parse(prev).c) + "; cityListCountry = " + JSON.stringify(JSON.parse(prev).k) + ";"); if (JSON.parse(prev).c) await B.x("loadMyCityList(" + JSON.stringify(JSON.parse(prev).c) + ")"); /* يُنتظر — تحميل سابح كان يستبدل ذاكرة المحطة التالية (r94) */
+    B.x("switchTab(" + JSON.stringify(JSON.parse(prev).tab) + ")");
+  }, ['cityLists.visibility']);
 
 
   await must('r93-٣ · (ملاحظة المالك ١٤:٤٥ · ١٤:٤٧) Help وSymbols يواكبان r91–r93 · بلاطات الرموز عاجية بحبر داكن كأزرار البطاقة', async () => {
