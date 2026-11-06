@@ -1,5 +1,5 @@
 {
- "build": "M2-ID-r108",
+ "build": "M2-ID-r109",
  "at": "2026-11-05",
  "modes": [
   "network",
@@ -62,6 +62,11 @@
     {
      "id": "places.merge",
      "name": "Merge into another city + Undo",
+     "kind": "write"
+    },
+    {
+     "id": "places.publish",
+     "name": "🌐 نشر القائمة: الأم وكل تصنيفاتها تحمل العلم معًا (r104)",
      "kind": "write"
     }
    ]
@@ -1113,6 +1118,85 @@
      "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
     ],
     "text": "City deleted | Faultville → Faultburg · 6 places ✓ — Undo is in City | Undone · Faultville ✓"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.publish",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.publish",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.publish",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
+    ],
+    "text": ""
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.publish",
+   "mode": "bad",
+   "na": "لا إدخال",
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.publish",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": ""
+   },
+   "group": "places",
+   "kind": "write"
+  },
+  {
+   "cap": "places.publish",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
+    ],
+    "text": ""
    },
    "group": "places",
    "kind": "write"
@@ -2557,7 +2641,9 @@
    "detail": {
     "changed": [
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA"
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
     ],
     "text": ""
    },
@@ -2593,7 +2679,9 @@
    "detail": {
     "changed": [
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA"
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_hotels"
     ],
     "text": ""
    },
@@ -2706,7 +2794,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793888269089_bmgqbg"
+     "reports/r_1793922673863_dj8dd6"
     ],
     "text": "Thanks — reported"
    },
@@ -2738,7 +2826,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793888270921_wa2wed"
+     "reports/r_1793922675687_xoziha"
     ],
     "text": "Thanks — reported"
    },
@@ -3199,7 +3287,7 @@
     "changed": [
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnick1793888295387",
+     "nicknames/faultnick1793922700080",
      "stats/users"
     ],
     "text": "Account created ✓"
@@ -3228,7 +3316,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1793888296966"
+     "nicknames/faultnick1793922701638"
     ],
     "text": "Account created ✓ | Account created ✓"
    },
@@ -3245,7 +3333,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1793888297669"
+     "nicknames/faultnick1793922702348"
     ],
     "text": "Account created ✓"
    },
@@ -3342,8 +3430,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew02366",
-     "nicknames/faultnick1793888297669"
+     "nicknames/faultnew07024",
+     "nicknames/faultnick1793922702348"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3371,8 +3459,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew03827",
-     "nicknames/faultnick1793888297669"
+     "nicknames/faultnew08482",
+     "nicknames/faultnick1793922702348"
     ],
     "text": "Nickname saved ✓ | Nickname saved ✓"
    },
@@ -3389,8 +3477,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew04440",
-     "nicknames/faultnick1793888297669"
+     "nicknames/faultnew09092",
+     "nicknames/faultnick1793922702348"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3762,7 +3850,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793888339962_c86ytp"
+     "reports/r_1793922744481_5a1v17"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -3787,8 +3875,8 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793888342007_n2985k",
-     "reports/r_1793888342007_9ipioo"
+     "reports/r_1793922746536_36z8fj",
+     "reports/r_1793922746536_n4eduy"
     ],
     "text": "Thanks — we will look into it | Thanks — we will look into it"
    },
@@ -3802,7 +3890,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793888342997_81jglq"
+     "reports/r_1793922747512_4wpe7h"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -3913,6 +4001,6 @@
   }
  ],
  "reds": 2,
- "ok": 242,
- "na": 74
+ "ok": 247,
+ "na": 75
 }
