@@ -230,8 +230,12 @@ const mpData = (function(){
         const me = currentUser && currentUser.uid; let q = col('userCityListCats').where('ownerId', '==', parent.ownerId).where('cityId', '==', parent.cityId);
         if (parent.ownerId !== me && !isOwner){ if (parent.public === true) q = q.where('public', '==', true); else if (me && (parent.sharedWith || []).indexOf(me) >= 0) q = q.where('sharedWith', 'array-contains', me); else return Object.assign({}, parent, { categories: {} }); }
         logTiming('[DATA] compose ' + parent.cityId + ' · cats query…'); const snap = await q.get(); logTiming('[DATA] compose ' + parent.cityId + ' · ' + snap.size + ' cats'); /* هـ-٨ */
-        const cats = {}; snap.forEach(function(d){ const c = d.data(); cats[c.catId] = { active: c.active !== false, places: c.places || [] }; });
-        return Object.assign({}, parent, { categories: mpFixAreaPlaces(cats) }); // ب-٦
+        const cats = {}; const visStale = []; const pPub = parent.public === true, pShared = mpData.cityLists._sharedKey(parent.sharedWith);
+        snap.forEach(function(d){ const c = d.data(); cats[c.catId] = { active: c.active !== false, places: c.places || [] }; if (parent.ownerId === me && ((c.public === true) !== pPub || mpData.cityLists._sharedKey(c.sharedWith) !== pShared)) visStale.push(d.id); }); /* r104 (ق١١-٠٦-٠١): للمالك — التصنيفات التي يخالف علمها الأم تُعاد للمُحمِّل ليصلحها */
+        const out = Object.assign({}, parent, { categories: mpFixAreaPlaces(cats) }); // ب-٦
+        if (visStale.length) out._visStale = visStale;
+        if (!snap.size && Array.isArray(parent.index) && parent.index.length) out._unreadable = true; /* r104: الأم تقول إن فيها أماكن والاستعلام عاد صفرًا — التصنيفات غير مقروءة لهذا الحساب (لا «لا أماكن») */
+        return out;
       },
       _indexOf: function(categories){ const ix = []; Object.keys(categories || {}).forEach(function(k){ (((categories[k] || {}).places) || []).forEach(function(p){ if (!p || !(p.name || p.url)) return; const o = { id: p.id || '', name: p.name || '', catId: k }; if (p.topPlace === true) o.top = true; if (p.topAt || p.updatedAt) o.at = p.topAt || p.updatedAt; if (p.updatedAt) o.up = p.updatedAt; /* خ-٦: ختم التعديل وحده — Latest يقرؤه من الفهرس (قرار r73y: المعدَّل لا Top) */ ix.push(o); }); }); return ix; },
       _fromIndex: function(parent){ // للشاشات الجماعية: categories مصغَّرة من الفهرس (اسم · معرّف · top · at) بلا قراءة فرعية
@@ -251,13 +255,21 @@ const mpData = (function(){
         if (!cats){ return col('userCityLists').doc(id).set(parent, { merge: true }); }
         delete parent.categories; parent.index = mpData.cityLists._indexOf(cats); parent.splitV = 1;
         const isPublic = data.public === true; const shared = data.sharedWith || [];
+        /* r104 (ق١١-٠٦-٠١ · السبب الجذري لعطل مونترو): منذ r100-أ تُكتب التصنيفات المتغيّرة وحدها، و🌐/المشاركة لا يغيّران تصنيفًا — فبقيت نسخة شرط القراءة بالفرعية خاصة بينما الأم عامة (والعكس عند الإلغاء).
+           opts.syncVis: مستندات التصنيفات القائمة التي لن تُكتب كاملة تأخذ العلمين في الدفعة نفسها (ذرّيًّا مع الأم) — قراءة واحدة بالاستعلام قبل الدفعة. */
+        let visDocs = []; if (opts && opts.syncVis && only){ const vs = await col('userCityListCats').where('ownerId', '==', uid).where('cityId', '==', cityId).get(); vs.forEach(function(d){ if (only.indexOf(String(d.id).slice(id.length + 1)) < 0) visDocs.push(d.id); }); }
         const b = db.batch(); b.set(col('userCityLists').doc(id), Object.assign({}, parent, { categories: del() }), { merge: true });
         Object.keys(cats).forEach(function(k){ if (only && only.indexOf(k) < 0) return; const e = cats[k] || {}; b.set(col('userCityListCats').doc(id + '_' + k), { ownerId: uid, cityId: cityId, catId: k, public: isPublic, sharedWith: shared, active: e.active !== false, places: (e.places || []).filter(function(p){ return p && (p.name || p.url); }), updatedAt: Date.now() }); });
-        return b.commit();
+        visDocs.forEach(function(docId){ b.set(col('userCityListCats').doc(docId), { public: isPublic, sharedWith: shared }, { merge: true }); });
+        await b.commit(); return { visCats: visDocs.length };
       },
+      _sharedKey: function(arr){ return (Array.isArray(arr) ? arr.map(String).slice().sort() : []).join(','); }, /* r104: مقارنة sharedWith بلا اعتبار للترتيب */
       setVisibility: async function(uid, cityId, isPublic, shared){ // r72t: نسخة شرط القراءة بالفرعية تتبع الأم
         const id = uid + '_' + cityId; const snap = await col('userCityListCats').where('ownerId', '==', uid).where('cityId', '==', cityId).get(); const b = db.batch();
         b.set(col('userCityLists').doc(id), { public: isPublic, sharedWith: shared || [] }, { merge: true }); snap.forEach(function(d){ b.set(col('userCityListCats').doc(d.id), { public: isPublic, sharedWith: shared || [] }, { merge: true }); }); return b.commit();
+      },
+      repairVisibility: async function(docIds, isPublic, shared){ /* r104: العلاج الذاتي عند تحميل قائمتي — المعرّفات جاءت من القراءة نفسها (لا قراءة إضافية) · دفعة واحدة */
+        const b = db.batch(); (docIds || []).forEach(function(docId){ b.set(col('userCityListCats').doc(docId), { public: isPublic === true, sharedWith: Array.isArray(shared) ? shared : [] }, { merge: true }); }); return b.commit();
       },
       dropCategoryKeys: async function(uid, cityId, keys){ // ر٧٠ط · r72t: حذف الفرعيات القديمة
         const id = uid + '_' + cityId; const b = db.batch(); keys.forEach(function(k){ b.delete(col('userCityListCats').doc(id + '_' + k)); }); const u = {}; keys.forEach(function(k){ u['categories.' + k] = del(); }); b.set(col('userCityLists').doc(id), u, { merge: true }); return b.commit();
