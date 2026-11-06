@@ -6,8 +6,11 @@ let userListData = { customCities: [], customCountries: [] };
 let cityListCityId = null;   // المدينة اللي المستخدم شغال عليها جوه "My List"
 let sharedCityLists = [];  // قوائم مدن مستخدمين آخرين شُوركت معي بالتحديد (Share with someone)
 let myCityListCatsDirty = false, myCityListOldKeys = []; // ر٧٠ط
+let myCityListSavedVis = null; /* r104 (ق١١-٠٦-٠١): آخر علمَي رؤية مكتوبَين (public · sharedWith) — تغيّرهما = كل مستندات التصنيفات تأخذهما في دفعة الحفظ نفسها */
 let myCityListSaved = null; /* r100-أ: لقطة آخر حالة محفوظة لتصنيفات المدينة المعروضة — الفرق عنها = ما تغيّر محليًّا (يُكتب وحده) وما حُذف محليًّا (لا يعود من المخزن) */
 function plSnapSaved(){ if (myCityListOldKeys.length || myCityListCatsDirty){ myCityListSaved = null; return; } /* ترحيل معلَّق: الذاكرة لا تطابق المخزن — الحفظ التالي يكتب كاملًا */ myCityListSaved = JSON.parse(JSON.stringify((myCityListData && myCityListData.categories) || {})); }
+function plVisSnap(){ myCityListSavedVis = myCityListData ? { public: myCityListData.public === true, sharedWith: (myCityListData.sharedWith || []).slice() } : null; } /* r104 */
+function plVisChanged(meta){ return !myCityListSavedVis || (myCityListSavedVis.public !== (meta.public === true)) || mpData.cityLists._sharedKey(myCityListSavedVis.sharedWith) !== mpData.cityLists._sharedKey(meta.sharedWith); } /* r104: بلا لقطة = يُعامل متغيّرًا (الأمان للرؤية) */
 function plPlaceKey(p){ return (p && (p.id || p.url)) || ''; }
 function plMergeCat(local, remote, saved){ /* r100-أ (العائلة ٥ — الكتابة العمياء): الناتج = المحلي ∪ (البعيد − المحذوف محليًّا)؛ مكان لم يُمسّ هنا وتغيّر هناك يؤخذ من هناك */
   const L = (local && local.places) || [], R = (remote && remote.places) || [], S = (saved && saved.places) || [];
@@ -129,11 +132,16 @@ async function loadMyCityList(cityId){
       categories: split.pub // خ٢: الخاص لم يعد يُدمج بقائمتي — وجهة العناوين هي المحرِّر الوحيد للمستند الخاص
     };
     plSnapSaved(); mpSaveOk('places'); /* r100-أ */
+    plVisSnap(); /* r104 */
+    if (Array.isArray(data._visStale) && data._visStale.length && !currentUserSuspended){ /* r104 (ق١١-٠٦-٠١): العلاج الذاتي — تصنيفات علمها يخالف الأم (أثر r100-أ على 🌐/المشاركة) تُصلَّح في مكانها من القراءة نفسها، دفعة واحدة، وتُترك أثرًا */
+      try{ await mpData.cityLists.repairVisibility(data._visStale, myCityListData.public, myCityListData.sharedWith); if (stale()) return; logTiming('LIST · ' + cityId + ' · visibility repaired ' + data._visStale.length + ' cat(s) · ' + (myCityListData.public ? 'public' : 'private') + ' · shared ' + (myCityListData.sharedWith || []).length); }
+      catch(e){ if (stale()) return; mpSwallow(e, 'visibility-repair'); try{ logTiming('LIST · ' + cityId + ' · visibility repair FAILED · ' + ((e && e.code) || (e && e.message) || 'error')); }catch(_){} }
+    }
     try{ const live = liveCountOf(myCityListData.categories); userListData.cityPlaceCounts = userListData.cityPlaceCounts || {}; // r70q2: تعافي العدّاد ذاتيًّا — إن خالف الواقع (مستند مستخدم صُفّر بعد الأماكن) يُصحَّح ويُحفظ
       if (currentUser && (Number(userListData.cityPlaceCounts[cityId]) || 0) !== live){ userListData.cityPlaceCounts[cityId] = live; const patch = { cityPlaceCounts: {} }; patch.cityPlaceCounts[cityId] = live; mpData.userLists.merge(currentUser.uid, patch).catch(function(){}); } }catch(e){}
     // تعبئة تلقائية بأثر رجعي لمعرّفات الأماكن القديمة — لهذي المدينة فقط
     if (backfillPlaceIds(myCityListData.categories) && !currentUserSuspended && Object.keys(myCityListData.categories).length){
-      mpData.cityLists.save(currentUser.uid, cityId, { ownerId: currentUser.uid, cityId, cityName: cityNameOf(cityId) || cityId, categories: myCityListData.categories }).catch(()=>{});
+      mpData.cityLists.save(currentUser.uid, cityId, { ownerId: currentUser.uid, cityId, cityName: cityNameOf(cityId) || cityId, public: myCityListData.public === true, sharedWith: myCityListData.sharedWith || [], categories: myCityListData.categories }).catch(()=>{}); /* r104 (المراجعة المستقلة): الكتابة الكاملة هنا كانت بلا علمَي الرؤية فتُعيد كل التصنيفات خاصة — العلمان يُمرَّران من الأم */
     }
   }catch(e){
     if (stale()) return;
@@ -142,7 +150,7 @@ async function loadMyCityList(cityId){
     // فالمسار الطبيعي للحساب والمدينة الجديدين يمر من فرع !doc.exists أعلاه، وتصنيف الحارس الثالث صار دقيقًا:
     // permission-denied هنا رفضٌ حقيقي (قواعد أو جلسة) لا غيابًا — يُعامل فشلًا حاجبًا للحفظ كأي خطأ آخر.
     myCityListData = { public:false, sharedWith:[], sharedWithNames:{}, bookmarkCount:0, categories:{} };
-    myCityListLoadFailed = true; myCityListLoadedFor = null; myCityListSaved = null; /* r100-أ: بلا لقطة — الحفظ التالي (إن سُمح) يكتب كاملًا */
+    myCityListLoadFailed = true; myCityListLoadedFor = null; myCityListSaved = null; myCityListSavedVis = null; /* r100-أ: بلا لقطة — الحفظ التالي (إن سُمح) يكتب كاملًا */
     myCityListLoadError = mpErrText(e); mpSwallow(e, 'places-load'); if (code === 'permission-denied') try{ logTiming('PLACES · load · permission denied (rules 3.8: absent docs read as empty — this is a real denial)'); }catch(_){} /* r100-د: للمستخدم سبب مفهوم؛ للتشخيص تصنيف الحارس الثالث كما كان */
     myCityListLoading = false; return;
   }
@@ -186,7 +194,7 @@ async function saveMyCityList(){
     if (currentUser && curData[currentUser.uid]) delete curData[currentUser.uid]; // ر٧٢-أ-١و: ⭐/الملاحظات تظهر بصفحتي فورًا بعد الحفظ
   if (!livePlaces){ // ر٧٠ج (قرار المالك): القائمة الفارغة لا وجود لها — يُحذف مستندها (كالرحلة الفارغة)؛ المدينة تبقى بعدّاد صفر
       try{ await mpData.cityLists.remove(currentUser.uid, cityListCityId); }catch(e){}
-      myCityListOldKeys = []; myCityListCatsDirty = false;
+      myCityListOldKeys = []; myCityListCatsDirty = false; myCityListSavedVis = null; /* r104 */
       if (Object.keys(priv).length) await mpData.privatePlaces.save(currentUser.uid, cityListCityId, priv);
       userListData.cityPlaceCounts = userListData.cityPlaceCounts || {}; if (userListData.cityPlaceCounts[cityListCityId]){ userListData.cityPlaceCounts[cityListCityId] = 0; try{ await saveUserListGeneral(); }catch(e){} }
       delete __cmSummary.places; plSnapSaved(); mpSaveOk('places'); /* r100-أ */ try{ await syncCommunityProfile(); }catch(e){} try{ logTiming('SAVE · ' + cityListCityId + ' · 0 places · list removed'); }catch(_){} return true; // ر٧٢-أ-١د: لا مدينة شبح بالملف العام بعد حذف القائمة الفارغة · r87-3
@@ -198,8 +206,11 @@ async function saveMyCityList(){
       for (const k of changed){ let remote = null; try{ remote = await mpData.cityLists.catDoc(currentUser.uid, cityListCityId, k); }catch(e){ remote = null; } if (remote) plMergeCat(pub[k], remote, myCityListSaved[k]); /* يحدّث pub[k] في مكانه — وهو كيان myCityListData.categories[k] نفسه */ }
       onlyCats = changed; try{ logTiming('SAVE · ' + cityListCityId + ' · cats changed ' + changed.length + '/' + Object.keys(pub).length); }catch(_){}
     }
-    await mpData.cityLists.save(currentUser.uid, cityListCityId,
-      { ownerId: currentUser.uid, cityId: cityListCityId, cityName: cityNameOf(cityListCityId) || cityListCityId, nickname: userListData.nickname || null, ...meta, categories: pub, catsV: CATS_VERSION }, onlyCats ? { onlyCats: onlyCats } : undefined); // ر٧٠ط · r100-أ
+    const visChanged = plVisChanged(meta); /* r104 */
+    const __w = await mpData.cityLists.save(currentUser.uid, cityListCityId,
+      { ownerId: currentUser.uid, cityId: cityListCityId, cityName: cityNameOf(cityListCityId) || cityListCityId, nickname: userListData.nickname || null, ...meta, categories: pub, catsV: CATS_VERSION }, onlyCats ? { onlyCats: onlyCats, syncVis: visChanged } : undefined); // ر٧٠ط · r100-أ · r104: تغيّر الرؤية يُسرى على كل مستندات التصنيفات في الدفعة نفسها
+    if (visChanged && onlyCats){ try{ logTiming('SAVE · ' + cityListCityId + ' · visibility → ' + (meta.public === true ? 'public' : 'private') + ' · shared ' + (meta.sharedWith || []).length + ' · cats ' + ((onlyCats ? onlyCats.length : Object.keys(pub).length) + ((__w && __w.visCats) || 0))); }catch(_){} }
+    plVisSnap(); /* r104: اللقطة بعد الكتابة الناجحة */
     if (myCityListOldKeys.length){ await mpData.cityLists.dropCategoryKeys(currentUser.uid, cityListCityId, myCityListOldKeys); myCityListOldKeys = []; } // الدمج لا يحذف المفاتيح القديمة — تُحذف صراحة
     myCityListCatsDirty = false;
     if (Object.keys(priv).length) await mpData.privatePlaces.save(currentUser.uid, cityListCityId, priv);
