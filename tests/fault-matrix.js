@@ -66,6 +66,11 @@ const PLACES = { id: 'places', name: 'الأماكن', caps: [
     action: "await cmMerge('fmA', 'fmB'); " + WAIT + " if (cmUndo) await cmUndoLast(); " + WAIT,
     bad: ["await cmMerge('fmA', 'fmA'); " + WAIT, "await cmMerge('fmA', 'no_such_city'); " + WAIT, "await cmMerge('', 'fmB'); " + WAIT],
     cleanup: "userListData.customCities = (userListData.customCities || []).filter(function(c){ return c.id !== 'fmA' && c.id !== 'fmB'; }).concat([{ id: 'fmA', name: 'Faultville', country: 'Testland', lat: 48.86, lng: 2.35 }, { id: 'fmB', name: 'Faultburg', country: 'Testland', lat: 48.9, lng: 2.4 }]); " + PL_CLEAN },
+  { id: 'places.publish', name: '🌐 نشر القائمة: الأم وكل تصنيفاتها تحمل العلم معًا (r104)', kind: 'write',
+    setup: PL_CITY + " if (!userListData.nickname) userListData.nickname = 'faultnick';",
+    invariant: "(await (async function(){ var d = await mpData.cityLists.get(currentUser.uid, 'fmA'); return !!d && !d._visStale; })())", /* لا تصنيف يخالف الأم بعد أي تسلسل — أو يُصلَح عند أول قراءة */
+    action: "await toggleCityListPublic(); " + WAIT,
+    cleanup: "if (myCityListData && myCityListData.public){ myCityListData.public = false; try{ await saveMyCityList(); }catch(_){} } " + PL_CLEAN },
 ] };
 
 /* ── الرحلات ── */
