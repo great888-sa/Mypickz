@@ -261,7 +261,7 @@ function curPrimeLayerFromCurator(uid){ /* ر٧٣-أب (٢): طبقة المست
   viewingUserUid = uid; viewingUserData = Object.assign({ publicCityIds: d.cities.map(function(c){ return c.id; }) }, u); viewingUserCities = d.cities.map(function(c){ return { id: c.id, name: c.name, categories: c.categories || {}, _full: c._full === true, _src: c, favoriteCount: 0, bookmarkCount: c.bookmarkCount || 0, viewCount: c.viewCount || 0 }; }); communityUserTrips = (d.trips || []).slice(); communityUserDayPlans = (d.dayPlans || []).slice(); /* r103 */ communityUserLayer = null; communityViewingCityId = null; viewingCommunityTripId = null; vcuStep = 'done'; return true; }
 async function curEnsureCity(uid, cityId){ /* خ-٦: تحميل المدينة عند فتحها — تركيب مستنداتها الفرعية مرة بالجلسة؛ قبلها الفهرس يكفي للعدّ والبطاقات */
   const d = curData[uid]; if (!d) return null; const c = (d.cities || []).find(function(x){ return x.id === cityId; }); if (!c || c._full) return c || null;
-  try{ const full = await mpData.cityLists.get(uid, cityId); if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; c._full = true; logTiming('[CUR] city composed ' + cityId + ' cats=' + Object.keys(full.categories).length); } }catch(e){ mpSwallow(e, 'curator city'); }
+  try{ const full = await mpData.cityLists.get(uid, cityId); if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; c._full = true; c._unreadable = full._unreadable === true; logTiming('[CUR] city composed ' + cityId + ' cats=' + Object.keys(full.categories).length + (c._unreadable ? ' · UNREADABLE (index has places)' : '')); } }catch(e){ mpSwallow(e, 'curator city'); } /* r104 */
   return c;
 }
 async function curHydrate(uid, items){ /* خ-٦: عناصر مختارة من الفهرس (مدينة · تصنيف · مكان) → تُقرأ مستندات التصنيفات المعنية فقط (مرة بالجلسة) وتُستبدل الأماكن الكاملة بمعرّفها */
@@ -671,8 +671,8 @@ async function cmEnsureCity(uid, c){ /* خ-٦: تركيب مدينة الشخص 
   /* هـ-١٠ (السبب الجذري لتجمّد Open من Shared with me — أُعيد إنتاجه في Chromium وأُوقف المنقّح على مكدسه): كان الاستدعاء الثاني أثناء التحميل يعود فورًا بوعد محلول، فيعيد renderCommunityUserList الرسم في .then، فيستدعي هذه الدالة فتعود فورًا… سلسلة مهام دقيقة (microtasks) لا تترك للخيط الرئيسي فرصة لمعالجة جواب القراءة الذي ينهي التحميل — تجمّد كامل حتى يقتل Safari الصفحة. مسار المشاركة يرسم مرتين أثناء التحميل دائمًا (openCommunityModal بعد تحميل قوائم المجتمع)، والفتح المباشر لا يرسم إلا مرة. الآن: الاستدعاء الثاني ينتظر الوعد الجاري نفسه؛ وبعد المحاولة تُعدّ المدينة مكتملة (بنجاح أو ببيانات الفهرس) فلا إعادة طلب ولا دوران */
   if (!c || c._full) return c; if (c._loading) return c._loading;
   c._loading = (async function(){
-    try{ if (c._src){ await curEnsureCity(uid, c.id); if (c._src._full){ c.categories = c._src.categories; } }
-      else { const full = await mpData.cityLists.get(uid, c.id); if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; logTiming('[CM] city composed ' + c.id + ' cats=' + Object.keys(full.categories).length); } else showToast('Could not load this list'); } }
+    try{ if (c._src){ await curEnsureCity(uid, c.id); if (c._src._full){ c.categories = c._src.categories; c._unreadable = c._src._unreadable === true; } }
+      else { const full = await mpData.cityLists.get(uid, c.id); if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; c._unreadable = full._unreadable === true; logTiming('[CM] city composed ' + c.id + ' cats=' + Object.keys(full.categories).length + (c._unreadable ? ' · UNREADABLE (index has places)' : '')); } else showToast('Could not load this list'); } } /* r104 */
     catch(e){ mpSwallow(e, 'community city'); mpErrToast('Could not load this list', e); } /* r100-د */
     c._full = true; c._loading = null; return c;
   })();
@@ -803,7 +803,7 @@ function renderCommunityUserList(wrap){
   secBlocks.sort(function(a, b){ return (b.hit ? 1 : 0) - (a.hit ? 1 : 0); }); html += secBlocks.map(function(x){ return x.html; }).join('');
   if ((cmFilterMain || cmFilterSub) && hasAnyPlace) html += '<div class="ctx" style="margin-top:8px;"><button type="button" class="act" onclick="cmFilterMain = \'\'; cmFilterSub = \'\'; renderCommunityModal()">Show all categories</button></div>';
 
-  if (!hasAnyPlace) html += `<div class="mp-empty mini">No active places in this city yet</div>`;
+  if (!hasAnyPlace) html += (cityObj && cityObj._unreadable && !(cmFilterMain || cmFilterSub)) ? `<div class="mp-empty mini" id="cmUnreadable">Couldn't read this list's places<br><small>The list says it has places, but this account couldn't read them — the owner opening their list once repairs it</small></div>` : `<div class="mp-empty mini">No active places in this city yet</div>`; /* r104 (ق١١-٠٦-٠١ البند ٤): الصدق بدل «لا أماكن» حين تكون الأم غير فارغة والتصنيفات غير مقروءة */
   wrap.innerHTML = html;
 }
 
