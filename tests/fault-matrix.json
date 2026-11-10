@@ -1,6 +1,6 @@
 {
- "build": "M2-ID-r110",
- "at": "2026-11-09",
+ "build": "M2-ID-r113",
+ "at": "2026-11-10",
  "modes": [
   "network",
   "permission",
@@ -1693,7 +1693,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1794268513896_odr8a"
+     "trips/trip_1794324238280_k7kgx"
     ],
     "text": ""
    },
@@ -1718,7 +1718,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1794268516034_7pt98"
+     "trips/trip_1794324240443_bhtdw"
     ],
     "text": ""
    },
@@ -1732,7 +1732,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1794268516987_7iw1y"
+     "trips/trip_1794324241444_5sl3d"
     ],
     "text": ""
    },
@@ -1745,8 +1745,8 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Fault Day → Fault Trip · day 2 ✓ | Could not load the places of this trip — check your connection | Not saved | Not saved",
-    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+    "text": "Kept as it was",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
    },
    "group": "trips",
    "kind": "write"
@@ -1757,8 +1757,8 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Fault Day → Fault Trip · day 2 ✓ | Could not load the places of this trip — you don't have access | Not saved | Not saved",
-    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+    "text": "Kept as it was",
+    "note": "لم يلمس المخزن — يعمل من الذاكرة"
    },
    "group": "trips",
    "kind": "write"
@@ -1769,10 +1769,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "trips/fmt1"
-    ],
-    "text": "Fault Day → Fault Trip · day 2 ✓"
+    "text": "Kept as it was"
    },
    "group": "trips",
    "kind": "write"
@@ -1794,10 +1791,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "trips/fmt1"
-    ],
-    "text": "Fault Day → Fault Trip · day 2 ✓"
+    "text": "Kept as it was"
    },
    "group": "trips",
    "kind": "write"
@@ -1808,10 +1802,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "changed": [
-     "trips/fmt1"
-    ],
-    "text": "Fault Day → Fault Trip · day 2 ✓"
+    "text": "Kept as it was"
    },
    "group": "trips",
    "kind": "write"
@@ -2515,8 +2506,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "This trip is no longer available",
-    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+    "text": "Could not open this trip — check your connection"
    },
    "group": "community",
    "kind": "read"
@@ -2527,8 +2517,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "This trip is no longer available",
-    "note": "لم يلمس المخزن — يعمل من الذاكرة"
+    "text": "This trip is no longer available"
    },
    "group": "community",
    "kind": "read"
@@ -2539,7 +2528,10 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "This trip is no longer available"
+    "changed": [
+     "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    ],
+    "text": ""
    },
    "group": "community",
    "kind": "read"
@@ -2876,7 +2868,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1794268584143_a0pmjn"
+     "reports/r_1794324309257_qg7od6"
     ],
     "text": "Thanks — reported"
    },
@@ -2908,7 +2900,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1794268585987_irxlu4"
+     "reports/r_1794324311093_g99wgt"
     ],
     "text": "Thanks — reported"
    },
@@ -3369,7 +3361,7 @@
     "changed": [
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnick1794268610832",
+     "nicknames/faultnick1794324336069",
      "stats/users"
     ],
     "text": "Account created ✓"
@@ -3398,7 +3390,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1794268612414"
+     "nicknames/faultnick1794324337657"
     ],
     "text": "Account created ✓ | Account created ✓"
    },
@@ -3415,7 +3407,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1794268613134"
+     "nicknames/faultnick1794324338377"
     ],
     "text": "Account created ✓"
    },
@@ -3511,9 +3503,10 @@
     "changed": [
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew17945",
-     "nicknames/faultnick1794268613134"
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_3196359",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_3203789"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3540,9 +3533,10 @@
     "changed": [
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew19439",
-     "nicknames/faultnick1794268613134"
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_3196359",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_3203789"
     ],
     "text": "Nickname saved ✓ | Nickname saved ✓"
    },
@@ -3558,9 +3552,10 @@
     "changed": [
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew20069",
-     "nicknames/faultnick1794268613134"
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_3196359",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_3203789"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3932,7 +3927,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1794268655850_kg8n6z"
+     "reports/r_1794324381116_mcz0za"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -3957,8 +3952,8 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1794268657920_v7q5sl",
-     "reports/r_1794268657920_uo91ms"
+     "reports/r_1794324383229_f4u33p",
+     "reports/r_1794324383229_9rnkk9"
     ],
     "text": "Thanks — we will look into it | Thanks — we will look into it"
    },
@@ -3972,7 +3967,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1794268658915_2mh03x"
+     "reports/r_1794324384230_ciw1rt"
     ],
     "text": "Thanks — we will look into it"
    },
