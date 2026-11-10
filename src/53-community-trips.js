@@ -4,18 +4,24 @@ let viewingCommunityTripId = null;
 
 async function loadCommunityUserTrips(uid){
   try{
-    const __rows = await mpData.trips.publicByOwner(uid); const snap = { forEach: function(fn){ __rows.forEach(function(r){ fn({ id: r.id, data: function(){ return r; } }); }); }, empty: __rows.length === 0, size: __rows.length };
+    const __rows = await cmPersonTrips(uid); /* r109 */ const snap = { forEach: function(fn){ __rows.forEach(function(r){ fn({ id: r.id, data: function(){ return r; } }); }); }, empty: __rows.length === 0, size: __rows.length };
     communityUserTrips = []; communityUserDayPlans = [];
     snap.forEach(doc => { const d = doc.data(); if (d && d.dayPlan){ communityUserDayPlans.push({ id: doc.id, ...d }); return; } communityUserTrips.push({ id: doc.id, ...d }); }); /* r92 (ق١٠-٢٨-٠٦): خطة اليوم لا تُعرض في قائمة الرحلات · r103: تُحفظ جانبًا لشرائح مدينتها */
   }catch(e){ communityUserTrips = []; communityUserDayPlans = []; }
 }
+let cmTripOpening = null;
 async function openCommunityTrip(tripId){
   try{ const __t = (cmCache.trips && cmCache.trips[tripId]) || (communityUserTrips || []).find(function(t){ return t.id === tripId; }); if (__t && currentUser && __t.ownerId !== currentUser.uid) mpData.trips.bumpView(tripId).catch(function(){}); }catch(_){} // r72t (M4.26 ٣)
   mpTrack.statsTrip(tripId, 'view_total');
-  viewingCommunityTripId = tripId;
+  const __op = (cmTripOpening = tripId + '#' + Date.now() + Math.random()); /* r109-ب (المراجعة): حالة العرض تُضبط بعد التحقق لا قبله — رسمٌ متزامن لا يعرض الخطة من الذاكرة، وفتحٌ أحدث لا يلغيه فتح أقدم */
   let trip = communityUserTrips.find(t => t.id === tripId) || (communityUserDayPlans || []).find(t => t.id === tripId) || (typeof sharedTrips !== 'undefined' ? (sharedTrips || []).find(t => t.id === tripId) : null) || cmCache.trips[tripId]; // ر٦٩ذ: من السوق مباشرة · r103: خطة يوم من الشرائح (عامة أو مشارَكة معي)
-  if (!trip){ try{ trip = await mpData.trips.get(tripId); }catch(e){} }
+  let __fresh = false; if (!trip){ const __v = await cmVerifyTrip(tripId); if (cmTripOpening !== __op) return; if (__v.ok){ trip = __v.trip; __fresh = true; } else if (__v.err){ mpErrToast('Could not open this trip', __v.err); return; } } /* r109 (المراجعة الثانية): كان النداء على mpData.trips.get — عضو غير موجود — فالمسار يقول «no longer available» دائمًا؛ التدقيق §39 يمنع الصنف */ /* r109 (المراجعة الثانية): كان النداء على mpData.trips.get — عضو غير موجود — فالمسار يقول «no longer available» دائمًا؛ التدقيق §39 يمنع الصنف */
   if (!trip){ showToast('This trip is no longer available'); return; }
+  if (!__fresh && !(currentUser && trip.ownerId === currentUser.uid)){ /* r109-ب: من الذاكرة — قراءة تحقق واحدة قبل العرض، وما عاد منها هو ما يُعرض */ const __v = await cmVerifyTrip(tripId); if (cmTripOpening !== __op) return;
+    if (__v.gone){ cmTripGone(tripId, trip.ownerId); showToast('This trip is no longer available'); renderCommunityModal(); return; }
+    if (__v.err){ mpErrToast('Could not open this trip', __v.err); return; }
+    const __t = __v.trip; const __swap = function(arr){ const i = (arr || []).findIndex(function(t){ return t.id === tripId; }); if (i >= 0) arr[i] = __t; }; __swap(communityUserTrips); __swap(communityUserDayPlans); if (cmCache.trips[tripId]) cmCache.trips[tripId] = __t; trip = __t; }
+  viewingCommunityTripId = tripId;
   if (!communityUserTrips.find(t => t.id === tripId)){ if (trip.dayPlan){ if (!(communityUserDayPlans || []).some(t => t.id === tripId)) communityUserDayPlans.push(trip); } else communityUserTrips.push(trip); } /* r103: خطة اليوم لا تدخل قائمة رحلات الشخص */
   if (!viewingUserUid){ cmDirect = true; viewingUserUid = trip.ownerId; viewingUserData = (communityUsers || []).find(u => u.uid === trip.ownerId) || { uid: trip.ownerId, nickname: trip.ownerName || 'user', publicCityIds: [] }; viewingUserCities = []; } // ر٦٩غ: الفتح من السوق مباشرة — عرض الرحلة يعيش بطبقة صاحبها
   const wrap = document.getElementById('communityBody');
@@ -66,7 +72,7 @@ async function openMostSavedStats(){
       const rows = await mpData.placeCounts.top(30); // v1.40: placeFavoriteCounts = عدّاد الحفظ
       rowsHtml = rows.length ? rows.map(function(d, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span><a href="' + attrStr(d.url || '#') + '" target="_blank" rel="noopener" class="stats-name">' + escapeHtml(d.name || '') + '</a></div><div class="pl-sub">' + (d.count || 0) + ' save' + (d.count === 1 ? '' : 's') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No saves recorded yet</div>';
     } else {
-      const rows = (await mpData.cityLists.publicLists()).filter(function(l){ return (l.copyCount || 0) > 0; }).sort(function(a, b){ return (b.copyCount || 0) - (a.copyCount || 0); }).slice(0, 30);
+      const rows = (await cmPublicListsCached()).filter(function(l){ return (l.copyCount || 0) > 0; }) /* r109: من الباب الواحد */.sort(function(a, b){ return (b.copyCount || 0) - (a.copyCount || 0); }).slice(0, 30);
       rowsHtml = rows.length ? rows.map(function(l, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span>' + escapeHtml(l.cityName || l.cityId || '') + '</div><div class="pl-sub">' + (l.copyCount || 0) + ' cop' + (l.copyCount === 1 ? 'y' : 'ies') + (l.nickname ? ' · by ' + escapeHtml(l.nickname) : '') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No copies recorded yet</div>';
     }
     body.innerHTML = seg + rowsHtml;
