@@ -194,8 +194,8 @@ function pickerPanel(spec){
   if (typeof spec.edit === 'boolean') st.edit = spec.edit;
   const items = pickerFilterItems(spec.items, st.query);
   const rows = (spec.limit ? items.slice(0, spec.limit) : items).map(it =>
-    '<div class="prow' + (it.selected ? ' sel' : '') + '"' + (it.country ? ' data-country="' + attrStr(String(it.country).toLowerCase()) + '"' : '')
-    + ' onclick="' + (spec.onPick || 'void') + '(\'' + attrStr(it.id) + '\')"><span class="nm">' + (it.selected ? '<span class="dot"></span>' : '') + (it.icon ? escapeHtml(it.icon) + ' ' : '') + escapeHtml(it.name) + (it.sub ? '<br><span class="dim mini">' + escapeHtml(it.sub) + '</span>' : '') + '</span>'
+    '<div class="prow' + (it.selected ? ' sel' : '') + (it.off ? ' off' : '') + '"' + (it.country ? ' data-country="' + attrStr(String(it.country).toLowerCase()) + '"' : '')
+    + (it.off ? '' : ' onclick="' + (spec.onPick || 'void') + '(\'' + attrStr(it.id) + '\')"') + '><span class="nm">' /* r105-٣: it.off = معروض بلا اختيار (السبب في sub) */ + (it.selected ? '<span class="dot"></span>' : '') + (it.icon ? escapeHtml(it.icon) + ' ' : '') + escapeHtml(it.name) + (it.sub ? '<br><span class="dim mini">' + escapeHtml(it.sub) + '</span>' : '') + '</span>'
     + '<span>' + (it.count == null ? '' : '<span class="cnt-num">' + escapeHtml(String(it.count)) + '</span>')
     + ((st.edit && it.custom) ? ' <button type="button" class="del" onclick="event.stopPropagation();' + (spec.onDelete || 'void') + '(\'' + attrStr(it.id) + '\')" title="Delete">🗑</button>' : '')
     + '</span></div>').join('');
