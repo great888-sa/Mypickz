@@ -49,12 +49,27 @@ function gazLoad(cc){
 }
 async function gazCityOptions(countryName){
   const rows = await gazLoad(plCountryCode(countryName));
-  return rows.map(c => ({ name: c.n, alt: [].concat(c.a || [], c.ar ? [c.ar] : []) }));
+  return rows.map(c => ({ name: c.n, alt: [].concat(c.s || [], c.a || [], c.ar ? [c.ar] : []) })); /* r107-ج: الأسماء القوية تدخل البحث */
 }
-async function gazFindCity(countryName, name){ // ز-١-ج-٢: الصف بالمعجم (معرّف · مركز · نصف قطر الجزيرة) — الاسم أو بدائله أو العربي
-  const rows = await gazLoad(plCountryCode(countryName)); const n = pickerNormalize(name); let best = null;
-  (rows || []).forEach(function(c){ const names = [c.n].concat(c.a || [], c.ar ? [c.ar] : []); if (names.some(function(x){ return pickerNormalize(x) === n; }) && (!best || (c.p || 0) > (best.p || 0))) best = c; });
-  return best;
+/* ═══ r107-ب (ق١١-١٠-٠٢ — عيّنة المالك: نيويورك تُثبَّت في كلينتون، ويسكونسن): محلِّل الأسماء الواحد. أسماء المعجم البديلة ضجيج (أول أربعة بدائل من GeoNames كيفما جاءت: «New York» بديلٌ لبلدتين ليس أيٌّ منهما نيويورك،
+   وصف نيويورك نفسه اسمه «New York City»). القواعد — لكل من يطابق اسمًا بصف: (١) الاسم الأصلي/العربي ٤ ثم القوي s (يكتبه باني المعجم الجديد) ٣ ثم «الاسم بلا لاحقة City» ٢ ثم البديل ١ ·
+   (٢) بديلٌ وحده أبعد من ١٠٠ كم عن المرجع لا يُصدَّق (far) — يُسأل عنه ولا يُختار صامتًا · (٣) بمرجع: الأقرب بين أصحاب الطبقة العليا (Salamanca الحيّ لا المدينة) · بلا مرجع: الرتبة ثم السكان. ═══ */
+const GAZ_ALIAS_KM = 100;
+function gazWords(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(function(w){ return w && !/^\d+$/.test(w); }); }
+function gazCore(s){ const w = gazWords(s); while (w.length > 1 && w[w.length - 1] === 'city') w.pop(); return w.join(' '); }
+function gazNameRank(row, name){ const base = String(name || '').replace(/[\d٠-٩]+/g, ' ').trim(); /* «الرياض ١٢٢١١» — الرمز البريدي ليس من الاسم */ const en = pickerNormalize(base); const ar = (typeof arNorm === 'function') ? arNorm(base) : ''; if (!row || (!en && !ar)) return 0;
+  if ((en && pickerNormalize(row.n) === en) || (ar && [].concat(row.ar || []).some(function(x){ return arNorm(x) === ar; }))) return 4;
+  if (en && (row.s || []).some(function(x){ return pickerNormalize(x) === en; })) return 3;
+  const core = gazCore(name); if (core.length >= 3 && (gazCore(row.n) === core || (row.s || []).some(function(x){ return gazCore(x) === core; }))) return 2;
+  if (en && (row.a || []).some(function(x){ return pickerNormalize(x) === en; })) return 1; return 0; }
+function gazCityRow(city, row){ return { n: (city && city.name) || (row && row.n) || '', ar: [city && city.nameAr, row && row.ar].filter(Boolean), s: [row && row.n].concat((row && row.s) || []).filter(Boolean), a: (row && row.a) || [] }; } /* المدينة المفتوحة بكل أسمائها (اسمها عندك + صف المعجم) — صفًّا يُسأل عنه gazNameRank */
+function gazResolve(rows, name, o){ o = o || {}; const near = (o.near && typeof o.near.lat === 'number') ? o.near : null; const ok = [], far = [];
+  (rows || []).forEach(function(r){ if (typeof r.lat !== 'number' || (o.skipId !== undefined && o.skipId !== null && String(r.id) === String(o.skipId))) return; const rank = gazNameRank(r, name); if (!rank) return; const km = near ? plKm(near, r) : null; if (o.maxKm && near && km > o.maxKm) return; const it = { row: r, rank: rank, km: km }; if (rank === 1 && near && km > GAZ_ALIAS_KM) far.push(it); else ok.push(it); });
+  const tier = function(x){ return x.rank >= 3 ? 3 : x.rank; }; const top = ok.reduce(function(m, x){ return Math.max(m, tier(x)); }, 0); const by = near ? function(a, b){ return (a.km - b.km) || (b.rank - a.rank); } : function(a, b){ return (b.rank - a.rank) || ((b.row.p || 0) - (a.row.p || 0)); };
+  const best = ok.filter(function(x){ return tier(x) === top; }).sort(by), lower = ok.filter(function(x){ return tier(x) !== top; }).sort(by); far.sort(function(a, b){ return a.km - b.km; });
+  return { ok: best, lower: lower, far: far, best: best.length ? best[0].row : null }; } /* (٤) الطبقة تسبق القرب: اسمٌ مطابق تمامًا يسبق «بلا City» وهذا يسبق البديل — ثم الأقرب داخل الطبقة (عيّنتا القياس: «Quezon City» من دافاو · «Marseille» من باريس) */
+async function gazFindCity(countryName, name){ // ز-١-ج-٢: الصف بالمعجم (معرّف · مركز · نصف قطر الجزيرة) · r107-ب: الاسم الأصلي يسبق البديل (كان الأكبر سكانًا بين كل من حمل الاسم ولو بديلًا)
+  const rows = await gazLoad(plCountryCode(countryName)); return gazResolve(rows, name).best;
 }
 function gazEntryToCity(row, countryName){ const o = { id: String(row.id), name: row.n, country: countryName }; if (typeof row.lat === 'number'){ o.lat = row.lat; o.lng = row.lng; } if (row.r) o.r = row.r; if (row.ar) o.nameAr = row.ar; if (row.island) o.island = true; return o; }
 let inputModalOptions = null;
