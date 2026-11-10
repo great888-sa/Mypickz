@@ -130,6 +130,8 @@ async function loadUsersForAdmin(){ // عبر طبقة العزل فقط
 }
 /* ب-٢-٢-ب (v2-ب · ٢ · ٢-ب): Users — بحث بالاسم أو البريد · صف بالحرفين والاسم والبريد والشارات · النقر يفتح بطاقة المستخدم بأفعاله الثلاثة (Curator badge · View stats · Suspend) · Show more بعد ٥٠ */
 let adminUsersShown = 50;
+const adminHoldChecked = {}; /* r109-ب: حساب أُوقف قبل «الإيقاف الكامل» بقيت تصنيفاته عامة في القواعد — عند فتح Users يُفحص كل موقوف مرة بالجلسة ويُكتب ما يخالف وحده (علاج ذاتي كعلاج r104، وسطر VIS · account … held … (out of step only) حين كُتب شيء) */
+async function adminHoldSweep(){ const list = (allUsersCache || []).filter(function(u){ return u && u.suspended && !adminHoldChecked[u.uid]; }); for (const u of list){ adminHoldChecked[u.uid] = true; try{ const sd = await mpData.suspensions.get(u.uid); if (!(sd && sd.exists) || !u.suspended || u.__suspendBusy) continue; /* المراجعة: مصدر الحقيقة suspensions/{uid} يُقرأ لحظتها — حساب رُفع إيقافه للتوّ لا يُحتجز من جديد */ await mpData.cityLists.holdAll(u.uid, true, { onlyOutOfStep: true }); await mpData.holdOrRestore(await mpData.trips.byOwner(u.uid), true); }catch(e){ delete adminHoldChecked[u.uid]; mpSwallow(e, 'hold-sweep'); } } }
 async function openUsersModal(){
   const body = document.getElementById('dashBody'); const bd = document.getElementById('dashBackdrop'); if (!body || !bd) return;
   dashSet('👥 Users', adminBack); body.innerHTML = '<div class="mp-empty mini">Loading…</div>'; bd.classList.add('show'); adminUsersShown = 50;
@@ -138,7 +140,8 @@ async function openUsersModal(){
     allUsersCache = await mpData.users.all();
     try{ const susSet = await mpData.suspensions.allIds(); allUsersCache.forEach(u => { u.suspended = susSet.has(u.uid); }); }catch(e){ /* v3: مصدر الحقيقة suspensions — قبل نشرها يبقى الحقل القديم */ }
   }catch(e){ mpSwallow(e, 'admin-users'); allUsersCache = []; body.innerHTML = '<div class="mp-empty mini">Could not load users — ' + escapeHtml(mpErrText(e)) + '</div><button type="button" class="dash-door" onclick="openUsersModal()"><span>↻ Retry</span><span></span></button>'; return; }
-  await loadCommunityLists();
+  await loadCommunityLists(true); /* r109: بعد فعل إداري — من الخادم */
+  adminHoldSweep(); /* r109-ب: لا ينتظره الرسم */
   communityUsers.forEach(cu => { const u = allUsersCache.find(x => x.uid === cu.uid); if (u && !u.nickname && cu.nickname){ u.nickname = cu.nickname; mpData.users.merge(cu.uid, { nickname: cu.nickname }).catch(()=>{}); } }); // إصلاح تلقائي للاسم الناقص من القائمة العامة
   try{ curators = await mpData.profiles.curators(200); }catch(e){ curators = curators || []; }
   body.innerHTML = '<div class="ctx" id="usersCtx" style="text-align:center;"></div><div class="headrow" style="margin:0 0 8px;"><input type="text" id="usersSearchInput" class="csel grow psearch" placeholder="Search by name or email…" oninput="renderUsersModal(this.value)" autocomplete="off"></div><div id="usersListBody"></div>';
