@@ -1,6 +1,6 @@
 {
- "build": "M2-ID-r109",
- "at": "2026-11-05",
+ "build": "M2-ID-r110",
+ "at": "2026-11-09",
  "modes": [
   "network",
   "permission",
@@ -108,6 +108,11 @@
     {
      "id": "trips.dayPlan",
      "name": "خطة اليوم: بناء وحفظ",
+     "kind": "write"
+    },
+    {
+     "id": "trips.optionSwap",
+     "name": "Options في Day route: البديل يصير المحطة (r105)",
      "kind": "write"
     },
     {
@@ -1658,6 +1663,83 @@
    "kind": "write"
   },
   {
+   "cap": "trips.optionSwap",
+   "mode": "network",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not load the places of this trip — check your connection | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.optionSwap",
+   "mode": "permission",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": "Could not load the places of this trip — you don't have access | Not saved | Not saved",
+    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.optionSwap",
+   "mode": "partial",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/trip_1794268513896_odr8a"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.optionSwap",
+   "mode": "bad",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.optionSwap",
+   "mode": "concurrency",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/trip_1794268516034_7pt98"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
+   "cap": "trips.optionSwap",
+   "mode": "stale",
+   "v": "ok",
+   "why": "",
+   "detail": {
+    "changed": [
+     "trips/trip_1794268516987_7iw1y"
+    ],
+    "text": ""
+   },
+   "group": "trips",
+   "kind": "write"
+  },
+  {
    "cap": "trips.dayPlanCopy",
    "mode": "network",
    "v": "ok",
@@ -2794,7 +2876,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793922673863_dj8dd6"
+     "reports/r_1794268584143_a0pmjn"
     ],
     "text": "Thanks — reported"
    },
@@ -2826,7 +2908,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793922675687_xoziha"
+     "reports/r_1794268585987_irxlu4"
     ],
     "text": "Thanks — reported"
    },
@@ -3287,7 +3369,7 @@
     "changed": [
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnick1793922700080",
+     "nicknames/faultnick1794268610832",
      "stats/users"
     ],
     "text": "Account created ✓"
@@ -3316,7 +3398,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1793922701638"
+     "nicknames/faultnick1794268612414"
     ],
     "text": "Account created ✓ | Account created ✓"
    },
@@ -3333,7 +3415,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1793922702348"
+     "nicknames/faultnick1794268613134"
     ],
     "text": "Account created ✓"
    },
@@ -3430,8 +3512,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew07024",
-     "nicknames/faultnick1793922702348"
+     "nicknames/faultnew17945",
+     "nicknames/faultnick1794268613134"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3459,8 +3541,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew08482",
-     "nicknames/faultnick1793922702348"
+     "nicknames/faultnew19439",
+     "nicknames/faultnick1794268613134"
     ],
     "text": "Nickname saved ✓ | Nickname saved ✓"
    },
@@ -3477,8 +3559,8 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "communityProfiles/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnew09092",
-     "nicknames/faultnick1793922702348"
+     "nicknames/faultnew20069",
+     "nicknames/faultnick1794268613134"
     ],
     "text": "Nickname saved ✓"
    },
@@ -3850,7 +3932,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793922744481_5a1v17"
+     "reports/r_1794268655850_kg8n6z"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -3875,8 +3957,8 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793922746536_36z8fj",
-     "reports/r_1793922746536_n4eduy"
+     "reports/r_1794268657920_v7q5sl",
+     "reports/r_1794268657920_uo91ms"
     ],
     "text": "Thanks — we will look into it | Thanks — we will look into it"
    },
@@ -3890,7 +3972,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1793922747512_4wpe7h"
+     "reports/r_1794268658915_2mh03x"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -4001,6 +4083,6 @@
   }
  ],
  "reds": 2,
- "ok": 247,
+ "ok": 253,
  "na": 75
 }
