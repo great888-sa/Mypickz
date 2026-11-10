@@ -671,6 +671,12 @@ function finish(){
   planTruthGuard();
   handlerCoverageGuard();
   soonGuard();
+  faultMatrixGuard();
+  planMatrixGuard();
+  namesGuard();
+  readsGuard();
+  dataMembersGuard();
+  sessionGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
@@ -936,4 +942,138 @@ function soonGuard(){
   const unknown = hits.filter(function(h){ return !KNOWN_SOON.some(function(k){ return k.re.test(h); }) && !/function soonChip|function showSoon|class="' \+ \(cls \|\| 'chip'\) \+ ' soon"|\.soon-tag\{|\.soon\{|soon-tag\b[^<]*\{|'<span class="soon-tag">' \+ escapeHtml\(step\)/.test(h); });
   check(hits.length > 0, T + 'Soon markers read from src/ (' + hits.length + ' lines)');
   check(unknown.length === 0, T + 'every Soon marker is on the approved list with its phase (' + KNOWN_SOON.length + ' approved)', 'unlisted: ' + unknown.map(function(h){ return h.trim().slice(0, 90); }).join(' ‖ '));
+}
+
+// ---------- §36 (r107 · ق١١-١٠-٠٢ — «المشكلة عيّنة لصنف»): مصفوفة الخطة سقّاطة — كل دالة تحفظ خطة رحلة لها صف في tests/plan-matrix.js (أو سبب مكتوب أنها لا تمسّ الخطة) ·
+//            كل صف يحكم في السياقات الأربعة أو يسبّب · كل من يعيد رسم الأيام يمرّ بالناقل الواحد · الحارس قبل الكتابة في saveTrip · الرحلة تشغّل المصفوفة ----------
+function planMatrixGuard(){
+  const T = '§36 plan matrix is a ratchet (r107): ';
+  const pmPath = path.join(__dirname, 'plan-matrix.js'); if (!fs.existsSync(pmPath)){ check(false, T + 'tests/plan-matrix.js exists'); return; }
+  let PM; try{ PM = require(pmPath); }catch(e){ check(false, T + 'tests/plan-matrix.js loads', String(e && e.message)); return; }
+  const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts.filter(function(p){ return /\.js$/.test(p); });
+  const fns = {}; parts.forEach(function(p){ const src = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); const re = /(?:^|\n)(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g; let m; const idx = []; while ((m = re.exec(src))) idx.push([m.index, m[1]]); idx.forEach(function(it, i){ fns[it[1]] = { file: p, body: src.slice(it[0], i + 1 < idx.length ? idx[i + 1][0] : src.length).replace(/^[^{]*\{/, '') }; }); });
+  const savers = Object.keys(fns).filter(function(n){ return /\b(saveTrip|tbTouch|tbSaveNow|tripViewSave)\s*\(/.test(fns[n].body); }); /* r108: tbTouch = «الجلسة تغيّرت» — ما يغيّره يُكتب عند زر الحفظ، فهو من الأفعال التي تغيّر الخطة المحفوظة */
+  const covers = new Set(); PM.OPS.forEach(function(o){ (o.covers || []).forEach(function(c){ covers.add(c); }); }); const notPlan = PM.NOT_PLAN || {};
+  const ids = PM.OPS.map(function(o){ return o.id; });
+  check(PM.OPS.length >= 50 && new Set(ids).size === ids.length, T + 'ops are defined with unique ids (' + PM.OPS.length + ')');
+  const badCtx = []; PM.OPS.forEach(function(o){ PM.CTX.forEach(function(k){ const c = (o.ctx || {})[k]; if (typeof c === 'string'){ if (c.trim().length < 6) badCtx.push(o.id + '×' + k); } else if (!c || !(typeof c.d === 'number' || c.d === 'replace') || typeof c.shape !== 'string') badCtx.push(o.id + '×' + k); }); });
+  check(PM.CTX.length === 4 && badCtx.length === 0, T + 'every op states a verdict or a reason in each of the four plan shapes (' + (PM.OPS.length * PM.CTX.length) + ' cells)', badCtx.slice(0, 6).join(', '));
+  const missing = savers.filter(function(n){ return !covers.has(n) && !(n in notPlan); });
+  check(savers.length >= 50, T + 'functions that save a trip are read from src/ (' + savers.length + ')');
+  check(missing.length === 0, T + 'every function that saves a trip has a matrix row or a written reason (' + (savers.length - missing.length) + '/' + savers.length + ')', 'no row: ' + missing.map(function(n){ return n + ' @ ' + fns[n].file; }).join(' · '));
+  const stale = [...covers].filter(function(n){ return !fns[n]; }).concat(Object.keys(notPlan).filter(function(n){ return !fns[n]; }));
+  check(stale.length === 0, T + 'no row names a function that is gone', stale.join(' · '));
+  check(Object.keys(notPlan).every(function(n){ return String(notPlan[n]).trim().length >= 6; }), T + 'every exemption carries its reason');
+  const REDRAW_OK = { tripAddContinue: 'يُلحق أيام مدينة جديدة بآخر الخطة — لا يمسّ يومًا قائمًا' };
+  const redraw = Object.keys(fns).filter(function(n){ return /\btripPlanDays\s*\(/.test(fns[n].body); }); const loose = redraw.filter(function(n){ return !/\b(tripDayCarry|tripLinearPlace)\s*\(/.test(fns[n].body) && !REDRAW_OK[n]; });
+  check(redraw.length >= 3 && loose.length === 0, T + 'whoever redraws the days carries each day in its shape — tripDayCarry / tripLinearPlace (' + redraw.length + ' sites)', loose.join(' · '));
+  const st = fns.saveTrip ? fns.saveTrip.body : ''; const gi = st.indexOf('tripGuardCheck('), wi = st.indexOf('mpData.trips.save(');
+  check(gi >= 0 && wi > gi && /tripGuardRestore\(trip, __g\); return 'guard';/.test(st) && /tripGuardSettle\(trip\.id, __gen, __was, __now, /.test(st) && /!\(now\.count\[id\] > 0\)/.test(fns.tripGuardSettle ? fns.tripGuardSettle.body : ''), T + 'saveTrip asks the plan guard before the write, tells its caller when it objects, and settles a declaration only when the write that carried it has landed');
+  check(!!fns.tripInsert && /mode === 'daytrip'\)\{ tripLinearPush\(/.test(fns.tripInsert.body) && !!fns.tripSuggestSlot && /if \(d\.mode === 'daytrip'\) return;/.test(fns.tripSuggestSlot.body) && !!fns.tripPlanNormalize && /healed \+= tripLinearPush\(/.test(fns.tripPlanNormalize.body), T + 'the engine knows both day shapes at insert, at suggest and at load (self-heal)');
+  check(!!fns.dpAddToTripRun && /tripDayFreshIds\(srcDay, srcRoute\)/.test(fns.dpAddToTripRun.body) && !!fns.tripNormalize && /tripIdsHeal\(t\)/.test(fns.tripNormalize.body) && /tripIdsHeal\(trip\)/.test(st) && /\(b\.count\[id\] \|\| 0\) < a\.count\[id\]/.test(fns.tripGuardCheck ? fns.tripGuardCheck.body : ''), T + 'a copied day gets its own entry ids, duplicate ids are healed at load and before the write, and the guard counts copies');
+  const journey = fs.readFileSync(path.join(ROOT, 'tests', 'journey.js'), 'utf8');
+  check(/require\(path\.join\(__dirname, 'plan-matrix\.js'\)\)/.test(journey) && /await planMatrixRun\(uid, /.test(journey) && /reds\.length === 0/.test(journey), T + 'the journey runs the matrix and fails on a red cell');
+}
+
+// ---------- §37 (r107-ب/ج · ق١١-١٠-٠٢ — عيّنة نيويورك/كلينتون): اسم المعجم لا يُطابَق إلا بالمحلِّل الواحد · الدبوس الملصوق لا يُحفظ بعيدًا بلا سؤال · باني المعجم يجتاز عيّنته ----------
+function namesGuard(){
+  const T = '§37 one name resolver, asked far pins, checked gazetteer build (r107): ';
+  const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts.filter(function(p){ return /\.js$/.test(p); });
+  const fns = {}; parts.forEach(function(p){ const src = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); const re = /(?:^|\n)(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g; let m; const idx = []; while ((m = re.exec(src))) idx.push([m.index, m[1]]); idx.forEach(function(it, i){ fns[it[1]] = { file: p, body: src.slice(it[0], i + 1 < idx.length ? idx[i + 1][0] : src.length) }; }); });
+  const ALIAS_OK = { gazNameRank: 'المحلِّل نفسه', gazCityRow: 'صف المدينة المفتوحة للمحلِّل', gazCityOptions: 'نص البحث في منتقي المدن — المستخدم يختار الصف بعينه', tkPickCity: 'ترجيح بين مرشَّحين متجاورين جغرافيًّا في الاستيراد (كلمة كاملة في اسم المكان) — لا يختار صفًّا بالاسم وحده' };
+  const raw = Object.keys(fns).filter(function(n){ return /\.a \|\| \[\]|\(row\.a\b|\(c\.a\b|\.row\.a\)/.test(fns[n].body); }); const loose = raw.filter(function(n){ return !ALIAS_OK[n]; });
+  check(raw.indexOf('gazNameRank') >= 0 && loose.length === 0, T + 'no function reads gazetteer side-names except the resolver and the listed geo-bounded ones (' + raw.length + ' sites)', loose.map(function(n){ return n + ' @ ' + fns[n].file; }).join(' · '));
+  const users = ['tkTownRef', 'plTownDetect', 'tbStopTownPick', 'tkAreaIsTown', 'gazFindCity'].filter(function(n){ return fns[n] && /\b(gazResolve|gazNameRank)\(/.test(fns[n].body); });
+  check(users.length === 5, T + 'the five name matchers go through gazResolve / gazNameRank (' + users.length + '/5)');
+  const gr = fns.gazResolve ? fns.gazResolve.body : ''; check(/rank === 1 && near && km > GAZ_ALIAS_KM\) far\.push\(it\)/.test(gr) && /tier\(x\) === top/.test(gr), T + 'a far side-name is set aside (never the silent pick) and the name tier outranks distance');
+  const asked = ['savePlPlaceRun', 'tkPinFromGoogleApply'].filter(function(n){ return fns[n] && /await plFarAsk\(/.test(fns[n].body); });
+  check(asked.length === 2 && !!fns.plFarAsk && /return v === 'alt' \? 'outside' : 'stop';/.test(fns.plFarAsk.body), T + 'a pasted pin far from its city is asked about before it is written (' + asked.length + '/2 writers)');
+  const tp = fns.tkPlusPoint ? fns.tkPlusPoint.body : ''; check(/ref\.soft/.test(tp) && /tkTownRef\(r\.locality, \{ ask: true, ctx: soft \}\)/.test(tp), T + 'the town pasted with a short code outranks a default reference and may be asked about');
+  const gb = path.join(ROOT, 'scripts', 'gazetteer-build.py'); const gsrc = fs.existsSync(gb) ? fs.readFileSync(gb, 'utf8') : '';
+  check(/SANITY FAILED/.test(gsrc) && /HARD_ANCHORS = \[\('US', 5128581, 'New York'\)\]/.test(gsrc) && /def selftest\(\)/.test(gsrc) && /raise SystemExit\(1\)/.test(gsrc) && gsrc.indexOf("if problems:") < gsrc.indexOf("os.makedirs(cdir, exist_ok=True)"), T + 'the gazetteer builder checks before it writes (anchors · nothing lost · no side-name equal to a bigger city)');
+  let st = null; try{ st = require('child_process').spawnSync('python3', [gb, '--selftest'], { encoding: 'utf8', timeout: 60000 }); }catch(_){ st = null; }
+  if (!st || st.error) console.log('INFO  ' + T + 'python3 not available here — builder self-test not run');
+  else check(st.status === 0 && /SELFTEST PASSED — 18\/18/.test(st.stdout || ''), T + 'the gazetteer builder passes its own sample (18/18)', String(st.stdout || st.stderr || '').split('\n').filter(function(l){ return /^FAIL/.test(l); }).join(' · '));
+}
+
+// ---------- §38 (r109 · ق١١-١٠-٠٣ — ميزانية القراءة): قراءات سوق المجتمع من باب واحد (cmMarketGet) بذاكرة جلسة ومهلة — لا نداء مباشر لاستعلامَي السوق خارجه · والرحلة تعدّ القراءات شاشةً شاشة ----------
+function sessionGuard(){
+  /* §40 (r108 · ق١١-١٠-٠٤): the trip editor is a session — nothing writes the trip but the buttons. Before: 31 sites saved after one second and closing saved what was pending. */
+  const T = '§40 the trip editor writes only from its buttons (r108): ';
+  const src = fs.readFileSync(path.join(ROOT, 'src', '59-trip-builder.js'), 'utf8'); const idx = []; const re = /(?:^|\n)(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g; let m; while ((m = re.exec(src))) idx.push([m.index, m[1]]);
+  const fns = {}; idx.forEach(function(it, i){ fns[it[1]] = src.slice(it[0], i + 1 < idx.length ? idx[i + 1][0] : src.length).replace(/^[^{]*\{/, ''); });
+  const writers = Object.keys(fns).filter(function(n){ return /\bsaveTrip\s*\(/.test(fns[n]); }).sort(); const callers = Object.keys(fns).filter(function(n){ return /\btbSaveNow\s*\(/.test(fns[n]); }).sort();
+  check(writers.join() === 'tbApprove,tbSaveNow' && callers.join() === 'tbSaveDraft' && !/setTimeout\(\s*tbSaveNow/.test(src) && !/saveTimer\s*=\s*setTimeout/.test(src) && !/\btbSave\s*\(\)/.test(src), T + 'saveTrip is reached from Approve/Done and from the writer alone, the writer from Save as draft alone, and no timer saves', 'saveTrip in: ' + writers.join(',') + ' · tbSaveNow in: ' + callers.join(','));
+  check((src.match(/\btbTouch\(\)/g) || []).length >= 30 && /function tbTouch\(\)\{ if \(!TB\) return; TB\.landed = null;[^}]*tbSessionStore\(\); \}/.test(src) && !/saveTrip|mpData\./.test(fns.tbTouch || 'x saveTrip') && !/saveTrip|mpData\.trips/.test(fns.tbSessionStore || 'x saveTrip'), T + 'every edit marks the session and writes the device copy only (' + (src.match(/\btbTouch\(\)/g) || []).length + ' sites)');
+  check(/if \(!TB \|\| TB\.closing \|\| TB\.saving\) return;/.test(fns.tbClose || '') && /mpConfirm\('What you changed since the last save will be lost\.', \{ title: 'Discard your changes\?', ok: 'Discard', cancel: 'Keep editing', danger: true \}\)/.test(fns.tbClose || '') && /if \(!TB \|\| TB\.saving\) return;/.test(fns.tbApprove || '') && /TB\.saving\) return;/.test(fns.tbSaveDraft || ''), T + 'leaving asks before discarding, and no button acts while a write is on its way');
+  check(!/tripGuardAllow\([^)]*'\*'/.test(src) && /TB\.plan && \(TB\.dayPlan \|\| tbDTDay\(\)\)\) h \+= '<button type="button" class="tb-door two" style="margin-top:10px;" onclick="tbPickTyped\(\)">/.test(src) && /alt: 'Discard', cancel: 'Not now'/.test(fns.tbSessionOffer || '') && /tripsLoadFailed\) return 'later';/.test(fns.tbSessionOffer || ''), T + 'inside a session the guard is never switched off wholesale (undo and restore declare exactly what they take away), the typed-place door is in the picker for every day that takes stops, and the device copy is dropped only by an explicit Discard');
+}
+function dataMembersGuard(){
+  /* §39 (r109 · second review): a call on a data-layer member that does not exist fails only when its path runs (measured: mpData.trips.get — 1 of 317 call sites, in a fallback that then always said "no longer available"). The layer is evaluated with stubs to get its real shape; every mpData.<group>.<fn>( and mpData.<fn>( in the parts must name a defined member. */
+  const T = '§39 every data-layer call names a defined member (r109): ';
+  const vm = require('vm'); const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts.filter(function(p){ return /\.js$/.test(p); });
+  const dl = fs.readFileSync(path.join(ROOT, 'src', '43-mpdata.js'), 'utf8'); let shape = null, err = '';
+  const sb = { firebase: { firestore: Object.assign(function(){ return {}; }, { FieldValue: { increment: function(){ return 0; }, delete: function(){ return 0; }, serverTimestamp: function(){ return 0; }, arrayUnion: function(){ return 0; }, arrayRemove: function(){ return 0; } } }), auth: function(){ return {}; }, storage: function(){ return {}; } }, db: { collection: function(){ return { doc: function(){ return {}; } }; }, batch: function(){ return {}; } }, window: {}, document: {}, console: console, logTiming: function(){}, setTimeout: setTimeout, clearTimeout: clearTimeout, localStorage: { getItem: function(){ return null; }, setItem: function(){} }, navigator: {} }; sb.globalThis = sb;
+  try{ vm.runInNewContext(dl + '\n;globalThis.__shape = (function(){ const o = {}; Object.keys(mpData).forEach(function(k){ o[k] = (mpData[k] && typeof mpData[k] === "object") ? Object.keys(mpData[k]) : typeof mpData[k]; }); return o; })();', sb, { timeout: 5000 }); shape = sb.__shape; }catch(e){ err = String(e && e.message).slice(0, 160); }
+  check(!!shape && Object.keys(shape).length >= 25, T + 'the data layer evaluates on its own and exposes its groups', err || (shape ? Object.keys(shape).length + ' groups' : ''));
+  if (!shape) return;
+  const bad = []; let n = 0;
+  parts.forEach(function(p){ const src = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); let m; const re = /\bmpData\.([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)\s*\(/g; while ((m = re.exec(src))){ n++; const g = shape[m[1]]; if (!Array.isArray(g) || g.indexOf(m[2]) < 0) bad.push(p + ': mpData.' + m[1] + '.' + m[2]); }
+    const re2 = /\bmpData\.([A-Za-z_$][\w$]*)\s*\(/g; while ((m = re2.exec(src))){ n++; if (shape[m[1]] !== 'function') bad.push(p + ': mpData.' + m[1] + '()'); } });
+  check(n >= 300 && bad.length === 0, T + 'no call site names a missing member', n + ' call sites · ' + (bad.slice(0, 5).join(' · ') || 'none missing'));
+}
+function readsGuard(){
+  const T = '§38 community reads go through one door with a budget (r109): ';
+  const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts.filter(function(p){ return /\.js$/.test(p); });
+  const fns = {}; let all = ''; parts.forEach(function(p){ const src = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); all += src; const re = /(?:^|\n)(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g; let m; const idx = []; while ((m = re.exec(src))) idx.push([m.index, m[1]]); idx.forEach(function(it, i){ fns[it[1]] = { file: p, body: src.slice(it[0], i + 1 < idx.length ? idx[i + 1][0] : src.length) }; }); });
+  const calls = function(needle){ return Object.keys(fns).filter(function(n){ return fns[n].body.indexOf(needle) >= 0; }); };
+  const cl = calls('mpData.cityLists.publicLists('), ct = calls('mpData.trips.publicTrips('), cu = calls('mpData.communityProfiles.withPublic('), cp = calls('mpData.trips.publicByOwner(');
+  check(cl.join() === 'cmMarketGet' && ct.join() === 'cmMarketGet' && cu.join() === 'cmMarketGet' && cp.slice().sort().join() === 'cmPersonTrips,syncCommunityProfileFor', T + 'the three market queries are called from cmMarketGet only, and a person\'s trips from cmPersonTrips only — plus the one place that decides a write (syncCommunityProfileFor reads the server, never the session memory)', 'publicLists: ' + cl.join(',') + ' · publicTrips: ' + ct.join(',') + ' · withPublic: ' + cu.join(',') + ' · publicByOwner: ' + cp.join(','));
+  const g = fns.cmMarketGet ? fns.cmMarketGet.body : '';
+  check(/if \(m && m\.promise && Date\.now\(\) - m\.at < CM_FLIGHT_MAX\) return m\.promise;/.test(g) && /const CM_FLIGHT_MAX = 30 \* 1000;/.test(all) && /Date\.now\(\) - m\.at < CM_MARKET_TTL/.test(g) && /const CM_MARKET_TTL = 10 \* 60 \* 1000;/.test(all), T + 'one in-flight promise is shared and rows are kept for ten minutes');
+  check(!!fns.cmMarketFresh && /now - m\.at >= CM_MARKET_TTL/.test(fns.cmMarketFresh.body) && !!fns.cmMarketRefresh && !!fns.cmFreshPaint && /cmMarketRefresh\(\)/.test(fns.cmFreshPaint.body), T + 'entering the tab drops only what is past its time, and the user can read again by hand (the line says when it was read)');
+  check(!!fns.cmForgetSession && /cmMarketDrop\(\)/.test(fns.cmForgetSession.body), T + 'the session memory is cleared when the account changes');
+  /* the write door: every data-layer member that writes to a collection the market shows is in MP_MARKET_WRITES (or exempt by name with a reason) */
+  const dl = fs.readFileSync(path.join(ROOT, 'src', '43-mpdata.js'), 'utf8');
+  const tbl = {}; (dl.match(/\n  \['(\w*)', '(\w+)', function/g) || []).forEach(function(l){ const m = /\['(\w*)', '(\w+)'/.exec(l); tbl[(m[1] ? m[1] + '.' : '') + m[2]] = true; });
+  const exempt = { 'lists.bumpView': 1, 'trips.bumpView': 1, 'communityProfiles.bumpView': 1, 'follows.set': 1 }; /* views and the follower counter: they change neither what is shown nor who is shown */
+  const mem = []; const reM = /([A-Za-z_$][\w$]*): (?:async )?function\(/g; let mm; while ((mm = reM.exec(dl))) mem.push([mm.index, mm[1]]);
+  const missing = []; let writers = 0;
+  mem.forEach(function(it, i){ const body = dl.slice(it[0], i + 1 < mem.length ? mem[i + 1][0] : dl.indexOf('\nconst MP_MARKET_WRITES')); const ls = dl.lastIndexOf('\n', it[0]) + 1; const indent = (/^ */.exec(dl.slice(ls, it[0])) || [''])[0].length; const lineHead = dl.slice(ls, it[0]);
+    let group = ''; if (!(indent === 4 && lineHead.trim() === '')){ const gs = dl.slice(0, it[0]).match(/\n    ([A-Za-z_$][\w$]*): \{/g) || []; group = gs.length ? /([A-Za-z_$][\w$]*): \{/.exec(gs[gs.length - 1])[1] : ''; }
+    const writes = /\.(set|update|delete)\(|\.commit\(/.test(body); const market = /col\('(trips|userCityLists|userCityListCats|communityProfiles)'\)|col\(coll\)|\bbatch\.(update|set)\(doc\.ref/.test(body) && /col\('(trips|userCityLists|userCityListCats|communityProfiles)'\)\.doc\([^)]*\)\.(set|update|delete)\(|b\.(set|delete|update)\(col\('(trips|userCityLists|userCityListCats|communityProfiles)'\)|b\.(set|delete|update)\(col\(coll\)|b\.(set|update)\((listRef|tripRef)|b\.update\(d\.ref|batch\.(update|set)\(doc\.ref/.test(body);
+    if (!writes || !market) return; writers++; const name = (group ? group + '.' : '') + it[1]; if (!tbl[name] && !exempt[name]) missing.push(name); });
+  check(writers >= 17 && missing.length === 0 && Object.keys(tbl).length >= 17 && /function cmWrote\(kind, id, pub, ownerUid\)/.test(all) && /if \(typeof cmWrote === 'function'\) cmWrote\.apply\(null, w\[2\]\(a\)\)/.test(dl), T + 'the write door: every data-layer write on what the market shows tells the community memory after it succeeds (MP_MARKET_WRITES · views and the follower counter are exempt by name)', 'writers ' + writers + ' · table ' + Object.keys(tbl).length + ' · missing: ' + (missing.join(', ') || 'none'));
+  check(!!fns.resetSessionState && /cmForgetSession\(\);/.test(fns.resetSessionState.body) && /Object\.keys\(plVisState\)\.forEach\(function\(k\)\{ delete plVisState\[k\]; \}\);/.test(fns.resetSessionState.body), T + 'an account change clears the community memory and the visibility-dot state (resetSessionState)');
+  check(/const __free = setTimeout\(function\(\)\{ cmRefreshBusy = false; \}, CM_FLIGHT_MAX\);/.test(all) && /finally \{ clearTimeout\(__free\); cmRefreshBusy = false; \}/.test(all), T + 'the refresh guard is released after thirty seconds even when a read never settles');
+  check(!!fns.viewCommunityUser && /const __seq = \+\+vcuSeq;/.test(fns.viewCommunityUser.body) && (fns.viewCommunityUser.body.match(/if \(!__mine\(\)\) return;/g) || []).length >= 5 && !/viewingUserCities\.push\(/.test(fns.viewCommunityUser.body), T + 'overlapping opens of a person: the latest call alone completes (the superseded one stops after every wait and never fills the shared array)');
+  check(!!fns.resetSessionState && /delete cmCache\.trips\[k\]/.test(fns.resetSessionState.body) && /delete cmCache\.places\[k\]/.test(fns.resetSessionState.body), T + 'an account change clears the market cards kept for export (lists, trips, places)');
+  check(!/r\._matches = n/.test(all) && /cities: viewingUserCities\.filter\(function\(c\)\{ return !c\._shared; \}\)/.test(all) && /viewingUserCities = __pc\.cities\.slice\(\);/.test(all), T + 'the shared rows are never written on (the category filter counts on a copy) and a list shared by name never enters the person memory');
+  /* r109-ب: the hold is complete, and every open point of someone else's content from memory passes the one-read check */
+  check(/await mpData\.cityLists\.holdAll\(uid, newVal\);/.test(all) && !/holdOrRestore\(await mpData\.cityLists\.byOwner/.test(all) && /if \(hold && d && d\.suspended === true\) return;/.test(dl) && /holdAll: async function\(uid, hold, opts\)/.test(dl) && !!fns.adminHoldSweep && /holdAll\(u\.uid, true, \{ onlyOutOfStep: true \}\)/.test(fns.adminHoldSweep.body), T + 'a suspension holds every list together with its category documents (holdAll), holding twice keeps what was saved for the lift, and accounts held before this are swept once per session from Users');
+  const cityIn = Object.keys(fns).filter(function(n){ return /communityUserLayer = (cityId|\(what === 'places'\) \? cityId)/.test(fns[n].body); }); const tripIn = Object.keys(fns).filter(function(n){ return /viewingCommunityTripId = tripId|viewingSharedTrip = true/.test(fns[n].body); });
+  check(cityIn.slice().sort().join() === 'curBrowse,openCommunityCityList' && cityIn.every(function(n){ return /cmOpenMark\(cityId/.test(fns[n].body); }) && tripIn.slice().sort().join() === 'openCommunityTrip,openSharedTripDetail' && tripIn.every(function(n){ return /cmVerifyTrip\(tripId\)/.test(fns[n].body); }) && !!fns.cmEnsureCity && /if \(c\._recheck\)/.test(fns.cmEnsureCity.body) && !!fns.cmStillOpen, T + 'the open points are known by name (a city: openCommunityCityList, curBrowse · a trip: openCommunityTrip, openSharedTripDetail) and each passes the check — a new way in must be added here', 'city: ' + cityIn.join(',') + ' · trip: ' + tripIn.join(','));
+  const journey = fs.readFileSync(path.join(ROOT, 'tests', 'journey.js'), 'utf8');
+  check(/await must\('r109 · ميزانية القراءة في المجتمع/.test(journey) && /steps\.open\.listQ === 1 && steps\.open\.reads >= N \+ U && steps\.open\.reads <= N \+ U \+ 2/.test(journey) && /total <= 3 \* N \+ 2 \* U \+ 20/.test(journey), T + 'the journey counts billed reads screen by screen against the budget');
+}
+
+// ---------- §35 (r99 · ق١١-٠٣-٠٢ — مصفوفة الإفشال سقّاطة): كل خلية إمّا حكم وإمّا سبب عدم انطباق · الحُمر لا تزيد عن الأساس · خلية خضراء في الأساس لا تحمرّ ----------
+function faultMatrixGuard(){
+  const T = '§35 fault matrix is a ratchet (r99): ';
+  const mp = path.join(__dirname, 'fault-matrix.json'), bp = path.join(__dirname, 'fault-baseline.json');
+  if (!fs.existsSync(mp)){ check(false, T + 'tests/fault-matrix.json exists (journey writes it)'); return; }
+  const m = JSON.parse(fs.readFileSync(mp, 'utf8')); const base = fs.existsSync(bp) ? JSON.parse(fs.readFileSync(bp, 'utf8')) : null;
+  const cells = m.cells || []; const bad = cells.filter(c => !c.v && !c.na); const broken = cells.filter(c => c.setupError || c.cleanupError);
+  check(cells.length > 0, T + 'cells recorded (' + cells.length + ' = ' + (m.groups || []).reduce((a, g) => a + g.caps.length, 0) + ' caps × ' + (m.modes || []).length + ' modes)');
+  check(bad.length === 0, T + 'every cell has a verdict or a reason', bad.slice(0, 5).map(c => c.cap + '/' + c.mode).join(', '));
+  check(broken.length === 0, T + 'no fixture errors inside the matrix', broken.slice(0, 5).map(c => c.cap + '/' + c.mode).join(', '));
+  if (!base){ check(false, T + 'tests/fault-baseline.json exists (accepted reds)'); return; }
+  const reds = cells.filter(c => c.v && c.v !== 'ok'); const baseCells = base.cells || {};
+  const regressions = reds.filter(c => baseCells[c.cap + '/' + c.mode] === 'ok');
+  const newCells = cells.filter(c => c.v && !(c.cap + '/' + c.mode in baseCells));
+  check(reds.length <= base.reds, T + 'reds never exceed the baseline (' + reds.length + ' ≤ ' + base.reds + ')');
+  check(regressions.length === 0, T + 'no cell that was green in the baseline is red now', regressions.slice(0, 5).map(c => c.cap + '/' + c.mode + ' ' + c.v).join(', '));
+  check(newCells.filter(c => c.v !== 'ok').length === 0, T + 'a new capability enters green or gets its reds accepted into the baseline', newCells.filter(c => c.v !== 'ok').slice(0, 5).map(c => c.cap + '/' + c.mode).join(', '));
+  const closed = Object.keys(baseCells).filter(k => baseCells[k] !== 'ok' && cells.some(c => c.cap + '/' + c.mode === k && c.v === 'ok'));
+  if (closed.length) console.log('INFO  ' + T + closed.length + ' red cell(s) in the baseline are green now — lower the baseline: ' + closed.slice(0, 6).join(', '));
 }
