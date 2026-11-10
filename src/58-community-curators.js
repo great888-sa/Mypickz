@@ -13,12 +13,12 @@ let viewingUserUid = null;
 let viewingUserData = null;
 let communityViewingCityId = null;
 
-async function loadCommunityLists(){
+async function loadCommunityLists(fresh){ /* r109: من الباب الواحد — fresh للمسارات الإدارية التي غيّرت للتوّ (إيقاف · بطاقات الحالة) */
   try{
-    const snap = await mpData.communityProfiles.withPublic();
+    if (fresh) cmMarket.users = null; const snap = await cmMarketGet('users');
     communityUsers = [];
     snap.forEach(doc => {
-      const d = doc.data();
+      const d = doc.data;
       if (!d.nickname) return;
       communityUsers.push({
         uid: doc.id,
@@ -62,7 +62,7 @@ function renderCommunityModal(){
     + (communityTab === 'places' ? '<div id="cmCatRow">' + cmCatRowHtml() + '</div>' : '') // ر٧٠ط (N-082): التصفية رئيسي ← فرعي على قوائم الآخرين
     + '<div class="chipgrid c2"><button type="button" class="chip drop" onclick="cmAllChip()">' + (st.marked ? escapeHtml(sortLbl) : 'All users <span class="srcsub">· ' + ({ recent: 'recent', views: 'most viewed', bookmarks: 'bookmarked', copies: 'saved' }[st.sort] || 'recent') + '</span>') /* r75d: الشريحة بسطر واحد — «All users · most viewed» (الوجهة معلومة من المبدّل فوقها؛ القائمة تحتفظ بالتسميات الكاملة) */ + ' <span class="srcsub">' + (cmSortOpen ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</span></button>' // r72w: بلا خفوت // r72u (قرار المالك): الشريحة نفسها قائمة منسدلة بالترتيبات (الافتراضي recent)
     + '<button type="button" class="chip drop' + (cmSearchOpen ? ' on' : '') + '" onclick="cmToggleSearch()">Search by username <span class="arr">' + (cmSearchOpen ? '⌃' : '⌄') + '</span></button></div><div id="cmSortPanel">' + (cmSortOpen ? pickerPanel({ id: 'cmSort', bare: true, onPick: 'cmPickSort', items: sortOpts.map(function(x){ return { id: x[0], name: x[1], count: cmSortCounts()[x[0]], selected: st.marked ? x[0] === 'mine' : st.sort === x[0] }; }) }) : '') + '</div>' + (cmSearchOpen ? '<div class="headrow"><input id="cmSearch" class="csel" style="flex:1;" placeholder="Type a username" onkeydown="if(event.key===\'Enter\')cmSearchGo()"><button type="button" class="actn primary hact" onclick="cmSearchGo()">Go</button></div>' : '')
-    + '<div class="ctx" id="cmCtx"><b>Community · ' + (tabT ? 'Trips' : 'Places') + (st.marked ? ' · 🔖 mine' : '') + '</b> · ' + (st.city ? escapeHtml((allCities().find(function(c){ return c.id === st.city; }) || {}).name || st.city) : 'All cities') + (!st.marked ? ' · <span class="dim">' + escapeHtml(sortLbl.toLowerCase()) + '</span>' : '') + '</div></div>'
+    + '<div class="ctx" id="cmCtx"><b>Community · ' + (tabT ? 'Trips' : 'Places') + (st.marked ? ' · 🔖 mine' : '') + '</b> · ' + (st.city ? escapeHtml((allCities().find(function(c){ return c.id === st.city; }) || {}).name || st.city) : 'All cities') + (!st.marked ? ' · <span class="dim">' + escapeHtml(sortLbl.toLowerCase()) + '</span>' : '') + '<span id="cmFresh" class="cm-fresh"></span></div></div>' /* r109: عمر صفوف السوق وزر ↻ — يُملآن بعد التحميل */
     + '<div id="cmMarket"><div class="mp-empty mini">Loading…</div></div>';
   wrap.innerHTML = html;
   cmLoadMarket();
@@ -74,7 +74,7 @@ function cmLayerBack(){ communityUserTripsCity = ''; if (cmDirect){ cmDirect = f
 async function cmOpenList(owner, cityId, origin){ cmDirect = true; communityTab = 'places'; personLayerOnly = null; logTiming('[CM] open shared: person…'); await viewCommunityUser(owner); logTiming('[CM] open shared: person loaded · cities ' + (viewingUserCities || []).length); await cmEnsureSharedCity(owner, cityId); logTiming('[CM] open shared: list ' + ((viewingUserCities || []).some(function(c){ return c.id === cityId; }) ? 'ready' : 'MISSING')); if (currentTab !== 'Community') switchTab('Community'); logTiming('[CM] open shared: tab switched'); /* د-٢: الفتح من وجهة الأماكن كان يرسم في جسم المجتمع المخفي — الانتقال بعد تحميل الشخص */ openCommunityCityList(cityId, origin); }
 async function cmEnsureSharedCity(uid, cityId){ if (currentUser && typeof tripsLoaded !== 'undefined' && !tripsLoaded){ try{ await loadUserTrips(); }catch(_){} } /* r103: الرحلات المشارَكة معي تحمل خطط اليوم للقائمة المشارَكة */ /* د-٢ (ملاحظة المالك ١٤ أكتوبر): القائمة المشارَكة معي بالاسم ليست عامة فلا تأتي مع مدن الشخص العامة — تُقرأ مستندها (القواعد تسمح لمن في sharedWith) وتُضاف إلى مدنه للجلسة */
   if ((viewingUserCities || []).find(function(c){ return c.id === cityId; })) return;
-  try{ const d = await mpData.cityLists.get(uid, cityId); logTiming('[CM] shared doc arrived+composed · cats ' + (d && d.categories ? Object.keys(d.categories).length : 'none')); if (!d){ showToast('This shared list no longer exists'); return; } const meta = allCities().find(function(c){ return c.id === cityId; }); viewingUserCities.push({ id: cityId, name: (meta && meta.name) || d.cityName || cityId, categories: (function(){ const out = {}; Object.keys((d.categories && typeof d.categories === 'object') ? d.categories : {}).forEach(function(k){ const c = d.categories[k] || {}; out[k] = Object.assign({}, c, { active: c.active !== false }); }); return out; })(), _full: true, _shared: true, /* active غير المكتوب = فعّال (كما تركّبه الطبقة) */ favoriteCount: d.favoriteCount || 0, bookmarkCount: d.bookmarkCount || 0, viewCount: d.viewCount || 0 }); }catch(e){ mpSwallow(e, 'shared list'); showToast('Could not load this shared list · ' + ((e && (e.code || e.message)) || 'error')); } } /* د-٣: السبب يظهر رسالةً ليُشخَّص (إذن · فهرس · شبكة) */ // r72u: مصدر الأماكن دائمًا · ب-٢-١: المنشأ يُمرَّر إلى نقطة العدّ الواحدة
+  try{ const d = await mpData.cityLists.get(uid, cityId); logTiming('[CM] shared doc arrived+composed · cats ' + (d && d.categories ? Object.keys(d.categories).length : 'none')); if (!d){ showToast('This shared list no longer exists'); return; } const meta = allCities().find(function(c){ return c.id === cityId; }); viewingUserCities.push({ id: cityId, name: (meta && meta.name) || d.cityName || cityId, categories: (function(){ const out = {}; Object.keys((d.categories && typeof d.categories === 'object') ? d.categories : {}).forEach(function(k){ const c = d.categories[k] || {}; out[k] = Object.assign({}, c, { active: c.active !== false }); }); return out; })(), _full: true, _shared: true, _fresh: true, /* active غير المكتوب = فعّال (كما تركّبه الطبقة) */ favoriteCount: d.favoriteCount || 0, bookmarkCount: d.bookmarkCount || 0, viewCount: d.viewCount || 0 }); }catch(e){ mpSwallow(e, 'shared list'); showToast('Could not load this shared list · ' + ((e && (e.code || e.message)) || 'error')); } } /* د-٣: السبب يظهر رسالةً ليُشخَّص (إذن · فهرس · شبكة) */ // r72u: مصدر الأماكن دائمًا · ب-٢-١: المنشأ يُمرَّر إلى نقطة العدّ الواحدة
 let cmSortOpen = false; // r72r-2
 let cmSearchOpen = false; // r72s
 let cmLastRows = []; // r72w: الصفوف المحمَّلة (بعد مرشِّح المدينة) — للأعداد بقائمة الترتيب
@@ -91,7 +91,7 @@ async function cmLoadCitySummary(){
   const tab = communityTab;
   if (!__cmSummary[tab]){
     try{
-      let rows = (tab === 'trips') ? (await mpData.trips.publicTrips()).filter(function(t){ return !(t && t.dayPlan); }) : await mpData.cityLists.publicLists(); /* r103: خطة اليوم لا تدخل الخلاصة */
+      let rows = (tab === 'trips') ? (await cmPublicTripsCached()).filter(function(t){ return !(t && t.dayPlan); }) : await cmPublicListsCached(); /* r109 */ /* r103: خطة اليوم لا تدخل الخلاصة */
       if (tab !== 'trips') rows = (rows || []).filter(function(r){ return liveCountOf(r.categories) > 0; }); // ر٧٠ط-٢
       if (currentUser) rows = (rows || []).filter(function(r){ return (r.ownerId || (r.id || '').split('_')[0]) !== currentUser.uid; });
       __cmSummary[tab] = rows || [];
@@ -102,7 +102,7 @@ let cmFilterMain = '', cmFilterSub = ''; // ر٧٠ط (N-082)
 function cmCatFilterHit(catId){ const c = catIdNew(catId); if (cmFilterSub) return c === cmFilterSub; if (cmFilterMain) return sectionIdOf(c) === cmFilterMain; return true; }
 function cmApplyCatFilter(rows){
   if (!cmFilterMain && !cmFilterSub) return rows;
-  return rows.map(function(r){ let n = 0; Object.keys(r.categories || {}).forEach(function(k){ if (cmCatFilterHit(k)) n += ((r.categories[k] || {}).places || []).length; }); r._matches = n; return r; }).filter(function(r){ return r._matches > 0; });
+  return rows.map(function(r){ let n = 0; Object.keys(r.categories || {}).forEach(function(k){ if (cmCatFilterHit(k)) n += ((r.categories[k] || {}).places || []).length; }); return n > 0 ? Object.assign({}, r, { _matches: n }) : null; /* r109 (المراجعة): نسخة تحمل العدّ — الصفوف مشتركة في ذاكرة الجلسة فلا يُكتب عليها */ }).filter(Boolean);
 }
 function cmCatCountOf(catId){ let n = 0; cmSummaryRows().forEach(function(r){ Object.keys(r.categories || {}).forEach(function(k){ if (catIdNew(k) === catId) n += ((r.categories[k] || {}).places || []).length; }); }); return n; }
 function cmPlaceNamesOf(catId){ const out = []; cmSummaryRows().forEach(function(r){ Object.keys(r.categories || {}).forEach(function(k){ if (catIdNew(k) === catId) ((r.categories[k] || {}).places || []).forEach(function(q){ if (q && q.name) out.push(q.name); }); }); }); return out; }
@@ -176,13 +176,13 @@ async function cmLoadMarket(){
       return;
     }
     if (!tabT){
-      let rows = await mpData.cityLists.publicLists();
+      let rows = (await cmPublicListsCached()).slice(); /* r109: من الباب الواحد */
       rows = rows.filter(function(r){ return liveCountOf(r.categories) > 0; }); // ر٧٠ط-٢: لا قائمة بلا مكان بالسوق (احترازي للموروث حتى يُفتح من صاحبه)
       if (currentUser) rows = rows.filter(function(r){ return (r.ownerId || (r.id || '').split('_')[0]) !== currentUser.uid; }); // ر٦٩ب: المجتمع سوق الآخرين — ملكك يسكن الأماكن (المبدأ الحاكم)
       cmFillCityPick(rows);
       if (communityCityFilter) rows = rows.filter(function(r){ return r.cityId === communityCityFilter; });
       rows = cmApplyCatFilter(rows); // ر٧٠ط: قوائم فيها مطابقة للتصنيف المختار (بعدّاد المطابقات)
-      cmLastRows = rows.slice(); // r72w: للأعداد بقائمة الترتيب
+      cmLastRows = rows.slice(); cmFreshPaint(); /* r109 */ // r72w: للأعداد بقائمة الترتيب
       if (communitySort === 'bookmarks') rows = rows.filter(function(r){ return (r.bookmarkCount || 0) > 0; }); // ر٦٩م (N-047): «الأكثر تمييزًا» = ما له تمييز فعلًا
       if (communitySort === 'views') rows = rows.filter(function(r){ return (r.viewCount || 0) > 0; });
       if (communitySort === 'copies') rows = rows.filter(function(r){ return (r.copyCount || 0) > 0; }); // r72m: «الأكثر حفظًا» = ما نُسخ فعلًا
@@ -199,11 +199,11 @@ async function cmLoadMarket(){
         return othersCard({ title: escapeHtml(r.cityName || r.cityId), sub: 'Places · ' + places + (r._matches ? ' · matches · ' + r._matches : ''), stat: (r.viewCount || 0) + ' views', bmSelf: mine, bmOn: !!(listBookmarksMap && listBookmarksMap[owner + '_' + r.cityId]), cnt: cnt, bmHandler: "toggleListBookmark('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')", reportKind: 'list', reportKey: owner + '_' + r.cityId, saveHandler: "saveOthersList('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')", savedOn: !!myCopiedLists[owner + '_' + r.cityId], unsaveHandler: "showToast('Remove copied places from your list in Places')", exportHandler: "openExportPreview('olist', '" + attrStr(owner + '_' + r.cityId) + "')", openHandler: "cmOpenList('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')" });
       }, 'cities'); /* r75c: «Xxx · 2 cities» */
     } else {
-      let rows = (await mpData.trips.publicTrips()).filter(function(t){ return !(t && t.dayPlan); }); /* r103 */
+      let rows = (await cmPublicTripsCached()).filter(function(t){ return !(t && t.dayPlan); }); /* r103 · r109 */
       if (currentUser) rows = rows.filter(function(t){ return t.ownerId !== currentUser.uid; }); // ر٦٩ب: رحلاتك تسكن الرحلات لا المجتمع
       cmFillCityPick(rows);
       if (communityCityFilter) rows = rows.filter(function(r){ return r.cityId === communityCityFilter; });
-      cmLastRows = rows.slice(); // r72w
+      cmLastRows = rows.slice(); cmFreshPaint(); /* r109 */ // r72w
             if (communitySort === 'bookmarks') rows = rows.filter(function(t){ return (t.saveCount || 0) > 0; }); // ر٦٩م (N-047)
             if (communitySort === 'copies') rows = rows.filter(function(t){ return (t.copyCount || 0) > 0; }); // r72m
 rows.sort(function(a, b){ return communitySort === 'recent' ? String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')) : communitySort === 'copies' ? (b.copyCount || 0) - (a.copyCount || 0) : communitySort === 'views' ? (b.viewCount || 0) - (a.viewCount || 0) : (b.saveCount || 0) - (a.saveCount || 0); }); // r72t: views بالرحلات
@@ -214,10 +214,49 @@ rows.sort(function(a, b){ return communitySort === 'recent' ? String(b.updatedAt
         return othersCard({ title: escapeHtml(title), sub: tripMetaLine(t), lines: [['Saved by users', '· ' + (t.copyCount || 0)]], bmSelf: mine, bmOn: !!(tripSavesMap && tripSavesMap[t.id]), cnt: cnt, bmHandler: "toggleTripSave('" + attrStr(t.id) + "')", saveHandler: "copyOthersTrip('" + attrStr(t.id) + "')", savedOn: !!tripCopyOf(t.id), unsaveHandler: "removeMyTripCopy('" + attrStr(t.id) + "')", reportKind: 'trip', reportKey: t.id, exportHandler: "openExportPreview('otrip', '" + attrStr(t.id) + "')", openHandler: "openCommunityTrip('" + attrStr(t.id) + "')" });
       }, 'trips'); /* r75c: «Xxx · 3 trips» */
     }
-  }catch(e){ mpSwallow(e, 'market'); host.innerHTML = '<div class="mp-empty">Could not load — try again.</div>'; }
+  }catch(e){ mpSwallow(e, 'market'); host.innerHTML = '<div class="mp-empty">Could not load — try again. <button type="button" class="chip sm" onclick="cmMarketRefresh()">↻ Try again</button></div>'; }
 }
 
 let viewingUserCities = []; // تفاصيل المدن العامة الكاملة (فئات/أماكن) — تُحمَّل فقط لحظة فتح ملف شخص معيّن (Lazy)
+const cmPersonCities = {}; /* r105-ب: مدن كل شخص فُتح في الجلسة (بفهرسها وما رُكِّب منها) — تُمسح عند الخروج */
+/* ═══ r109 (ق١١-١٠-٠٣ — القياس: فتح المجتمع ١٢٧ قراءة لـ٦٣ قائمة · العودة إلى الجذر ٦٣ · مغادرة التبويب والعودة ٦٤ · Trips ثم Places ١٢٨ · الجلسة ٤١٤):
+   قراءات السوق من باب واحد — (١) نداء واحد: الوعد نفسه لكل من يطلب في اللحظة نفسها (كانت الخلاصة والرسم يستعلمان معًا) · (٢) ذاكرة جلسة: الصفوف تبقى ما دامت أحدث من CM_MARKET_TTL،
+   وتُجدَّد عند دخول التبويب بعد المهلة أو بزر ↻ أو عند تبدّل الحساب · (٣) سطر READS في الشريط لكل استعلام فعلي — والتدقيق §٣٨ يمنع أي نداء مباشر خارج هذا الباب، ومحطة الميزانية تعدّ القراءات شاشةً شاشة. ═══ */
+const CM_MARKET_TTL = 10 * 60 * 1000;
+const cmMarket = { lists: null, trips: null, users: null }; /* لكل نوع: { rows, at } أو { promise, at } والاستعلام في الطريق · users = ملفات من لهم محتوى عام (كانت تُقرأ كلها عند كل دخول للتبويب، بلا حدّ) */
+const CM_FLIGHT_MAX = 30 * 1000; /* استعلام في الطريق يُشارَك ما دام حديثًا — المعلّق لا يحبس من بعده (المراجعة) */
+function cmMarketGet(kind){ const m = cmMarket[kind]; if (m && m.promise && Date.now() - m.at < CM_FLIGHT_MAX) return m.promise; if (m && m.rows && Date.now() - m.at < CM_MARKET_TTL) return Promise.resolve(m.rows);
+  const p = (kind === 'trips' ? mpData.trips.publicTrips() : kind === 'users' ? mpData.communityProfiles.withPublic().then(function(snap){ const out = []; snap.forEach(function(d){ out.push({ id: d.id, data: d.data() }); }); return out; }) : mpData.cityLists.publicLists()).then(function(rows){ if (cmMarket[kind] && cmMarket[kind].promise === p) cmMarket[kind] = { rows: rows || [], at: Date.now() }; try{ logTiming('READS · market ' + kind + ' · ' + (rows || []).length + ' docs · 1 query'); }catch(_){} return rows || []; }, function(e){ if (cmMarket[kind] && cmMarket[kind].promise === p) cmMarket[kind] = null; throw e; });
+  cmMarket[kind] = { promise: p, at: Date.now() }; return p; }
+function cmPublicListsCached(){ return cmMarketGet('lists'); }
+function cmPublicTripsCached(){ return cmMarketGet('trips'); }
+function cmMarketAt(kind){ const m = cmMarket[kind]; return (m && m.rows) ? m.at : 0; }
+function cmPersonTrips(uid){ /* r109: رحلات شخص العامة — استعلام واحد لكل من يطلبها (صفحة الشخص · صفحة المنتقي · قائمة مدنه) وتبقى للمهلة نفسها */ const m = cmPersonTripsMem[uid]; if (m && m.promise && Date.now() - m.at < CM_FLIGHT_MAX) return m.promise; if (m && m.rows && Date.now() - m.at < CM_MARKET_TTL) return Promise.resolve(m.rows); const p = mpData.trips.publicByOwner(uid).then(function(rows){ if (cmPersonTripsMem[uid] && cmPersonTripsMem[uid].promise === p) cmPersonTripsMem[uid] = { rows: rows || [], at: Date.now() }; return rows || []; }, function(e){ if (cmPersonTripsMem[uid] && cmPersonTripsMem[uid].promise === p) delete cmPersonTripsMem[uid]; throw e; }); cmPersonTripsMem[uid] = { promise: p, at: Date.now() }; return p; }
+const cmPersonTripsMem = {};
+function cmMarketDrop(){ cmMarket.lists = null; cmMarket.trips = null; cmMarket.users = null; Object.keys(cmPersonTripsMem).forEach(function(k){ delete cmPersonTripsMem[k]; }); Object.keys(__cmSummary).forEach(function(k){ delete __cmSummary[k]; }); Object.keys(cmPersonCities).forEach(function(k){ delete cmPersonCities[k]; }); }
+/* ═══ r109-ب (ق١١-١٠-٠٥ · البند ٦ «قراءة تحقق»): ما في ذاكرة الجلسة يُعرض بعد قراءة واحدة تتحقق أنه ما زال مفتوحًا لهذا الحساب — صاحبه أخفاه أو أُوقف حسابه؟ يختفي الآن لا بعد عشر دقائق. نقطة الفتح واحدة لكل نوع: openCommunityTrip · openSharedTripDetail · openCommunityCityList. فشل الشبكة يُغلق ولا يعرض (لا نعرف)، ويُعاد عند الفتح التالي. ═══ */
+function cmOpenMark(cityId, o){ /* نقطة فتح مدينة شخص آخر (openCommunityCityList · curBrowse): محتواها في الذاكرة؟ تُعلَّم للتحقق. o.fresh: رُكّبت للتوّ بقراءة تمرّ بالقواعد · o.memory: محتواها آتٍ من ذاكرة صفحة المنتقي ولو لم تكتمل في هذه الطبقة بعد */ o = o || {}; const c = (viewingUserCities || []).find(function(x){ return x.id === cityId; }); if (!c || !viewingUserUid || (currentUser && viewingUserUid === currentUser.uid)) return; if (o.fresh || c._fresh){ c._fresh = false; return; } if ((c._full || o.memory || (c._src && c._src._full)) && !c._loading){ c._composed = c._full === true; /* المراجعة: مكتملة في هذه الطبقة؟ بعد التحقق تُعرض كما هي؛ وإلا تُركَّب بعده (كانت تُعلَّم مكتملة بلا تركيب فتظهر فارغة) */ c._full = false; c._recheck = true; } }
+function cmStillOpen(d){ const me = currentUser ? currentUser.uid : null; if (d && typeof isOwner !== 'undefined' && isOwner === true) return true; /* المراجعة: مالك التطبيق يراجع المحتوى المبلَّغ عنه والمحتجز قبل رفع الإيقاف — القواعد تسمح له */ return !!d && d.suspended !== true && ((!!me && d.ownerId === me) || d.public === true || (!!me && Array.isArray(d.sharedWith) && d.sharedWith.indexOf(me) >= 0)); }
+async function cmVerifyTrip(tripId){ /* { ok, trip } · { gone } · { err } */
+  try{ const d = await mpData.trips.getDoc(tripId); if (d && d.exists){ const t = Object.assign({ id: d.id }, d.data()); if (cmStillOpen(t)){ try{ logTiming('READS · check · trip ' + tripId + ' · still open'); }catch(_){} return { ok: true, trip: t }; } } try{ logTiming('READS · check · trip ' + tripId + ' · gone'); }catch(_){} return { gone: true }; }
+  catch(e){ if (e && e.code === 'permission-denied'){ try{ logTiming('READS · check · trip ' + tripId + ' · gone (denied)'); }catch(_){} return { gone: true }; } mpSwallow(e, 'check-trip'); return { err: e }; } }
+function cmTripGone(tripId, ownerId){ const out = function(t){ return t.id !== tripId; }; communityUserTrips = (communityUserTrips || []).filter(out); communityUserDayPlans = (communityUserDayPlans || []).filter(out); if (typeof sharedTrips !== 'undefined' && Array.isArray(sharedTrips)) sharedTrips = sharedTrips.filter(out); delete cmCache.trips[tripId]; try{ delete resolvedTripCache['community_' + tripId]; delete resolvedTripCache[tripId]; }catch(_){} cmWrote('trips', tripId, true, ownerId || null); }
+function cmCityGone(uid, c, why){ /* why: 'gone' أو خطأ الشبكة */
+  if (why === 'gone'){ viewingUserCities = (viewingUserCities || []).filter(function(x){ return x !== c; }); delete cmCache.lists[uid + '_' + c.id]; cmWrote('lists', uid + '_' + c.id, true, uid); showToast('This list is no longer available'); }
+  else mpErrToast('Could not open this list', why);
+  if (viewingUserUid === uid && communityUserLayer === c.id){ communityViewingCityId = null; cmLayerBack(); } }
+function cmWrote(kind, id, pub, ownerUid){ /* r109 (المراجعة · مانع): باب واحد — طبقة البيانات تنادي بعد كل كتابة ناجحة على ما يعرضه السوق (MP_MARKET_WRITES: حفظ · حذف · عام/خاص · تمييز · حفظ رحلة · نسخ · ملف المجتمع · إيقاف). تُسقط الذاكرة حين يكون المكتوب عامًّا الآن، أو كان بين الصفوف المحفوظة (كان عامًّا عند القراءة)، أو كان استعلام في الطريق — والرسم التالي يقرأ من الخادم. المشاهدات خارج الباب قصدًا (عدّادها يلحق مع القراءة التالية). */
+  const hit = function(m){ return !!(m && (m.promise || (m.rows || []).some(function(r){ return r && r.id === id; }))); };
+  if (kind === 'trips'){ if (pub || hit(cmMarket.trips)){ cmMarket.trips = null; delete __cmSummary.trips; } Object.keys(cmPersonTripsMem).forEach(function(k){ if ((pub && k === ownerUid) || hit(cmPersonTripsMem[k])) delete cmPersonTripsMem[k]; }); }
+  else if (kind === 'lists'){ if (pub || hit(cmMarket.lists)){ cmMarket.lists = null; delete __cmSummary.places; } const o = ownerUid || String(id || '').split('_')[0]; if (o && cmPersonCities[o]) delete cmPersonCities[o]; }
+  else if (kind === 'users') cmMarket.users = null;
+  else cmMarketDrop(); }
+function cmMarketFresh(){ const now = Date.now(); ['lists', 'trips', 'users'].forEach(function(k){ const m = cmMarket[k]; if (m && m.rows && now - m.at >= CM_MARKET_TTL){ cmMarket[k] = null; if (k !== 'users') delete __cmSummary[k === 'lists' ? 'places' : 'trips']; } }); } /* دخول التبويب: يُجدَّد ما تجاوز المهلة وحده (كان كل دخول يقرأ السوق كله) */
+let cmRefreshBusy = false;
+async function cmMarketRefresh(){ if (cmRefreshBusy) return; cmRefreshBusy = true; /* ضغطتان = قراءة واحدة */ const __free = setTimeout(function(){ cmRefreshBusy = false; }, CM_FLIGHT_MAX); /* قراءة معلّقة لا تُميت الزر (المراجعة الثانية) */ try{ cmMarketDrop(); try{ logTiming('READS · market · refreshed by hand'); }catch(_){} try{ await loadCommunityLists(); }catch(_){} renderCommunityModal(); if (document.getElementById('cmMarket') && !communityMarkedOnly){ try{ await cmMarketGet(communityTab === 'trips' ? 'trips' : 'lists'); }catch(_){} } /* الانشغال يدوم حتى تصل الصفوف (الاستعلام نفسه الذي بدأه الرسم) */ } finally { clearTimeout(__free); cmRefreshBusy = false; } } /* ↻: القوائم وملفات أصحابها معًا */
+function cmFreshPaint(){ const el = document.getElementById('cmFresh'); if (!el) return; const a = cmMarketAgeLabel(); el.innerHTML = a ? ' · <span class="dim">read ' + a + '</span> <button type="button" class="chip sm" onclick="cmMarketRefresh()" title="Read the market again now" aria-label="Refresh">↻</button>' : ''; }
+function cmMarketAgeLabel(){ const at = cmMarketAt(communityTab === 'trips' ? 'trips' : 'lists'); if (!at) return ''; const min = Math.floor((Date.now() - at) / 60000); return min < 1 ? 'just now' : min + ' min ago'; }
+function cmForgetSession(){ cmMarketDrop(); }
 
 // ═══ ر٧٢-أ-١ (إعادة البناء من المسودة البصرية v2 — ١٦ سبتمبر): شبكة المنتقين · صفحة المنتقي · الشرائح الست · شاشة المدينة · حالة «أنا» — على القواعد الحية بلا نشرة
 let curators = null, curFilterCity = '', curNameQ = '', curCityOpen = false, curShown = 30, curSort = 'updated'; // ر٧٢-أ-١و/ح: الترتيب (updated · views · following) — الافتراضي الأحدث تحديثًا
@@ -252,8 +291,8 @@ async function curLoadContent(uid){ // مدنه وأماكنه ورحلاته ا
     const extra = await Promise.all(ids0.filter(function(c){ return !have[c]; }).map(function(cid){ return mpData.cityLists.getIndex(uid, cid).catch(function(){ return null; }); })); // ر٧٢-أ-١و: المسار المثبَت بالمجتمع (مستندات الملف العام) يُضم إلى الاستعلام — لا تفاوت بين الواجهتين
     docs = docs.concat(extra.filter(Boolean)); const ids = docs.map(function(d){ return d.cityId; });
     logTiming('[CUR] content ' + uid.slice(0, 6) + ': query=' + (qErr ? 'ERR ' + qErr : (docs.length - extra.filter(Boolean).length)) + ' profile=' + ids0.length + ' union=' + docs.length);
-    docs.forEach(function(d, i){ if (!d || d.public !== true) return; const cats = (d.categories && typeof d.categories === 'object') ? d.categories : {}; const n = Object.keys(cats).reduce(function(a, k){ return a + ((cats[k] && cats[k].places) || []).filter(function(p){ return p && (p.name || p.url); }).length; }, 0); if (!n) return; /* ر٧٢-أ-١د: مدينة بلا أماكن لا تُعرض */ out.cities.push({ id: d.cityId || ids[i], name: d.cityName || (allCities().find(function(c){ return c.id === (d.cityId || ids[i]); }) || {}).name || ids[i], count: n, categories: cats, _full: d._indexOnly !== true }); });
-    try{ const __all = await mpData.trips.publicByOwner(uid); out.trips = __all.filter(function(t){ return !(t && t.dayPlan); }); out.dayPlans = __all.filter(function(t){ return t && t.dayPlan; }); }catch(e){ out.trips = []; out.dayPlans = []; } /* r103: خطط اليوم جانبًا لشرائح مدنه */
+    docs.forEach(function(d, i){ if (!d || d.public !== true) return; const cats = (d.categories && typeof d.categories === 'object') ? d.categories : {}; const n = Object.keys(cats).reduce(function(a, k){ return a + ((cats[k] && cats[k].places) || []).filter(function(p){ return p && (p.name || p.url); }).length; }, 0); if (!n) return; /* ر٧٢-أ-١د: مدينة بلا أماكن لا تُعرض */ out.cities.push({ id: d.cityId || ids[i], name: d.cityName || (allCities().find(function(c){ return c.id === (d.cityId || ids[i]); }) || {}).name || ids[i], count: n, categories: cats, _full: d._indexOnly !== true, _row: d }); }); /* r105-ب: صف الفهرس يُحفظ ليُركَّب منه بلا قراءة الأم ثانية */
+    try{ const __all = await cmPersonTrips(uid); out.trips = __all.filter(function(t){ return !(t && t.dayPlan); }); out.dayPlans = __all.filter(function(t){ return t && t.dayPlan; }); }catch(e){ out.trips = []; out.dayPlans = []; } /* r103: خطط اليوم جانبًا لشرائح مدنه */
   }catch(e){ mpSwallow(e, 'curator content'); }
   out.loaded = true; curData[uid] = out; return out;
 }
@@ -261,7 +300,7 @@ function curPrimeLayerFromCurator(uid){ /* ر٧٣-أب (٢): طبقة المست
   viewingUserUid = uid; viewingUserData = Object.assign({ publicCityIds: d.cities.map(function(c){ return c.id; }) }, u); viewingUserCities = d.cities.map(function(c){ return { id: c.id, name: c.name, categories: c.categories || {}, _full: c._full === true, _src: c, favoriteCount: 0, bookmarkCount: c.bookmarkCount || 0, viewCount: c.viewCount || 0 }; }); communityUserTrips = (d.trips || []).slice(); communityUserDayPlans = (d.dayPlans || []).slice(); /* r103 */ communityUserLayer = null; communityViewingCityId = null; viewingCommunityTripId = null; vcuStep = 'done'; return true; }
 async function curEnsureCity(uid, cityId){ /* خ-٦: تحميل المدينة عند فتحها — تركيب مستنداتها الفرعية مرة بالجلسة؛ قبلها الفهرس يكفي للعدّ والبطاقات */
   const d = curData[uid]; if (!d) return null; const c = (d.cities || []).find(function(x){ return x.id === cityId; }); if (!c || c._full) return c || null;
-  try{ const full = await mpData.cityLists.get(uid, cityId); if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; c._full = true; c._unreadable = full._unreadable === true; logTiming('[CUR] city composed ' + cityId + ' cats=' + Object.keys(full.categories).length + (c._unreadable ? ' · UNREADABLE (index has places)' : '')); } }catch(e){ mpSwallow(e, 'curator city'); } /* r104 */
+  try{ const full = (c._row && c._row.splitV === 1) ? await mpData.cityLists.composeRow(c._row) : await mpData.cityLists.get(uid, cityId); /* r105-ب: من صف الفهرس (قراءة الأم موفَّرة) */ if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; c._full = true; c._unreadable = full._unreadable === true; logTiming('[CUR] city composed ' + cityId + ' cats=' + Object.keys(full.categories).length + (c._unreadable ? ' · UNREADABLE (index has places)' : '')); } }catch(e){ mpSwallow(e, 'curator city'); } /* r104 */
   return c;
 }
 async function curHydrate(uid, items){ /* خ-٦: عناصر مختارة من الفهرس (مدينة · تصنيف · مكان) → تُقرأ مستندات التصنيفات المعنية فقط (مرة بالجلسة) وتُستبدل الأماكن الكاملة بمعرّفها */
@@ -466,9 +505,10 @@ async function curBrowse(uid, what, cityId){ // All places / All trips / Open li
   curArchiveOf = uid; if (!cityId) curChip = what; /* ر٧٣-أب (٢): مع مدينة محددة تبقى الشريحة العليا على Cities (لا تظليل مزدوج) */ communityTab = (what === 'trips') ? 'trips' : 'places'; communityScreen = 'source'; personLayerOnly = (what === 'trips') ? 'trips' : 'places';
   logTiming('[CUR] browse ' + what + ' uid=' + String(uid).slice(0, 6) + (cityId ? ' city=' + cityId : ''));
   let timedOut = false;
+  const __mem = !!(cityId && what === 'places' && ((curData[uid] && (curData[uid].cities || []).some(function(c){ return c.id === cityId && c._full; })) || (viewingUserUid === uid && (viewingUserCities || []).some(function(c){ return c.id === cityId && (c._full || (c._src && c._src._full)); })))); /* r109-ب: المدينة مركَّبة في ذاكرة صفحة المنتقي من قبل — تُسلَّم بقراءة تحقق */
   if (cityId && what === 'places'){ try{ await curEnsureCity(uid, cityId); }catch(_){ } if (currentUser && uid !== currentUser.uid) mpTrack.statsList(uid + '_' + cityId, 'open_curator'); } /* خ-٦: المدينة المفتوحة تُركَّب كاملة قبل تسليمها لطبقة المجتمع · ب-٢-١: فتح من صفحة المنتقي يُعدّ open_curator (لا يمرّ بـopenCommunityCityList) */
   const __loaded = (viewingUserUid === uid && viewingUserData && Array.isArray(viewingUserCities) && viewingUserCities.length) || curPrimeLayerFromCurator(uid); /* ر٧٣-أب (٢) — السبب الجذري للبطء: طبقة المجتمع كانت تعيد قراءة كل قوائم الشخص (قائمة + ٢٧ مستندًا لكل مدينة) رغم أن صفحة المنتقي حمّلتها؛ الآن تُبنى من بيانات المنتقي المحمَّلة بلا قراءة */
-  try{ if (__loaded){ viewingCommunityTripId = null; try{ await ensureListBookmarks(); await ensureTripSaves(); }catch(_){} } else await Promise.race([viewCommunityUser(uid), new Promise(function(r){ setTimeout(function(){ timedOut = true; r(); }, 15000); })]); if (cityId){ communityViewingCityId = cityId; communityUserLayer = (what === 'places') ? cityId : null; communityUserTripsCity = (what === 'trips') ? cityId : ''; } else { communityUserLayer = null; communityUserTripsCity = ''; } }catch(e){ mpSwallow(e, 'curator browse'); mpErrToast('Could not open', e); try{ logTiming('[CM] open failed · step ' + vcuStep); }catch(_){} /* r100-د */ logTiming('[CUR] browse failed: ' + ((e && (e.code || e.message)) || e) + ' step=' + vcuStep); }
+  try{ if (__loaded){ viewingCommunityTripId = null; try{ await ensureListBookmarks(); await ensureTripSaves(); }catch(_){} } else await Promise.race([viewCommunityUser(uid), new Promise(function(r){ setTimeout(function(){ timedOut = true; r(); }, 15000); })]); if (cityId){ communityViewingCityId = cityId; communityUserLayer = (what === 'places') ? cityId : null; communityUserTripsCity = (what === 'trips') ? cityId : ''; if (what === 'places') cmOpenMark(cityId, { fresh: !__mem, memory: __mem }); } else { communityUserLayer = null; communityUserTripsCity = ''; } }catch(e){ mpSwallow(e, 'curator browse'); mpErrToast('Could not open', e); try{ logTiming('[CM] open failed · step ' + vcuStep); }catch(_){} /* r100-د */ logTiming('[CUR] browse failed: ' + ((e && (e.code || e.message)) || e) + ' step=' + vcuStep); }
   if (timedOut){ showToast('Slow connection · stuck at step ' + vcuStep + ' — showing what loaded'); logTiming('[CUR] browse timeout step=' + vcuStep); } // ر٧٢-أ-٢ز: لا انتظار صامتًا
   try{ switchTab('Community'); if (cityId && HOSTED.Community) renderCommunityModal(); } finally { curBrowseBusy = false; }
 }
@@ -596,13 +636,15 @@ async function sendAppReport(){
   showToast('Thanks — we will look into it'); dashBack();
 }
 let vcuStep = ''; // ر٧٢-أ-٢ز: آخر مرحلة بلغها فتح طبقة الشخص (للتشخيص على الجهاز)
+let vcuSeq = 0; /* r109 (المراجعة الثانية): فتحان متداخلان (ضغطتان · شخص ثم آخر) — الأخير وحده يُكمل، والسابق يتوقف عند أول عودة من انتظار فلا يخلط مدن شخصين ولا يسكن ذاكرة الجلسة */
 async function viewCommunityUser(uid){
+  const __seq = ++vcuSeq; const __mine = function(){ return vcuSeq === __seq; };
   vcuStep = 'profile'; communityUserLayer = null;
   viewingUserUid = uid;
-  viewingUserData = null; const __tp = performance.now(); let __pErr = null; try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ __pErr = e; mpSwallow(e, 'profile'); } logTiming('[CM] person: profile in ' + Math.round(performance.now() - __tp) + 'ms'); /* د-٥ */ // r72r-1: الملف طازج بكل فتح (المدن الجديدة تظهر) — لا من ذاكرة المجتمع
+  viewingUserData = null; const __tp = performance.now(); let __pErr = null; let __vd = null; try{ __vd = await mpData.profiles.get(uid); }catch(e){ __pErr = e; mpSwallow(e, 'profile'); } if (!__mine()) return; viewingUserData = __vd; logTiming('[CM] person: profile in ' + Math.round(performance.now() - __tp) + 'ms'); /* د-٥ */ // r72r-1: الملف طازج بكل فتح (المدن الجديدة تظهر) — لا من ذاكرة المجتمع
   if (!viewingUserData) viewingUserData = communityUsers.find(u => u.uid === uid);
   if (!viewingUserData){ // ر٦٥: صاحب بطاقة لم يصل ملفه للقائمة (تحميل ناقص أو ملف حديث) — يُقرأ مفردًا بدل الانهيار
-    try{ viewingUserData = await mpData.profiles.get(uid); }catch(e){ __pErr = e; mpSwallow(e, 'profile'); }
+    let __vd2 = null; try{ __vd2 = await mpData.profiles.get(uid); }catch(e){ __pErr = e; mpSwallow(e, 'profile'); } if (!__mine()) return; viewingUserData = __vd2;
     if (!viewingUserData){ viewingUserData = { uid: uid, nickname: 'user', publicCityIds: [] }; if (__pErr) mpErrToast('Could not load this person', __pErr); } /* r100-د: الملف الوهمي «user» يُعلَن سببه */
   }
   communityViewingCityId = null;
@@ -611,31 +653,37 @@ async function viewCommunityUser(uid){
   // ✅ يعمل الآن (المرحلة ٣) — الاستثناء الأمني الجديد يسمح بتحديث viewCount لملف عام
   try{
     await mpData.communityProfiles.bumpView(uid);
-    viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1;
+    if (__mine()) viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1;
   }catch(e){}
+  if (!__mine()) return;
   // تحميل كسول: فقط تفاصيل مدن هذا المستخدم المفتوح حاليًا، مو كل مستخدمي Community دفعة وحدة
-  viewingUserCities = [];
-  try{
+  viewingUserCities = []; const __vc = [];
+  const __pk = ((viewingUserData && Array.isArray(viewingUserData.publicCityIds)) ? viewingUserData.publicCityIds.slice().sort().join(',') : ''); const __pc = cmPersonCities[uid]; if (__pc && __pc.key === __pk && Date.now() - __pc.at < CM_MARKET_TTL){ viewingUserCities = __pc.cities.slice(); logTiming('[CM] person: cities from session (' + viewingUserCities.length + ')'); } /* r109: ذاكرة الجلسة صالحة ما دام ملفه (المقروء طازجًا) يذكر المدن نفسها وما دامت داخل المهلة */ /* r105-ب (قياس: زيارة الشخص ثانيةً كانت تعيد استعلام فهرسه وتركيب كل مدينة مفتوحة) — مرة بالجلسة كصفحة المنتقي */
+  else try{
     let __qRows = []; try{ __qRows = await mpData.cityLists.publicByOwner(uid); }catch(e){ mpSwallow(e, 'public by owner'); } /* خ-٦: الفهرس وحده — مدينة الطبقة ٣ تُركَّب عند فتحها (cmEnsureCity) */ // r72s: اتحاد المصدرين كما بصفحة المنتقي · r72t: بالفرعية (الأماكن كاملة) — المدينة الجديدة تظهر ولو لم تصل إلى الملف العام بعد
     const __qIds = {}; __qRows.forEach(function(r){ __qIds[r.cityId || String(r.id || '').split('_').slice(1).join('_')] = r; });
     const __missing = (viewingUserData.publicCityIds || []).filter(function(cid){ return !__qIds[cid]; });
     const cityDocs = await Promise.all(__missing.map(cityId => mpData.cityLists.getIndex(uid, cityId).then(function(d){ return { exists: !!d, data: function(){ return d; } }; }).catch(function(){ return { exists: false }; }))); // r72t: عبر الطبقة (مركَّبة)
+    if (!__mine()) return;
     const __all = __qRows.map(function(r){ return { exists: true, data: function(){ return r; } }; }).concat(cityDocs);
     __all.forEach(doc => {
       if (!doc.exists) return;
       const d = doc.data(); if (d.public !== true) return;
       const cityMeta = allCities().find(c => c.id === d.cityId);
-      viewingUserCities.push({
+      __vc.push({
         id: d.cityId,
         name: (cityMeta && cityMeta.name) || d.cityName || d.cityId,
         categories: (d.categories && typeof d.categories==='object') ? d.categories : {},
-        _full: d._indexOnly !== true,
+        _full: d._indexOnly !== true, _row: d, /* r105-ب */
         favoriteCount: d.favoriteCount || 0,
         bookmarkCount: d.bookmarkCount || 0,
         viewCount: d.viewCount || 0
       });
     });
+    viewingUserCities = __vc;
   }catch(e){}
+  if (!__mine()) return;
+  if (viewingUserCities.length && !(__pc && __pc.key === __pk && Date.now() - __pc.at < CM_MARKET_TTL)) cmPersonCities[uid] = { cities: viewingUserCities.filter(function(c){ return !c._shared; }), key: __pk, at: Date.now() }; /* r109 · المراجعة: مصفوفة الذاكرة غير مصفوفة العرض — القائمة المشارَكة بالاسم (cmEnsureSharedCity) تُضاف للعرض وحده ولا تسكن الذاكرة */
   logTiming('[CM] person: cities in ' + Math.round(performance.now() - __tp) + 'ms'); vcuStep = 'trips'; await loadCommunityUserTrips(uid); logTiming('[CM] person: trips in ' + Math.round(performance.now() - __tp) + 'ms');
   vcuStep = 'bookmarks'; await ensureListBookmarks();
   vcuStep = 'saves'; await ensureTripSaves(); logTiming('[CM] person: bookmarks+saves in ' + Math.round(performance.now() - __tp) + 'ms'); /* د-٥ */
@@ -647,6 +695,7 @@ let communityUserTripsCity = ''; /* ر٧٣-أب (٢): «(City) All trips» من 
 function openCommunityCityList(cityId, origin){ /* ب-٢-١ (قرار ١٠-٠٩-٠٤): نقطة العدّ الواحدة لفتح قائمة شخص آخر — كل فتح يُعدّ بمنشئه: app (المشارَك معي) · community (الافتراضي) · curator (من صفحة المنتقي) */
   logTiming('[CM] open city list ' + cityId + ' · render…'); /* هـ-٨: علامة قبل الرسم */
   communityUserLayer = cityId; communityViewingCityId = cityId;
+  cmOpenMark(cityId); /* r109-ب: الفتح من الذاكرة يمرّ بقراءة التحقق — الرسم يعرض Loading حتى تعود */
   if (currentUser && viewingUserUid && viewingUserUid !== currentUser.uid){
     const k = viewingUserUid + '_' + cityId;
     if (!viewBumped[k]){ viewBumped[k] = true; mpData.lists.bumpView(viewingUserUid, cityId); }
@@ -671,8 +720,10 @@ async function cmEnsureCity(uid, c){ /* خ-٦: تركيب مدينة الشخص 
   /* هـ-١٠ (السبب الجذري لتجمّد Open من Shared with me — أُعيد إنتاجه في Chromium وأُوقف المنقّح على مكدسه): كان الاستدعاء الثاني أثناء التحميل يعود فورًا بوعد محلول، فيعيد renderCommunityUserList الرسم في .then، فيستدعي هذه الدالة فتعود فورًا… سلسلة مهام دقيقة (microtasks) لا تترك للخيط الرئيسي فرصة لمعالجة جواب القراءة الذي ينهي التحميل — تجمّد كامل حتى يقتل Safari الصفحة. مسار المشاركة يرسم مرتين أثناء التحميل دائمًا (openCommunityModal بعد تحميل قوائم المجتمع)، والفتح المباشر لا يرسم إلا مرة. الآن: الاستدعاء الثاني ينتظر الوعد الجاري نفسه؛ وبعد المحاولة تُعدّ المدينة مكتملة (بنجاح أو ببيانات الفهرس) فلا إعادة طلب ولا دوران */
   if (!c || c._full) return c; if (c._loading) return c._loading;
   c._loading = (async function(){
+    if (c._recheck){ /* r109-ب: المدينة في الذاكرة بمحتواها — قراءة الأم وحدها تتحقق */ let why = 'gone'; try{ const d = await mpData.cityLists.getIndex(uid, c.id); if (cmStillOpen(d ? Object.assign({}, d, { ownerId: d.ownerId || uid }) : null)) why = ''; }catch(e){ if (!(e && e.code === 'permission-denied')){ mpSwallow(e, 'check-list'); why = e; } }
+      try{ logTiming('READS · check · list ' + c.id + ' · ' + (why === '' ? 'still open' : why === 'gone' ? 'gone' : 'not checked')); }catch(_){} if (why !== ''){ c._loading = null; cmCityGone(uid, c, why); return c; } c._recheck = false; if (c._composed){ c._composed = false; c._full = true; c._loading = null; return c; } /* غير مركَّبة في هذه الطبقة: يكمل إلى التركيب أدناه والوعد الجاري نفسه باقٍ في _loading (هـ-١٠) */ }
     try{ if (c._src){ await curEnsureCity(uid, c.id); if (c._src._full){ c.categories = c._src.categories; c._unreadable = c._src._unreadable === true; } }
-      else { const full = await mpData.cityLists.get(uid, c.id); if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; c._unreadable = full._unreadable === true; logTiming('[CM] city composed ' + c.id + ' cats=' + Object.keys(full.categories).length + (c._unreadable ? ' · UNREADABLE (index has places)' : '')); } else showToast('Could not load this list'); } } /* r104 */
+      else { const full = (c._row && c._row.splitV === 1) ? await mpData.cityLists.composeRow(c._row) : await mpData.cityLists.get(uid, c.id); /* r105-ب */ if (full && full.categories && typeof full.categories === 'object'){ c.categories = full.categories; c._unreadable = full._unreadable === true; logTiming('[CM] city composed ' + c.id + ' cats=' + Object.keys(full.categories).length + (c._unreadable ? ' · UNREADABLE (index has places)' : '')); } else showToast('Could not load this list'); } } /* r104 */
     catch(e){ mpSwallow(e, 'community city'); mpErrToast('Could not load this list', e); } /* r100-د */
     c._full = true; c._loading = null; return c;
   })();
