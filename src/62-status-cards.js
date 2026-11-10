@@ -138,8 +138,9 @@ async function toggleSuspendUser(uid){
   if (!uid || !currentUser || uid === currentUser.uid){ if (uid && currentUser && uid === currentUser.uid) showToast("You can't suspend yourself"); return; } /* r100-ج */
   const u = allUsersCache.find(x => x.uid === uid);
   if (!u) return;
+  if (u.__suspendBusy) return; u.__suspendBusy = true; /* r109-ب (المراجعة): ضغطتان = فعل واحد — العلم يُرفع قبل أي انتظار (ورقة التأكيد نفسها انتظار) */
   const newVal = !u.suspended;
-  if (newVal && !(await mpConfirm('Holds every public list and trip and the shared-by-name access. Unsuspend restores everything.', { title: '⛔ Suspend ' + (u.nickname || u.email || 'this user') + '?', ok: 'Suspend', danger: true }))) return; /* ب-٢-٢-ب: الإيقاف بورقة تأكيد */
+  if (newVal && !(await mpConfirm('Holds every public list and trip and the shared-by-name access. Unsuspend restores everything.', { title: '⛔ Suspend ' + (u.nickname || u.email || 'this user') + '?', ok: 'Suspend', danger: true }))){ delete u.__suspendBusy; return; } /* ب-٢-٢-ب: الإيقاف بورقة تأكيد */
   try{
     // v3: مصدر الحقيقة suspensions/{uid} — وجود المستند = إيقاف. users.suspended كتابة انتقالية (تُزال بدفعة ٢/ز).
     if (newVal) await mpData.suspensions.set(uid, { at: Date.now(), by: currentUser.uid, email: u.email || '' });
@@ -147,8 +148,8 @@ async function toggleSuspendUser(uid){
     await mpData.users.merge(uid, { suspended: newVal }).catch(()=>{});
     // ٢٦ أغسطس (القرار ١): الإيقاف يحتجز العام والمشاركة بالاسم على كل قوائم المستخدم ورحلاته، والرفع يستعيدهما كما كانا —
     // لا محو ولا فعل يدوي؛ البوابة البشرية هي قرار الرفع (المالك يراجع المحتوى قبله — وصفة الإيقاف بدليل التشغيل)
-    await mpData.holdOrRestore(await mpData.cityLists.byOwner(uid), newVal);
-    try{ await mpData.holdOrRestore(await mpData.trips.byOwner(uid), newVal); }catch(e){}
+    await mpData.cityLists.holdAll(uid, newVal); /* r109-ب: القوائم وتصنيفاتها معًا — الإيقاف كامل */
+    await mpData.holdOrRestore(await mpData.trips.byOwner(uid), newVal); /* r109-ب (المراجعة): كان فشلها يُبتلع فيُقال «User suspended» ورحلاته عامة — الآن يُعلَن، وإعادة الضغط تكمل الاتجاه نفسه (الإيقاف والرفع قابلان للتكرار) */
     if (newVal){
       await mpData.profiles.merge(uid, { hasAnyPublicCity: false, hasAnyPublicContent: false, publicCityIds: [] }).catch(()=>{});
     } else {
@@ -156,9 +157,10 @@ async function toggleSuspendUser(uid){
     }
     u.suspended = newVal;
     showToast(newVal ? 'User suspended' : 'User unsuspended');
-    await loadCommunityLists();
+    await loadCommunityLists(true);
     openAdminUserCard(uid); /* ب-٢-٢-ب */
-  }catch(e){ showToast('Could not update user'); }
+  }catch(e){ mpSwallow(e, 'suspend'); mpErrToast('Could not finish — tap again to complete it', e); }
+  finally{ delete u.__suspendBusy; }
 }
 
 let expandedSections = {}; // { sectionTitle: true } — القسم مفتوح بالكامل
