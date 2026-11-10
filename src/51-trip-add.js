@@ -9,7 +9,7 @@
    مرجع المكان بالمدخل = { sourceType:'mylist'|'community', cityId, subcatId, placeId, sourceUid? } — كما كان، بلا حقل جديد (الاختيار ٢)
    مستند بلا plan = تنسيق قديم: لا يُفتح، سطر «Old format · delete» فقط (القرار ١٤ · الاختيار ١٢)
    ========================================================= */
-let userTrips = [];
+let userTrips = []; let tripsLoadFailed = false;
 let sharedTrips = [];           // رحلات شُوركت معي بالتحديد (sharedWith)
 let tripsLoaded = false;
 let currentTripId = null;       // الرحلة المفتوحة حاليًا
@@ -32,11 +32,12 @@ async function withAuthRetry(fn){
 
 async function loadUserTrips(){
   if (!currentUser){ userTrips = []; sharedTrips = []; tripsLoaded = true; return; }
+  tripsLoadFailed = false;
   try{
     const snap = await withAuthRetry(() => mpData.trips.byOwner(currentUser.uid));
     userTrips = [];
     snap.forEach(doc => userTrips.push({ id: doc.id, ...doc.data() }));
-  }catch(e){ userTrips = []; }
+  }catch(e){ userTrips = []; tripsLoadFailed = true; /* r108 (المراجعة): قراءة فشلت ≠ لا رحلات — نسخة التحرير على الجهاز لا تُسقط بسببها */ }
   try{
     const snap2 = await withAuthRetry(() => mpData.trips.sharedWith(currentUser.uid));
     sharedTrips = [];
@@ -45,10 +46,11 @@ async function loadUserTrips(){
   userTrips.forEach(tripNormalize); sharedTrips.forEach(tripNormalize);
   userTrips.forEach(tripSnap); mpSaveOk('trips'); /* r100-أ */
   tripsLoaded = true;
+  try{ if (typeof tbSessionOffer === 'function') setTimeout(function(){ tbSessionOffer().catch(function(e){ mpSwallow(e, 'tb-session'); }); }, 0); }catch(_){} /* r108: تحرير انقطع قبل الحفظ يُعرض للاستعادة */
   try{ if (typeof dpReconcile === 'function') await dpReconcile(); }catch(_){} /* r103 */
   if (typeof plRow4Refresh === 'function') plRow4Refresh(); /* r98b (ق١١-٠٣-٠١): عدّاد Day plan — الصف قد يكون رُسم قبل اكتمال التحميل */
 }
-function tripNormalize(t){ if (!t) return t; if (t.plan) tripPlanNormalize(t.plan); if (t.dayPlan && !t.title && t.plan && t.plan.days && t.plan.days[0] && t.plan.days[0].transportNote){ t.title = String(t.plan.days[0].transportNote).trim().slice(0, 80); t.plan.days[0].transportNote = ''; } /* r93-١: ما كُتب في Transport note (r92) يصير اسم الخطة */ if (!Array.isArray(t.cities)) t.cities = t.cityId ? [{ cityId: t.cityId, cityName: t.cityName || '', days: tripHasPlan(t) ? Math.max(1, t.plan.days.filter(function(d){ return d.kind === 'full'; }).length) : 1, stay: null, arrival: null, departure: null, fallback: 'transit' }] : []; t.cities = t.cities.map(function(c){ return (typeof c === 'string') ? { cityId: c, cityName: c, days: 1, stay: null, arrival: null, departure: null, fallback: 'transit' } : c; }); if (!t.version) t.version = 'balanced'; if (!t.status) t.status = tripHasPlan(t) ? 'approved' : 'draft'; if (t.dayRoutes && (typeof t.dayRoutes !== 'object' || Array.isArray(t.dayRoutes))) t.dayRoutes = {}; if (t.dayRoutes) tripRoutesPrune(t); return t; } // r78: مسار اليوم يُقرأ مقلَّمًا (أرجل فقدت طرفًا تسقط)
+function tripNormalize(t){ if (!t) return t; if (t.plan){ tripPlanNormalize(t.plan); tripIdsHeal(t); /* r107 */ } if (t.dayPlan && !t.title && t.plan && t.plan.days && t.plan.days[0] && t.plan.days[0].transportNote){ t.title = String(t.plan.days[0].transportNote).trim().slice(0, 80); t.plan.days[0].transportNote = ''; } /* r93-١: ما كُتب في Transport note (r92) يصير اسم الخطة */ if (!Array.isArray(t.cities)) t.cities = t.cityId ? [{ cityId: t.cityId, cityName: t.cityName || '', days: tripHasPlan(t) ? Math.max(1, t.plan.days.filter(function(d){ return d.kind === 'full'; }).length) : 1, stay: null, arrival: null, departure: null, fallback: 'transit' }] : []; t.cities = t.cities.map(function(c){ return (typeof c === 'string') ? { cityId: c, cityName: c, days: 1, stay: null, arrival: null, departure: null, fallback: 'transit' } : c; }); if (!t.version) t.version = 'balanced'; if (!t.status) t.status = tripHasPlan(t) ? 'approved' : 'draft'; if (t.dayRoutes && (typeof t.dayRoutes !== 'object' || Array.isArray(t.dayRoutes))) t.dayRoutes = {}; if (t.dayRoutes) tripRoutesPrune(t); return t; } // r78: مسار اليوم يُقرأ مقلَّمًا (أرجل فقدت طرفًا تسقط)
 function tripHasPlan(t){ return !!(t && t.plan && Array.isArray(t.plan.days)); }
 function tripIsOld(t){ return !!(t && !tripHasPlan(t) && Array.isArray(t.days)); } // القديم: days[] بالخانات
 function tripCityIds(t){ return (t && Array.isArray(t.cities) ? t.cities : []).map(function(c){ return typeof c === 'string' ? c : c.cityId; }).filter(Boolean).concat(t && t.cityId && !(t.cities || []).length ? [t.cityId] : []); }
@@ -57,25 +59,41 @@ function tripDayCount(t){ return tripHasPlan(t) ? t.plan.days.length : ((t && t.
 function tripPlaceCount(t){ return tripHasPlan(t) ? tripPlanCount(t.plan) : 0; }
 function tripMetaLine(t){ const d = tripDayCount(t), p = tripPlaceCount(t); return d + (d === 1 ? ' day' : ' days') + ' · ' + p + (p === 1 ? ' place' : ' places'); } // بدل سطر النوع (القرار ١٣)
 function tripTitle(t){ if (!t) return ''; if (t.title) return t.title; const names = (t.cities || []).map(function(c){ return c.cityName; }).filter(Boolean); const base = names.length ? names.join(' & ') : (t.cityName || 'Trip'); return t.customLabel ? (base + ' — ' + t.customLabel) : base; }
-function tripSpec(t){ return { cities: t.cities || [], version: t.version || 'balanced' }; }
+function tripSpec(t){ return { cities: t.cities || [], version: t.version || 'balanced', dayPlan: !!t.dayPlan }; }
 function tripRestRowHtml(stayName, minutes, removeOn){ return '<div class="trip-rest"><span><b>Rest at ' + escapeHtml(stayName || 'your stay') + '</b> <span class="dim">· about ' + (minutes >= 90 ? (Math.round(minutes / 30) / 2) + ' h' : minutes + ' min') + '</span></span>' + (removeOn ? '<button type="button" class="actn" onclick="' + removeOn + '">Remove</button>' : '') + '</div>'; } // ب-٧: سطر الراحة بين فترتين (المسودة والعرض)
 function tripRestAddHtml(hasStay, addOn){ return hasStay ? '<button type="button" class="trip-rest-add" onclick="' + addOn + '">＋ Add rest</button>' : '<div class="trip-rest-add off">＋ Add rest <span class="dim">· set where you stay in Setup</span></div>'; } // ب-٧: الزر بين الفترتين؛ بلا إقامة تلميح
 function tripLegWarnHtml(w){ return '<div class="trip-legwarn">↓ ' + tripKmLabel(w.km) + ' · ' + (w.mode === 'walk' ? 'walk' : w.mode === 'car' ? 'car' : 'metro') + ' — a long leg</div>'; } // ب-٥: الرِّجل الطويلة سطرًا رفيعًا قبل محطتها (المسودة والعرض)
 const tripSavedJson = {}; /* r100-أ: لقطة آخر حفظ لكل رحلة — Discard يعيدها في مكانها (الرحلة الجديدة تُزال) */
 function tripSnap(t){ if (t && t.id) tripSavedJson[t.id] = JSON.stringify(t); }
-async function tripDiscard(trip){ const j = tripSavedJson[trip.id]; const i = userTrips.findIndex(function(t){ return t.id === trip.id; }); if (j){ const old = JSON.parse(j); Object.keys(trip).forEach(function(k){ delete trip[k]; }); Object.assign(trip, old); if (i < 0) userTrips.push(trip); } else { if (i >= 0) userTrips.splice(i, 1); if (typeof TB !== 'undefined' && TB){ TB = null; const bd = document.getElementById('tripBuildBackdrop'); if (bd) bd.classList.remove('show'); } } delete resolvedTripCache[trip.id]; try{ renderTripsBody(); }catch(_){} }
-async function saveTrip(trip){
+/* ═══ r107 (ق١١-١٠-٠٢): حارس الخطة — آخر خط قبل الكتابة. القاعدة: مكان لا يغادر الخطة ويوم بترتيب صاحبه لا يُعاد رسمه إلا بفعل أعلنه مساره (tripGuardAllow).
+   مسار نسي أن يعرف شكل اليوم أو أسقط شيئًا في الطريق لا يُكتب: تعود الخطة كما حُفظت آخر مرة، ويُقال ذلك للمستخدم، ويُسجَّل PLAN-GUARD. الأساس = tripSavedJson (لقطة التحميل ثم كل حفظ ناجح). ═══ */
+const tripGuardOk = {}; let tripGuardGen = 0; /* كل إعلان يحمل رقم جيله: كتابة ناجحة تستهلك ما أُعلن قبل بدئها فقط — ما أُعلن والكتابة في الطريق يبقى للتالية (المراجعة المستقلة: حذف محطتين متتاليتين كان يُرفض ثانيهما) */
+function tripGuardAllow(tripId, ids, shape){ if (!tripId) return; const g = tripGuardOk[tripId] = tripGuardOk[tripId] || { ids: {}, all: 0, shape: 0 }; const gen = ++tripGuardGen; if (ids === '*') g.all = gen; else (ids || []).forEach(function(id){ if (id) g.ids[id] = gen; }); if (shape) g.shape = gen; }
+function tripGuardSettle(tripId, gen0, was, now, builder){ /* إعلانٌ يُستهلك حين تحمله الكتابة فعلًا: معرّف غاب عمّا كُتب · شكل نقص فيه يوم خطّي · تراجع غيّر الخطة — لا بمجرد أن كتابةً أخرى مرّت (المراجعة الثانية: إعادة محاولة أو dpSyncWithList بين الحذف وحفظه) */ const g = tripGuardOk[tripId]; if (!g) return; const changed = was.json !== now.json; Object.keys(g.ids).forEach(function(id){ if (g.ids[id] <= gen0 && !(now.count[id] > 0)) delete g.ids[id]; }); if (g.all && g.all <= gen0 && (changed || builder)) g.all = 0; /* كتابة المنشئ تحمل حالته كلها — تراجعه يُستهلك بها ولو عادت الخطة كما كانت */ if (g.shape && g.shape <= gen0 && now.lin < was.lin) g.shape = 0; if (!g.all && !g.shape && !Object.keys(g.ids).length) delete tripGuardOk[tripId]; }
+const tripWriteSeq = {}, tripBaseSeq = {}; /* أساس الحارس لا يتراجع إن اكتملت كتابتان بغير ترتيبهما */
+function tripGuardReset(tripId){ delete tripGuardOk[tripId]; }
+function tripPlanIndex(plan){ const names = {}, count = {}; let lin = 0; if (plan && Array.isArray(plan.days)){ plan.days.forEach(function(d){ if (d.mode === 'daytrip') lin++; }); tripPlanEntries(plan).concat(plan.tray || []).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x){ if (x && x.id){ names[x.id] = x.name || 'a place'; count[x.id] = (count[x.id] || 0) + 1; } }); }); } return { names: names, count: count, lin: lin }; } /* مدخل بلا معرّف (مستند قديم) لا يُتتبَّع */
+function tripGuardCheck(trip){ const j = tripSavedJson[trip.id]; if (!j) return null; let old; try{ old = JSON.parse(j); }catch(_){ return null; } if (!old || !tripHasPlan(old)) return null; const ok = tripGuardOk[trip.id] || { ids: {}, all: 0, shape: 0 }; if (ok.all) return null; const a = tripPlanIndex(old.plan), b = tripPlanIndex(trip.plan); const lost = Object.keys(a.names).filter(function(id){ return (b.count[id] || 0) < a.count[id] && !ok.ids[id]; }); /* بالعدد لا بالوجود: نسخة من اثنتين سقطت = فقد */ const shape = b.lin < a.lin && !ok.shape; if (!lost.length && !shape) return null; return { lost: lost.map(function(id){ return a.names[id]; }), shape: shape, old: old }; }
+function tripGuardRestore(trip, g){ Object.keys(trip).forEach(function(k){ delete trip[k]; }); Object.assign(trip, g.old); /* الرحلة كلها كما حُفظت (الخطة والمدن والمسارات والحالة والاسم) — لا نصف عودة */ delete resolvedTripCache[trip.id]; tripGuardReset(trip.id);
+  try{ logTiming('PLAN-GUARD · ' + trip.id + ' · not saved' + (g.lost.length ? ' · ' + g.lost.length + ' place(s) would have left the plan unasked: ' + g.lost.slice(0, 4).join(', ') + (g.lost.length > 4 ? '…' : '') : '') + (g.shape ? ' · a day in your own order would have been redrawn' : '')); }catch(_){}
+  try{ if (typeof tbGuardReload === 'function') tbGuardReload(trip); }catch(_){}
+  try{ if (currentTab === 'Trips' && currentTripId === trip.id) renderMyTripsModal(); }catch(_){}
+  try{ mpSheet({ title: 'Kept as it was', text: 'That step would have ' + (g.lost.length ? 'dropped ' + (g.lost.length === 1 ? g.lost[0] : g.lost.length + ' places (' + g.lost.slice(0, 3).join(', ') + (g.lost.length > 3 ? '…' : '') + ')') + ' from the plan' : 'redrawn a day you ordered yourself') + ' without asking you — so it was not saved, and the plan is back as you last saved it. Diagnostics has a PLAN-GUARD line if you want to report it.', ok: 'OK' }); }catch(_){} }
+async function tripDiscard(trip){ tripGuardReset(trip.id); const j = tripSavedJson[trip.id]; const i = userTrips.findIndex(function(t){ return t.id === trip.id; }); if (j){ const old = JSON.parse(j); Object.keys(trip).forEach(function(k){ delete trip[k]; }); Object.assign(trip, old); if (i < 0) userTrips.push(trip); } else { if (i >= 0) userTrips.splice(i, 1); if (typeof TB !== 'undefined' && TB){ TB = null; const bd = document.getElementById('tripBuildBackdrop'); if (bd) bd.classList.remove('show'); try{ if (typeof tbSessionClear === 'function') tbSessionClear(); }catch(_){} /* r108: تخلّى عنها — لا تُعرض للاستعادة */ } } delete resolvedTripCache[trip.id]; try{ renderTripsBody(); }catch(_){} }
+async function saveTrip(trip, o){
   mpTrack.hit('trip_save');
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   try{
     trip.ownerId = trip.ownerId || currentUser.uid; // صيد المحاكاة (ر٦٠+): الحل يقرأ المالك من الكائن المحلي
     const __isNew = !trip.__saved; trip.__saved = true; // r72p (٧): trip_built مرة عند أول حفظ
+    if (tripHasPlan(trip)){ tripPlanNormalize(trip.plan); tripIdsHeal(trip); } /* r107: العلاج الذاتي قبل الكتابة أيضًا */ const __g = tripGuardCheck(trip); if (__g){ if (o && o.builder && typeof tbGuardRefused === 'function' && typeof TB !== 'undefined' && TB && TB.tripId === trip.id) tbGuardRefused(trip, __g); /* r108: داخل جلسة التحرير — يُرفض الحفظ ويبقى التحرير (كان يعيد الرحلة فيضيع عمل الجلسة كلها لا خطوة واحدة) */ else tripGuardRestore(trip, __g); return 'guard'; } /* r107: الحارس — المستدعي يعرف أن الحفظ رُفض */ const __gen = tripGuardGen;
     if (trip.dayRoutes) tripRoutesPrune(trip); // r78 (البيان ٣-١): الأرجل التي فقدت طرفًا تُحذف عند الحفظ
     const __hasLegs = !!(trip.dayRoutes && Object.keys(trip.dayRoutes).some(function(k){ return trip.dayRoutes[k] && trip.dayRoutes[k].legs && Object.keys(trip.dayRoutes[k].legs).length; }));
+    const __w = JSON.stringify(trip); const __seq = tripWriteSeq[trip.id] = (tripWriteSeq[trip.id] || 0) + 1; let __was = { json: '', lin: 0 }; try{ const __o = tripSavedJson[trip.id] ? JSON.parse(tripSavedJson[trip.id]) : null; if (__o && tripHasPlan(__o)) __was = { json: JSON.stringify(__o.plan), lin: tripPlanIndex(__o.plan).lin }; }catch(_){} const __now = Object.assign(tripPlanIndex(trip.plan), { json: JSON.stringify(trip.plan || null) }); /* r107: أساس الحارس = ما كُتب فعلًا (الرحلة كلها قبل الانتظار — الحفظ لا يعدّل الكائن) */
     await mpData.trips.save(trip, Object.assign({ ownerId: currentUser.uid }, __hasLegs ? { legSources: ['user'] } : {})); // الدفعة ب: الأرجل من المستخدم وحده (legSourcesOk)
     if (__isNew && !trip.source) try{ mpTrack.statsCity(trip.cityId, 'trip_built'); }catch(_){}
-    tripSnap(trip); mpSaveOk('trips'); /* r100-أ */
-  }catch(e){ await mpSaveFailed('trips', e, function(){ return saveTrip(trip); }, function(){ return tripDiscard(trip); }); try{ renderTripsBody(); }catch(_){} }
+    if (__seq >= (tripBaseSeq[trip.id] || 0)){ tripBaseSeq[trip.id] = __seq; tripSavedJson[trip.id] = __w; } tripGuardSettle(trip.id, __gen, __was, __now, !!(o && o.builder)); mpSaveOk('trips'); /* r100-أ */
+  }catch(e){ const __f = await mpSaveFailed('trips', e, function(){ return saveTrip(trip, o); }, function(){ return tripDiscard(trip); }); try{ renderTripsBody(); }catch(_){} return __f === 'discard' ? 'discarded' : (__f === 'retry' && !mpUnsaved.trips) ? undefined : 'failed'; /* r108 (المراجعة): المستدعي يعرف — كُتبت بعد إعادة المحاولة · أو تخلّى عنها صاحبها · أو ما زالت غير محفوظة */ }
 }
 function generateTripId(){
   return "trip_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
@@ -160,7 +178,7 @@ async function undoTripAdd(i){
   const trip = userTrips.find(t => t.id === activeTripId);
   const rec = activeTripAdded[i]; if (!trip || rec === undefined) return;
   const id = (activeTripAddedRefs || [])[i];
-  if (id && tripHasPlan(trip)){ tripDetach(trip.plan, id); await saveTrip(trip); delete resolvedTripCache[trip.id]; }
+  if (id && tripHasPlan(trip)){ tripGuardAllow(trip.id, [id]); /* r107 */ tripDetach(trip.plan, id); await saveTrip(trip); delete resolvedTripCache[trip.id]; }
   activeTripAdded.splice(i, 1); activeTripAddedRefs.splice(i, 1);
   updateActiveTripBanner();
   if (currentTab === 'Trips' && currentTripId === trip.id) openTripDetail(trip.id);
@@ -222,9 +240,10 @@ async function tripAutoPlace(trip, ref){
   const place = await tripPlaceDataFor(ref);
   if (ref.sourceType === 'mylist' && tripSectionOf(ref.subcatId) === 'stay'){ const city = (trip.cities || []).find(function(c){ return c.cityId === ref.cityId; }); if (city){ city.stay = { name: (place && place.name) || ref.name || 'Stay', geo: (place && place.geo && typeof place.geo.lat === 'number') ? { lat: place.geo.lat, lng: place.geo.lng } : null }; await saveTrip(trip); delete resolvedTripCache[trip.id]; updateActiveTripBanner(); showActionToast('Set as where you stay · ' + (city.cityName || ''), [['Setup', "openTripBuilder({ tripId: '" + attrStr(trip.id) + "', stage: 1 })"]]); if (currentTab === 'Trips' && currentTripId === trip.id) openTripDetail(trip.id); return; } } /* ب-٨: الفندق إقامة لا محطة */
   const e = tripEntryFromPlace(Object.assign({}, ref, { name: ref.name }), place);
-  const slot = tripSuggestSlot(trip.plan, e, tripSpec(trip)); let where;
-  if (slot){ tripInsert(trip.plan, slot.dayIdx, slot.period, e, slot.alt, slot.excursion); const d = trip.plan.days[slot.dayIdx]; where = tripDayLabel(d) + ' · ' + TRIP_PERIOD_LABEL[slot.period] + (slot.alt ? ' · alternative' : ''); }
-  else { trip.plan.tray.push(e); where = e.geo ? 'Program full · in the tray · ' + trip.plan.tray.length : 'No pin · in the tray'; }
+  const put = tripAddAuto(trip.plan, e, tripSpec(trip)); const slot = put.where !== 'tray'; let where; /* r107: الإضافة الواحدة — رحلة اليوم تأخذه محطةً في آخر مسارها (كان يُكتب في فترة لا تُعرض) */
+  if (put.where === 'stop'){ const d = trip.plan.days[put.dayIdx]; where = (trip.plan.days.length > 1 ? tripDayLabel(d) + ' · ' : '') + 'stop ' + (put.index + 1) + ' · end of the route'; }
+  else if (slot){ const d = trip.plan.days[put.dayIdx]; where = tripDayLabel(d) + ' · ' + TRIP_PERIOD_LABEL[put.period] + (put.where === 'alt' ? ' · alternative' : ''); }
+  else { where = e.geo ? 'Program full · in the tray · ' + trip.plan.tray.length : 'No pin · in the tray'; }
   try{ mpTripCount('placesAdded', 1); if (!slot) mpTripCount('placesTrayed', 1); }catch(_){} /* r79 (ج · القرار ١٠) */
   // r78: لا علم مخزَّن للاكتمال — الرِّجل الجديدة بلا دقائق تجعل مسار اليوم «غير مكتمل» اشتقاقًا (التثبيت ٢)
   activeTripAdded.push(e.name); activeTripAddedRefs.push(e.id);
