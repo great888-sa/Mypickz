@@ -4,6 +4,8 @@
    النطاق: المفكرات والحفوظ وعدّاداتها (v1.40 — القرار ٠٩) والمصادقة والقوائم والرحلات — يتسع بكل دفعة.
    الوحدة لا تعرف الواجهة ولا تعرض رسائل؛ الأخطاء تُرمى للمستدعي كما هي.
    ========================================================= */
+/* r105-ج (ق١١-٠٦-٠١ · الاقتراح الثالث): سطر رؤية موحّد في الشريط — VIS · <city> · public|private · shared N · <event> — يصدر عند الختم (الحفظ) والإصلاح (التحميل) والتركيب عند المشاهد؛ هو السطر الذي كان سيكشف عطل مونترو من أول نظرة */
+function mpVisLine(cityId, flags, event){ try{ logTiming('VIS · ' + cityId + ' · ' + (flags && flags.public === true ? 'public' : 'private') + ' · shared ' + ((flags && Array.isArray(flags.sharedWith)) ? flags.sharedWith.length : 0) + ' · ' + event); }catch(_){} }
 const mpData = (function(){
   const inc = function(n){ return firebase.firestore.FieldValue.increment(n); };
   function listDerived(data){ // r72m (M4.25): hasTop · geoSources · flagsUsed من أماكن القائمة — تُكتب مع الحفظ، وتُحدَّث كلما تغيّرت الأماكن
@@ -235,8 +237,12 @@ const mpData = (function(){
         const out = Object.assign({}, parent, { categories: mpFixAreaPlaces(cats) }); // ب-٦
         if (visStale.length) out._visStale = visStale;
         if (!snap.size && Array.isArray(parent.index) && parent.index.length) out._unreadable = true; /* r104: الأم تقول إن فيها أماكن والاستعلام عاد صفرًا — التصنيفات غير مقروءة لهذا الحساب (لا «لا أماكن») */
+        if (parent.ownerId !== me) mpVisLine(parent.cityId, parent, 'viewer · ' + snap.size + '/' + mpData.cityLists._indexCats(parent) + ' cats' + (out._unreadable ? ' · UNREADABLE' : (snap.size < mpData.cityLists._indexCats(parent) ? ' · PARTIAL' : ''))); /* r105-ج */
+        else if (visStale.length) mpVisLine(parent.cityId, parent, 'owner · ' + visStale.length + '/' + snap.size + ' cats out of step');
         return out;
       },
+      _indexCats: function(parent){ const seen = {}; (parent && Array.isArray(parent.index) ? parent.index : []).forEach(function(e){ if (e && e.catId) seen[e.catId] = 1; }); return Object.keys(seen).length; }, /* r105-ج: عدد التصنيفات التي يذكرها الفهرس */
+      composeRow: function(row){ /* r105-ب (قياس): صف الفهرس (من publicByOwner/getIndex) يحمل الأم كاملة — التركيب منه يوفّر قراءة الأم الثانية عند فتح المدينة */ if (!row || row.splitV !== 1 || !row.ownerId || !row.cityId) return null; const parent = Object.assign({}, row); delete parent.categories; delete parent._indexOnly; return mpData.cityLists._compose(parent, row.ownerId + '_' + row.cityId); },
       _indexOf: function(categories){ const ix = []; Object.keys(categories || {}).forEach(function(k){ (((categories[k] || {}).places) || []).forEach(function(p){ if (!p || !(p.name || p.url)) return; const o = { id: p.id || '', name: p.name || '', catId: k }; if (p.topPlace === true) o.top = true; if (p.topAt || p.updatedAt) o.at = p.topAt || p.updatedAt; if (p.updatedAt) o.up = p.updatedAt; /* خ-٦: ختم التعديل وحده — Latest يقرؤه من الفهرس (قرار r73y: المعدَّل لا Top) */ ix.push(o); }); }); return ix; },
       _fromIndex: function(parent){ // للشاشات الجماعية: categories مصغَّرة من الفهرس (اسم · معرّف · top · at) بلا قراءة فرعية
         if (parent && parent.cityId && parent.cityName) rememberCity(parent.cityId, parent.cityName, parent.country);
@@ -261,7 +267,7 @@ const mpData = (function(){
         const b = db.batch(); b.set(col('userCityLists').doc(id), Object.assign({}, parent, { categories: del() }), { merge: true });
         Object.keys(cats).forEach(function(k){ if (only && only.indexOf(k) < 0) return; const e = cats[k] || {}; b.set(col('userCityListCats').doc(id + '_' + k), { ownerId: uid, cityId: cityId, catId: k, public: isPublic, sharedWith: shared, active: e.active !== false, places: (e.places || []).filter(function(p){ return p && (p.name || p.url); }), updatedAt: Date.now() }); });
         visDocs.forEach(function(docId){ b.set(col('userCityListCats').doc(docId), { public: isPublic, sharedWith: shared }, { merge: true }); });
-        await b.commit(); return { visCats: visDocs.length };
+        await b.commit(); if (opts && opts.syncVis && only) mpVisLine(cityId, data, 'stamped · ' + (visDocs.length + only.length) + '/' + (visDocs.length + only.length) + ' cats'); return { visCats: visDocs.length }; /* r105-ج */
       },
       _sharedKey: function(arr){ return (Array.isArray(arr) ? arr.map(String).slice().sort() : []).join(','); }, /* r104: مقارنة sharedWith بلا اعتبار للترتيب */
       setVisibility: async function(uid, cityId, isPublic, shared){ // r72t: نسخة شرط القراءة بالفرعية تتبع الأم
@@ -279,6 +285,22 @@ const mpData = (function(){
       },
       removeKeys: function(uid, cityId, keys){ const u = {}; keys.forEach(k => { u['categories.' + k] = del(); }); return col('userCityLists').doc(uid + '_' + cityId).update(u); },
       byOwner: function(uid){ return col('userCityLists').where('ownerId', '==', uid).get(); },
+      holdAll: async function(uid, hold, opts){ /* r109-ب (ق١١-١٠-٠٥ — قياس: بعد الإيقاف القائمة الأم مخفية ومستند تصنيفها `public: true` واستعلام حساب آخر يعيد المكان): الإيقاف كامل — كل قائمة وكل مستند تصنيف تحتها في الكتابة نفسها. الأم تحفظ ما كان (publicHeld · sharedWithHeld) والتصنيفات تتبع الأم دائمًا (r104) فلا تحتاج حفظًا خاصًّا: عند الرفع تأخذ علمَي الأم المستعادَين. تكرار الإيقاف على موقوف لا يمحو المحفوظ. opts.onlyOutOfStep: يكتب ما يخالف وحده (علاج حساب أُوقف قبل هذه الدفعة). */
+        const ps = await col('userCityLists').where('ownerId', '==', uid).get(); const cs = await col('userCityListCats').where('ownerId', '==', uid).get();
+        const only = !!(opts && opts.onlyOutOfStep); const pOps = [], cOps = []; const flags = {}; let nL = 0, nC = 0;
+        ps.forEach(function(doc){ const d = doc.data() || {}; const u = { suspended: hold }; let write = true;
+          if (hold){ if (d.suspended === true){ flags[doc.id] = { public: false, sharedWith: [] }; write = d.public === true || (Array.isArray(d.sharedWith) && d.sharedWith.length > 0); if (write){ u.public = false; u.sharedWith = []; } else return; }
+            else { u.sharedWithHeld = Array.isArray(d.sharedWith) ? d.sharedWith : []; u.sharedWith = []; u.publicHeld = d.public === true; u.public = false; flags[doc.id] = { public: false, sharedWith: [] }; } }
+          else { if (d.suspended !== true){ flags[doc.id] = { public: d.public === true, sharedWith: Array.isArray(d.sharedWith) ? d.sharedWith : [] }; return; } /* المراجعة: الرفع على غير محتجز (إعادة بعد فشل جزئي · ضغطتان) لا يكتب «خاصة» فوق قائمة عادت — تصنيفاتها تتبع علمَيها الحاليين */
+            u.sharedWith = Array.isArray(d.sharedWithHeld) ? d.sharedWithHeld : (Array.isArray(d.sharedWith) ? d.sharedWith : []); u.sharedWithHeld = del(); u.public = d.publicHeld === true; u.publicHeld = del(); flags[doc.id] = { public: u.public, sharedWith: u.sharedWith }; }
+          nL++; pOps.push([col('userCityLists').doc(doc.id), u]); });
+        cs.forEach(function(doc){ const d = doc.data() || {}; const f = flags[uid + '_' + d.cityId] || { public: false, sharedWith: [] }; /* تصنيف بلا أم يُخفى */
+          const same = (d.public === true) === (f.public === true) && mpData.cityLists._sharedKey(d.sharedWith) === mpData.cityLists._sharedKey(f.sharedWith); if (only && same) return; nC++; cOps.push([col('userCityListCats').doc(doc.id), { public: f.public === true, sharedWith: f.sharedWith || [] }]); });
+        const ops = hold ? cOps.concat(pOps) : pOps.concat(cOps); /* المراجعة: عند الإيقاف التصنيفات أولًا، وعند الرفع الأمهات أولًا — انقطاع بين دفعتين يترك تصنيفًا خاصًّا تحت أم عامة (لا يُقرأ؛ يعالجه تحميل صاحبها أو إعادة المحاولة) ولا يترك أبدًا تصنيفًا عامًّا تحت أم مخفية */
+        for (let i = 0; i < ops.length; i += 400){ const b = db.batch(); ops.slice(i, i + 400).forEach(function(o){ b.set(o[0], o[1], { merge: true }); }); await b.commit(); }
+        if (ops.length) try{ logTiming('VIS · account ' + uid + ' · ' + (hold ? 'held' : 'restored') + ' · ' + nL + ' lists · ' + nC + ' category docs' + (only ? ' (out of step only)' : '')); }catch(_){}
+        return { lists: nL, cats: nC };
+      },
       sharedWith: function(uid){ return col('userCityLists').where('sharedWith', 'array-contains', uid).get(); }, /* ر٧٣-أب (٢) */
       publicByOwnerRaw: function(uid){ return col('userCityLists').where('ownerId', '==', uid).where('public', '==', true).get(); },
       setNicknameAll: async function(uid, nickname){ const snap = await col('userCityLists').where('ownerId', '==', uid).get(); const b = db.batch(); snap.forEach(function(d){ b.update(d.ref, { nickname: nickname }); }); return b.commit(); }, /* ر٧٣-أب (٢) */
@@ -358,9 +380,11 @@ const mpData = (function(){
     // القرار ١ (٢٦ أغسطس): الإيقاف احتجاز كامل (العام + المشاركة بالاسم)، والرفع استعادة كاملة — البوابة البشرية هي قرار الرفع
     holdOrRestore: async function(snap, hold){
       if (snap.empty) return;
-      const batch = db.batch();
+      const ops = [];
       snap.forEach(doc => {
         const d = doc.data();
+        if (!hold && !(d && d.suspended === true)) return; /* r109-ب (المراجعة): الرفع على غير محتجز لا يكتب «خاصة» فوق ما عاد */
+        if (hold && d && d.suspended === true) return; /* r109-ب: تكرار الإيقاف على موقوف لا يمحو ما حُفظ للرفع (publicHeld · sharedWithHeld) */
         const u = { suspended: hold };
         if (hold){
           u.sharedWithHeld = Array.isArray(d.sharedWith) ? d.sharedWith : [];
@@ -373,9 +397,9 @@ const mpData = (function(){
           u.public = d.publicHeld === true;
           u.publicHeld = del();
         }
-        batch.update(doc.ref, u);
+        ops.push([doc.ref, u]);
       });
-      await batch.commit();
+      for (let i = 0; i < ops.length; i += 400){ const batch = db.batch(); ops.slice(i, i + 400).forEach(function(o){ batch.update(o[0], o[1]); }); await batch.commit(); } /* r109-ب: دفعات من ٤٠٠ (حدّ Firestore ٥٠٠) */
     }
   };
 })();
@@ -452,3 +476,26 @@ async function linkOwnerUid(){
   }catch(e){ /* صامت */ }
 }
 
+/* ═══ r109 (المراجعة · مانع): باب واحد للكتابات التي يعرضها السوق — بعد نجاح كل واحدة يُخبَر المجتمع (cmWrote) فيُسقط من ذاكرة جلسته ما لم يعد يُصدَّق. الجدول هو المرجع: كتابة جديدة على trips / userCityLists / userCityListCats / communityProfiles تُضاف هنا (تدقيق §38 يوقف البناء إن غابت). المشاهدات (bumpView ×3) وعدّاد المتابعين (follows.set) خارجه قصدًا: لا يغيّران ما يظهر ولا من يظهر، وعدّادهما يلحق مع القراءة التالية. ═══ */
+const MP_MARKET_WRITES = [
+  ['bookmarks', 'toggleList', function(a){ return ['lists', a[1] + '_' + a[2], true, a[1]]; }],
+  ['tripSaves', 'toggle', function(a){ return ['trips', a[1], true, null]; }],
+  ['copies', 'record', function(a){ return [a[3] === 'trips' ? 'trips' : 'lists', a[2], true, null]; }],
+  ['copies', 'unrecord', function(a){ return [a[2] === 'trips' ? 'trips' : 'lists', a[1], true, null]; }],
+  ['profiles', 'merge', function(a){ return ['users', a[0], true, a[0]]; }],
+  ['profiles', 'remove', function(a){ return ['users', a[0], true, a[0]]; }],
+  ['communityProfiles', 'set', function(a){ return ['users', a[0], true, a[0]]; }],
+  ['cityLists', 'save', function(a){ return ['lists', a[0] + '_' + a[1], !!(a[2] && a[2].public === true), a[0]]; }],
+  ['cityLists', 'setVisibility', function(a){ return ['lists', a[0] + '_' + a[1], true, a[0]]; }],
+  ['cityLists', 'repairVisibility', function(a){ return ['lists', '', false, String((a[0] || [])[0] || '').split('_')[0]]; }],
+  ['cityLists', 'dropCategoryKeys', function(a){ return ['lists', a[0] + '_' + a[1], false, a[0]]; }],
+  ['cityLists', 'remove', function(a){ return ['lists', a[0] + '_' + a[1], false, a[0]]; }],
+  ['cityLists', 'removeKeys', function(a){ return ['lists', a[0] + '_' + a[1], false, a[0]]; }],
+  ['cityLists', 'setNicknameAll', function(a){ return ['lists', '', true, a[0]]; }],
+  ['trips', 'save', function(a){ return ['trips', a[0] && a[0].id, !!(a[0] && a[0].public === true), (a[1] && a[1].ownerId) || (a[0] && a[0].ownerId) || null]; }],
+  ['trips', 'remove', function(a){ return ['trips', a[0], false, null]; }],
+  ['', 'holdOrRestore', function(){ return ['all', '', true, null]; }],
+  ['cityLists', 'holdAll', function(){ return ['all', '', true, null]; }]
+];
+MP_MARKET_WRITES.forEach(function(w){ const o = w[0] ? mpData[w[0]] : mpData, f = o && o[w[1]]; if (typeof f !== 'function') return;
+  o[w[1]] = function(){ const a = arguments; return Promise.resolve(f.apply(this, a)).then(function(v){ try{ if (typeof cmWrote === 'function') cmWrote.apply(null, w[2](a)); }catch(_){} return v; }); }; });
