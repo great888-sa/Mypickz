@@ -194,7 +194,7 @@ function pickerPanel(spec){
   if (typeof spec.edit === 'boolean') st.edit = spec.edit;
   const items = pickerFilterItems(spec.items, st.query);
   const rows = (spec.limit ? items.slice(0, spec.limit) : items).map(it =>
-    '<div class="prow' + (it.selected ? ' sel' : '') + (it.off ? ' off' : '') + '"' + (it.country ? ' data-country="' + attrStr(String(it.country).toLowerCase()) + '"' : '')
+    '<div class="prow' + (it.selected ? ' sel' : '') + (it.off ? ' off' : '') + '"' + (it.country ? ' data-country="' + attrVal(String(it.country).toLowerCase()) + '"' : '')
     + (it.off ? '' : ' onclick="' + (spec.onPick || 'void') + '(\'' + attrStr(it.id) + '\')"') + '><span class="nm">' /* r105-٣: it.off = معروض بلا اختيار (السبب في sub) */ + (it.selected ? '<span class="dot"></span>' : '') + (it.icon ? escapeHtml(it.icon) + ' ' : '') + escapeHtml(it.name) + (it.sub ? '<br><span class="dim mini">' + escapeHtml(it.sub) + '</span>' : '') + '</span>'
     + '<span>' + (it.count == null ? '' : '<span class="cnt-num">' + escapeHtml(String(it.count)) + '</span>')
     + ((st.edit && it.custom) ? ' <button type="button" class="del" onclick="event.stopPropagation();' + (spec.onDelete || 'void') + '(\'' + attrStr(it.id) + '\')" title="Delete">🗑</button>' : '')
@@ -206,9 +206,9 @@ function pickerPanel(spec){
     + (spec.noClose ? '' : '<span class="x" onclick="' + (spec.onClose || 'void(0)') + '">✕</span>') + '</span></div>';
   const filter = '<div class="pline">'
     + (spec.countryLabel ? '<span class="csel" onclick="' + (spec.onCountry || 'void(0)') + '">' + escapeHtml(spec.countryLabel) + ' <span class="arr">⌄</span></span>' : '')
-    + '<input type="text" class="search psearch" placeholder="' + attrStr(spec.filterPlaceholder || 'Type to filter…') + '" value="' + attrStr(st.query) + '" oninput="pickerFilterInput(\'' + attrStr(id) + '\', this.value)" autocomplete="off"></div>';
-  const bareSearch = (spec.bare && spec.search) ? '<div class="pline"><input type="text" class="search psearch" placeholder="' + attrStr(spec.filterPlaceholder || 'Type to filter…') + '" value="' + attrStr(st.query) + '" oninput="pickerFilterInput(\'' + attrStr(id) + '\', this.value)" autocomplete="off"></div>' : '';
-  return '<div class="panel' + (spec.bare ? ' bare' : '') + '" id="pk_' + attrStr(id) + '">' + (spec.bare ? bareSearch : head + filter) + rows + empty + more
+    + '<input type="text" class="search psearch" placeholder="' + attrVal(spec.filterPlaceholder || 'Type to filter…') + '" value="' + attrVal(st.query) + '" oninput="pickerFilterInput(\'' + attrStr(id) + '\', this.value)" autocomplete="off"></div>';
+  const bareSearch = (spec.bare && spec.search) ? '<div class="pline"><input type="text" class="search psearch" placeholder="' + attrVal(spec.filterPlaceholder || 'Type to filter…') + '" value="' + attrVal(st.query) + '" oninput="pickerFilterInput(\'' + attrStr(id) + '\', this.value)" autocomplete="off"></div>' : '';
+  return '<div class="panel' + (spec.bare ? ' bare' : '') + '" id="pk_' + attrVal(id) + '">' + (spec.bare ? bareSearch : head + filter) + rows + empty + more
     + (spec.canAdd ? '<button type="button" class="cta" onclick="' + (spec.onAdd || 'void(0)') + '">' + escapeHtml(spec.addLabel || '＋ Add city') + '</button>' : '') + '</div>';
 }
 // ر٧٠هـ (N-074 · N-075 · قرار المالك): الصيغة الموحَّدة بالصفوف والنوافذ — شريحة يسارًا (المختارة أو «Choose a city ⌄») وحقل «Type a city…» يمينًا؛
@@ -218,8 +218,8 @@ function pickerRow(spec){
   const id = spec.id; const st = __pk[id] || (__pk[id] = { query: '', edit: false, open: false });
   st.rowSpec = spec;
   return '<div class="headrow pkrow"><button type="button" class="csel grow' + (st.open ? ' on' : '') + '" onclick="pickerToggle(\'' + attrStr(id) + '\')"><b>' + escapeHtml(spec.label || 'Choose a city') + '</b> ' + (st.open ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button>'
-    + '<input type="text" class="csel grow psearch" placeholder="' + attrStr(spec.placeholder || 'Type a city…') + '" value="' + attrStr(st.query) + '" oninput="pickerTypeOpen(\'' + attrStr(id) + '\', this.value)" autocomplete="off"></div>'
-    + '<div id="pk_' + attrStr(id) + '_host">' + pickerRowPanel(id) + '</div>';
+    + '<input type="text" class="csel grow psearch" placeholder="' + attrVal(spec.placeholder || 'Type a city…') + '" value="' + attrVal(st.query) + '" oninput="pickerTypeOpen(\'' + attrStr(id) + '\', this.value)" autocomplete="off"></div>'
+    + '<div id="pk_' + attrVal(id) + '_host">' + pickerRowPanel(id) + '</div>';
 }
 function pickerRowPanel(id){
   const st = __pk[id]; if (!st || !st.rowSpec || !st.open) return '';
@@ -242,7 +242,7 @@ function catPairRow(spec){
     + '<button type="button" class="csel grow' + (st.open === 'sub' ? ' on' : '') + '" onclick="catPairToggle(\'' + attrStr(id) + '\', \'sub\')"' + (main ? '' : ' disabled') + '><b>' + escapeHtml(sub ? sub.name : (spec.subLabel || 'Sub-category')) + '</b> ' + (st.open === 'sub' ? '<span class="arr">⌃</span>' : '<span class="arr">⌄</span>') + '</button></div>'
     + (spec.noHost ? '' : catPairHost(id)); // r74m: lead = عنصر يسبق الشريحتين بالصف (مبدّل العرض) · noHost = اللوحة تُرسم في موضع آخر (خارج الرأس الثابت)
 }
-function catPairHost(id){ return '<div id="cp_' + attrStr(id) + '_host">' + catPairPanel(id) + '</div>'; }
+function catPairHost(id){ return '<div id="cp_' + attrVal(id) + '_host">' + catPairPanel(id) + '</div>'; }
 function catSections(){ const out = []; DATA.forEach(function(sec){ const d = sectionDisplay(sec); out.push({ id: sec.id || sec.title, name: d.name }); }); return out; }
 function catPairPanel(id){
   const st = __cp[id]; if (!st || !st.spec || !st.open) return ''; const sp = st.spec; const cnt = sp.countOf || function(){ return undefined; };
