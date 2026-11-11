@@ -677,10 +677,54 @@ function finish(){
   readsGuard();
   dataMembersGuard();
   sessionGuard();
+  uiParityGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
   process.exit(fails === 0 ? 0 : 1);
+}
+
+// ---------- §41 (r110-ب · ق١١-١١-٠٢ — «المشكلة عيّنة لصنف»): واجهة واحدة لشكلَي محرّر الخطة. مصفوفة الخطة (§36) تحرس البيانات؛ هذا القسم يحرس الواجهة:
+//            أفعال صف المحطة وأبواب الإضافة تُرسم من قطع مشتركة بالأسماء والترتيب المعلنة في tests/ui-parity.js — ورسّاما الشكلين لا يكتبان فعل صف خارجها.
+function uiParityGuard(){
+  const T = '§41 one interface for both plan shapes (r110): ';
+  const P = require(path.join(ROOT, 'tests', 'ui-parity.js'));
+  const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts; let all = ''; const fns = {};
+  parts.forEach(function(p){ const src = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); all += src + '\n'; const re = /(?:^|\n)(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g; let m; const idx = []; while ((m = re.exec(src))) idx.push([m.index, m[1]]); idx.forEach(function(it, i){ fns[it[1]] = src.slice(it[0], i + 1 < idx.length ? idx[i + 1][0] : src.length); }); });
+  const body = function(n){ return fns[n] || ''; };
+  const acts = body('tbRowActs');
+  check(!!acts && !!body('tbAddChipHtml') && !!body('tbAddDoorHtml'), T + 'the shared pieces exist (tbRowActs · tbAddChipHtml · tbAddDoorHtml)');
+  /* (١) الجدول: كل صف يسمّي معالجًا معرَّفًا لكل شكل أو سببًا مكتوبًا — والمعالج مرسوم في tbRowActs */
+  const bad = []; P.ROW.forEach(function(r){ ['city', 'linear'].forEach(function(k){ const v = r[k]; if (P.isFn(v)){ if (!fns[v]) bad.push(r.key + '.' + k + ': ' + v + ' is not defined'); else if (acts.indexOf('"' + v + "('") < 0) bad.push(r.key + '.' + k + ': ' + v + ' is not drawn by tbRowActs'); } else if (String(v || '').trim().length < 12) bad.push(r.key + '.' + k + ': no handler and no written reason'); }); if (r.linearWhen && String(r.linearElse || '').trim().length < 12) bad.push(r.key + ': conditional on linear without a written reason'); });
+  check(P.ROW.length >= 9 && bad.length === 0, T + 'every row action names a handler per shape or a written reason, and tbRowActs draws it (' + P.ROW.length + ' rows)', bad.join(' ‖ '));
+  /* (٢) الترتيب: أسماء الأفعال تظهر في tbRowActs بترتيب الجدول */
+  let at = -1; const order = []; P.ROW.forEach(function(r){ const i = acts.indexOf("'" + r.label + "'", 0); if (i < 0) order.push(r.label + ' not found'); else { if (i < at) order.push(r.label + ' is drawn before the row above it'); at = Math.max(at, i); } });
+  check(order.length === 0, T + 'tbRowActs draws the actions in the order of the table', order.join(' ‖ '));
+  /* (٣) الرسّامان يرسمان الأفعال من القطعة المشتركة وحدها — لا فعل صف مكتوب في أيٍّ منهما */
+  const rowHandlers = Array.from(new Set(P.ROW.reduce(function(a, r){ return a.concat([r.city, r.linear].filter(P.isFn)); }, [])));
+  const leak = []; ['tbCardHtml', 'tbDayTripHtml'].forEach(function(n){ if (body(n).indexOf('tbRowActs(') < 0) leak.push(n + ' does not call tbRowActs'); });
+  /* المراجعة المستقلة ب (٥): كان يُبحث عن onclick="اسم(" حرفيًّا — فمرّ معالج صف يُمرَّر اسمًا لقطعة راسمة (tripOrdHtml(…, 'tbDTMove')). الآن: اسم معالج الصف لا يظهر *بأي صيغة* في أي راسم للمحرّر غير tbRowActs، إلا ما سمّاه الجدول (STATIC_OUTSIDE) بسببه. */
+  const renderers = Object.keys(fns).filter(function(n){ return /^tb[A-Z]\w*Html$/.test(n); }); const allowed = P.STATIC_OUTSIDE || {};
+  renderers.forEach(function(n){ rowHandlers.forEach(function(h){ if (new RegExp('\\b' + h + '\\b').test(body(n)) && !((allowed[n] || {})[h])) leak.push(n + ' names ' + h); }); });
+  Object.keys(allowed).forEach(function(n){ Object.keys(allowed[n]).forEach(function(h){ if (!new RegExp('\\b' + h + '\\b').test(body(n))) leak.push('STATIC_OUTSIDE lists ' + n + '.' + h + ' but it is not there'); else if (String(allowed[n][h]).trim().length < 12) leak.push(n + '.' + h + ': no written reason'); }); });
+  check(renderers.length >= 10 && leak.length === 0, T + 'no editor renderer names a row handler except tbRowActs (' + renderers.length + ' renderers · token-level)', leak.join(' ‖ '));
+  /* (٤) أبواب الإضافة: الشريحة والباب العريض من القطعتين في الرسّامين كليهما — ولا «＋ Add places» مكتوبًا خارجهما إلا زر العرض المحفوظ */
+  const doors = []; ['tbDraftHtml', 'tbDayTripHtml'].forEach(function(n){ const b = body(n); if (b.indexOf('tbAddChipHtml(') < 0) doors.push(n + ' has no ＋ Add places chip'); if (b.indexOf('tbAddDoorHtml(') < 0) doors.push(n + ' has no ＋ Add places door'); });
+  let lit = 0; parts.forEach(function(p){ if (p === '60-help.js') return; lit += (fs.readFileSync(path.join(ROOT, 'src', p), 'utf8').match(/>＋ Add places</g) || []).length; }); /* نص الإرشاد يذكر الاسم ولا يرسم بابًا */
+  check(doors.length === 0, T + 'the add chip and the add door are drawn in both editors from the shared pieces', doors.join(' ‖ '));
+  check(lit === 3, T + '“＋ Add places” is written in three places only: the chip, the door and the saved view (' + lit + ')');
+  check(/openTripBuilder\(\{ tripId: \\'' \+ attrStr\(trip\.id\) \+ '\\', stage: 2, pick: true, daySel: tripDaySel \}\)">＋ Add places</.test(all), T + 'the saved view’s ＋ Add places opens the editor with the picker open (same behaviour as inside Edit)');
+  check(all.indexOf('startAddingToTrip') < 0, T + 'the old Places adding entry (startAddingToTrip) is gone — one name, one behaviour');
+  /* (٥) Setup: باب الاختيار للشكلين */
+  check((all.match(/<span>Pick places in /g) || []).length === 1 && all.indexOf('You add the stops on the next screen with') < 0 && /flabel">' \+ \(TB\.dayTrip \? 'Stops' : 'Places for this '/.test(all), T + 'Setup offers the same “Pick places in …” door for both shapes');
+  /* (٦) بلا عودة تلقائية وبلا كلمة return (r110-أ) */
+  check(all.indexOf("? 'return' :") < 0 && !/seq\.push\(\{ kind: 'end', id: 'stay'/.test(all), T + 'no automatic return step and no “return” label — the end is the user’s choice (r110-أ)');
+  /* (٧) المراجعة المستقلة (٥ — الصنف): قيمة سمة HTML تُرمَّز HTML (attrVal) — attrStr ترميز نصّ JS داخل onclick، وفي value كانت تُظهر الفاصلة العليا بشرطة وتحفظها */
+  const badVal = (all.match(/(?:value|placeholder)=\\?"' \+ attrStr\(/g) || []).length; const goodVal = (all.match(/(?:value|placeholder)=\\?"' \+ attrVal\(/g) || []).length;
+  check(badVal === 0 && goodVal >= 40 && /function attrVal\(s\)\{[^}]*&#39;/.test(all), T + 'attribute values are HTML-escaped (attrVal · ' + goodVal + ' sites) — attrStr is for handler strings only (' + badVal + ' left in value/placeholder)');
+  /* المراجعة المستقلة ب (الصنف كله): attrStr داخل سمة حدث (on…) أو نصّ معالج وحدهما — كل سمة أخرى (title · href · label · min · id · data-*) attrVal، والمحدِّد cssVal */
+  const ctx = { handler: 0, other: [] }; all.split('\n').forEach(function(l){ let i = -1; while ((i = l.indexOf('attrStr(', i + 1)) >= 0){ if (l.slice(Math.max(0, i - 9), i).endsWith('function ')) continue; const q = l.lastIndexOf('"', i); const mm = q >= 0 ? l.slice(0, q).match(/([\w:-]+)=\\?$/) : null; if (mm && !/^on/.test(mm[1])) ctx.other.push(mm[1] + '=…' + l.slice(i, i + 40)); else ctx.handler++; } });
+  check(ctx.other.length === 0 && ctx.handler >= 250 && /function cssVal\(s\)/.test(all), T + 'attrStr appears only inside handlers (' + ctx.handler + ') — every other attribute is attrVal and selectors are cssVal', ctx.other.slice(0, 6).join(' ‖ '));
 }
 
 // ---------- §21 (ر٦٩): تطابق الواجهات الخمس بالمرجع الحاكم v1.42 — نسبة تُطبع بكل تشغيل ولا تنخفض ----------
@@ -924,14 +968,31 @@ function sortRedLinesGuard(){
 // ---------- §33 (r98 · ق١١-٠٢-٠١ — «هل تختبر كل زر؟»): كل معالج واجهة في src/ (onclick · onchange · oninput) له محطة في الرحلة — الحارس يعدّ ويقارن؛ زر جديد بلا محطة يُحمرّ
 function handlerCoverageGuard(){
   const T = '§33 every handler has a station (r98): ';
+  /* معالجات سبقت r110 يُبنى نصُّها ديناميًّا ولا محطة تسمّيها (قد تُضغط في محطة بزرّها المرسوم — لم يُقَس) — تُشطب كلٌّ عند محطتها؛ لا يُضاف إليها */
+  const HANDLERS_PENDING = new Set(['addrModalAddCity', 'cmSendCachedPlace', 'curEditPlace', 'curPickChip', 'exportOtherList', 'exportOwnTripRow', 'openSavedTripInCommunity', 'plAddToTripFor', 'plOpenCardAt', 'tbAddCity', 'tbAddCityToggle', 'tbSelCity']);
+  /* دوال تظهر بصيغة نصّ معالج وليست معالج واجهة (رسالة داخل نص) */
+  const NOT_HANDLERS = new Set(['showToast']);
   const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts; const names = new Set();
   const SKIP = new Set(['document', 'event', 'this']); /* تعبيرات مضمَّنة لا دوال: event.stopPropagation() · this.classList … */
-  parts.forEach(function(p){ const src = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); const re = /on(?:click|change|input)=\\?"([A-Za-z_$][\w$]*)/g; let m; while ((m = re.exec(src))){ if (!SKIP.has(m[1])) names.add(m[1]); } });
-  const journey = fs.readFileSync(path.join(ROOT, 'tests', 'journey.js'), 'utf8');
-  const missing = [...names].filter(function(n){ return !new RegExp('\\b' + n.replace(/\$/g, '\\$') + '\\b').test(journey); });
-  check(names.size >= 330, T + 'handler inventory read from src/ (' + names.size + ')');
-  check(missing.length === 0, T + 'every handler is referenced by a station (' + (names.size - missing.length) + '/' + names.size + ')', 'no station: ' + missing.join(' · '));
+  let all = ''; parts.forEach(function(p){ const src = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); all += src + '\n'; const re = /on(?:click|change|input)=\\?"([A-Za-z_$][\w$]*)/g; let m; while ((m = re.exec(src))){ if (!SKIP.has(m[1])) names.add(m[1]); } });
+  /* r110-ب (قياس ١١ نوفمبر): المعالج الذي يُبنى نصُّه ديناميًّا (onclick="' + fn + '") كان خارج نظر هذا الحارس — ٧٠ معالجًا. يُقرأ الآن أيضًا: (١) نصّ معالج كامل يُمرَّر لقطعة راسمة ("name('" · 'name()') لدالة معرَّفة في src/ ·
+     (٢) اسم مجرَّد يُمرَّر للقطع الراسمة المسمّاة. ما سبق r110 بلا محطة باسمه مُدرج في HANDLERS_PENDING — قائمة لا تكبر: اسم جديد يُحمرّ، واسم نال محطته يجب أن يُشطب. */
+  const defined = new Set(); { const reF = /(?:^|[\n;}\s])(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g; let m; while ((m = reF.exec(all))) defined.add(m[1]); }
+  /* r110 (المراجعة المستقلة ب): كان يُقرأ أول اسم في onclick/onchange/oninput وحدها — فخرج من النظر كل معالج ثانٍ في النص («x = v; curRerender()») وكل حدث آخر (onpaste · onkeydown · ontouch…). يُقرأ الآن كل حدث مضمَّن وكل نداء لدالة معرَّفة داخل نص المعالج (لا داخل ما يُضمّ إليه وقت الرسم). */
+  { const reA = /\bon[a-z]+=(\\?)"/g; let m; while ((m = reA.exec(all))){ const esc = m[1] === '\\'; const j = reA.lastIndex; let end; if (esc) end = all.indexOf('\\"', j); else { end = j; while (end < all.length && all[end] !== '"' && all[end] !== '\n') end++; } if (end < 0) continue; const body = all.slice(j, Math.min(end, j + 900)).replace(/\$\{[^}]*\}/g, ''); body.split(esc ? /(?<!\\)"/ : /(?<!\\)'/).forEach(function(seg, k){ if (k % 2) return; const re = /([A-Za-z_$][\w$]*)\s*\(/g; let x; while ((x = re.exec(seg))){ if (seg[x.index - 1] === '.') continue; if (defined.has(x[1]) && !SKIP.has(x[1]) && !NOT_HANDLERS.has(x[1])) names.add(x[1]); } }); } }
+  const literal = names.size; { const reC = /(["'])([A-Za-z_$][\w$]*)\((?:\)\1|')/g; let m; while ((m = reC.exec(all))){ if (defined.has(m[2]) && !SKIP.has(m[2]) && !NOT_HANDLERS.has(m[2])) names.add(m[2]); } }
+  { const reB = /(?:tripLegMinInput|tripOrdHtml)\([^;\n]{0,200}?,\s*'([A-Za-z_$][\w$]*)'\s*\)/g; let m; while ((m = reB.exec(all))){ if (defined.has(m[1])) names.add(m[1]); } }
+  const journey = fs.readFileSync(path.join(ROOT, 'tests', 'journey.js'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'tests', 'plan-matrix.js'), 'utf8');
+  const has = function(n){ return new RegExp('\\b' + n.replace(/\$/g, '\\$') + '\\b').test(journey); };
+  const missing = [...names].filter(function(n){ return !has(n) && !HANDLERS_PENDING.has(n); });
+  const stale = [...HANDLERS_PENDING].filter(function(n){ return has(n) || !names.has(n); });
+  check(literal >= 350, T + 'handler inventory read from src/ — every inline event and every call inside a handler (' + literal + ' literal · ' + names.size + ' with handlers passed to shared renderers)');
+  check(['sheetTouch', 'sheetKey', 'curRerender', 'curRerenderPage', 'tbStopOnPaste'].every(function(n){ return names.has(n); }), T + 'second calls and non-click events are read (ontouch · onkeydown · onpaste · “x = v; fn()”)');
+  check(names.size >= literal + 45, T + 'handlers built through shared renderers are read too (r110 — ' + (names.size - literal) + ')');
+  check(missing.length === 0, T + 'every handler is referenced by a station (' + (names.size - missing.length - HANDLERS_PENDING.size) + '/' + names.size + ' · ' + HANDLERS_PENDING.size + ' pending by name)', 'no station: ' + missing.join(' · '));
+  check(stale.length === 0, T + 'the pending list only shrinks — a handler that got its station (or is gone) leaves it', 'remove from HANDLERS_PENDING: ' + stale.join(' · '));
 }
+
 
 // ---------- §34 (r98 · ق١١-٠٢-٠١ — الكنس يُستهلك بالاختبار): لا وسم Soon إلا بمرحلة مسمّاة في القائمة المعتمدة — وسم جديد أو متقادم يُحمرّ
 function soonGuard(){
