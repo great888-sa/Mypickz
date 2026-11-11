@@ -10,6 +10,8 @@ const SAME = { d: 0, shape: 'same' };
 const KEEP = { d: 0, shape: 'same', order: true };
 const NOT_RENDERED_LINEAR = 'الزر لا يُرسم في المحرّر الخطّي';
 const NOT_RENDERED_PERIODS = 'الزر لا يُرسم في شبكة الفترات';
+const END_IN_ROUTE_TAB = 'يوم المدينة: صف النهاية في تبويب Day route (v.end*)';
+const END_IN_EDITOR = 'اليوم الخطّي: صف النهاية في المحرّر (b.end*) — عرضه للقراءة';
 const B_OPEN = "await openTripBuilder({ tripId: P.ids[KID], stage: 2 }); if (K === 'K3l') TB.daySel = P.lin(TB.plan); if (K === 'K3c') TB.daySel = P.cityDay(TB.plan); tbRender(); var plan = TB.plan;";
 const V_OPEN = "currentTripId = P.ids[KID]; var trip = P.trip(KID); var plan = trip.plan; resolvedTripCache[trip.id] = await resolveTripPlaces(trip); tripDaySel = (K === 'K3l') ? P.lin(plan) : Math.max(0, P.cityDay(plan)); tripCitySel = 'pmA'; tripTab = 'plan';";
 
@@ -115,10 +117,10 @@ const OPS = [
     run: B_OPEN + " tbClose();", ctx: { K1: KEEP, K2: KEEP, K3c: KEEP, K3l: KEEP } },
   /* ── عرض الخطة المحفوظة ── */
   { id: 'v.addPlace', name: '＋ Add places ثم مكان', where: 'view', covers: ['tripAutoPlace'],
-    run: V_OPEN + " startAddingToTrip(trip.id); await addPlaceToTrip('mylist', 'pmA', 'pizza', 'z1', null, 'Pizza Z'); activeTripId = null; updateActiveTripBanner();",
+    run: V_OPEN + " activeTripId = trip.id; activeTripAdded = []; activeTripAddedRefs = []; updateActiveTripBanner(); /* r110-ب: وضع «Adding to» يُدخَل من زر Trip على بطاقة المكان (tripAddContinue) — زر العرض المحفوظ صار يفتح المنتقي */ await addPlaceToTrip('mylist', 'pmA', 'pizza', 'z1', null, 'Pizza Z'); activeTripId = null; updateActiveTripBanner();",
     ctx: { K1: { d: 1, shape: 'same' }, K2: { d: 1, shape: 'same', also: "P.inStops(plan, 'Pizza Z')" }, K3c: { d: 1, shape: 'same', order: true, also: "!P.inStops(plan, 'Pizza Z')" }, K3l: { d: 1, shape: 'same', order: true, also: "!P.inStops(plan, 'Pizza Z')" } } },
   { id: 'v.addUndo', name: '＋ Add places ثم ✕ في الشريط', where: 'view', covers: ['undoTripAdd'],
-    run: V_OPEN + " startAddingToTrip(trip.id); await addPlaceToTrip('mylist', 'pmA', 'pizza', 'z1', null, 'Pizza Z'); await undoTripAdd(0); activeTripId = null; updateActiveTripBanner();", ctx: { K1: KEEP, K2: KEEP, K3c: KEEP, K3l: KEEP } },
+    run: V_OPEN + " activeTripId = trip.id; activeTripAdded = []; activeTripAddedRefs = []; updateActiveTripBanner(); /* r110-ب: وضع «Adding to» يُدخَل من زر Trip على بطاقة المكان (tripAddContinue) — زر العرض المحفوظ صار يفتح المنتقي */ await addPlaceToTrip('mylist', 'pmA', 'pizza', 'z1', null, 'Pizza Z'); await undoTripAdd(0); activeTripId = null; updateActiveTripBanner();", ctx: { K1: KEEP, K2: KEEP, K3c: KEEP, K3l: KEEP } },
   { id: 'v.remove', name: 'حذف مكان من العرض', where: 'view', covers: ['tripViewRemove'],
     run: V_OPEN + " await tripViewRemove(P.perEntry(plan).e.id);", ctx: { K1: { d: -1, shape: 'same' }, K2: 'يوم الرحلة للقراءة — التحرير في المنشئ', K3c: { d: -1, shape: 'same', order: true }, K3l: 'يوم الرحلة للقراءة — التحرير في المنشئ' } },
   { id: 'v.move', name: 'Move من العرض', where: 'view', covers: ['tripOpenMoveSheet'],
@@ -139,6 +141,25 @@ const OPS = [
   { id: 'v.route', name: 'Day route: الخروج · دقائق رِجل · مدة بقاء', where: 'view', covers: ['tripRouteQueueSave', 'tripRouteFlush'],
     run: V_OPEN + " tripTab = 'route'; var __es = tripDayEntries(plan.days[tripDaySel]); tripRouteSetTime('leave', '09:10'); if (__es.length > 1) tripLegSetMinutes(tripLegKey(__es[0].id, __es[1].id), '12'); tripStaySetMinutes(__es[0].id, '25'); tripRouteFlush(); await new Promise(function(r){ setTimeout(r, 30); });",
     ctx: { K1: SAME, K2: 'يوم الرحلة بلا تبويب Day route', K3c: KEEP, K3l: 'يوم الرحلة بلا تبويب Day route' } },
+  /* ── r110-أ (ق١١-١١-٠٢): نقطة النهاية باختيار المستخدم — تُكتب في dayRoutes ولا تمسّ أماكن الخطة ولا ترتيبها؛ اليوم الخطّي من المحرّر ويوم المدينة من تبويب Day route ── */
+  { id: 'b.endStart', name: 'End point: Back to start (المحرّر الخطّي)', where: 'builder', covers: ['tbDTEndSheet'],
+    run: B_OPEN + " tbDTEndSheet(); tripEndPick('start');",
+    ctx: { K1: END_IN_ROUTE_TAB, K2: { d: 0, shape: 'same', order: true, also: "P.endOf(KID, K) === 'start'" }, K3c: END_IN_ROUTE_TAB, K3l: { d: 0, shape: 'same', order: true, also: "P.endOf(KID, K) === 'start'" } } },
+  { id: 'b.endPlace', name: 'End point: نقطة أخرى باسمها (المحرّر الخطّي)', where: 'builder', covers: ['tbDTEndSheet'],
+    run: B_OPEN + " tbDTEndSheet(); document.getElementById('tripEndName').value = 'Pier 2'; await tripEndUsePoint();",
+    ctx: { K1: END_IN_ROUTE_TAB, K2: { d: 0, shape: 'same', order: true, also: "(P.endOf(KID, K) || {}).name === 'Pier 2'" }, K3c: END_IN_ROUTE_TAB, K3l: { d: 0, shape: 'same', order: true, also: "(P.endOf(KID, K) || {}).name === 'Pier 2'" } } },
+  { id: 'b.endNone', name: 'End point: start ثم No end point (المحرّر الخطّي)', where: 'builder', covers: ['tbDTEndSheet'],
+    run: B_OPEN + " tbDTEndSheet(); tripEndPick('start'); tbDTEndSheet(); tripEndPick('none');",
+    ctx: { K1: END_IN_ROUTE_TAB, K2: { d: 0, shape: 'same', order: true, also: "(P.endOf(KID, K) || 'none') === 'none'" }, K3c: END_IN_ROUTE_TAB, K3l: { d: 0, shape: 'same', order: true, also: "(P.endOf(KID, K) || 'none') === 'none'" } } },
+  { id: 'v.endStart', name: 'End point: Back to start (تبويب Day route)', where: 'view', covers: ['tripRouteEndSheet'],
+    run: V_OPEN + " tripTab = 'route'; tripRouteEndSheet(); tripEndPick('start'); tripRouteFlush(); await new Promise(function(r){ setTimeout(r, 30); });",
+    ctx: { K1: { d: 0, shape: 'same', also: "P.endOf(KID, K) === 'start'" }, K2: END_IN_EDITOR, K3c: { d: 0, shape: 'same', order: true, also: "P.endOf(KID, K) === 'start'" }, K3l: END_IN_EDITOR } },
+  { id: 'v.endPlace', name: 'End point: نقطة أخرى (تبويب Day route)', where: 'view', covers: ['tripRouteEndSheet'],
+    run: V_OPEN + " tripTab = 'route'; tripRouteEndSheet(); document.getElementById('tripEndName').value = 'Pier 2'; await tripEndUsePoint(); tripRouteFlush(); await new Promise(function(r){ setTimeout(r, 30); });",
+    ctx: { K1: { d: 0, shape: 'same', also: "(P.endOf(KID, K) || {}).name === 'Pier 2'" }, K2: END_IN_EDITOR, K3c: { d: 0, shape: 'same', order: true, also: "(P.endOf(KID, K) || {}).name === 'Pier 2'" }, K3l: END_IN_EDITOR } },
+  { id: 'v.endNone', name: 'End point: start ثم No end point (تبويب Day route)', where: 'view', covers: ['tripRouteEndSheet'],
+    run: V_OPEN + " tripTab = 'route'; tripRouteEndSheet(); tripEndPick('start'); tripRouteEndSheet(); tripEndPick('none'); tripRouteFlush(); await new Promise(function(r){ setTimeout(r, 30); });",
+    ctx: { K1: { d: 0, shape: 'same', also: "(P.endOf(KID, K) || 'none') === 'none'" }, K2: END_IN_EDITOR, K3c: { d: 0, shape: 'same', order: true, also: "(P.endOf(KID, K) || 'none') === 'none'" }, K3l: END_IN_EDITOR } },
   { id: 'v.copyNew', name: 'Copy into a trip: يوم جديد', where: 'view', covers: ['dpAddToTripRun'],
     run: "await dpAddToTrip(P.ids.K2, P.ids.K3, { mode: 'new' });", ctx: { K1: 'الهدف رحلة متعددة الأيام', K2: 'الهدف رحلة متعددة الأيام', K3c: { d: 3, shape: '+linear', order: true }, K3l: 'يُفحص مرة' } },
   { id: 'v.copyReplace', name: 'Copy into a trip: استبدال يوم مدينة', where: 'view', covers: ['dpAddToTripRun'],
