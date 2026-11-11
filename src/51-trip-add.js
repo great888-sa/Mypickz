@@ -78,7 +78,7 @@ function tripGuardRestore(trip, g){ Object.keys(trip).forEach(function(k){ delet
   try{ logTiming('PLAN-GUARD · ' + trip.id + ' · not saved' + (g.lost.length ? ' · ' + g.lost.length + ' place(s) would have left the plan unasked: ' + g.lost.slice(0, 4).join(', ') + (g.lost.length > 4 ? '…' : '') : '') + (g.shape ? ' · a day in your own order would have been redrawn' : '')); }catch(_){}
   try{ if (typeof tbGuardReload === 'function') tbGuardReload(trip); }catch(_){}
   try{ if (currentTab === 'Trips' && currentTripId === trip.id) renderMyTripsModal(); }catch(_){}
-  try{ mpSheet({ title: 'Kept as it was', text: 'That step would have ' + (g.lost.length ? 'dropped ' + (g.lost.length === 1 ? g.lost[0] : g.lost.length + ' places (' + g.lost.slice(0, 3).join(', ') + (g.lost.length > 3 ? '…' : '') + ')') + ' from the plan' : 'redrawn a day you ordered yourself') + ' without asking you — so it was not saved, and the plan is back as you last saved it. Diagnostics has a PLAN-GUARD line if you want to report it.', ok: 'OK' }); }catch(_){} }
+  try{ mpSheet({ title: 'Kept as it was', noCancel: true, text: 'That step would have ' + (g.lost.length ? 'dropped ' + (g.lost.length === 1 ? g.lost[0] : g.lost.length + ' places (' + g.lost.slice(0, 3).join(', ') + (g.lost.length > 3 ? '…' : '') + ')') + ' from the plan' : 'redrawn a day you ordered yourself') + ' without asking you — so it was not saved, and the plan is back as you last saved it. Diagnostics has a PLAN-GUARD line if you want to report it.', ok: 'OK' }); }catch(_){} }
 async function tripDiscard(trip){ tripGuardReset(trip.id); const j = tripSavedJson[trip.id]; const i = userTrips.findIndex(function(t){ return t.id === trip.id; }); if (j){ const old = JSON.parse(j); Object.keys(trip).forEach(function(k){ delete trip[k]; }); Object.assign(trip, old); if (i < 0) userTrips.push(trip); } else { if (i >= 0) userTrips.splice(i, 1); if (typeof TB !== 'undefined' && TB){ TB = null; const bd = document.getElementById('tripBuildBackdrop'); if (bd) bd.classList.remove('show'); try{ if (typeof tbSessionClear === 'function') tbSessionClear(); }catch(_){} /* r108: تخلّى عنها — لا تُعرض للاستعادة */ } } delete resolvedTripCache[trip.id]; try{ renderTripsBody(); }catch(_){} }
 async function saveTrip(trip, o){
   mpTrack.hit('trip_save');
@@ -120,7 +120,7 @@ async function resolveTripPlaces(trip){
   for (const e of flat){ if (e.ref && e.ref.sourceType === 'community' && e.ref.sourceUid){ const k = e.ref.sourceUid + '|' + (e.ref.cityId || trip.cityId); if (communityLinks[k]) continue; try{ const d = await mpData.cityLists.get(e.ref.sourceUid, e.ref.cityId || trip.cityId); communityLinks[k] = (d && d.categories) || {}; }catch(err){ communityLinks[k] = {}; } } }
   if (__rErr) mpReadFailed(__rErr, 'trip-resolve', 'the places of this trip'); /* r100-د: مرة واحدة — الأماكن تظهر بأسمائها من الخطة بلا تفاصيل؛ رفض الإذن على قوائم الغير صامت بالتصميم (قد تكون خاصة) */
   function resolveRef(e){
-    const ref = e.ref || {}; if (ref.sourceType === 'stop') return Object.assign({}, e, { alts: [], _p: null, _available: true }); /* r92: المحطة غير المحفوظة تحمل اسمها وموضعها في الخطة نفسها */ const linksObj = ref.sourceType === 'community' ? (communityLinks[ref.sourceUid + '|' + (ref.cityId || trip.cityId)] || {}) : (myLinksByCity[ref.cityId || trip.cityId] || {});
+    const ref = e.ref || {}; if (ref.sourceType === 'stop') return Object.assign({}, e, { alts: (e.alts || []).map(resolveRef), _p: null, _available: true }); /* r92: المحطة غير المحفوظة تحمل اسمها وموضعها في الخطة نفسها · المراجعة ج (٢): وبدائلها تُحلّ معها (كانت تُسقَط: بديل محطة مكتوبة يختفي من العرض المحفوظ والبرنامج) */ const linksObj = ref.sourceType === 'community' ? (communityLinks[ref.sourceUid + '|' + (ref.cityId || trip.cityId)] || {}) : (myLinksByCity[ref.cityId || trip.cityId] || {});
     const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
     if (!place) console.warn('[MyPickz][trip-resolve] unavailable', JSON.stringify(ref)); // ر٦٠ · عدسة التشخيص
     const liveGeo = (place && place.geo && typeof place.geo.lat === 'number' && typeof place.geo.lng === 'number') ? { lat: place.geo.lat, lng: place.geo.lng } : null; /* r102-ج (ق١١-٠٥-٠١): دبوس المكان الحالي في قائمته يسبق الدبوس المنسوخ لحظة الاختيار — تصحيح الدبوس يصل المسافات بلا إعادة اختيار */ return Object.assign({}, e, { geo: liveGeo || e.geo || null, alts: (e.alts || []).map(resolveRef), _p: place || null, _available: !!place });
@@ -141,13 +141,6 @@ function tripsEmptyGuideHtml(){ // بلا رحلة بالحساب: أبواب أ
     + '</div>';
 }
 function tripsGuideGo(src){ if (src === 'curators'){ switchTab('Curators'); return; } communityTab = 'trips'; communityScreen = 'source'; communityScreenState.trips.shared = (src === 'shared'); switchTab('Community'); }
-function startAddingToTrip(tripId){
-  activeTripId = tripId;
-  activeTripAdded = []; activeTripAddedRefs = [];
-  updateActiveTripBanner();
-  switchTab('Places');
-  showToast('Tap Trip on any place — it lands in its best slot');
-}
 function openActiveTrip(){ const id = activeTripId; if (!id) return; switchTab('Trips'); openTripDetail(id); }
 async function stopAddingToTrip(discard){
   const doneId = activeTripId, origin = tripAddOrigin;
