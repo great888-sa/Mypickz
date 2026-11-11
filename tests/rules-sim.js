@@ -1,5 +1,8 @@
 // MyPickz — tests/rules-sim.js
 // يختبر firestore.rules على محرك Firebase الرسمي (المحاكي) — لا تفسير خاص لدلالات القواعد.
+// v3.16 (١١ نوفمبر ٢٠٢٦ — r117): + القسم ٢٩ (٢٤ حالة — ٩ للربط و١٥ للاتجاه الثاني ومعرّف العدّاد واسمه ورابطه) وقياسات INFO لا تدخل الحصيلة: placeFavoriteCounts مربوط بسجل صاحبه copies/<uid>__p_<docId> (+١ بإنشائه بالطلب نفسه · −١ بحذفه) — حالات العدّاد الأقدم (٦ · ١٧ · ١٩ · ٢٨) صارت بالدفعة نفسها؛
+//   + القسم ٣٠ (٤ حالات): مفاتيح الأحداث الأربعة المحذوفة تُرفض. لم تُشغَّل على المحاكي في بيئة الكتابة — يشغّلها CI.
+// v3.15 (١١ نوفمبر ٢٠٢٦ — r116-أ «الرائج في المدينة»): + القسم ٢٨ (٥ حالات): placeFavoriteCounts يقبل city الاختياري بنمطه عند الإنشاء؛ التحديث لا يغيّره.
 // v3.14 (٩ أكتوبر ٢٠٢٦ — ب-٢ My stats): + القسم ٢٧ (٧ حالات): المفتاح اليومي save بـstats_curators؛ المفاتيح القديمة وقيود ±١..٥٠ والقراءة كما هي.
 // v3.13 (١ أكتوبر ٢٠٢٦ — الإحكام): + القسم ٢٦ (٩ حالات) · حالات الأم بـcategories صارت مرفوضة · حالات cities حُذفت · المدن بالتحليلات بمعرّف المعجم.
 // v3.12 (٢٩ سبتمبر ٢٠٢٦ — others عام): + القسم ٢٥ (٦ حالات) · تُحدَّث حالات others القديمة.
@@ -26,6 +29,8 @@ const PROJECT_ID = 'demo-mypickz'; // بادئة demo- = وضع محاكاة ص�
 const RULES = fs.readFileSync(path.resolve(__dirname, '..', 'firestore.rules'), 'utf8');
 
 // الأدوار الأربعة (مستخرجة من نص القواعد): بلا حساب · مستخدم عادي · مستخدم مُوقَف · المالك
+/* v3.16 (١-ب): معرّف العدّاد بصمة ١٦ خانة ست-عشرية — الحالات تسمّي عدّاداتها بأسماء قصيرة (p1 · c28a) وهذه الدالة تجعلها بالنمط */
+const pf = (name) => ('0000000000000000' + Buffer.from(String(name)).toString('hex')).slice(-16);
 const OWNER = 'owner1';
 const A = 'userA';        // مستخدم عادي (صاحب الشأن بأغلب الحالات)
 const B = 'userB';        // مستخدم عادي آخر (يملك محتوى عامًّا وخاصًّا)
@@ -80,7 +85,8 @@ const no = (label, f) => expect(false, label, f);
     await db.doc(`users/${S}`).set({ email: 's@x', nickname: 's' });
     await db.doc('analytics/visits').set({ count: 10 });
     await db.doc('stats/users').set({ count: 4 });
-    await db.doc('placeFavoriteCounts/p1').set({ name: 'Holybelly', url: 'https://maps.app.goo.gl/x', count: 2 });
+    await db.doc('placeFavoriteCounts/' + pf('p1')).set({ name: 'Holybelly', url: 'https://maps.app.goo.gl/x', count: 2 });
+    await db.doc(`copies/${S}__p_${pf('p1')}`).set({ uid: S, kind: 'place', docKey: 'p_' + pf('p1') }); /* v3.16: سجل الموقوف القائم — به يسحب حفظه (−١) */
     await db.doc(`dailyStats/${TODAY}`).set({ newSignupsToday: 2, activeToday: 5 });
   });
 
@@ -151,7 +157,7 @@ const no = (label, f) => expect(false, label, f);
   await ok('events create {place_open:3} guest (real city)', () => guest.doc(EV).set({ place_open: 3 }));
   await no('events create unknown city (not a gazetteer id)', () => guest.doc('analytics/events_2026-08-19__nowhere__cafes').set({ place_open: 1 }));
   await ok('events create city all / category all', () => guest.doc('analytics/events_2026-08-19__all__all').set({ visit_source: 1, signup_start: 1 }));
-  await ok('events create reserved future key (share_card, curator_view)', () => guest.doc('analytics/events_2026-08-19__2988507__all').set({ share_card: 1, curator_view: 2 }));
+  await ok('events create two kept keys (share_card, personal_open)', () => guest.doc('analytics/events_2026-08-19__2988507__all').set({ share_card: 1, personal_open: 2 }));
   await no('events create unknown key', () => guest.doc('analytics/events_2026-08-19__2988507__bars').set({ hack: 1 }));
   await ok('events create import keys (reserved for ب-١)', () => guest.doc('analytics/events_2026-08-19__2988507__import').set({ import_run: 1, import_place: 30, import_suggest_kept: 20, import_suggest_changed: 10 }));
   await ok('events create bookmark_add (نشرة التنظيف — محل reserved_1)', () => guest.doc('analytics/events_2026-08-19__all__lists').set({ bookmark_add: 1 }));
@@ -163,6 +169,10 @@ const no = (label, f) => expect(false, label, f);
   await no('events update +51', () => guest.doc(EV).update({ place_open: 104 }));
   await no('events update decrease', () => guest.doc(EV).update({ place_open: 1 }));
   await ok('events update add second key +1 (bookmark_add)', () => guest.doc(EV).update({ bookmark_add: 1 }));
+  // r115-ب: رؤية البوابة (reserved_3) من زائر · وحدّ الستة مفاتيح في التحديث (eventsUpdateOk: aff.size() <= 6) — العميل يقسّم الدفعة عليه
+  await ok('events create reserved_3 by a guest, city all (gate seen — r115)', () => guest.doc('analytics/events_2026-08-19__all__gate').set({ reserved_3: 1 }));
+  await ok('events update six keys at once', () => guest.doc('analytics/events_2026-08-19__all__all').update({ place_open: 1, bookmark_add: 1, mylist_open: 1, mylist_save: 1, trip_open: 1, trip_save: 1 }));
+  await no('events update seven keys at once (the client splits at six)', () => guest.doc('analytics/events_2026-08-19__all__all').update({ place_open: 2, bookmark_add: 2, mylist_open: 2, mylist_save: 2, trip_open: 2, trip_save: 2, community_open: 1 }));
   await no('events read user (owner-only)', () => a.doc(EV).get());
   await ok('events read owner', () => owner.doc(EV).get());
   await no('events delete owner', () => owner.doc(EV).delete());
@@ -260,18 +270,21 @@ const no = (label, f) => expect(false, label, f);
 
   // ================= ٦) placeFavoriteCounts (v3.8: عدّاد حفظ المكان — البنية كما هي) =================
   const pfc = { name: 'X', url: 'https://maps.app.goo.gl/y', count: 1 };
-  await ok('pfc read guest', () => guest.doc('placeFavoriteCounts/p1').get());
-  await no('pfc create guest', () => guest.doc('placeFavoriteCounts/p2').set(pfc));
-  await ok('pfc create user', () => a.doc('placeFavoriteCounts/p2').set(pfc));
-  await no('pfc create suspended', () => s.doc('placeFavoriteCounts/p3').set(pfc));
-  await no('pfc create count:5', () => a.doc('placeFavoriteCounts/p4').set({ ...pfc, count: 5 }));
-  await no('pfc create extra field', () => a.doc('placeFavoriteCounts/p5').set({ ...pfc, x: 1 }));
-  await ok('pfc update +1 user', () => a.doc('placeFavoriteCounts/p1').update({ count: 3 }));
-  await no('pfc update +1 suspended', () => s.doc('placeFavoriteCounts/p1').update({ count: 4 }));
-  await ok('pfc update -1 suspended (may withdraw a like)', () => s.doc('placeFavoriteCounts/p1').update({ count: 2 }));
-  await no('pfc update +5', () => a.doc('placeFavoriteCounts/p1').update({ count: 7 }));
-  await no('pfc delete user', () => a.doc('placeFavoriteCounts/p1').delete());
-  await ok('pfc delete owner', () => owner.doc('placeFavoriteCounts/p2').delete());
+  /* v3.16 (r117-أ): الزيادة والنقص بدفعة واحدة مع سجل صاحبها copies/<uid>__p_<docId> */
+  const pfcUp = (ctx, uid, name, data, create) => { const id = pf(name); const btch = ctx.batch(); btch.set(ctx.doc(`copies/${uid}__p_${id}`), { uid, kind: 'place', docKey: 'p_' + id }); if (create) btch.set(ctx.doc('placeFavoriteCounts/' + id), data); else btch.update(ctx.doc('placeFavoriteCounts/' + id), data); return btch.commit(); };
+  const pfcDown = (ctx, uid, name, data) => { const id = pf(name); const btch = ctx.batch(); btch.delete(ctx.doc(`copies/${uid}__p_${id}`)); btch.update(ctx.doc('placeFavoriteCounts/' + id), data); return btch.commit(); };
+  await ok('pfc read guest', () => guest.doc('placeFavoriteCounts/' + pf('p1')).get());
+  await no('pfc create guest', () => guest.doc('placeFavoriteCounts/' + pf('p2')).set(pfc));
+  await ok('pfc create user (with own record, one batch)', () => pfcUp(a, A, 'p2', pfc, true));
+  await no('pfc create suspended', () => pfcUp(s, S, 'p3', pfc, true));
+  await no('pfc create count:5', () => pfcUp(a, A, 'p4', { ...pfc, count: 5 }, true));
+  await no('pfc create extra field', () => pfcUp(a, A, 'p5', { ...pfc, x: 1 }, true));
+  await ok('pfc update +1 user (with own record, one batch)', () => pfcUp(a, A, 'p1', { count: 3 }));
+  await no('pfc update +1 suspended (on a counter he has no record for)', () => pfcUp(s, S, 'p2', { count: 2 }));
+  await ok('pfc update -1 suspended (may withdraw a save: deletes own record in the same batch)', () => pfcDown(s, S, 'p1', { count: 2 }));
+  await no('pfc update +5', () => pfcUp(b, B, 'p1', { count: 7 }));
+  await no('pfc delete user', () => a.doc('placeFavoriteCounts/' + pf('p1')).delete());
+  await ok('pfc delete owner', () => owner.doc('placeFavoriteCounts/' + pf('p2')).delete());
 
   // ================= ٧) favorites — المجموعة مجتثة (نشرة التنظيف ٤ سبتمبر) =================
   // نشرة التنظيف ٤ سبتمبر: الكتلة اجتُثت — الرفض الافتراضي يحكم الجميع (حراسة الاجتثاث)
@@ -442,9 +455,9 @@ const no = (label, f) => expect(false, label, f);
   await no('stats update by guest', () => guest.doc('stats/users').update({ count: 6 }));
   await ok('[ACK P2] stats create by suspended (anonymous counters uniform policy — owner-approved)', () => s.doc('stats/new2').set({ count: 1 }));
 
-  await no('pfc update by guest', () => guest.doc('placeFavoriteCounts/p1').update({ count: 3 }));
-  await no('pfc P3 CLOSED: rename attempt (name+count) rejected — name/url frozen after create', () => a.doc('placeFavoriteCounts/p1').update({ name: 'Renamed', count: 3 }));
-  await no('pfc P4 CLOSED: partial create (count only) rejected — all three fields required', () => a.doc('placeFavoriteCounts/p9').set({ count: 1 }));
+  await no('pfc update by guest', () => guest.doc('placeFavoriteCounts/' + pf('p1')).update({ count: 3 }));
+  await no('pfc P3 CLOSED: rename attempt (name+count) rejected — name/url frozen after create', () => pfcUp(b, B, 'p1', { name: 'Renamed', count: 3 }));
+  await no('pfc P4 CLOSED: partial create (count only) rejected — all three fields required', () => pfcUp(a, A, 'p9', { count: 1 }, true));
 
   await no('favorites read by suspended — block removed, default deny (نشرة التنظيف)', () => s.doc(`favorites/${S}`).get());
   await no('favorites write guest', () => guest.doc('favorites/ghost').set({ places: [] }));
@@ -476,7 +489,7 @@ const no = (label, f) => expect(false, label, f);
 
 
   // ================= ١٧) v3.4: أشقاء قرارات الأعلام =================
-  await no('pfc P3: url change rejected (link hijack closed)', () => a.doc('placeFavoriteCounts/p1').update({ url: 'https://evil.example', count: 3 }));
+  await no('pfc P3: url change rejected (link hijack closed)', () => pfcUp(b, B, 'p1', { url: 'https://evil.example', count: 3 }));
   await ok('cp read own by suspended (withdrawal rights intact)', () => s.doc(`communityProfiles/${S}`).get());
   await ok('cp delete own by suspended (withdrawal rights intact)', () => s.doc(`communityProfiles/${S}`).delete());
   await no('cp P5: suspended cannot CREATE own community profile', () => s.doc(`communityProfiles/${S}`).set({ hasAnyPublicContent: false }));
@@ -494,7 +507,8 @@ const no = (label, f) => expect(false, label, f);
   // ================= ١٩) v3.6: القرارات الثلاثة =================
   await env.withSecurityRulesDisabled(async (c) => {
     const db = c.firestore();
-    await db.doc('placeFavoriteCounts/p0').set({ name: 'Zero', url: 'https://maps.app.goo.gl/z', count: 0 });
+    await db.doc('placeFavoriteCounts/' + pf('p0')).set({ name: 'Zero', url: 'https://maps.app.goo.gl/z', count: 0 });
+    await db.doc(`copies/${A}__p_${pf('p0')}`).set({ uid: A, kind: 'place', docKey: 'p_' + pf('p0') }); /* v3.16: بسجل قائم — الرفض للأرضية لا لغياب السجل */
     await db.doc(`communityProfiles/${B}`).set({ hasAnyPublicContent: true, viewCount: 5, totalFavoriteCount: 0 });
     await db.doc('userCityLists/cBpub').set({ ownerId: B, public: true, sharedWith: [], favoriteCount: 0 });
     await db.doc(`userLists/${B}`).set({ public: true, nickname: 'b', favoriteCount: 0 });
@@ -506,7 +520,7 @@ const no = (label, f) => expect(false, label, f);
     await db.doc('userCityLists/cHeld').set({ ownerId: S, public: false, sharedWith: [], sharedWithHeld: [A], favoriteCount: 0 });
   });
 
-  await no('v3.6 (12) pfc count 0 -> -1 denied', () => a.doc('placeFavoriteCounts/p0').update({ count: -1 }));
+  await no('v3.6 (12) pfc count 0 -> -1 denied', () => pfcDown(a, A, 'p0', { count: -1 }));
   await no('v3.6 (12) cp totalFavoriteCount 0 -> -1 denied', () => a.doc(`communityProfiles/${B}`).update({ totalFavoriteCount: -1 }));
   await no('v3.6 (12) ucl favoriteCount 0 -> -1 denied', () => a.doc('userCityLists/cBpub').update({ favoriteCount: -1 }));
   await no('v3.6 (12) userLists favoriteCount 0 -> -1 denied', () => a.doc(`userLists/${B}`).update({ favoriteCount: -1 }));
@@ -981,6 +995,62 @@ const no = (label, f) => expect(false, label, f);
   await no('v3.14 stats_curators update save decrease denied', () => a.doc(SV).update({ save: 2 }));
   await no('v3.14 stats_curators unknown key still denied (saves)', () => a.doc(SV).set({ saves: 1 }));
   await ok('v3.14 stats_curators daily read by its curator', () => cur.doc(SV).get());
+
+  // ================= ٢٨) v3.15 — placeFavoriteCounts: حقل city الاختياري عند الإنشاء (١١ نوفمبر ٢٠٢٦ · r116-أ) =================
+  const PC = { name: 'Pastéis de Belém', url: 'https://maps.app.goo.gl/pc28', count: 1 };
+  await ok('v3.15 pfc create with a gazetteer city id allow', () => pfcUp(a, A, 'c28a', { ...PC, city: '2267057' }, true));
+  await ok('v3.15 pfc create without city still allow', () => pfcUp(a, A, 'c28b', PC, true));
+  await no('v3.15 pfc create with a private (non-id) city denied', () => pfcUp(a, A, 'c28c', { ...PC, city: 'c_my_village' }, true));
+  await no('v3.15 pfc create with city plus an unknown field denied', () => pfcUp(a, A, 'c28d', { ...PC, city: '2267057', by: A }, true));
+  await no('v3.15 pfc update changing city denied (frozen after create)', () => pfcUp(b, B, 'c28a', { count: 2, city: 'i_madeira' }));
+
+  // ================= ٢٩) v3.16 — placeFavoriteCounts مربوط بسجل صاحبه copies/<uid>__p_<docId> (١١ نوفمبر ٢٠٢٦ · r117-أ) =================
+  await no('v3.16 pfc bare create without a record denied (forged first save)', () => a.doc('placeFavoriteCounts/' + pf('c29x')).set(PC));
+  await no('v3.16 pfc bare +1 without a record denied (forged save)', () => b.doc('placeFavoriteCounts/' + pf('c28a')).update({ count: 2 }));
+  await ok('v3.16 pfc +1 with own new record in one batch allow', () => pfcUp(b, B, 'c28a', { count: 2 }));
+  await no('v3.16 pfc second +1 by the same saver denied (record already exists)', () => pfcUp(b, B, 'c28a', { count: 3 }));
+  await no('v3.16 pfc +1 carried by a record of another counter denied', () => { const btch = c.batch(); btch.set(c.doc(`copies/${C}__p_${pf('c28b')}`), { uid: C, kind: 'place', docKey: 'p_' + pf('c28b') }); btch.update(c.doc('placeFavoriteCounts/' + pf('c28a')), { count: 3 }); return btch.commit(); });
+  await no('v3.16 pfc bare -1 keeping the record denied', () => b.doc('placeFavoriteCounts/' + pf('c28a')).update({ count: 1 }));
+  await no('v3.16 pfc -1 by a user who never saved denied (zeroing others closed)', () => pfcDown(c, C, 'c28a', { count: 1 }));
+  await ok('v3.16 pfc -1 deleting own record in one batch allow', () => pfcDown(b, B, 'c28a', { count: 1 }));
+  await no('v3.16 copies: a save record under another uid denied (no borrowing)', () => b.doc(`copies/${A}__p_${pf('c29z')}`).set({ uid: A, kind: 'place', docKey: 'p_' + pf('c29z') })); /* معرّف لم يوجد قط — الرفض لشرط الصاحب لا لـupdate: false */
+
+  // v3.16 (١-ب): الربط في الاتجاهين — السجل لا يُنشأ ولا يُحذف إلا مع حركة عدّاده · معرّف العدّاد الجديد ١٦ خانة ست-عشرية
+  const rec29 = (uid, name) => `copies/${uid}__p_${pf(name)}`; const recData = (uid, name) => ({ uid, kind: 'place', docKey: 'p_' + pf(name) });
+  await no('v3.16 save record created alone (no counter move) denied — first half of a two-step zeroing', () => b.doc(rec29(B, 'c28b')).set(recData(B, 'c28b')));
+  await ok('v3.16 +1 on c28b with own record (count 2) allow', () => pfcUp(b, B, 'c28b', { count: 2 }));
+  await no('v3.16 save record deleted alone while its counter is above zero denied — first half of a two-step inflation', () => b.doc(rec29(B, 'c28b')).delete());
+  await env.withSecurityRulesDisabled(async (ctx) => { await ctx.firestore().doc(rec29(B, 'gone29')).set(recData(B, 'gone29')); });
+  await ok('v3.16 save record of a missing counter may be deleted alone', () => b.doc(rec29(B, 'gone29')).delete());
+  await ok('v3.16 save record of a counter at zero may be deleted alone', () => a.doc(rec29(A, 'p0')).delete());
+  await no('v3.16 counter created under a free (non-hex) id denied', () => { const btch = a.batch(); btch.set(a.doc(`copies/${A}__p_plainid29`), { uid: A, kind: 'place', docKey: 'p_plainid29' }); btch.set(a.doc('placeFavoriteCounts/plainid29'), PC); return btch.commit(); });
+  await ok('v3.16 second counter for the same saver (c29y, count 1) allow', () => pfcUp(b, B, 'c29y', PC, true));
+  await ok('v3.16 two pairs in one batch (account deletion shape): both records deleted, both counters -1 allow', () => { const btch = b.batch(); ['c28b', 'c29y'].forEach((n, i) => { btch.delete(b.doc(rec29(B, n))); btch.update(b.doc('placeFavoriteCounts/' + pf(n)), { count: i === 0 ? 1 : 0 }); }); return btch.commit(); });
+  await ok('v3.16 app owner may correct a counter without a record', () => owner.doc('placeFavoriteCounts/' + pf('c28b')).update({ count: 7 }));
+  await no('v3.16 counter created with a non-http link denied', () => pfcUp(a, A, 'c29j', { name: 'J', url: 'javascript://maps.google.com/%0aalert(1)', count: 1 }, true));
+  await no('v3.16 counter created with a non-string name denied', () => pfcUp(a, A, 'c29n', { name: { x: 1 }, url: 'https://maps.app.goo.gl/n29', count: 1 }, true));
+  await env.withSecurityRulesDisabled(async (ctx) => { await ctx.firestore().doc('placeFavoriteCounts/legacy29').set({ name: 'Legacy', url: 'https://maps.app.goo.gl/l29', count: 3 }); });
+  await no('v3.16 counter with a free (pre-v3.16) id cannot be moved by a non-owner', () => { const btch = b.batch(); btch.set(b.doc(`copies/${B}__p_legacy29`), { uid: B, kind: 'place', docKey: 'p_legacy29' }); btch.update(b.doc('placeFavoriteCounts/legacy29'), { count: 4 }); return btch.commit(); });
+  await ok('v3.16 my own missing save record is readable by id (the app checks it before unsaving)', () => a.doc(rec29(A, 'c29q')).get());
+  await no('v3.16 another saver’s record is not readable by id', () => b.doc(rec29(A, 'c28a')).get());
+  await ok('v3.16 an ordinary copy record (list) is still created and deleted alone', async () => { await a.doc(`copies/${A}__someList29`).set({ uid: A, kind: 'list', docKey: 'someList29' }); await a.doc(`copies/${A}__someList29`).delete(); });
+
+  /* قياسات لا أحكام (لا تدخل الحصيلة — تُقرأ من سجل CI): سلوك للمحرّك الرسمي لم يُقَس في بيئة الكتابة، والتطبيق مبنيّ ليعمل على الوجهين.
+     (١) هل ترى قاعدة السجل (getAfter للعدّاد) حركة increment على العدّاد في الدفعة نفسها؟ التطبيق يكتب increment أولًا ثم يعيد بقيمة صريحة إن رُفض.
+     (٢) هل يقبل المحرّك استعلام حذف الحساب where('uid','==',uid) بقاعدة القراءة الجديدة؟ التطبيق لا يعتمد عليه لعدّاد «saved by» (savedByReleaseCities يقرأ بالمعرّف). */
+  try{ const q29r = await b.collection('reports').where('by', '==', B).get(); console.log('INFO  v3.16 reports list by own uid (account deletion query): ALLOWED · ' + q29r.size + ' docs'); }catch(e){ console.log('INFO  v3.16 reports list by own uid (account deletion query): DENIED · ' + (e && e.code) + ' — reports of a deleted account stay (read is owner-only)'); }
+  { let FV = null; try{ const fb = require('firebase/compat/app'); require('firebase/compat/firestore'); FV = (fb.default || fb).firestore.FieldValue; }catch(_){ }
+    if (!FV) console.log('INFO  v3.16 increment probes: not measured (FieldValue not available in this runner)');
+    else { const probe = async (label, fn) => { try{ await fn(); console.log('INFO  v3.16 ' + label + ': ALLOWED'); return true; }catch(e){ console.log('INFO  v3.16 ' + label + ': DENIED · ' + (e && e.code)); return false; } };
+      const up = await probe('save as the app writes it (record with serverTimestamp + counter increment(1), one batch)', () => { const btch = b.batch(); btch.set(b.doc(rec29(B, 'c29y')), Object.assign(recData(B, 'c29y'), { at: FV.serverTimestamp() })); btch.update(b.doc('placeFavoriteCounts/' + pf('c29y')), { count: FV.increment(1) }); return btch.commit(); });
+      if (up) await probe('unsave as the app writes it (record delete + counter increment(-1), one batch)', () => { const btch = b.batch(); btch.delete(b.doc(rec29(B, 'c29y'))); btch.update(b.doc('placeFavoriteCounts/' + pf('c29y')), { count: FV.increment(-1) }); return btch.commit(); }); } }
+  try{ const q29 = await b.collection('copies').where('uid', '==', B).get(); console.log('INFO  v3.16 copies list by uid (account deletion query): ALLOWED · ' + q29.size + ' docs'); }catch(e){ console.log('INFO  v3.16 copies list by uid (account deletion query): DENIED · ' + (e && e.code)); }
+
+  // ================= ٣٠) v3.16 — مفاتيح الأحداث الأربعة المحذوفة (١١ نوفمبر ٢٠٢٦ · r117-ب) =================
+  await no('v3.16 events create with curator_view denied (key removed)', () => guest.doc('analytics/events_2026-11-11__2988507__all').set({ curator_view: 1 }));
+  await no('v3.16 events create with session_depth denied (key removed)', () => guest.doc('analytics/events_2026-11-11__all__all').set({ session_depth: 1 }));
+  await ok('v3.16 events create with kept keys allow (share_card, personal_save)', () => guest.doc('analytics/events_2026-11-11__all__all').set({ share_card: 1, personal_save: 1 }));
+  await no('v3.16 events update adding curator_follow or curator_contact denied', () => guest.doc('analytics/events_2026-11-11__all__all').update({ curator_follow: 1, curator_contact: 1 }));
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
