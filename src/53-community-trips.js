@@ -70,7 +70,7 @@ async function openMostSavedStats(){
     let rowsHtml = '';
     if (mostSavedTab === 'places'){
       const rows = await mpData.placeCounts.top(30); // v1.40: placeFavoriteCounts = عدّاد الحفظ
-      rowsHtml = rows.length ? rows.map(function(d, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span><a href="' + attrStr(d.url || '#') + '" target="_blank" rel="noopener" class="stats-name">' + escapeHtml(d.name || '') + '</a></div><div class="pl-sub">' + (d.count || 0) + ' save' + (d.count === 1 ? '' : 's') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No saves recorded yet</div>';
+      rowsHtml = rows.length ? rows.map(function(d, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span><a href="' + attrVal(d.url || '#') + '" target="_blank" rel="noopener" class="stats-name">' + escapeHtml(d.name || '') + '</a></div><div class="pl-sub">' + (d.count || 0) + ' save' + (d.count === 1 ? '' : 's') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No saves recorded yet</div>';
     } else {
       const rows = (await cmPublicListsCached()).filter(function(l){ return (l.copyCount || 0) > 0; }) /* r109: من الباب الواحد */.sort(function(a, b){ return (b.copyCount || 0) - (a.copyCount || 0); }).slice(0, 30);
       rowsHtml = rows.length ? rows.map(function(l, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span>' + escapeHtml(l.cityName || l.cityId || '') + '</div><div class="pl-sub">' + (l.copyCount || 0) + ' cop' + (l.copyCount === 1 ? 'y' : 'ies') + (l.nickname ? ' · by ' + escapeHtml(l.nickname) : '') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No copies recorded yet</div>';
@@ -148,7 +148,7 @@ function mpSheet(o){
   const ok = el('sheetOk'); ok.textContent = o.ok || 'OK'; ok.classList.toggle('btn-danger', !!o.danger); ok.classList.toggle('btn-brass', !o.danger);
   const alt = el('sheetAlt'); alt.style.display = o.alt ? '' : 'none'; alt.textContent = o.alt || '·';
   const alt2 = el('sheetAlt2'); if (alt2){ alt2.style.display = o.alt2 ? '' : 'none'; alt2.textContent = o.alt2 || '·'; } /* r75c: 'alt2' */
-  el('sheetCancel').textContent = o.cancel || 'Cancel';
+  el('sheetCancel').textContent = o.cancel || 'Cancel'; el('sheetCancel').style.display = o.noCancel ? 'none' : ''; /* r110-ب: ورقة إعلامية بزر واحد (Not saved · Kept as it was) — كان Cancel يظهر زائدًا بجوار OK */
   const inp = el('sheetInput'); __sheetHasInput = !!o.input; inp.style.display = o.input ? '' : 'none'; inp.value = (o.input && o.input.value) || ''; inp.placeholder = (o.input && o.input.placeholder) || ''; if (o.input) mpLenWatch('sheetInput', MP_LIMITS.sheet); else { const lc = inp.nextElementSibling; if (lc && lc.classList.contains('lencount')) lc.textContent = ''; } /* r100-ج */
   const alts = el('sheetAlts'); if (alts) alts.style.display = (o.alt || o.alt2) ? '' : 'none'; /* r75d-٢: البديلان بصف واحد */
   el('sheetCard').style.transform = ''; el('sheetBackdrop').classList.add('show'); sheetBarsHide(true); /* r75d-٢ (ملاحظة المالك ١٢ أكتوبر): الأشرطة السفلية تختفي ما دامت الورقة مفتوحة — الورقة على حافة الشاشة بلا قياس ولا رفع (بديل sheetLift) */
