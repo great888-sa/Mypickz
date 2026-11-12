@@ -1102,7 +1102,7 @@ const no = (label, f) => expect(false, label, f);
     + ' D D D D D' /* 061–065: معرّفات العدّادات المجهولة */
     + ' D D D D D D' /* 066–071: معرّفات ملحَقة وحقول بلا نوع */
     + ' D' /* 072: displayName القديم — يبقى مرفوضًا، علاجه في الكود */
-    + ' A D D D' /* 073 أسماء كثيرة لحساب واحد (غير مغلق) · 074 حقل زائد · 075–076 اسم غيره */
+    + ' A D A A' /* 073 أسماء كثيرة لحساب واحد (غير مغلق) · 074 حقل زائد · 075–076 اسم غيره في الملف والقائمة: مقبول في القواعد — البند ١٤ سُحب (lower() لا يطابق التطبيق)، والتحقق في القارئ */
     + ' D D' /* 077 الموقوف لا يعيد إنشاء مستنده · 078 حذف الطلب المرفوض ثم إعادته بوقت قديم: مرفوض (v3.17 ١٥ — بوقت الخادم يبقى ممكنًا: مسمّى) */
     + ' D D' /* 079–080: المستند الخاص المعلَّم عامًّا */
     + ' D D D' /* 081–083: كتابات مشروعة مرفوضة — علاجها في الكود أو البيانات */
@@ -1453,7 +1453,7 @@ const no = (label, f) => expect(false, label, f);
 
   // ================= ٣٢) v3.17 — حالات النص الجديد (١٢ نوفمبر ٢٠٢٦ · ق١١-١٢-٠٥) =================
   // ما لا تغطيه قياسات القسم ٣١: المسارات المشروعة تحت القواعد الجديدة (كما يكتبها التطبيق بعد الإصلاح) وحدود كل شرط جديد.
-  // ثلاثة أشياء تُقاس هنا لأول مرة في قواعدنا: math.abs (الهوية) · is timestamp مع serverTimestamp (السجلات) · تحويل الحروف lower() للأسماء (قرار ٣-٤).
+  // تُقاس هنا لأول مرة في قواعدنا: math.abs (الهوية) · is timestamp مع serverTimestamp (السجلات) · بناء نص التاريخ من ساعة الخادم. (تحويل الحروف lower() قيس في التشغيل الأول ١٢ نوفمبر فخالف التطبيق — البند ١٤ سُحب.)
   { const X = 'userX17', Y = 'userY17', Z = 'userZ17', W = 'userW17', NN = 'userN17';
     const x = env.authenticatedContext(X).firestore(), y = env.authenticatedContext(Y).firestore(), z = env.authenticatedContext(Z).firestore(), w = env.authenticatedContext(W).firestore();
     let FV17 = null; try { const fb = require('firebase/compat/app'); require('firebase/compat/firestore'); FV17 = (fb.default || fb).firestore.FieldValue; } catch (_) { }
@@ -1474,7 +1474,6 @@ const no = (label, f) => expect(false, label, f);
       await db.doc(`communityProfiles/${NN}`).set({ hasAnyPublicContent: false }); // لا محتوى عامًّا ولا توثيق — لا عدّاد له يُحرَّك
       await db.doc(`follows/${X}_${Y}`).set({ followerUid: X, curatorUid: Y, at: 1 });
       await db.doc('nicknames/x17name').set({ uid: X, nickname: 'X17name' }); await db.doc('nicknames/y17name').set({ uid: Y, nickname: 'Y17name' });
-      for (const nm of ['سارة', 'Émile', 'Abu Ali Jr.', "O'Neil", 'İbrahim', 'ΝΙΚΟΣ']) await db.doc('nicknames/' + nm.toLowerCase()).set({ uid: X, nickname: nm }); /* المفتاح كما يبنيه التطبيق: toLowerCase */
       await db.doc(`curatorRequests/${X}`).set({ uid: X, text: 'x', at: NOW - 8 * DAYMS, status: 'declined' });
       await db.doc(`curatorRequests/${Y}`).set({ uid: Y, text: 'x', at: NOW - 2 * DAYMS, status: 'declined' });
       await db.doc(`curatorRequests/${W}`).set({ uid: W, text: 'x', at: NOW - 8 * DAYMS, status: 'declined' });
@@ -1553,20 +1552,12 @@ const no = (label, f) => expect(false, label, f);
     await no('v3.17 category doc with a string in public deny', () => x.doc(`userCityListCats/${X}_c1_coffee`).set({ ownerId: X, cityId: 'c1', catId: 'coffee', public: 'true', sharedWith: [], places: [] }));
     await ok('v3.17 category doc with a boolean public allow', () => x.doc(`userCityListCats/${X}_c1_coffee`).set({ ownerId: X, cityId: 'c1', catId: 'coffee', public: false, sharedWith: [], places: [] }));
 
-    // --- (١٤ · ق٣-٤) الاسم المعروض مسجَّل لصاحبه — الحالتان الموسومتان [measure] هما شرط القرار: إن فشلت إحداهما يُسحب البند ---
+    // --- (١٤ · ق٣-٤) سُحب: القياس على المحرّك (١٢ نوفمبر ٠٩:٥٠ — «Émile → key émile» رُفض) أظهر أن lower() في القواعد لا يطابق toLowerCase في التطبيق، وشرط القرار أن يُسحب البند عند أول مخالفة.
+    //     ما بقي في القواعد نوع الحقل وحدّه (٧)؛ ومطابقة الاسم المعروض لسجل صاحبه يتحقق منها القارئ في الكود. الحالات التالية تثبت أن القواعد لا تربط الاسم — كي لا يُظنّ العكس. ---
     await ok('v3.17 PUBLIC list carrying my registered nickname allow', L17('n1', { public: true, nickname: 'X17name' }));
-    await no('v3.17 PUBLIC list carrying a nickname nobody registered deny', L17('n2', { public: true, nickname: 'Nobody17' }));
-    await no('v3.17 PUBLIC list carrying ANOTHER user\'s nickname deny', L17('n3', { public: true, nickname: 'Y17name' }));
-    await ok('v3.17 PRIVATE list with any nickname allow (the check is for public lists)', L17('n4', { nickname: 'Nobody17' }));
-    await no('v3.17 making that private list PUBLIC while its nickname is not mine deny', () => x.doc(`userCityLists/${X}_n4`).update({ public: true }));
-    await ok('v3.17 [measure ق٣-٤] PUBLIC list with an Arabic nickname (key = the same letters) allow', L17('n5', { public: true, nickname: 'سارة' }));
-    await ok('v3.17 [measure ق٣-٤] PUBLIC list with an accented capital (Émile → key émile) allow', L17('n6', { public: true, nickname: 'Émile' }));
-    await ok('v3.17 [measure ق٣-٤] PUBLIC list with a nickname holding spaces and a dot (Abu Ali Jr.) allow', L17('n7', { public: true, nickname: 'Abu Ali Jr.' }));
-    await ok('v3.17 [measure ق٣-٤] PUBLIC list with a nickname holding an apostrophe (O\'Neil) allow', L17('n8', { public: true, nickname: "O'Neil" }));
-    /* حرفان معروفان باختلاف تحويلهما بين المكتبات — قياس خارج الحصيلة: إن رُفض أحدهما فصاحب اسم كهذا يُرفض حفظ قائمته العامة (يُعرض على المالك) */
-    for (const pr of [['n9', 'İbrahim'], ['n10', 'ΝΙΚΟΣ']]){ try { await L17(pr[0], { public: true, nickname: pr[1] })(); console.log('INFO  v3.17 lower() ' + pr[1] + ' (app key ' + pr[1].toLowerCase() + '): ALLOWED'); } catch (e) { console.log('INFO  v3.17 lower() ' + pr[1] + ' (app key ' + pr[1].toLowerCase() + '): DENIED · ' + (e && e.code)); } }
-    await ok('v3.17 profile carrying my registered nickname allow', () => x.doc(`communityProfiles/${X}`).set({ nickname: 'X17name' }, { merge: true }));
-    await no('v3.17 profile carrying ANOTHER user\'s nickname deny', () => x.doc(`communityProfiles/${X}`).set({ nickname: 'Y17name' }, { merge: true }));
+    await ok('v3.17 PUBLIC list carrying a nickname registered to another user allow IN THE RULES (item 14 withdrawn — the reader verifies the shown name)', L17('n3', { public: true, nickname: 'Y17name' }));
+    await ok('v3.17 profile carrying a nickname registered to another user allow IN THE RULES (item 14 withdrawn)', () => x.doc(`communityProfiles/${X}`).set({ nickname: 'Y17name' }, { merge: true }));
+    await no('v3.17 list nickname of 25 characters deny (typed and bounded)', L17('n4', { nickname: 'k'.repeat(25) }));
 
     // --- (٥-ب · ق٣-٢) نافذة التاريخ — ٢٠٢٦-٠٨-١٨/١٩/٢٠ تُحوَّل إلى اليوم/أمس/غدًا؛ ٢٠٢٦-٠١-٠٥ و٢٠٣١-٠١-٠١ خارج النافذة دائمًا ---
     await ok('v3.17 events doc dated TODAY allow', () => guest.doc('analytics/events_2026-08-18__all__w17').set({ place_open: 1 }));
