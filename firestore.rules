@@ -12,7 +12,7 @@
 //   (١١) السجلات الأربعة (listBookmarks · tripSaves · copies للقائمة والرحلة · follows) مربوطة بعدّاداتها في الاتجاهين — نمط v3.16 (١-ب) · المتابعة لمن له محتوى عام أو موثَّق فقط (ق٣-١)
 //   (١٢) reports: القراءة لصاحب البلاغ أيضًا (استعلام حذف الحساب)
 //   (١٣) curatorRequests: المرفوض يعيد طلبه بعد أسبوع بتعديل مستنده (ق٣-٣)
-//   (١٤) الاسم المعروض في الملف والقائمة العامة مسجَّل لصاحبه في nicknames (ق٣-٤)
+//   (١٤) سُحب قبل النشر (شرط القرار ق٣-٤): ربط الاسم المعروض بسجل nicknames — القياس على المحرّك (١٢ نوفمبر ٠٩:٥٠) أظهر أن lower() في القواعد لا يطابق toLowerCase في التطبيق (Émile رُفض)؛ التحقق ينتقل إلى القارئ في الكود
 //   (١٥ — إضافات المراجعة المستقلة، أُقرّت بالقرار ق١١-١٢-٠٦): عدّاد النسخ يتحرّك فقط مع سجل من نوعه (list على القائمة · trip على الرحلة) · قراءة analytics بالاسم (visits وحده عام)
 //        · وقت طلب المنتقي ضمن يوم من ساعة الخادم (إنشاءً وإعادةً) · عنوان الرحلة واسم مدينتها يقبلان null · حذف سجل نسخ غير موجود يبقى مقبولًا
 //   الامتحان: القسمان ٣١ و٣٢ · التراجع: firestore_rules_v3-16.txt (المرفوع قبلها، غير منشور) ثم firestore_rules_v3-14.txt (المنشور)
@@ -125,11 +125,6 @@ service cloud.firestore {
     function legSourcesOk() {
       return !('legSources' in request.resource.data)
         || (request.resource.data.legSources is list && request.resource.data.legSources.hasOnly(['estimate', 'osrm', 'user']));
-    }
-    // v3.17 (١٤ · ق٣-٤): الاسم المعروض مسجَّل لصاحبه — مفتاح السجل هو الاسم بحروف صغيرة (كما يكتبه التطبيق: toLowerCase)
-    function nickMine(n) {
-      return n == null || (n is string && n.size() <= 24
-        && get(/databases/$(database)/documents/nicknames/$(n.lower())).data.uid == request.auth.uid);
     }
     // v3.17 (٥-ب · ق٣-٢): نافذة التاريخ للمستندات اليومية — أمس · اليوم · غدًا بساعة الخادم (التطبيق يكتب بعضها باليوم العالمي وبعضها باليوم المحلي — كلاهما داخل النافذة)
     function dayStr(t) {
@@ -538,14 +533,11 @@ service cloud.firestore {
           && (!('public' in request.resource.data) || request.resource.data.public is bool)
           && (!('sharedWith' in request.resource.data) || request.resource.data.sharedWith is list);
       }
-      function shownNickOk() { // v3.17 (١٤ · ق٣-٤): على القائمة العامة فقط
-        return request.resource.data.get('public', false) != true || nickMine(request.resource.data.get('nickname', null));
-      }
       // v3.8 (السطران ٣ و١٩): bookmarkCount وviewCount يبدآن صفرًا/غائبين (نمط ١٦)
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.ownerId == request.auth.uid
         && docId.split('_')[0] == request.auth.uid
-        && shownFieldsOk() && shownNickOk()
+        && shownFieldsOk()
         && noPrivateKeys()
         && request.resource.data.get('favoriteCount', 0) == 0
         && request.resource.data.get('bookmarkCount', 0) == 0
@@ -560,7 +552,7 @@ service cloud.firestore {
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
             && request.resource.data.ownerId == resource.data.ownerId // v3.17 (١): المالك لا يُنقل
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['favoriteCount', 'bookmarkCount', 'viewCount', 'copyCount'])
-            && shownFieldsOk() && shownNickOk()
+            && shownFieldsOk()
             && hasTopOk(request.auth.uid) && geoSourcesOk() && noGoogleCoords() && flagsUsedOk() && catsVOk()) // M4.25 (١)(٢)(٣)(٤)
         || (isSignedIn() && !isSuspended() && (resource.data.public == true || request.auth.uid in resource.data.get('sharedWith', [])) && resource.data.ownerId != request.auth.uid && // M4.24.1 بند ١٨
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookmarkCount', 'viewCount', 'copyCount']) &&
@@ -649,12 +641,10 @@ service cloud.firestore {
         return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verified', 'followerCount', 'viewCount']);
       }
       allow create: if isOwner()
-        || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysAbsentOnCreate() && profileFieldsOk()
-            && nickMine(request.resource.data.get('nickname', null))); // v3.17 (١٤)
+        || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysAbsentOnCreate() && profileFieldsOk());
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == uid);
       allow update: if isOwner()
-        || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysUntouched() && profileFieldsOk()
-            && nickMine(request.resource.data.get('nickname', null))) // v3.17 (١٤)
+        || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysUntouched() && profileFieldsOk())
         || (isSignedIn() && !isSuspended() && request.auth.uid != uid // v3.17 (٣): صاحب الملف لا يحرّك عدّادات الزوّار (كان يزيد مشاهداته بخطوات +١)
             && (resource.data.hasAnyPublicContent == true || resource.data.get('verified', false) == true) && // M4.25 (٥)
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount','followerCount']) && // v3.17 (٣): totalFavoriteCount سُحب
