@@ -1,3 +1,21 @@
+// firestore rules v3.17 (إصلاحات المراجعة الشاملة · المحور ١ · ١٢ نوفمبر ٢٠٢٦ — نصوصها أُقرّت بالقرار ق١١-١٢-٠٥؛ تُنشر مرة مع الرفعة الواحدة، ومعها v3.16 التي لم تُنشر منفردة):
+//   (١) trips · userCityLists: حقل المالك لا يُنقل في تعديل صاحبه (زرع المحتوى في حساب الغير)
+//   (٢) userLists: القراءة لصاحبه وحده — فرع public سُحب
+//   (٣) communityProfiles: صاحب الملف لا يحرّك عدّادات الزوّار · totalFavoriteCount سُحب (لا كود يكتبه ولا يقرؤه)
+//   (٤) dailyStats: المعرّف تاريخ · التحديث +١ لا أكثر
+//   (٥) معرّفات العدّادات المجهولة: عدد المقاطع · stats_curators لملف قائم · (٥-ب · ق٣-٢) نافذة التاريخ: أمس · اليوم · غدًا بساعة الخادم
+//   (٦) placeIdentity: التحديث بشرط القرب من الموضع المسجَّل
+//   (٧) أنواع الحقول المعروضة للجميع (القوائم · التصنيفات · الرحلات)
+//   (٨) users: الموقوف لا ينشئ مستنده
+//   (٩) nicknames: لا سرد · حقلان فقط بنوعهما وحدّهما
+//   (١٠) أنواع حقول السجلات والبلاغات · حدّ نص البلاغ ٣٠٠
+//   (١١) السجلات الأربعة (listBookmarks · tripSaves · copies للقائمة والرحلة · follows) مربوطة بعدّاداتها في الاتجاهين — نمط v3.16 (١-ب) · المتابعة لمن له محتوى عام أو موثَّق فقط (ق٣-١)
+//   (١٢) reports: القراءة لصاحب البلاغ أيضًا (استعلام حذف الحساب)
+//   (١٣) curatorRequests: المرفوض يعيد طلبه بعد أسبوع بتعديل مستنده (ق٣-٣)
+//   (١٤) الاسم المعروض في الملف والقائمة العامة مسجَّل لصاحبه في nicknames (ق٣-٤)
+//   (١٥ — إضافات المراجعة المستقلة، أُقرّت بالقرار ق١١-١٢-٠٦): عدّاد النسخ يتحرّك فقط مع سجل من نوعه (list على القائمة · trip على الرحلة) · قراءة analytics بالاسم (visits وحده عام)
+//        · وقت طلب المنتقي ضمن يوم من ساعة الخادم (إنشاءً وإعادةً) · عنوان الرحلة واسم مدينتها يقبلان null · حذف سجل نسخ غير موجود يبقى مقبولًا
+//   الامتحان: القسمان ٣١ و٣٢ · التراجع: firestore_rules_v3-16.txt (المرفوع قبلها، غير منشور) ثم firestore_rules_v3-14.txt (المنشور)
 // firestore rules v3.16 (r117 · ١١ نوفمبر ٢٠٢٦ — نشرة واحدة تضمّ v3.15 التي لم تُنشر منفردة؛ تُنشر مع كود r117):
 //   (١) placeFavoriteCounts مربوط بسجل صاحبه copies/{uid}__p_{docId}: +١ بإنشاء السجل بالطلب نفسه · −١ بحذفه بالطلب نفسه (تضييق — ق١١-١١-١٥ · «نعم» ق١١-١١-١٧)
 //   (١-ب) الربط في الاتجاهين (المراجعة المستقلة · ق١١-١١-١٨): سجل الحفظ يُنشأ فقط مع +١ على عدّاده ويُحذف فقط مع −١ (أو حين لا عدّاد يُنقص) · معرّف العدّاد ١٦ خانة ست-عشرية (إنشاءً وتحريكًا) · اسمه ورابطه نصّان بحدّ والرابط http(s)
@@ -108,6 +126,20 @@ service cloud.firestore {
       return !('legSources' in request.resource.data)
         || (request.resource.data.legSources is list && request.resource.data.legSources.hasOnly(['estimate', 'osrm', 'user']));
     }
+    // v3.17 (١٤ · ق٣-٤): الاسم المعروض مسجَّل لصاحبه — مفتاح السجل هو الاسم بحروف صغيرة (كما يكتبه التطبيق: toLowerCase)
+    function nickMine(n) {
+      return n == null || (n is string && n.size() <= 24
+        && get(/databases/$(database)/documents/nicknames/$(n.lower())).data.uid == request.auth.uid);
+    }
+    // v3.17 (٥-ب · ق٣-٢): نافذة التاريخ للمستندات اليومية — أمس · اليوم · غدًا بساعة الخادم (التطبيق يكتب بعضها باليوم العالمي وبعضها باليوم المحلي — كلاهما داخل النافذة)
+    function dayStr(t) {
+      return string(t.year()) + '-' + (t.month() < 10 ? '0' : '') + string(t.month()) + '-' + (t.day() < 10 ? '0' : '') + string(t.day());
+    }
+    function dayNear(d) {
+      return d == dayStr(request.time)
+        || d == dayStr(request.time - duration.value(1, 'd'))
+        || d == dayStr(request.time + duration.value(1, 'd'));
+    }
 
     match /settings/{docId} {
       allow read: if true;
@@ -133,11 +165,16 @@ service cloud.firestore {
     // القراءة للمالك فقط (قرار المالك ١٩ أغسطس) — أرقام صحة المشروع وحجمه بيانات داخلية. visits يبقى عامًّا (يُعرض أصلًا).
     // الأحداث محجوزة كاملة الآن حتى لا تُعاد نشرة عند تفعيل وظائفها لاحقًا (ج-١أ: share_card, curator_*, signup_*, visit_source · ب-١: import_*) · reserved_1 = نشر عام.
     function isErrorsDoc(id) { return id.matches('errors_[0-9]{4}-[0-9]{2}-[0-9]{2}'); }
-    function isEventsDoc(id) { return id.matches('events_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}__[a-z0-9_-]{1,40}'); }
-    function isSourcesDoc(id) { return id.matches('sources_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
-    function isHoursDoc(id) { return id.matches('hours_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
-    function isSessionsDoc(id) { return id.matches('sessions_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
-    function isOwnerOnlyAnalytics(id) { return isErrorsDoc(id) || isEventsDoc(id) || isSourcesDoc(id) || isHoursDoc(id) || isSessionsDoc(id); }
+    // v3.17 (٥): النمط يسمح بالشرطة السفلية داخل المقطع فكان يقبل مقاطع زائدة — عدّ المقاطع يغلقها
+    function anDay(id) { return dayNear(id.split('_')[1]); } // v3.17 (٥-ب): تاريخ المستند اليومي بعد البادئة
+    function entId(id) { // v3.17 (٥): معرّف عدّاد الكيان — تراكمي (مقطع واحد) أو يومي (مقطعان، ثانيهما تاريخ ضمن النافذة)
+      return id.split('__').size() == 1
+        || (id.split('__').size() == 2 && id.split('__')[1].matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && dayNear(id.split('__')[1]));
+    }
+    function isEventsDoc(id) { return id.split('__').size() == 3 && id.matches('events_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}__[a-z0-9_-]{1,40}'); }
+    function isSourcesDoc(id) { return id.split('__').size() == 2 && id.matches('sources_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
+    function isHoursDoc(id) { return id.split('__').size() == 2 && id.matches('hours_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
+    function isSessionsDoc(id) { return id.split('__').size() == 2 && id.matches('sessions_[0-9]{4}-[0-9]{2}-[0-9]{2}__[a-z0-9_-]{1,40}'); }
     function cityOk(id) { // v3.13: بالنمط فقط (معرّف المعجم أو جزيرة أو all) — لا قراءة exists (الدليل محذوف)
       return id.split('__')[1].matches('all|[0-9]{3,9}|i_[a-z0-9_]{2,30}');
     }
@@ -333,23 +370,23 @@ service cloud.firestore {
     function cityOk2(id) { return cityOk(id); } // v3.13: بالنمط
 
     match /analytics/{docId} {
-      allow read: if !isOwnerOnlyAnalytics(docId) || isOwner();
+      allow read: if docId == 'visits' || isOwner(); // v3.17 (١٥): بالاسم لا بالنمط — عدّ المقاطع (٥) كان يجعل مستندًا قديمًا بمعرّف زائف مقروءًا للجميع
       allow create: if (docId == 'visits'
           && request.resource.data.keys().hasOnly(['count'])
           && request.resource.data.count == 1)
-        || (isErrorsDoc(docId) && errorsCreateOk())
-        || (isEventsDoc(docId) && cityOk(docId) && eventsCreateOk())
-        || (isSourcesDoc(docId) && cityOk2(docId) && sourcesCreateOk())
-        || (isHoursDoc(docId) && cityOk2(docId) && hoursCreateOk())
-        || (isSessionsDoc(docId) && cityOk2(docId) && sessionsCreateOk());
+        || (isErrorsDoc(docId) && anDay(docId) && errorsCreateOk())
+        || (isEventsDoc(docId) && anDay(docId) && cityOk(docId) && eventsCreateOk())
+        || (isSourcesDoc(docId) && anDay(docId) && cityOk2(docId) && sourcesCreateOk())
+        || (isHoursDoc(docId) && anDay(docId) && cityOk2(docId) && hoursCreateOk())
+        || (isSessionsDoc(docId) && anDay(docId) && cityOk2(docId) && sessionsCreateOk());
       allow update: if (docId == 'visits'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
           && request.resource.data.count == resource.data.count + 1)
-        || (isErrorsDoc(docId) && errorsUpdateOk())
-        || (isEventsDoc(docId) && cityOk(docId) && eventsUpdateOk())
-        || (isSourcesDoc(docId) && cityOk2(docId) && sourcesUpdateOk())
-        || (isHoursDoc(docId) && cityOk2(docId) && hoursUpdateOk())
-        || (isSessionsDoc(docId) && cityOk2(docId) && sessionsUpdateOk());
+        || (isErrorsDoc(docId) && anDay(docId) && errorsUpdateOk())
+        || (isEventsDoc(docId) && anDay(docId) && cityOk(docId) && eventsUpdateOk())
+        || (isSourcesDoc(docId) && anDay(docId) && cityOk2(docId) && sourcesUpdateOk())
+        || (isHoursDoc(docId) && anDay(docId) && cityOk2(docId) && hoursUpdateOk())
+        || (isSessionsDoc(docId) && anDay(docId) && cityOk2(docId) && sessionsUpdateOk());
       allow delete: if false;
     }
 
@@ -410,7 +447,7 @@ service cloud.firestore {
 
 
     match /userLists/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || resource.data.public == true);
+      allow read: if isSignedIn() && request.auth.uid == userId; // v3.17 (٢): فرع public سُحب — المستند يحمل مرايا المفكرة والحفظ والمتابعة وفهرس المدن الخاصة
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
       // v3.7 (الفجوة ١٦): صاحب القائمة لا يكتب favoriteCount ذاتيًا — إنشاء بصفر/غائب، وتعديل لا يمسه
       // v3.8 (السطر ٥): فرع ±١ من الآخرين سُحب — favoriteCount مجمَّد بقيمته (يبقى مقروءًا، لا ترحيل)
@@ -424,9 +461,19 @@ service cloud.firestore {
       allow read: if isOwner() || (isSignedIn() && (resource.data.ownerId == request.auth.uid
         || resource.data.public == true
         || request.auth.uid in resource.data.sharedWith));
+      function tripShownOk() { // v3.17 (٧): ما يقرؤه غير صاحبه — نوعه مضمون (ما بداخل المصفوفات يحميه القارئ في الكود)
+        return (!('title' in request.resource.data) || request.resource.data.title == null || (request.resource.data.title is string && request.resource.data.title.size() <= 120))
+          && (!('cityName' in request.resource.data) || request.resource.data.cityName == null || (request.resource.data.cityName is string && request.resource.data.cityName.size() <= 120))
+          && (!('customLabel' in request.resource.data) || request.resource.data.customLabel == null || (request.resource.data.customLabel is string && request.resource.data.customLabel.size() <= 120))
+          && (!('cities' in request.resource.data) || request.resource.data.cities is list)
+          && (!('public' in request.resource.data) || request.resource.data.public is bool)
+          && (!('sharedWith' in request.resource.data) || request.resource.data.sharedWith is list)
+          && (!('plan' in request.resource.data) || request.resource.data.plan == null || request.resource.data.plan is map);
+      }
       // v3.8 (السطر ٤ — نمط الفجوة ١٦): saveCount يبدأ صفرًا/غائبًا
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.ownerId == request.auth.uid
+        && tripShownOk()
         && request.resource.data.get('favoriteCount', 0) == 0
         && request.resource.data.get('saveCount', 0) == 0
         && request.resource.data.get('copyCount', 0) == 0 // M4.25 (٤)
@@ -437,7 +484,9 @@ service cloud.firestore {
       // v3.8 (السطر ٤): حفظ الرحلة العامة من الآخرين — saveCount ±١ بأرضية، مربوط بسجل tripSaves للطالب (نمط الفجوة ١٧)
       allow update: if isOwner()
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
+            && request.resource.data.ownerId == resource.data.ownerId // v3.17 (١): المالك لا يُنقل
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['favoriteCount', 'saveCount', 'copyCount', 'viewCount'])
+            && tripShownOk()
             && legSourcesOk() && noGoogleCoords()) // M4.25 (٢)(٣)(٤) · M4.26 (٣)
         || (isSignedIn() && !isSuspended() && (resource.data.public == true || request.auth.uid in resource.data.get('sharedWith', [])) && resource.data.ownerId != request.auth.uid && // M4.24.1 بند ١٨
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['saveCount', 'copyCount', 'viewCount']) &&
@@ -452,9 +501,11 @@ service cloud.firestore {
             request.resource.data.get('copyCount', 0) >= 0 &&
             (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0)
              || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) + 1
-                 && !exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)) && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)))
+                 && !exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)) && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId))
+                 && getAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)).data.kind == 'trip') // v3.17 (١٥): سجل من نوع العدّاد — وإلا حرّكه سجل من نوع آخر في المسار نفسه
              || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) - 1
-                 && exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)) && !existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId))))); // M4.25 (٤) · M4.26 (١) لحظي · v3.10: بالطلب نفسه
+                 && exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)) && !existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId))
+                 && get(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + tripId)).data.kind == 'trip'))); // M4.25 (٤) · M4.26 (١) لحظي · v3.10: بالطلب نفسه
       // ⚠️ delete بلا !isSuspended() عمدًا — حق حذف البيانات لا يسقط بالإيقاف (قرار المالك ١٦ أغسطس).
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.ownerId == request.auth.uid);
@@ -480,10 +531,21 @@ service cloud.firestore {
         return !('categories' in request.resource.data.diff(resource.data).affectedKeys())
           || !('categories' in request.resource.data);
       }
+      function shownFieldsOk() { // v3.17 (٧): ما يقرؤه غير صاحبه — نوعه مضمون
+        return (!('nickname' in request.resource.data) || request.resource.data.nickname == null
+                || (request.resource.data.nickname is string && request.resource.data.nickname.size() <= 24))
+          && (!('cityName' in request.resource.data) || (request.resource.data.cityName is string && request.resource.data.cityName.size() <= 120))
+          && (!('public' in request.resource.data) || request.resource.data.public is bool)
+          && (!('sharedWith' in request.resource.data) || request.resource.data.sharedWith is list);
+      }
+      function shownNickOk() { // v3.17 (١٤ · ق٣-٤): على القائمة العامة فقط
+        return request.resource.data.get('public', false) != true || nickMine(request.resource.data.get('nickname', null));
+      }
       // v3.8 (السطران ٣ و١٩): bookmarkCount وviewCount يبدآن صفرًا/غائبين (نمط ١٦)
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.ownerId == request.auth.uid
         && docId.split('_')[0] == request.auth.uid
+        && shownFieldsOk() && shownNickOk()
         && noPrivateKeys()
         && request.resource.data.get('favoriteCount', 0) == 0
         && request.resource.data.get('bookmarkCount', 0) == 0
@@ -496,16 +558,20 @@ service cloud.firestore {
       // v3.8 (السطر المعلَّق ق٠١-١٩): viewCount العام — زيادة بواحد فقط من الآخرين (نمط مشاهدات الملف المجتمعي)
       allow update: if privateKeysOkOnUpdate() && indexOk() && (isOwner()
         || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
+            && request.resource.data.ownerId == resource.data.ownerId // v3.17 (١): المالك لا يُنقل
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['favoriteCount', 'bookmarkCount', 'viewCount', 'copyCount'])
+            && shownFieldsOk() && shownNickOk()
             && hasTopOk(request.auth.uid) && geoSourcesOk() && noGoogleCoords() && flagsUsedOk() && catsVOk()) // M4.25 (١)(٢)(٣)(٤)
         || (isSignedIn() && !isSuspended() && (resource.data.public == true || request.auth.uid in resource.data.get('sharedWith', [])) && resource.data.ownerId != request.auth.uid && // M4.24.1 بند ١٨
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookmarkCount', 'viewCount', 'copyCount']) &&
             request.resource.data.get('copyCount', 0) >= 0 &&
             (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0)
              || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) + 1
-                 && !exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)) && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)))
+                 && !exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)) && existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId))
+                 && getAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)).data.kind == 'list') // v3.17 (١٥): سجل من نوع العدّاد — وإلا حرّكه سجل من نوع آخر في المسار نفسه
              || (request.resource.data.get('copyCount', 0) == resource.data.get('copyCount', 0) - 1
-                 && exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)) && !existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)))) && // M4.25 (٤) · M4.26 (١) لحظي · v3.10: السجل يُنشأ/يُحذف بالطلب نفسه (لا تضخيم ولا تصفير)
+                 && exists(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)) && !existsAfter(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId))
+                 && get(/databases/$(database)/documents/copies/$(request.auth.uid + '__' + docId)).data.kind == 'list')) && // M4.25 (٤) · M4.26 (١) لحظي · v3.10: السجل يُنشأ/يُحذف بالطلب نفسه (لا تضخيم ولا تصفير)
             (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
              || request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0) + 1) &&
             request.resource.data.get('bookmarkCount', 0) >= 0 &&
@@ -522,17 +588,25 @@ service cloud.firestore {
     // v3.11 (ز-١-ج): سجل هوية الأماكن — معلومة نملكها تتراكم مع كل تأكيد على الخريطة
     match /placeIdentity/{hash} {
       allow read: if true;
-      allow create, update: if isSignedIn() && !isSuspended()
-        && request.resource.data.keys().hasOnly(['lat', 'lng', 'source', 'openId', 'n', 'cityId', 'by', 'at'])
-        && request.resource.data.keys().hasAll(['lat', 'lng', 'source', 'by', 'at'])
-        && request.resource.data.by == request.auth.uid
-        && request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
-        && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
-        && request.resource.data.source in ['overture', 'fsq', 'user_pin']
-        && (!('openId' in request.resource.data) || (request.resource.data.openId is string && request.resource.data.openId.size() <= 80))
-        && (!('n' in request.resource.data) || (request.resource.data.n is string && request.resource.data.n.size() <= 120))
-        && (!('cityId' in request.resource.data) || (request.resource.data.cityId is string && request.resource.data.cityId.size() <= 40))
-        && hash.size() <= 80;
+      function idFieldsOk() {
+        return isSignedIn() && !isSuspended()
+          && request.resource.data.keys().hasOnly(['lat', 'lng', 'source', 'openId', 'n', 'cityId', 'by', 'at'])
+          && request.resource.data.keys().hasAll(['lat', 'lng', 'source', 'by', 'at'])
+          && request.resource.data.by == request.auth.uid
+          && request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+          && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+          && request.resource.data.source in ['overture', 'fsq', 'user_pin']
+          && (!('openId' in request.resource.data) || (request.resource.data.openId is string && request.resource.data.openId.size() <= 80))
+          && (!('n' in request.resource.data) || (request.resource.data.n is string && request.resource.data.n.size() <= 120))
+          && (!('cityId' in request.resource.data) || (request.resource.data.cityId is string && request.resource.data.cityId.size() <= 40))
+          && hash.size() <= 80;
+      }
+      allow create: if idFieldsOk();
+      // v3.17 (٦ · ق١١-١٢-٠٢): «آخر مؤكِّد يفوز» بشرط القرب — كان الشرط في التطبيق وحده (١ كم) فيتجاوزه من يكتب مباشرة.
+      //   ٠٫٠١ درجة عرض ≈ ١٫١ كم · خط الطول أوسع (٠٫٠٣) لأن درجته تضيق بعيدًا عن خط الاستواء. التصحيح الأبعد لمالك التطبيق (يحذف السجل).
+      allow update: if idFieldsOk()
+        && math.abs(request.resource.data.lat - resource.data.lat) <= 0.01
+        && math.abs(request.resource.data.lng - resource.data.lng) <= 0.03;
       allow delete: if isOwner();
     }
 
@@ -545,11 +619,13 @@ service cloud.firestore {
         && docId.split('_')[0] == request.auth.uid
         && request.resource.data.keys().hasAll(['ownerId', 'cityId', 'catId', 'public', 'places'])
         && request.resource.data.places is list
+        && request.resource.data.public is bool && request.resource.data.get('sharedWith', []) is list // v3.17 (٧)
         && !(request.resource.data.catId in ['hospitals_clinics', 'personal_home', 'personal_work', 'personal_family', 'personal_relatives', 'personal_friends'])
         && noGoogleCoords();
       allow update: if isOwner() || (isSignedIn() && !isSuspended() && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId && request.resource.data.catId == resource.data.catId && request.resource.data.cityId == resource.data.cityId
-        && request.resource.data.places is list && noGoogleCoords());
+        && request.resource.data.places is list && noGoogleCoords()
+        && request.resource.data.get('public', false) is bool && request.resource.data.get('sharedWith', []) is list); // v3.17 (٧)
       allow delete: if isOwner() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
     }
 
@@ -573,18 +649,17 @@ service cloud.firestore {
         return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verified', 'followerCount', 'viewCount']);
       }
       allow create: if isOwner()
-        || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysAbsentOnCreate() && profileFieldsOk());
+        || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysAbsentOnCreate() && profileFieldsOk()
+            && nickMine(request.resource.data.get('nickname', null))); // v3.17 (١٤)
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == uid);
       allow update: if isOwner()
-        || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysUntouched() && profileFieldsOk())
-        || (isSignedIn() && !isSuspended() && (resource.data.hasAnyPublicContent == true || resource.data.get('verified', false) == true) && // M4.25 (٥)
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount','totalFavoriteCount','followerCount']) &&
+        || (isSignedIn() && request.auth.uid == uid && !isSuspended() && selfProtectedKeysUntouched() && profileFieldsOk()
+            && nickMine(request.resource.data.get('nickname', null))) // v3.17 (١٤)
+        || (isSignedIn() && !isSuspended() && request.auth.uid != uid // v3.17 (٣): صاحب الملف لا يحرّك عدّادات الزوّار (كان يزيد مشاهداته بخطوات +١)
+            && (resource.data.hasAnyPublicContent == true || resource.data.get('verified', false) == true) && // M4.25 (٥)
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount','followerCount']) && // v3.17 (٣): totalFavoriteCount سُحب
             (request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0)
              || request.resource.data.get('viewCount', 0) == resource.data.get('viewCount', 0) + 1) &&
-            request.resource.data.get('totalFavoriteCount', 0) >= 0 &&
-            (request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0)
-             || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) + 1
-             || request.resource.data.get('totalFavoriteCount', 0) == resource.data.get('totalFavoriteCount', 0) - 1) &&
             request.resource.data.get('followerCount', 0) >= 0 &&
             (request.resource.data.get('followerCount', 0) == resource.data.get('followerCount', 0)
              || (request.resource.data.get('followerCount', 0) == resource.data.get('followerCount', 0) + 1
@@ -597,6 +672,22 @@ service cloud.firestore {
     match /follows/{docId} {
       function followerOfDoc() { return docId.split('_')[0]; }
       function curatorOfDoc() { return docId.split('_')[1]; }
+      // v3.17 (١١ · ق٣-١): السجل مربوط بعدّاد المتابعين في الاتجاهين، والمتابعة لمن له محتوى عام أو موثَّق فقط (من سواه لا عدّاد له يُحرَّك)
+      function fProfile() { return /databases/$(database)/documents/communityProfiles/$(curatorOfDoc()); }
+      function fCountable() {
+        return get(fProfile()).data.get('hasAnyPublicContent', false) == true || get(fProfile()).data.get('verified', false) == true;
+      }
+      function followCounted() {
+        return fCountable()
+          && getAfter(fProfile()).data.get('followerCount', 0) == get(fProfile()).data.get('followerCount', 0) + 1;
+      }
+      function followReleased() { // لا عدّاد يُنقَص: الملف حُذف · العدّاد عند الصفر · لم يعد معدودًا · صاحب السجل موقوف (حق الانسحاب)
+        return !exists(fProfile())
+          || get(fProfile()).data.get('followerCount', 0) <= 0
+          || !fCountable()
+          || isSuspended()
+          || (existsAfter(fProfile()) && getAfter(fProfile()).data.get('followerCount', 0) == get(fProfile()).data.get('followerCount', 0) - 1);
+      }
       allow read: if isOwner() || (isSignedIn() && (resource.data.followerUid == request.auth.uid || resource.data.curatorUid == request.auth.uid));
       allow create: if isSignedIn() && !isSuspended()
         && followerOfDoc() == request.auth.uid
@@ -605,9 +696,12 @@ service cloud.firestore {
         && request.resource.data.followerUid == request.auth.uid
         && request.resource.data.curatorUid == curatorOfDoc()
         && request.resource.data.curatorUid != request.auth.uid
-        && exists(/databases/$(database)/documents/communityProfiles/$(curatorOfDoc()));
+        && exists(/databases/$(database)/documents/communityProfiles/$(curatorOfDoc()))
+        && docId == request.auth.uid + '_' + request.resource.data.curatorUid // v3.17 (١١): لا سجل ثانٍ للزوج نفسه بمعرّف ملحَق
+        && (!('at' in request.resource.data) || request.resource.data.at is timestamp || request.resource.data.at is number) // v3.17 (١٠)
+        && followCounted();
       allow update: if false;
-      allow delete: if isOwner() || (isSignedIn() && resource.data.followerUid == request.auth.uid);
+      allow delete: if isOwner() || (isSignedIn() && resource.data.followerUid == request.auth.uid && followReleased());
     }
 
     // M4.25 (٤): سجل النسخ بإسناد — copies/{uid}__{docKey} · ينشئه صاحبه فقط · لا تعديل ولا حذف (النسخة قد تبقى عنده) · القراءة لصاحبه والمالك
@@ -627,6 +721,17 @@ service cloud.firestore {
           || get(saveCounter()).data.count <= 0
           || (existsAfter(saveCounter()) && getAfter(saveCounter()).data.count == get(saveCounter()).data.count - 1);
       }
+      // v3.17 (١١): سجل نسخ القائمة والرحلة مربوط بعدّاد copyCount على مصدره في الاتجاهين (النمط نفسه) — سجل نسخ المكان المفرد (place بغير بصمة) إسناد بلا عدّاد فيبقى حرًّا
+      function copyList() { return /databases/$(database)/documents/userCityLists/$(docId.split('__')[1]); }
+      function copyTrip() { return /databases/$(database)/documents/trips/$(docId.split('__')[1]); }
+      function cntUp(p) { return getAfter(p).data.get('copyCount', 0) == get(p).data.get('copyCount', 0) + 1; }
+      function cntFree(p) { // لا عدّاد يُنقَص: المصدر حُذف · العدّاد عند الصفر · لم يعد عامًّا ولا مشارَكًا معي · صاحب السجل موقوف
+        return !exists(p)
+          || get(p).data.get('copyCount', 0) <= 0
+          || !(get(p).data.get('public', false) == true || request.auth.uid in get(p).data.get('sharedWith', []))
+          || isSuspended()
+          || (existsAfter(p) && getAfter(p).data.get('copyCount', 0) == get(p).data.get('copyCount', 0) - 1);
+      }
       // v3.16 (١-ج): القراءة لصاحب الحقل uid أيضًا — الاستعلام where('uid','==',uid) (حذف الحساب) يُثبت هذا الشرط؛ شرط المعرّف وحده لا يُثبته استعلام
       allow read: if isOwner() || (isSignedIn() && ((resource != null && resource.data.uid == request.auth.uid) || docId.split('__')[0] == request.auth.uid));
       allow create: if isSignedIn() && !isSuspended()
@@ -636,9 +741,15 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.kind in ['trip', 'list', 'place']
         && request.resource.data.docKey is string && request.resource.data.docKey == docId.split('__')[1]
-        && (!isSaveRec() || saveCounted());
+        && (!isSaveRec() || saveCounted())
+        && (!('at' in request.resource.data) || request.resource.data.at is timestamp || request.resource.data.at is number) // v3.17 (١٠)
+        && (request.resource.data.kind != 'list' || cntUp(copyList())) // v3.17 (١١)
+        && (request.resource.data.kind != 'trip' || cntUp(copyTrip()));
       allow update: if false;
-      allow delete: if isOwner() || (isSignedIn() && docId.split('__')[0] == request.auth.uid && (!isSaveRec() || saveReleased())); // M4.26 (١)(٢): لصاحبه — العدّاد اللحظي وحذف الحساب
+      allow delete: if isOwner() || (isSignedIn() && docId.split('__')[0] == request.auth.uid
+        && (!isSaveRec() || saveReleased())
+        && (resource == null || resource.data.get('kind', '') != 'list' || cntFree(copyList())) // v3.17 (١١) · (١٥): سجل غير موجود يُحذف بلا شرط كما كان
+        && (resource == null || resource.data.get('kind', '') != 'trip' || cntFree(copyTrip()))); // M4.26 (١)(٢): لصاحبه — العدّاد اللحظي وحذف الحساب
     }
 
     // M4.25 (٦): رأي المنتقي بالمدينة — curatorCityNotes/{uid}__{cityId}
@@ -669,22 +780,35 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid', 'text', 'at', 'status'])
         && request.resource.data.uid == uid
         && request.resource.data.get('status', 'pending') == 'pending'
+        && (!('at' in request.resource.data) || (request.resource.data.at is number // v3.17 (١٥): وقت الطلب ضمن يوم من ساعة الخادم — وقت صفر كان يفتح إعادة الطلب فورًا
+            && request.resource.data.at >= request.time.toMillis() - 86400000
+            && request.resource.data.at <= request.time.toMillis() + 86400000))
         && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 300));
-      allow update: if isOwner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-        && request.resource.data.status in ['pending', 'accepted', 'declined'];
+      // v3.17 (١٣ · ق٣-٣ — «اسبوع» ق١١-١٢-٠٥): المرفوض يعيد طلبه بعد أسبوع من تاريخ طلبه، بتعديل مستنده (الحذف يبقى لحذف الحساب)
+      allow update: if (isOwner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && request.resource.data.status in ['pending', 'accepted', 'declined'])
+        || (isSignedIn() && !isSuspended() && request.auth.uid == uid
+          && resource.data.status == 'declined'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'text', 'at'])
+          && request.resource.data.at is number && request.resource.data.at >= resource.data.at + 604800000
+          && request.resource.data.at <= request.time.toMillis() + 86400000
+          && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 300)));
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == uid); // M4.26 (٢)
     }
 
     // M4.25 (٧): البلاغات — المسجَّل ينشئ؛ المالك يقرأ ويحذف
     match /reports/{docId} {
-      allow read: if isOwner();
+      allow read: if isOwner() || (isSignedIn() && resource.data.by == request.auth.uid); // v3.17 (١٢): صاحب البلاغ — استعلام حذف الحساب where('by','==',uid)
       allow create: if isSignedIn() && !isSuspended()
         && request.resource.data.keys().hasOnly(['by', 'kind', 'docKey', 'reason', 'at'])
         && request.resource.data.keys().hasAll(['by', 'kind'])
         && request.resource.data.by == request.auth.uid
         && request.resource.data.kind in ['place', 'list', 'trip', 'profile', 'notes', 'app'] // M4.26 (٦)
-        && (request.resource.data.kind == 'app' || (request.resource.data.docKey is string && request.resource.data.docKey.size() <= 120))
-        && (!('reason' in request.resource.data) || (request.resource.data.reason is string && request.resource.data.reason.size() <= 200));
+        && (!('docKey' in request.resource.data) || (request.resource.data.docKey is string && request.resource.data.docKey.size() <= 120)) // v3.17 (١٠): النوع يُفحص حيثما وُجد الحقل (كان يُفلت مع kind app)
+        && (request.resource.data.kind == 'app' || 'docKey' in request.resource.data)
+        && (!('at' in request.resource.data) || request.resource.data.at is number)
+        && (!('reason' in request.resource.data) || (request.resource.data.reason is string && request.resource.data.reason.size() <= 300)); // v3.17 (١٠): ٣٠٠ — بادئة التطبيق نحو ٥٠ حرفًا فوق ٢٠٠ المستخدم
       allow update: if false;
       allow delete: if isOwner() || (isSignedIn() && resource.data.by == request.auth.uid); // M4.26 (٢)
     }
@@ -696,30 +820,60 @@ service cloud.firestore {
     match /listBookmarks/{docId} {
       function bmOwner() { return docId.split('__')[0]; }
       function bmTarget() { return docId.split('__')[1]; }
+      // v3.17 (١١): السجل مربوط بعدّاد bookmarkCount في الاتجاهين (نمط v3.16 ١-ب)
+      function bmList() { return /databases/$(database)/documents/userCityLists/$(bmTarget()); }
+      function bmCounted() {
+        return getAfter(bmList()).data.get('bookmarkCount', 0) == get(bmList()).data.get('bookmarkCount', 0) + 1;
+      }
+      function bmReleased() { // لا عدّاد يُنقَص: القائمة حُذفت · العدّاد عند الصفر · لم تعد عامة ولا مشارَكة معي · صاحب السجل موقوف (حق الانسحاب)
+        return !exists(bmList())
+          || get(bmList()).data.get('bookmarkCount', 0) <= 0
+          || !(get(bmList()).data.get('public', false) == true || request.auth.uid in get(bmList()).data.get('sharedWith', []))
+          || isSuspended()
+          || (existsAfter(bmList()) && getAfter(bmList()).data.get('bookmarkCount', 0) == get(bmList()).data.get('bookmarkCount', 0) - 1);
+      }
       allow read: if isOwner() || (isSignedIn() && bmOwner() == request.auth.uid);
       allow create: if isSignedIn() && !isSuspended()
         && bmOwner() == request.auth.uid
         && request.resource.data.keys().hasOnly(['at'])
         && exists(/databases/$(database)/documents/userCityLists/$(bmTarget()))
         && (get(/databases/$(database)/documents/userCityLists/$(bmTarget())).data.public == true
-            || request.auth.uid in get(/databases/$(database)/documents/userCityLists/$(bmTarget())).data.get('sharedWith', [])); // M4.24.1 بند ١٨: المشارَك معك بالاسم
+            || request.auth.uid in get(/databases/$(database)/documents/userCityLists/$(bmTarget())).data.get('sharedWith', [])) // M4.24.1 بند ١٨: المشارَك معك بالاسم
+        && docId == request.auth.uid + '__' + bmTarget() // v3.17 (١١): لا سجل ثانٍ للقائمة نفسها بمعرّف ملحَق
+        && (!('at' in request.resource.data) || request.resource.data.at is timestamp || request.resource.data.at is number) // v3.17 (١٠)
+        && bmCounted();
       allow update: if false;
-      allow delete: if isOwner() || (isSignedIn() && bmOwner() == request.auth.uid);
+      allow delete: if isOwner() || (isSignedIn() && bmOwner() == request.auth.uid && bmReleased());
     }
 
     // ===== v3.8 (السطر ٤): سجل حفظ الرحلات — نفس أحكام سجل المفكرة حرفيًّا على الرحلات العامة =====
     match /tripSaves/{docId} {
       function tsOwner() { return docId.split('__')[0]; }
       function tsTarget() { return docId.split('__')[1]; }
+      // v3.17 (١١): السجل مربوط بعدّاد saveCount في الاتجاهين (نمط v3.16 ١-ب)
+      function tsTrip() { return /databases/$(database)/documents/trips/$(tsTarget()); }
+      function tsCounted() {
+        return getAfter(tsTrip()).data.get('saveCount', 0) == get(tsTrip()).data.get('saveCount', 0) + 1;
+      }
+      function tsReleased() {
+        return !exists(tsTrip())
+          || get(tsTrip()).data.get('saveCount', 0) <= 0
+          || !(get(tsTrip()).data.get('public', false) == true || request.auth.uid in get(tsTrip()).data.get('sharedWith', []))
+          || isSuspended()
+          || (existsAfter(tsTrip()) && getAfter(tsTrip()).data.get('saveCount', 0) == get(tsTrip()).data.get('saveCount', 0) - 1);
+      }
       allow read: if isOwner() || (isSignedIn() && tsOwner() == request.auth.uid);
       allow create: if isSignedIn() && !isSuspended()
         && tsOwner() == request.auth.uid
         && request.resource.data.keys().hasOnly(['at'])
         && exists(/databases/$(database)/documents/trips/$(tsTarget()))
         && (get(/databases/$(database)/documents/trips/$(tsTarget())).data.public == true
-            || request.auth.uid in get(/databases/$(database)/documents/trips/$(tsTarget())).data.get('sharedWith', [])); // M4.24.1 بند ١٨
+            || request.auth.uid in get(/databases/$(database)/documents/trips/$(tsTarget())).data.get('sharedWith', [])) // M4.24.1 بند ١٨
+        && docId == request.auth.uid + '__' + tsTarget() // v3.17 (١١)
+        && (!('at' in request.resource.data) || request.resource.data.at is timestamp || request.resource.data.at is number) // v3.17 (١٠)
+        && tsCounted();
       allow update: if false;
-      allow delete: if isOwner() || (isSignedIn() && tsOwner() == request.auth.uid);
+      allow delete: if isOwner() || (isSignedIn() && tsOwner() == request.auth.uid && tsReleased());
     }
 
     // ===== v3.6 (٣-ب): الفئات الخاصة — مجموعة مستقلة، الخصوصية على مستوى المستند =====
@@ -734,12 +888,20 @@ service cloud.firestore {
 
     // ===== إصلاح ثغرة ٤ =====
     match /nicknames/{nickId} {
-      allow read: if true; // يبقى عامًّا: فحص توافر الاسم بالتسجيل يجري قبل المصادقة (doSignUp) — الدخول بالاسم يُحلّ خادميًّا بالمرحلة هـ (ق٠٩-٠٧-٢١)؛ المستند يحمل uid فقط لا بريدًا
-      allow create: if isSignedIn() && !isSuspended()
-        && request.resource.data.uid == request.auth.uid;
+      // v3.17 (٩): القراءة المفردة تبقى عامة (فحص توافر الاسم بالتسجيل يجري قبل المصادقة — doSignUp)؛ السرد أُغلق: كان الزائر يسرد معرّف كل حساب، ولا كود يسرد المجموعة.
+      //   المستند حقلان فقط بنوعهما وحدّهما (كان يقبل حقولًا حرّة بلا حدّ وهو مقروء للجميع).
+      allow get: if true;
+      allow list: if false;
+      function nickDocOk() {
+        return request.resource.data.uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'nickname'])
+          && request.resource.data.nickname is string
+          && request.resource.data.nickname.size() >= 3 && request.resource.data.nickname.size() <= 24;
+      }
+      allow create: if isSignedIn() && !isSuspended() && nickDocOk() && nickId.size() <= 24;
       allow update: if isSignedIn() && !isSuspended()
         && resource.data.uid == request.auth.uid
-        && request.resource.data.uid == request.auth.uid;
+        && nickDocOk();
       allow delete: if isOwner()
         || (isSignedIn() && resource.data.uid == request.auth.uid);
     }
@@ -747,7 +909,7 @@ service cloud.firestore {
     // ===== إصلاح ثغرة ١ =====
     match /users/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isOwner());
-      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId && !isSuspended(); // v3.17 (٨): الموقوف كان يحذف مستنده ويعيد إنشاءه بمحتوى جديد
       allow update: if isOwner() || (isSignedIn() && request.auth.uid == userId && !isSuspended());
       allow delete: if isOwner() || (isSignedIn() && request.auth.uid == userId);
     }
@@ -755,16 +917,20 @@ service cloud.firestore {
     // ===== إصلاح ثغرة ٣ (ج) =====
     match /dailyStats/{date} {
       allow read: if isOwner();
-      allow create: if isSignedIn()
+      // v3.17 (٤): المعرّف تاريخ ضمن النافذة (كان أي معرّف يُقبل) · التحديث +١ لا أكثر (كان بلا سقف: قفزة إلى مليار بطلب واحد)
+      function dsDay() { return date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && dayNear(date); }
+      allow create: if isSignedIn() && dsDay()
         && request.resource.data.keys().hasOnly(['newSignupsToday','activeToday'])
         && request.resource.data.get('newSignupsToday', 0) >= 0
         && request.resource.data.get('newSignupsToday', 0) <= 1
         && request.resource.data.get('activeToday', 0) >= 0
         && request.resource.data.get('activeToday', 0) <= 1;
-      allow update: if isSignedIn()
+      allow update: if isSignedIn() && dsDay()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['newSignupsToday','activeToday'])
-        && request.resource.data.get('activeToday', 0) >= resource.data.get('activeToday', 0)
-        && request.resource.data.get('newSignupsToday', 0) >= resource.data.get('newSignupsToday', 0);
+        && (request.resource.data.get('activeToday', 0) == resource.data.get('activeToday', 0)
+            || request.resource.data.get('activeToday', 0) == resource.data.get('activeToday', 0) + 1)
+        && (request.resource.data.get('newSignupsToday', 0) == resource.data.get('newSignupsToday', 0)
+            || request.resource.data.get('newSignupsToday', 0) == resource.data.get('newSignupsToday', 0) + 1);
       allow delete: if isOwner();
     }
 
@@ -775,8 +941,8 @@ service cloud.firestore {
       function createOk() { return keysOk() && bumpC('open_app') && bumpC('open_community') && bumpC('open_curator') && bumpC('copy_from'); }
       function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('open_app') && bumpU('open_community') && bumpU('open_curator') && bumpU('copy_from'); } // M4.25 (٩) §١٧-ج
       allow read: if isOwner() || (isSignedIn() && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && get(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])).data.ownerId == request.auth.uid);
-      allow create: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && createOk();
-      allow update: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && updateOk();
+      allow create: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && entId(docId) && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && createOk();
+      allow update: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && entId(docId) && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && updateOk();
       allow delete: if isOwner();
     }
     // ===== v3.3 (أ) عدّادات الكيانات — stats_trips =====
@@ -785,8 +951,8 @@ service cloud.firestore {
       function createOk() { return keysOk() && bumpC('view_total'); }
       function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('view_total'); } // M4.25 (٩) §١٧-ج
       allow read: if isOwner() || (isSignedIn() && exists(/databases/$(database)/documents/trips/$(docId.split('__')[0])) && get(/databases/$(database)/documents/trips/$(docId.split('__')[0])).data.ownerId == request.auth.uid);
-      allow create: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && exists(/databases/$(database)/documents/trips/$(docId.split('__')[0])) && createOk();
-      allow update: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && exists(/databases/$(database)/documents/trips/$(docId.split('__')[0])) && updateOk();
+      allow create: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && entId(docId) && exists(/databases/$(database)/documents/trips/$(docId.split('__')[0])) && createOk();
+      allow update: if docId.matches('[A-Za-z0-9_-]{1,60}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && entId(docId) && exists(/databases/$(database)/documents/trips/$(docId.split('__')[0])) && updateOk();
       allow delete: if isOwner();
     }
     // ===== v3.3 (أ) عدّادات الكيانات — stats_places =====
@@ -796,7 +962,7 @@ service cloud.firestore {
       function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('open_total') && bumpU('trip_add'); } // M4.25 (٩) §١٧-ج
       allow read: if isOwner() || (isSignedIn() && !docId.matches('owner_.*') && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])) && get(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0])).data.ownerId == request.auth.uid);
       function userPlaceOk() { // v3.13: أماكن المستخدمين فقط (أماكن الدليل owner_… أُلغيت — الدليل مهاجَر إلى قوائم المالك)
-        return docId.matches('[A-Za-z0-9_-]{1,60}__[a-f0-9]{16}')
+        return docId.split('__').size() == 2 && docId.matches('[A-Za-z0-9_-]{1,60}__[a-f0-9]{16}') // v3.17 (٥)
           && exists(/databases/$(database)/documents/userCityLists/$(docId.split('__')[0]));
       }
       allow create: if userPlaceOk() && createOk();
@@ -810,8 +976,8 @@ service cloud.firestore {
       function createOk() { return keysOk() && bumpC('open') && bumpC('place_added') && bumpC('trip_built'); }
       function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('open') && bumpU('place_added') && bumpU('trip_built'); }
       allow read: if isOwner();
-      allow create: if isSignedIn() && docId.matches('[a-z0-9_-]{1,40}__[0-9]{4}-[0-9]{2}-[0-9]{2}') && createOk();
-      allow update: if isSignedIn() && docId.matches('[a-z0-9_-]{1,40}__[0-9]{4}-[0-9]{2}-[0-9]{2}') && updateOk();
+      allow create: if isSignedIn() && docId.split('__').size() == 2 && docId.matches('[a-z0-9_-]{1,40}__[0-9]{4}-[0-9]{2}-[0-9]{2}') && dayNear(docId.split('__')[1]) && createOk();
+      allow update: if isSignedIn() && docId.split('__').size() == 2 && docId.matches('[a-z0-9_-]{1,40}__[0-9]{4}-[0-9]{2}-[0-9]{2}') && dayNear(docId.split('__')[1]) && updateOk();
       allow delete: if isOwner();
     }
 
@@ -820,8 +986,8 @@ service cloud.firestore {
       function createOk() { return keysOk() && bumpC('page_view') && bumpC('follow') && bumpC('contact_click') && bumpC('ref_social') && bumpC('ref_card') && bumpC('export') && bumpC('save'); }
       function updateOk() { return keysOk() && request.resource.data.diff(resource.data).affectedKeys().size() >= 1 && bumpU('page_view') && bumpU('follow') && bumpU('contact_click') && bumpU('ref_social') && bumpU('ref_card') && bumpU('export') && bumpU('save'); } // M4.25 (٩) §١٧-ج · v3.14 save
       allow read: if isOwner() || (isSignedIn() && docId.split('__')[0] == request.auth.uid);
-      allow create: if docId.matches('[A-Za-z0-9]{20,40}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && createOk();
-      allow update: if docId.matches('[A-Za-z0-9]{20,40}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && updateOk();
+      allow create: if docId.matches('[A-Za-z0-9]{20,40}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && entId(docId) && exists(/databases/$(database)/documents/communityProfiles/$(docId.split('__')[0])) && createOk();
+      allow update: if docId.matches('[A-Za-z0-9]{20,40}(__[0-9]{4}-[0-9]{2}-[0-9]{2})?') && entId(docId) && exists(/databases/$(database)/documents/communityProfiles/$(docId.split('__')[0])) && updateOk();
       allow delete: if isOwner();
     }
     // ===== v3.3 (أ) عدّادات الكيانات — stats_cards =====
