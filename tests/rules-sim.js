@@ -20,6 +20,7 @@
 // v3.5 (٢٤ أغسطس ٢٠٢٦ — الشرط الحاجب): + القسم ١٨ — ٣١٩ حالة
 // يُشغَّل بـ: npx firebase emulators:exec --only firestore --project demo-mypickz "node tests/rules-sim.js"
 // كل حالة تُطبع بسطر PASS/FAIL. أي FAIL ⇒ رمز خروج ١ ⇒ الناشر يتوقف.
+// قياسات المراجعة الشاملة (١٢ نوفمبر ٢٠٢٦ · ق١١-١٢-٠٢): + القسم ٣١ — أسطر INFO خارج الحصيلة (الحالات المحتسبة تبقى ٦٧١) · خلاصتها أسطر «PS» آخر السجل
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -51,6 +52,7 @@ const ok = (label, f) => expect(true, label, f);
 const no = (label, f) => expect(false, label, f);
 
 (async () => {
+  process.exitCode = 1; // حارس صدق: إن فرغت حلقة الأحداث وحالةٌ معلَّقة (وعد لا يُحسم) يخرج التشغيل برمز ١ لا بصفر — السطر الأخير process.exit هو الذي يعلن النجاح
   const env = await initializeTestEnvironment({
     projectId: PROJECT_ID,
     firestore: { rules: RULES, host: '127.0.0.1', port: 8080 }
@@ -1051,6 +1053,334 @@ const no = (label, f) => expect(false, label, f);
   await no('v3.16 events create with session_depth denied (key removed)', () => guest.doc('analytics/events_2026-11-11__all__all').set({ session_depth: 1 }));
   await ok('v3.16 events create with kept keys allow (share_card, personal_save)', () => guest.doc('analytics/events_2026-11-11__all__all').set({ share_card: 1, personal_save: 1 }));
   await no('v3.16 events update adding curator_follow or curator_contact denied', () => guest.doc('analytics/events_2026-11-11__all__all').update({ curator_follow: 1, curator_contact: 1 }));
+
+  // ================= ٣١) قياسات المراجعة الشاملة — المحور ١: القواعد (١٢ نوفمبر ٢٠٢٦ · ق١١-١٢-٠٢) =================
+  // قياسات لا أحكام: كل سطر INFO خارج الحصيلة (pass/fail لا يتغيّران) ولا يُسقط التشغيل — أي عطل في القسم يُطبع INFO ABORTED ويمضي.
+  // المصدر: مراجعان مستقلان (R1 = سطح الهجوم على القواعد · R2 = مطابقة ما يكتبه التطبيق للقواعد). نصّ كل قياس كما كتبه صاحبه.
+  // قراءة R1: ALLOWED = الثغرة مؤكَّدة، إلا ما بدأ وصفه بـ[DENIED = …] فهو العكس (كتابة مشروعة ترفضها القواعد).
+  // قراءة R2: ما كُتب ok( / no( هو توقّع المراجع من نص القاعدة — يُطبع هنا INFO بنتيجته الفعلية ولا يُحتسب (ok وno مظلَّلتان داخل القسم).
+  // بعد كل إصلاح: القياس يتحوّل إلى حالة محتسبة (no / ok) في قسم الإصلاح.
+  // الخلاصة: آخر القسم يطبع أسطر «PS» — عشرون نتيجة في السطر بترتيب التنفيذ، وأول السطر رقم أول قياس فيه (A مقبول · A/n مقبول بعدد المستندات · D مرفوض بالقواعد · X:رمز رفض آخر · =قيمة · ? غير مقيس · ! عطل).
+  // جدول الأرقام والأوصاف: PROBE_MAP=1 يطبعه (أسطر PSMAP).
+  process.exitCode = fail === 0 ? 0 : 1; // إن فرغت حلقة الأحداث وقياس معلَّق، يخرج التشغيل برمز الحصيلة لا بصفر
+  { const PS = { 1: [], 2: [] }; const __log = console.log; const PSMAP = [];
+    const __end = function(note){ console.log = __log; [1, 2].forEach(function(k){ const L = PS[k]; console.log('\nPS' + k + ' n=' + L.length + ' (expected ' + (k === 1 ? 105 : 67) + ')' + (note || '')); for (let i = 0; i < L.length; i += 20) console.log('PS' + k + ' ' + ('00' + (i + 1)).slice(-3) + ': ' + L.slice(i, i + 20).join(' ')); }); if (process.env.PROBE_MAP) PSMAP.forEach(function(t){ console.log('PSMAP\t' + t); }); };
+    const __wd = setTimeout(function(){ __end(' — WATCHDOG 300 s, stopped after: ' + String(PSMAP[PSMAP.length - 1] || '(seed)').slice(0, 90)); console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed'); process.exit(fail === 0 ? 0 : 1); }, 300000);
+    console.log = function(line){ __log.apply(console, arguments); try{ const t = String(line); if (!/^INFO  R[12]/.test(t)) return; let r, m;
+      if (/ABORTED/.test(t)) r = '!';
+      else if ((m = /: ALLOWED(?: · (\d+) docs)?$/.exec(t))) r = 'A' + (m[1] ? '/' + m[1] : '');
+      else if ((m = /: DENIED · (\S+)$/.exec(t))) r = (m[1] === 'permission-denied') ? 'D' : 'X:' + m[1];
+      else if ((m = /(SURVIVES|IS WIPED)/.exec(t))) r = '=' + (m[1] === 'SURVIVES' ? 'S' : 'W');
+      else if ((m = / = (\S+)/.exec(t))) r = '=' + m[1];
+      else r = '?';
+      PS[t.charAt(7)].push(r); PSMAP.push('PS' + t.charAt(7) + ' ' + ('00' + PS[t.charAt(7)].length).slice(-3) + '\t' + t); }catch(_){ } };
+    try {
+    const r1 = async (label, fn) => { try { await fn(); console.log('INFO  R1 ' + label + ': ALLOWED'); return true; } catch (e) { console.log('INFO  R1 ' + label + ': DENIED · ' + (e && e.code)); return false; } };
+    const r1val = async (path, field) => { let n; await env.withSecurityRulesDisabled(async (ctx) => { const d = await ctx.firestore().doc(path).get(); n = d.exists ? d.data()[field] : '(no doc)'; }); return n; };
+    const R1BIG = 'x'.repeat(200000);
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await db.doc('userCityLists/userB_r1').set({ ownerId: B, cityId: 'r1', public: true, sharedWith: [], bookmarkCount: 3, copyCount: 3, viewCount: 0, splitV: 1, index: [] });
+      await db.doc('userCityLists/userB_r2').set({ ownerId: B, cityId: 'r2', public: true, sharedWith: [], bookmarkCount: 0, copyCount: 0, viewCount: 0, splitV: 1, index: [] });
+      await db.doc('trips/tR1').set({ ownerId: B, public: true, sharedWith: [], saveCount: 3, copyCount: 3, viewCount: 0, name: 'r1' });
+      await db.doc('trips/tR2').set({ ownerId: B, public: true, sharedWith: [], saveCount: 5, copyCount: 0, viewCount: 0, name: 'r2' });
+      await db.doc(`tripSaves/${A}__tR2`).set({ at: 1 });
+      await db.doc('communityProfiles/curR1').set({ nickname: 'r1', hasAnyPublicContent: true, followerCount: 3, viewCount: 0 });
+      await db.doc('communityProfiles/curR2').set({ nickname: 'r2', hasAnyPublicContent: true, followerCount: 0, viewCount: 0 });
+      await db.doc(`follows/${A}_curR2`).set({ followerUid: A, curatorUid: 'curR2', at: 1 });
+      await db.doc(`communityProfiles/${C}`).set({ nickname: 'c', hasAnyPublicContent: true, viewCount: 10, followerCount: 0 });
+      await db.doc(`communityProfiles/${A}`).set({ nickname: 'a', displayName: 'Old Name', hasAnyPublicContent: false });
+      await db.doc('placeFavoriteCounts/' + pf('r1x')).set({ name: 'R1', url: 'https://maps.app.goo.gl/r1x', count: 1 });
+      await db.doc('trips/tR3').set({ ownerId: A, public: false, sharedWith: [], name: 'r3' });
+      await db.doc('trips/tR3b').set({ ownerId: A, public: false, sharedWith: [], name: 'r3b' });
+      await db.doc(`userCityLists/${A}_r3`).set({ ownerId: A, cityId: 'r3', cityName: 'R3', public: false, sharedWith: [], splitV: 1, index: [] });
+      await db.doc('dailyStats/2026-11-10').set({ newSignupsToday: 1, activeToday: 1 });
+      await db.doc('dailyStats/2026-11-09').set({ newSignupsToday: 1, activeToday: 1 });
+      await db.doc(`users/${S}`).set({ email: 's@x', nickname: 's', suspended: true });
+      await db.doc(`curatorRequests/${A}`).set({ uid: A, text: 'x', at: 1, status: 'declined' });
+      await db.doc(`userLists/${B}`).set({ public: true, nickname: 'b', favoriteCount: 0, listBookmarkIds: { someone_list: true }, tripSaveIds: { someTrip: true }, following: ['someCurator'], privateCities: ['2988507'], placeBookmarks: { p1: { name: 'private note' } } });
+      await db.doc('stats_lists/userB_r2').set({ open_ulist: 4, open_app: 1 });
+      await db.doc('analytics/events_2026-11-11__all__r1').set({ session_depth: 2, place_open: 1 });
+      for (let i = 0; i < 25; i++) await db.doc('trips/tR5_' + i).set({ ownerId: S, public: true, sharedWith: [], name: 'r5' });
+      for (let i = 0; i < 21; i++) await db.doc('userCityLists/userB_q' + i).set({ ownerId: B, cityId: 'q' + i, public: false, sharedWith: [], splitV: 1, index: [] });
+    });
+
+    // --- P1/P2 · finding 3: the four bound counters, several requests, ONE account ---
+    // inflate: (+1 with a new record) → (record deleted alone) → (+1 again). Hole confirmed when step 3 is ALLOWED and the final value is seed+2.
+    const r1inflate = async (tag, who, rec, recData, ctr, field) => {
+      const n0 = await r1val(ctr, field);
+      const up = (n) => { const w = who.batch(); w.set(who.doc(rec), recData); w.update(who.doc(ctr), { [field]: n }); return w.commit(); };
+      await r1(tag + ' inflate 1/3: +1 with a new record (' + n0 + '→' + (n0 + 1) + ')', () => up(n0 + 1));
+      await r1(tag + ' inflate 2/3: record deleted ALONE, counter untouched', () => who.doc(rec).delete());
+      await r1(tag + ' inflate 3/3: +1 AGAIN by the same user (' + (n0 + 1) + '→' + (n0 + 2) + ')', () => up(n0 + 2));
+      console.log('INFO  R1 ' + tag + ' inflate: final ' + field + ' = ' + await r1val(ctr, field) + ' (seed ' + n0 + ' · seed+2 = one user counted twice)');
+      await env.withSecurityRulesDisabled(async (ctx) => { await ctx.firestore().doc(rec).delete(); });
+    };
+    // drain: (record created alone) → (−1 with that record deleted), twice. Hole confirmed when the −1 steps are ALLOWED and the final value is seed−2
+    // for a user who was never counted.
+    const r1drain = async (tag, who, rec, recData, ctr, field) => {
+      const n0 = await r1val(ctr, field);
+      const down = (n) => { const w = who.batch(); w.delete(who.doc(rec)); w.update(who.doc(ctr), { [field]: n }); return w.commit(); };
+      await r1(tag + ' drain 1/4: record created ALONE, counter untouched', () => who.doc(rec).set(recData));
+      await r1(tag + ' drain 2/4: -1 with that record deleted (' + n0 + '→' + (n0 - 1) + ')', () => down(n0 - 1));
+      await r1(tag + ' drain 3/4: record created ALONE again', () => who.doc(rec).set(recData));
+      await r1(tag + ' drain 4/4: -1 again (' + (n0 - 1) + '→' + (n0 - 2) + ')', () => down(n0 - 2));
+      console.log('INFO  R1 ' + tag + ' drain: final ' + field + ' = ' + await r1val(ctr, field) + ' (seed ' + n0 + ' · seed-2 = counts of other people removed)');
+    };
+    await r1inflate('P1 bookmarkCount', a, `listBookmarks/${A}__userB_r1`, { at: 1 }, 'userCityLists/userB_r1', 'bookmarkCount');
+    await r1drain('P2 bookmarkCount', c, `listBookmarks/${C}__userB_r1`, { at: 1 }, 'userCityLists/userB_r1', 'bookmarkCount');
+    await r1inflate('P1 saveCount', a, `tripSaves/${A}__tR1`, { at: 1 }, 'trips/tR1', 'saveCount');
+    await r1drain('P2 saveCount', c, `tripSaves/${C}__tR1`, { at: 1 }, 'trips/tR1', 'saveCount');
+    await r1inflate('P1 followerCount', a, `follows/${A}_curR1`, { followerUid: A, curatorUid: 'curR1', at: 1 }, 'communityProfiles/curR1', 'followerCount');
+    await r1drain('P2 followerCount', c, `follows/${C}_curR1`, { followerUid: C, curatorUid: 'curR1', at: 1 }, 'communityProfiles/curR1', 'followerCount');
+    await r1inflate('P1 copyCount(list)', a, `copies/${A}__userB_r1`, { uid: A, kind: 'list', docKey: 'userB_r1', at: 1 }, 'userCityLists/userB_r1', 'copyCount');
+    await r1drain('P2 copyCount(list)', c, `copies/${C}__userB_r1`, { uid: C, kind: 'list', docKey: 'userB_r1', at: 1 }, 'userCityLists/userB_r1', 'copyCount');
+    await r1inflate('P1 copyCount(trip)', a, `copies/${A}__tR1`, { uid: A, kind: 'trip', docKey: 'tR1', at: 1 }, 'trips/tR1', 'copyCount');
+    await r1drain('P2 copyCount(trip)', c, `copies/${C}__tR1`, { uid: C, kind: 'trip', docKey: 'tR1', at: 1 }, 'trips/tR1', 'copyCount');
+
+    // --- P3 · finding 4: the same counter written twice in ONE batch (engine semantics of `resource` on the second write) ---
+    await r1('P3a ONE batch: new bookmark record + bookmarkCount written twice (0→1, then →2) — ALLOWED = +2 for one record in one request', () => { const w = a.batch(); w.set(a.doc(`listBookmarks/${A}__userB_r2`), { at: 1 }); w.update(a.doc('userCityLists/userB_r2'), { bookmarkCount: 1 }); w.update(a.doc('userCityLists/userB_r2'), { bookmarkCount: 2 }); return w.commit(); });
+    console.log('INFO  R1 P3a final bookmarkCount = ' + await r1val('userCityLists/userB_r2', 'bookmarkCount') + ' (2 = hole confirmed)');
+    await r1('P3b ONE batch: save record deleted + saveCount written twice (5→4, then →3) — ALLOWED = -2 for one record in one request', () => { const w = a.batch(); w.delete(a.doc(`tripSaves/${A}__tR2`)); w.update(a.doc('trips/tR2'), { saveCount: 4 }); w.update(a.doc('trips/tR2'), { saveCount: 3 }); return w.commit(); });
+    console.log('INFO  R1 P3b final saveCount = ' + await r1val('trips/tR2', 'saveCount') + ' (3 = hole confirmed)');
+    await r1('P3c control on placeFavoriteCounts (expected DENIED: the record rule compares final state, getAfter == get + 1): record + count 1→2→3', () => { const id = pf('r1x'); const w = a.batch(); w.set(a.doc(`copies/${A}__p_${id}`), { uid: A, kind: 'place', docKey: 'p_' + id }); w.update(a.doc('placeFavoriteCounts/' + id), { count: 2 }); w.update(a.doc('placeFavoriteCounts/' + id), { count: 3 }); return w.commit(); });
+
+    // --- P4 · finding 1: ownerId is not pinned on the owner's own update (trips, userCityLists) ---
+    await r1('P4a trip owner rewrites ownerId to ANOTHER user and publishes it — ALLOWED = a document planted in B\'s account', () => a.doc('trips/tR3').update({ ownerId: B, public: true, ownerName: 'b', nickname: 'b' }));
+    await r1('P4b list owner rewrites ownerId to another user', () => a.doc(`userCityLists/${A}_r3`).update({ ownerId: B, public: true, nickname: 'b', cityName: 'Injected city name' }));
+    console.log('INFO  R1 P4b stored ownerId = ' + await r1val(`userCityLists/${A}_r3`, 'ownerId') + ' (userB = planted)');
+    await r1('P4c the planted list comes back in B\'s OWN query (the app loads "my lists" with it)', () => b.collection('userCityLists').where('ownerId', '==', B).get().then((q) => { if (!q.docs.some((d) => d.id === A + '_r3')) throw { code: 'not-in-result' }; }));
+    await r1('P4d ownerId rewritten to a uid that does not exist, public — ALLOWED = orphan public trip only the app owner can remove, invisible to a later hold of A', () => a.doc('trips/tR3b').update({ ownerId: 'ghostR1', public: true }));
+
+    // --- P5 · finding 5: view counters ---
+    await r1('P5a profile owner bumps OWN viewCount by +1 (10→11) — ALLOWED = "gap 15" is open in +1 steps', () => c.doc(`communityProfiles/${C}`).update({ viewCount: 11 }));
+    await r1('P5b one visitor bumps the same trip viewCount three times in a row', async () => { for (const n of [1, 2, 3]) await a.doc('trips/tR1').update({ viewCount: n }); });
+
+    // --- P6 · finding 7: dailyStats ---
+    await r1('P6a dailyStats jump 1 → 1e9 in one update by a normal user', () => a.doc('dailyStats/2026-11-10').update({ activeToday: 1000000000, newSignupsToday: 1000000000 }));
+    await r1('P6b dailyStats document with a non-date id', () => a.doc('dailyStats/2026-11-10zz').set({ activeToday: 1 }));
+    await r1('P6c dailyStats written by a SUSPENDED user', () => s.doc('dailyStats/2026-11-09').update({ activeToday: 2 }));
+
+    // --- P7 · finding 6: anonymous counters — document ids the app never produces ---
+    await r1('P7a events doc for an impossible date and a made-up city number', () => guest.doc('analytics/events_9999-99-99__999__zz').set({ place_open: 50, trip_open: 50 }));
+    await r1('P7b sessions doc with a junk suffix after the city', () => guest.doc('analytics/sessions_2026-11-11__all__junk1').set({ count: 50, seconds: 7200 }));
+    await r1('P7c stats_lists doc with a non-date suffix on an existing list', () => guest.doc('stats_lists/userB_r1__junk1').set({ open_app: 50, copy_from: 50 }));
+    await r1('P7d stats_places doc with an extra segment before the hash', () => guest.doc('stats_places/userB_r1__x__0123456789abcdef').set({ open_total: 50 }));
+    await r1('P7e stats_curators doc for an id that is no account', () => guest.doc('stats_curators/' + 'Z'.repeat(28)).set({ page_view: 50, follow: 50, save: 50 }));
+
+    // --- P8/P9 · finding 16: record ids and untyped fields ---
+    await r1('P8a a second follow record for the same pair under a suffixed id', () => a.doc(`follows/${A}_curR1_x`).set({ followerUid: A, curatorUid: 'curR1' }));
+    await r1('P8b a second bookmark record for the same list under a suffixed id', () => a.doc(`listBookmarks/${A}__userB_r1__x`).set({ at: 1 }));
+    await r1('P8c a copy record for a target that does not exist', () => a.doc(`copies/${A}__nothing_r1`).set({ uid: A, kind: 'list', docKey: 'nothing_r1' }));
+    await r1('P9a 200 KB string in listBookmarks.at', () => a.doc(`listBookmarks/${A}__userB_r1__big`).set({ at: R1BIG }));
+    await r1('P9b report kind app with a map as docKey and a 200 KB at (the owner inbox loads every report)', () => a.doc('reports/rR1big').set({ by: A, kind: 'app', docKey: { blob: R1BIG }, at: R1BIG }));
+    await r1('P9c 200 KB at in a follow record (delivered to the curator\'s followers query)', () => a.doc(`follows/${A}_curR1_big`).set({ followerUid: A, curatorUid: 'curR1', at: R1BIG }));
+
+    // --- P14 · finding 13 (run before P10c re-seeds the profile): legacy displayName blocks the owner's own update ---
+    await r1('P14 [DENIED = finding] profile that still holds displayName: the app\'s sync write (syncCommunityProfileFor payload)', () => a.doc(`communityProfiles/${A}`).set({ hasAnyPublicCity: true, hasAnyPublicContent: true, publicCityIds: ['2988507'], updatedAt: 1, nickname: 'a' }, { merge: true }));
+
+    // --- P10 · finding 10: names ---
+    await env.withSecurityRulesDisabled(async (ctx) => { await ctx.firestore().doc(`communityProfiles/${A}`).set({ nickname: 'a', hasAnyPublicContent: false }); });
+    await r1('P10a one account registers three nicknames', async () => { for (const n of ['r1name1', 'r1name2', 'r1name3']) await a.doc('nicknames/' + n).set({ uid: A, nickname: n }); });
+    await r1('P10b nickname doc whose field differs from its key, with a 200 KB extra field (guest-readable)', () => a.doc('nicknames/r1name4').set({ uid: A, nickname: 'Someone Else', blob: R1BIG }));
+    await r1('P10c profile nickname set to ANOTHER user\'s name (no link to nicknames/{key})', () => a.doc(`communityProfiles/${A}`).set({ nickname: 'b' }, { merge: true }));
+    await r1('P10d own list and trip carrying another user\'s name in nickname / ownerName', async () => { await a.doc(`userCityLists/${A}_r4`).set({ ownerId: A, cityId: 'r4', public: true, sharedWith: [], splitV: 1, index: [], nickname: 'b' }); await a.doc('trips/tR4').set({ ownerId: A, public: true, sharedWith: [], ownerName: 'b', nickname: 'b' }); });
+
+    // --- P11/P12 · findings 15 and 20 ---
+    await r1('P11 suspended user deletes and re-creates own users doc with new content — ALLOWED = the v3.2 update block is bypassed', async () => { await s.doc(`users/${S}`).delete(); await s.doc(`users/${S}`).set({ email: 'forged@x', suspended: false }); });
+    await r1('P12 declined curator request deleted and re-filed as pending', async () => { await a.doc(`curatorRequests/${A}`).delete(); await a.doc(`curatorRequests/${A}`).set({ uid: A, text: 'again', at: 2, status: 'pending' }); });
+
+    // --- P13 · finding 2: userLists flagged public ---
+    await r1('P13a another user GETs a userLists doc flagged public (bookmark / save / follow mirrors and the private-city index are inside)', () => a.doc(`userLists/${B}`).get().then((d) => { if (!(d.data() || {}).listBookmarkIds) throw { code: 'mirror-not-returned' }; }));
+    await r1('P13b …and enumerates every such doc', () => a.collection('userLists').where('public', '==', true).get());
+
+    // --- P15/P16 · findings 14 and 12: legitimate writes the rules refuse ---
+    await r1('P15a [DENIED = finding] cumulative stats_lists doc that still holds a pre-M4.25 key: +1 on a current key', () => guest.doc('stats_lists/userB_r2').update({ open_app: 2 }));
+    await r1('P15b [DENIED = finding] events doc that still holds a key removed in v3.16: +1 on a current key', () => guest.doc('analytics/events_2026-11-11__all__r1').update({ place_open: 2 }));
+    await r1('P16 [DENIED = finding] unfollow as the app writes it while followerCount is already 0 (record + mirror + -1, one batch; the app has no fallback)', () => { const w = a.batch(); w.delete(a.doc(`follows/${A}_curR2`)); w.set(a.doc(`userLists/${A}`), { following: [] }, { merge: true }); w.set(a.doc('communityProfiles/curR2'), { followerCount: -1 }, { merge: true }); return w.commit(); });
+
+    // --- P17 · note 25: the app's own list queries (no existing case measures any of them for an ordinary user) ---
+    await r1('P17a [DENIED = app path broken] categories of a split list shared with me (array-contains against resource.data.get(\'sharedWith\', []))', () => a.collection('userCityListCats').where('ownerId', '==', B).where('cityId', '==', 'split').where('sharedWith', 'array-contains', A).get());
+    await r1('P17b [DENIED = app path broken] public categories of another owner\'s split list', () => a.collection('userCityListCats').where('ownerId', '==', B).where('cityId', '==', 'split').where('public', '==', true).get());
+    await r1('P17c [DENIED = app path broken] my own categories of one city', () => a.collection('userCityListCats').where('ownerId', '==', A).where('cityId', '==', 'r5').get());
+    await r1('P17d [DENIED = app path broken] my own lists', () => a.collection('userCityLists').where('ownerId', '==', A).get());
+    await r1('P17e [DENIED = app path broken] public lists (market)', () => a.collection('userCityLists').where('public', '==', true).limit(100).get());
+    await r1('P17f [DENIED = app path broken] lists shared with me', () => a.collection('userCityLists').where('sharedWith', 'array-contains', A).get());
+    await r1('P17g [DENIED = app path broken] another owner\'s public lists (curator page)', () => a.collection('userCityLists').where('ownerId', '==', B).where('public', '==', true).get());
+    await r1('P17h [DENIED = app path broken] my own trips', () => a.collection('trips').where('ownerId', '==', A).get());
+    await r1('P17i [DENIED = app path broken] trips shared with me', () => a.collection('trips').where('sharedWith', 'array-contains', A).get());
+    await r1('P17j [DENIED = app path broken] public trips', () => a.collection('trips').where('public', '==', true).limit(100).get());
+
+    // --- P18/P19 · findings 19 and 18: what an owner cannot find, what everybody can ---
+    { let FP = null; try { const fb = require('firebase/compat/app'); require('firebase/compat/firestore'); FP = (fb.default || fb).firestore.FieldPath; } catch (_) { }
+      if (!FP) for (const col of ['listBookmarks', 'tripSaves', 'userPrivatePlaces']) console.log('INFO  R1 P18 ' + col + ': not measured (FieldPath not available in this runner)');
+      else for (const pair of [['listBookmarks', '__'], ['tripSaves', '__'], ['userPrivatePlaces', '_']]) await r1('P18 [DENIED = finding] ' + pair[0] + ': owner\'s id-range query over own prefix (without it the records are reachable only through the mirror in userLists)', () => a.collection(pair[0]).orderBy(FP.documentId()).startAt(A + pair[1]).endAt(A + pair[1] + '').get()); }
+    await r1('P19a guest lists every nickname document (uid of every account)', () => guest.collection('nicknames').get());
+    await r1('P19b guest lists placeIdentity (by = uid of the last confirmer, n = place name)', () => guest.collection('placeIdentity').get());
+    await r1('P19c any signed-in user reads every community profile in one query (contact fields included)', () => a.collection('communityProfiles').get());
+    await r1('P19d control (expected DENIED): non-owner collection read of analytics', () => a.collection('analytics').get());
+
+    // --- P20 · note 24: document-access-call limits in the batches the app sends ---
+    await r1('P20a [DENIED = hold flow breaks above ~19 docs] app owner batch of 25 trip updates (isOwner() reads settings/app for each write)', () => { const w = owner.batch(); for (let i = 0; i < 25; i++) w.update(owner.doc('trips/tR5_' + i), { suspended: true, public: false, sharedWith: [] }); return w.commit(); });
+    await r1('P20b [DENIED = list save breaks above ~19 categories] user batch: parent + 25 category docs (isSuspended() for each write)', () => { const w = a.batch(); w.set(a.doc(`userCityLists/${A}_r5`), { ownerId: A, cityId: 'r5', public: false, sharedWith: [], splitV: 1, index: [] }, { merge: true }); for (let i = 0; i < 25; i++) w.set(a.doc(`userCityListCats/${A}_r5_c${i}`), { ownerId: A, cityId: 'r5', catId: 'c' + i, public: false, sharedWith: [], active: true, places: [], updatedAt: 1 }); return w.commit(); });
+    await r1('P20c [DENIED = tracker batch falls back to single writes] guest batch on the stats of 21 DIFFERENT lists (one exists() each)', () => { const w = guest.batch(); for (let i = 0; i < 21; i++) w.set(guest.doc('stats_lists/userB_q' + i), { open_app: 1 }, { merge: true }); return w.commit(); });
+
+    // --- P21 · finding 8: placeFavoriteCounts — id unrelated to its url, chosen city, count-0 leftover ---
+    await r1('P21 counter created under an id unrelated to its url, for a chosen city, then released — ALLOWED = a count-0 document with that city stays for good', async () => { await pfcUp(a, A, 'r1flood', { name: 'Looks like a real place', url: 'https://example.org/not-the-hashed-url', count: 1, city: '2988507' }, true); await pfcDown(a, A, 'r1flood', { count: 0 }); });
+    console.log('INFO  R1 P21 leftover count = ' + await r1val('placeFavoriteCounts/' + pf('r1flood'), 'count') + ' (0 with the doc still present = occupies a slot of the 100-doc in-city sample)');
+    } catch (e) { console.log('INFO  R1 ABORTED · ' + String(e && (e.code || e.message) || e).slice(0, 120)); }
+    try {
+      const ok = (label, f) => info(label, f), no = ok; // داخل القسم فقط: توقّع المراجع يُقاس ولا يُحتسب
+    const R2FB = (() => { try { const fb = require('firebase/compat/app'); require('firebase/compat/firestore'); return (fb.default || fb).firestore; } catch (_) { return null; } })();
+    const R2FV = R2FB ? R2FB.FieldValue : null;
+    const r2inc = (n, explicit) => (R2FV ? R2FV.increment(n) : explicit);          // the app sends increment(); explicit value when FieldValue is not available in the runner
+    const r2del = (fallback) => (R2FV ? R2FV.delete() : fallback);
+    const r2id = R2FB ? R2FB.FieldPath.documentId() : '__name__';
+    const info = async (label, fn) => { try { const r = await fn(); console.log('INFO  R2 ' + label + ': ALLOWED' + (r && typeof r.size === 'number' ? ' · ' + r.size + ' docs' : '')); return true; } catch (e) { console.log('INFO  R2 ' + label + ': DENIED · ' + (e && e.code)); return false; } };
+    const P = { id: 'p1', name: 'P', url: 'https://maps.app.goo.gl/p' };
+    // mpData.cityLists.save as written: parent (merge, categories deleted, derived fields) + one full doc per category, one batch
+    const r2Save = (who, uid, cityId, parent, cats) => () => { const id = uid + '_' + cityId; const bt = who.batch();
+      bt.set(who.doc('userCityLists/' + id), Object.assign({ ownerId: uid, cityId: cityId, cityName: cityId, nickname: null, catsV: 3, splitV: 1, sharedWithNames: {}, hasTop: false, geoSources: [], flagsUsed: [], index: [] }, parent, R2FV ? { categories: R2FV.delete() } : {}), { merge: true });
+      Object.keys(cats || {}).forEach((k) => bt.set(who.doc('userCityListCats/' + id + '_' + k), { ownerId: uid, cityId: cityId, catId: k, public: parent.public === true, sharedWith: parent.sharedWith || [], active: true, places: cats[k], updatedAt: 1 }));
+      return bt.commit(); };
+    // mpData.bookmarks.toggleList(…, false) / removeRecord and the tripSaves twins, as written
+    const r2Unmark = (who, uid, recCol, srcCol, srcId, field, mirror) => () => { const bt = who.batch(); bt.delete(who.doc(recCol + '/' + uid + '__' + srcId));
+      bt.set(who.doc(srcCol + '/' + srcId), { [field]: r2inc(-1, 0) }, { merge: true }); bt.set(who.doc('userLists/' + uid), { [mirror]: { [srcId]: r2del(false) } }, { merge: true }); return bt.commit(); };
+    const r2RecordOnly = (who, uid, recCol, srcId, mirror) => () => { const bt = who.batch(); bt.delete(who.doc(recCol + '/' + uid + '__' + srcId)); bt.set(who.doc('userLists/' + uid), { [mirror]: { [srcId]: r2del(false) } }, { merge: true }); return bt.commit(); };
+
+    await env.withSecurityRulesDisabled(async (ctx) => { const db = ctx.firestore();
+      await db.doc(`communityProfiles/${C}`).set({ nickname: 'c', verified: true, hasAnyPublicContent: true, followerCount: 0 });
+      await db.doc(`communityProfiles/${A}`).set({ nickname: 'a', displayName: 'Old shown name', hasAnyPublicContent: false });
+      await db.doc(`userCityLists/${C}_r2top`).set({ ownerId: C, cityId: 'r2top', public: true, sharedWith: [], splitV: 1, index: [], hasTop: true, bookmarkCount: 0, catsV: 3 });
+      await db.doc(`userCityLists/${A}_r2top`).set({ ownerId: A, cityId: 'r2top', public: false, sharedWith: [], splitV: 1, index: [], hasTop: false, bookmarkCount: 0, catsV: 3 });
+      await db.doc(`userCityLists/${A}_r2top2`).set({ ownerId: A, cityId: 'r2top2', public: true, sharedWith: [], splitV: 1, index: [], hasTop: false, bookmarkCount: 0, catsV: 3 });
+      await db.doc('trips/r2trip').set({ ownerId: A, public: true, sharedWith: [], title: 'T', viewCount: 3, saveCount: 0, copyCount: 0 });
+      await db.doc(`userCityLists/${A}_r2bm`).set({ ownerId: A, cityId: 'r2bm', public: true, sharedWith: [], splitV: 1, index: [], bookmarkCount: 0, catsV: 3 });
+      await db.doc(`userCityLists/${A}_r2nobm`).set({ ownerId: A, cityId: 'r2nobm', public: false, sharedWith: [], splitV: 1, index: [], catsV: 3 }); // legacy: never had bookmarkCount
+      await db.doc(`userCityLists/${B}_r2gone`).set({ ownerId: B, cityId: 'r2gone', public: false, sharedWith: [], bookmarkCount: 1 });        // was public when A bookmarked it
+      await db.doc(`listBookmarks/${A}__${B}_r2gone`).set({ at: 1 });
+      await db.doc(`listBookmarks/${A}__${B}_r2none`).set({ at: 1 });                                                                          // its list was deleted
+      await db.doc(`userCityLists/${B}_r2pub`).set({ ownerId: B, cityId: 'r2pub', public: true, sharedWith: [], bookmarkCount: 1 });
+      await db.doc(`listBookmarks/${S}__${B}_r2pub`).set({ at: 1 });
+      await db.doc('trips/r2tgone').set({ ownerId: B, public: false, sharedWith: [], saveCount: 1 });
+      await db.doc(`tripSaves/${A}__r2tgone`).set({ at: 1 });
+      await db.doc(`curatorCityNotes/${A}__r2city`).set({ uid: A, cityId: 'r2city', text: 'left behind' });
+      await db.doc(`userCityLists/${B}_r2q`).set({ ownerId: B, cityId: 'r2q', public: false, sharedWith: [A], splitV: 1, index: [{ id: 'p1', name: 'P', catId: 'coffee' }] });
+      await db.doc(`userCityListCats/${B}_r2q_coffee`).set({ ownerId: B, cityId: 'r2q', catId: 'coffee', public: false, sharedWith: [A], active: true, places: [P] });
+      await db.doc(`userCityLists/${B}_r2qp`).set({ ownerId: B, cityId: 'r2qp', public: true, sharedWith: [], splitV: 1, index: [{ id: 'p1', name: 'P', catId: 'coffee' }] });
+      await db.doc(`userCityListCats/${B}_r2qp_coffee`).set({ ownerId: B, cityId: 'r2qp', catId: 'coffee', public: true, sharedWith: [], active: true, places: [P] });
+      await db.doc(`userCityLists/${A}_r2leg`).set({ ownerId: A, cityId: 'r2leg', public: true, sharedWith: [], bookmarkCount: 0, categories: { coffee: { active: true, places: [P] }, personal_home: { active: true, places: [{ name: 'Home' }] } } });
+      await db.doc(`follows/${A}_${C}`).set({ followerUid: A, curatorUid: C, at: 1 });                                                        // followed while C had no counter
+      await db.doc(`follows/${S}_${C}`).set({ followerUid: S, curatorUid: C, at: 1 });
+      await db.doc('trips/r2tc').set({ ownerId: B, public: true, sharedWith: [], copyCount: 1 });
+      await db.doc(`copies/${A}__r2tc`).set({ uid: A, kind: 'trip', docKey: 'r2tc', at: 1 });
+      await db.doc(`curatorRequests/${A}`).set({ uid: A, text: 'x', at: 1, status: 'declined' });
+      await db.doc(`userPrivatePlaces/${A}_r2addr`).set({ categories: { personal_home: { active: true, places: [{ name: 'Home' }] }, personal_work: { active: true, places: [{ name: 'Work' }] } } });
+      for (let i = 0; i < 12; i++) await db.doc(`userCityLists/${A}_r2n${i}`).set({ ownerId: A, cityId: 'r2n' + i, public: false, sharedWith: [], splitV: 1, index: [], bookmarkCount: 0 });
+    });
+
+    // --- F1 · Top ★ (plToggleTopRow → saveMyCityList → listDerived ⇒ hasTop:true) ---
+    await no('R2-1a Top place saved by a NON-verified owner (app batch, hasTop derived true) deny', r2Save(a, A, 'r2top', { public: false, sharedWith: [], bookmarkCount: 0, hasTop: true, index: [{ id: 'p1', name: 'P', catId: 'coffee', top: true }] }, { coffee: [Object.assign({ topPlace: true }, P)] }));
+    await no('R2-1b verified curator makes a PUBLIC list holding a Top place PRIVATE deny (cannot un-publish)', r2Save(c, C, 'r2top', { public: false, sharedWith: [], bookmarkCount: 0, hasTop: true }, {}));
+    await ok('R2-1c control: verified curator, public list, hasTop true allow', r2Save(c, C, 'r2top', { public: true, sharedWith: [], bookmarkCount: 0, hasTop: true }, { coffee: [Object.assign({ topPlace: true }, P)] }));
+    await no('R2-1d Top place saved by a NON-verified owner on a PUBLIC list deny (isolates verification from privacy)', r2Save(a, A, 'r2top2', { public: true, sharedWith: [], bookmarkCount: 0, hasTop: true, index: [{ id: 'p1', name: 'P', catId: 'coffee', top: true }] }, { coffee: [Object.assign({ topPlace: true }, P)] }));
+
+    // --- F2 · owner saves re-send counters as loaded ---
+    await ok('R2-2a visitor view bump as the app writes it (trips.bumpView)', () => b.doc('trips/r2trip').set({ viewCount: r2inc(1, 4) }, { merge: true }));
+    await no('R2-2b owner saves the trip object loaded BEFORE that view (viewCount 3) deny', () => a.doc('trips/r2trip').set({ id: 'r2trip', __saved: true, ownerId: A, public: true, sharedWith: [], title: 'T edited', viewCount: 3, saveCount: 0, copyCount: 0 }, { merge: true }));
+    await no('R2-2c owner makes that trip PRIVATE with the same stale object deny (toast still says private)', () => a.doc('trips/r2trip').set({ id: 'r2trip', __saved: true, ownerId: A, public: false, sharedWith: [], title: 'T', viewCount: 3, saveCount: 0, copyCount: 0 }, { merge: true }));
+    await ok('R2-2d control: same save carrying the current viewCount allow', () => a.doc('trips/r2trip').set({ id: 'r2trip', __saved: true, ownerId: A, public: true, sharedWith: [], title: 'T edited', viewCount: 4, saveCount: 0, copyCount: 0 }, { merge: true }));
+    await ok('R2-2e another user bookmarks the list (record + counter + mirror)', () => { const bt = c.batch(); bt.set(c.doc(`listBookmarks/${C}__${A}_r2bm`), { at: 1 }); bt.set(c.doc(`userCityLists/${A}_r2bm`), { bookmarkCount: r2inc(1, 1) }, { merge: true }); bt.set(c.doc(`userLists/${C}`), { listBookmarkIds: { [`${A}_r2bm`]: true } }, { merge: true }); return bt.commit(); });
+    await no('R2-2f list owner saves with bookmarkCount as loaded (0) deny', r2Save(a, A, 'r2bm', { public: true, sharedWith: [], bookmarkCount: 0 }, { coffee: [P] }));
+    await no('R2-2g list owner save ADDS bookmarkCount:0 to a doc that never had the field deny (affectedKeys counts an added key)', r2Save(a, A, 'r2nobm', { public: false, sharedWith: [], bookmarkCount: 0 }, { coffee: [P] }));
+
+    // --- F3 · cmUndoLast re-creates a deleted list from its old document (cmMetaOf keeps counters) ---
+    await no('R2-3a undo-merge re-create with the old viewCount (2) deny ⇒ merged city is not restored', r2Save(a, A, 'r2undo', { public: true, sharedWith: [], bookmarkCount: 0, viewCount: 2, copyCount: 0, index: [{ id: 'p1', name: 'P', catId: 'coffee' }] }, { coffee: [P] }));
+    await ok('R2-3b control: same re-create without counters allow', r2Save(a, A, 'r2undo', { public: true, sharedWith: [], bookmarkCount: 0, index: [{ id: 'p1', name: 'P', catId: 'coffee' }] }, { coffee: [P] }));
+
+    // --- F5 · un-bookmark / un-save when the source is private or gone, or the user is suspended ---
+    await no('R2-5a un-bookmark batch on a list that became private deny (the app swallows this as "floor")', r2Unmark(a, A, 'listBookmarks', 'userCityLists', `${B}_r2gone`, 'bookmarkCount', 'listBookmarkIds'));
+    await no('R2-5b un-bookmark batch on a DELETED list deny (set-merge = create of another user\'s list)', r2Unmark(a, A, 'listBookmarks', 'userCityLists', `${B}_r2none`, 'bookmarkCount', 'listBookmarkIds'));
+    await no('R2-5c un-save batch on a trip that became private deny', r2Unmark(a, A, 'tripSaves', 'trips', 'r2tgone', 'saveCount', 'tripSaveIds'));
+    await ok('R2-5d record + mirror alone allow (removeRecord — the fallback the app never reaches)', r2RecordOnly(a, A, 'listBookmarks', `${B}_r2gone`, 'listBookmarkIds'));
+    await no('R2-5e un-bookmark batch by a SUSPENDED user on a public list deny', r2Unmark(s, S, 'listBookmarks', 'userCityLists', `${B}_r2pub`, 'bookmarkCount', 'listBookmarkIds'));
+    await no('R2-5f removeRecord by a SUSPENDED user deny (the userLists mirror write)', r2RecordOnly(s, S, 'listBookmarks', `${B}_r2pub`, 'listBookmarkIds'));
+    await ok('R2-5g suspended user deletes the record alone allow (the only shape the rules accept)', () => s.doc(`listBookmarks/${S}__${B}_r2pub`).delete());
+
+    // --- F4 · account deletion: what the cascade could delete but does not ---
+    await ok('R2-4a curatorCityNotes delete by the uid in the id (no verified needed) allow — never called by doAccountDelete', () => a.doc(`curatorCityNotes/${A}__r2city`).delete());
+    await info('R2-4b own category docs by ownerId alone (finds orphans the per-city cascade misses)', () => a.collection('userCityListCats').where('ownerId', '==', A).get());
+
+    // --- F7 / inventory · the app's exact queries ---
+    await info('R2-7a cats of a list SHARED with me: ownerId + cityId + sharedWith array-contains (rule: resource.data.get(\'sharedWith\', []))', () => a.collection('userCityListCats').where('ownerId', '==', B).where('cityId', '==', 'r2q').where('sharedWith', 'array-contains', A).get());
+    await info('R2-7b cats of a PUBLIC list: ownerId + cityId + public == true', () => a.collection('userCityListCats').where('ownerId', '==', B).where('cityId', '==', 'r2qp').where('public', '==', true).get());
+    await info('R2-7c my own cats: ownerId + cityId', () => b.collection('userCityListCats').where('ownerId', '==', B).where('cityId', '==', 'r2q').get());
+    await no('R2-7d cats of another user with no visibility constraint deny', () => a.collection('userCityListCats').where('ownerId', '==', B).where('cityId', '==', 'r2qp').get());
+    await info('R2-7e app owner: all cats of one account (holdAll)', () => owner.collection('userCityListCats').where('ownerId', '==', B).get());
+    await info('R2-7f lists shared with me (cityLists.sharedWith)', () => a.collection('userCityLists').where('sharedWith', 'array-contains', A).get());
+    await info('R2-7g public lists, limit 100 (cityLists.publicLists)', () => a.collection('userCityLists').where('public', '==', true).limit(100).get());
+    await info('R2-7h my own lists (cityLists.byOwner)', () => a.collection('userCityLists').where('ownerId', '==', A).get());
+    await info('R2-7i public lists of one person (cityLists.publicByOwner)', () => a.collection('userCityLists').where('ownerId', '==', B).where('public', '==', true).get());
+    await info('R2-7j my own trips (trips.byOwner)', () => a.collection('trips').where('ownerId', '==', A).get());
+    await info('R2-7k trips shared with me (trips.sharedWith)', () => a.collection('trips').where('sharedWith', 'array-contains', A).get());
+    await info('R2-7l public trips, limit 100 (trips.publicTrips)', () => a.collection('trips').where('public', '==', true).limit(100).get());
+    await info('R2-7m public trips of one person (trips.publicByOwner)', () => a.collection('trips').where('ownerId', '==', B).where('public', '==', true).get());
+    await info('R2-7n curators directory (profiles.curators)', () => a.collection('communityProfiles').where('verified', '==', true).limit(200).get());
+    await no('R2-7o GUEST opens Community: profiles with public content deny', () => guest.collection('communityProfiles').where('hasAnyPublicContent', '==', true).get());
+    await no('R2-7p GUEST opens Community: public lists deny', () => guest.collection('userCityLists').where('public', '==', true).limit(100).get());
+    await info('R2-7q GUEST: Popular-in-city counters (placeCounts.inCity)', () => guest.collection('placeFavoriteCounts').where('city', '==', '2988507').limit(100).get());
+    await info('R2-7r app owner: analytics range on document id (analytics.range)', () => owner.collection('analytics').orderBy(r2id).startAt('events_2026-10-01').endAt('events_2026-10-31').limit(200).get());
+    await info('R2-7s ordinary user: the same analytics range (expected DENIED)', () => a.collection('analytics').orderBy(r2id).startAt('events_2026-10-01').endAt('events_2026-10-31').limit(200).get());
+    await info('R2-7t app owner: dailyStats range (dailyStats.range)', () => owner.collection('dailyStats').orderBy(r2id).startAt('2026-08-01').endAt('2026-08-31').limit(40).get());
+    await info('R2-7u app owner: stats_lists page of ids (stats.pageIds)', () => owner.collection('stats_lists').orderBy(r2id).limit(100).get());
+    await info('R2-7v app owner: whole collections (suspensions · curatorRequests · reports)', async () => { await owner.collection('suspensions').get(); await owner.collection('curatorRequests').get(); return owner.collection('reports').get(); });
+
+    // --- F8 · report a problem: prefix + text, sliced at 260 ---
+    await no('R2-8a app report with the app prefix + a 200-character description (reason 248 > 200) deny', () => a.doc('reports/r_r2_1').set({ by: A, kind: 'app', reason: '[Something broke · Community · 2026-11-11-r117] ' + 'x'.repeat(200), at: 1 }));
+    await ok('R2-8b reason of exactly 200 allow', () => a.doc('reports/r_r2_2').set({ by: A, kind: 'app', reason: 'x'.repeat(200), at: 1 }));
+    await info('R2-8c reason of 200 Arabic letters (does size() count characters or bytes?)', () => a.doc('reports/r_r2_3').set({ by: A, kind: 'app', reason: 'ع'.repeat(200), at: 1 }));
+
+    // --- F9 · legacy community profile still carrying displayName ---
+    await no('R2-9a syncCommunityProfile payload on a profile that still has displayName deny (silent in the app)', () => a.doc(`communityProfiles/${A}`).set({ hasAnyPublicCity: true, hasAnyPublicContent: true, publicCityIds: ['2988507'], updatedAt: 1, nickname: 'a' }, { merge: true }));
+    if (!R2FV) console.log('INFO  R2 R2-9b: not measured (FieldValue not available in this runner)'); else await ok('R2-9b same payload also deleting displayName allow', () => a.doc(`communityProfiles/${A}`).set({ hasAnyPublicCity: true, hasAnyPublicContent: true, publicCityIds: ['2988507'], updatedAt: 1, nickname: 'a', displayName: R2FV.delete() }, { merge: true }));
+
+    // --- F10 · deletes of documents that do not exist (rule reads resource.data) ---
+    await no('R2-10a delete of a category doc that does not exist deny (first op of dropCategoryKeys on a never-split legacy list)', () => a.doc(`userCityListCats/${A}_r2top_ghostcat`).delete());
+    await no('R2-10b delete of a list parent that does not exist deny ("Clear my list (0)" · cityLists.remove)', () => a.doc(`userCityLists/${A}_r2ghost`).delete());
+    await no('R2-10c delete of a trip that does not exist deny', () => a.doc('trips/r2ghosttrip').delete());
+
+    // --- F11 · legacy parent with private keys: cityLists.removeKeys ---
+    if (!R2FV) console.log('INFO  R2 R2-11a: not measured (FieldValue not available in this runner)'); else await no('R2-11a removeKeys: update categories.personal_home → delete on a legacy parent deny', () => a.doc(`userCityLists/${A}_r2leg`).update({ 'categories.personal_home': R2FV.delete() }));
+    if (!R2FV) console.log('INFO  R2 R2-11b: not measured (FieldValue not available in this runner)'); else await ok('R2-11b dropping the whole categories field allow (what the next full save does)', () => a.doc(`userCityLists/${A}_r2leg`).update({ categories: R2FV.delete() }));
+
+    // --- F13/F14 · follows ---
+    if (!R2FB) console.log('INFO  R2 R2-14a: not measured (FieldValue not available in this runner)'); else await no('R2-14a unfollow batch with the counter at 0 deny (follow was recorded without a counter; curator verified since)', () => { const bt = a.batch(); bt.delete(a.doc(`follows/${A}_${C}`)); bt.set(a.doc(`userLists/${A}`), { following: R2FV.arrayRemove(C) }, { merge: true }); bt.set(a.doc(`communityProfiles/${C}`), { followerCount: R2FV.increment(-1) }, { merge: true }); return bt.commit(); });
+    if (!R2FB) console.log('INFO  R2 R2-13a: not measured (FieldValue not available in this runner)'); else await no('R2-13a unfollow batch by a SUSPENDED user deny (userLists write) — rules allow only the bare record delete', () => { const bt = s.batch(); bt.delete(s.doc(`follows/${S}_${C}`)); bt.set(s.doc(`userLists/${S}`), { following: R2FV.arrayRemove(C) }, { merge: true }); return bt.commit(); });
+
+    // --- F15 · copies.record on a record that already exists ---
+    await no('R2-15 copy a trip again after deleting my copy the ordinary way (record still there ⇒ update:false) deny', () => { const bt = a.batch(); bt.set(a.doc(`copies/${A}__r2tc`), { uid: A, kind: 'trip', docKey: 'r2tc', at: 2 }); bt.set(a.doc('trips/r2tc'), { copyCount: r2inc(1, 2) }, { merge: true }); return bt.commit(); });
+
+    // --- F17 · curator request after a decline ---
+    await no('R2-17 second curator request while the declined one exists (set = update, owner-only) deny', () => a.doc(`curatorRequests/${A}`).set({ uid: A, text: 'again', at: 2, status: 'pending' }));
+
+    // --- F6/F16 · shapes the rules accept and the readers do not survive ---
+    await ok('R2-6a public list parent with index:[null] accepted (mpData.cityLists._fromIndex throws for every reader of the market)', () => a.doc(`userCityLists/${A}_r2evil1`).set({ ownerId: A, cityId: 'r2evil1', public: true, sharedWith: [], splitV: 1, index: [null] }));
+    await ok('R2-6b public list parent with nickname:5 accepted (cmGroupByOwner → curInitials → .trim throws)', () => a.doc(`userCityLists/${A}_r2evil2`).set({ ownerId: A, cityId: 'r2evil2', public: true, sharedWith: [], splitV: 1, nickname: 5, index: [{ id: 'p1', name: 'P', catId: 'coffee' }] }));
+    await ok('R2-6c public trip with ownerName:5 and plan.days:[{}] accepted (tripMetaLine → tripDayEntries throws)', () => a.doc('trips/r2evil').set({ ownerId: A, public: true, sharedWith: [], ownerName: 5, plan: { days: [{}] } }));
+    await ok('R2-16a category doc whose place has picks:5 · flags:7 · geo.source:"evil" accepted', () => a.doc(`userCityListCats/${A}_r2evil2_coffee`).set({ ownerId: A, cityId: 'r2evil2', catId: 'coffee', public: true, sharedWith: [], active: true, places: [{ id: 'p1', name: 'P', url: 'https://maps.app.goo.gl/p', picks: 5, flags: 7, geo: { lat: 1, lng: 1, source: 'evil' } }], updatedAt: 1 }));
+    await ok('R2-16b placeIdentity record written by one user is overwritten by another, far away, accepted', async () => { await a.doc('placeIdentity/kpr2x').set({ lat: 48.85, lng: 2.35, source: 'user_pin', n: 'Cafe', cityId: '2988507', by: A, at: 1 }); await b.doc('placeIdentity/kpr2x').set({ lat: -33.9, lng: 151.2, source: 'overture', openId: 'ovt:x', n: 'Cafe', cityId: '2988507', by: B, at: 2 }); });
+
+    // --- F19 · document-access calls in one batch (same documents read by every write) ---
+    await info('R2-19a full save: parent + 25 category docs in one batch', r2Save(a, A, 'r2big', { public: false, sharedWith: [], bookmarkCount: 0 }, Object.fromEntries(Array.from({ length: 25 }, (_, i) => ['cat' + i, [P]]))));
+    await info('R2-19b the same 26 documents again (now updates: isOwner() + isSuspended() per write)', r2Save(a, A, 'r2big', { public: false, sharedWith: [], bookmarkCount: 0 }, Object.fromEntries(Array.from({ length: 25 }, (_, i) => ['cat' + i, [P]]))));
+    await info('R2-19c setNicknameAll: 12 own list parents updated in one batch', () => { const bt = a.batch(); for (let i = 0; i < 12; i++) bt.update(a.doc(`userCityLists/${A}_r2n${i}`), { nickname: 'a2' }); return bt.commit(); });
+
+    // --- F18 · not a rules question: what set({categories:{}},{merge:true}) does to the other categories (privatePlaces.setCategory) ---
+    try { let d = {}; await env.withSecurityRulesDisabled(async (ctx) => { const ref = ctx.firestore().doc(`userPrivatePlaces/${A}_r2addr`); await ref.set({ categories: {}, updatedAt: 1 }, { merge: true }); await ref.update({ 'categories.personal_work': { active: true, places: [{ name: 'Work 2' }] }, updatedAt: 2 }); d = (await ref.get()).data() || {}; });
+      console.log('INFO  R2-18 setCategory as the app writes it (rules disabled: SDK merge semantics) — the untouched category personal_home: ' + ((d.categories && d.categories.personal_home) ? 'SURVIVES' : 'IS WIPED')); } catch (e) { console.log('INFO  R2-18 setCategory probe: DENIED · ' + (e && e.code)); }
+    } catch (e) { console.log('INFO  R2 ABORTED · ' + String(e && (e.code || e.message) || e).slice(0, 120)); }
+    clearTimeout(__wd); __end('');
+  }
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
