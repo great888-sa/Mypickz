@@ -41,7 +41,7 @@ async function loadUserTrips(){
   try{
     const snap2 = await withAuthRetry(() => mpData.trips.sharedWith(currentUser.uid));
     sharedTrips = [];
-    snap2.forEach(doc => sharedTrips.push({ id: doc.id, ...doc.data() }));
+    snap2.forEach(doc => sharedTrips.push(mpData.sane.trip({ id: doc.id, ...doc.data() }))); /* r118-و: رحلة مشارَكة معي ليست لي — تُطبَّع، واسم صاحبها من ملفه */
   }catch(e){ sharedTrips = []; }
   userTrips.forEach(tripNormalize); sharedTrips.forEach(tripNormalize);
   userTrips.forEach(tripSnap); mpSaveOk('trips'); /* r100-أ */
@@ -79,7 +79,7 @@ function tripGuardRestore(trip, g){ Object.keys(trip).forEach(function(k){ delet
   try{ if (typeof tbGuardReload === 'function') tbGuardReload(trip); }catch(_){}
   try{ if (currentTab === 'Trips' && currentTripId === trip.id) renderMyTripsModal(); }catch(_){}
   try{ mpSheet({ title: 'Kept as it was', noCancel: true, text: 'That step would have ' + (g.lost.length ? 'dropped ' + (g.lost.length === 1 ? g.lost[0] : g.lost.length + ' places (' + g.lost.slice(0, 3).join(', ') + (g.lost.length > 3 ? '…' : '') + ')') + ' from the plan' : 'redrawn a day you ordered yourself') + ' without asking you — so it was not saved, and the plan is back as you last saved it. Diagnostics has a PLAN-GUARD line if you want to report it.', ok: 'OK' }); }catch(_){} }
-async function tripDiscard(trip){ tripGuardReset(trip.id); const j = tripSavedJson[trip.id]; const i = userTrips.findIndex(function(t){ return t.id === trip.id; }); if (j){ const old = JSON.parse(j); Object.keys(trip).forEach(function(k){ delete trip[k]; }); Object.assign(trip, old); if (i < 0) userTrips.push(trip); } else { if (i >= 0) userTrips.splice(i, 1); if (typeof TB !== 'undefined' && TB){ TB = null; const bd = document.getElementById('tripBuildBackdrop'); if (bd) bd.classList.remove('show'); try{ if (typeof tbSessionClear === 'function') tbSessionClear(); }catch(_){} /* r108: تخلّى عنها — لا تُعرض للاستعادة */ } } delete resolvedTripCache[trip.id]; try{ renderTripsBody(); }catch(_){} }
+async function tripDiscard(trip){ delete tripCopyPending[trip.id]; tripGuardReset(trip.id); const j = tripSavedJson[trip.id]; const i = userTrips.findIndex(function(t){ return t.id === trip.id; }); if (j){ const old = JSON.parse(j); Object.keys(trip).forEach(function(k){ delete trip[k]; }); Object.assign(trip, old); if (i < 0) userTrips.push(trip); } else { if (i >= 0) userTrips.splice(i, 1); if (typeof TB !== 'undefined' && TB){ TB = null; const bd = document.getElementById('tripBuildBackdrop'); if (bd) bd.classList.remove('show'); try{ if (typeof tbSessionClear === 'function') tbSessionClear(); }catch(_){} /* r108: تخلّى عنها — لا تُعرض للاستعادة */ } } delete resolvedTripCache[trip.id]; try{ renderTripsBody(); }catch(_){} }
 async function saveTrip(trip, o){
   mpTrack.hit('trip_save');
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
@@ -92,6 +92,7 @@ async function saveTrip(trip, o){
     const __w = JSON.stringify(trip); const __seq = tripWriteSeq[trip.id] = (tripWriteSeq[trip.id] || 0) + 1; let __was = { json: '', lin: 0 }; try{ const __o = tripSavedJson[trip.id] ? JSON.parse(tripSavedJson[trip.id]) : null; if (__o && tripHasPlan(__o)) __was = { json: JSON.stringify(__o.plan), lin: tripPlanIndex(__o.plan).lin }; }catch(_){} const __now = Object.assign(tripPlanIndex(trip.plan), { json: JSON.stringify(trip.plan || null) }); /* r107: أساس الحارس = ما كُتب فعلًا (الرحلة كلها قبل الانتظار — الحفظ لا يعدّل الكائن) */
     await mpData.trips.save(trip, Object.assign({ ownerId: currentUser.uid }, __hasLegs ? { legSources: ['user'] } : {})); // الدفعة ب: الأرجل من المستخدم وحده (legSourcesOk)
     if (__isNew && !trip.source) try{ mpTrack.statsCity(trip.cityId, 'trip_built'); }catch(_){}
+    if (tripCopyPending[trip.id]) await tripCopyCount(trip); /* الدفعة ٢: النسخة ثبت حفظها الآن — سجلها وعدّاد مصدرها */
     if (__seq >= (tripBaseSeq[trip.id] || 0)){ tripBaseSeq[trip.id] = __seq; tripSavedJson[trip.id] = __w; } tripGuardSettle(trip.id, __gen, __was, __now, !!(o && o.builder)); mpSaveOk('trips'); /* r100-أ */
   }catch(e){ const __f = await mpSaveFailed('trips', e, function(){ return saveTrip(trip, o); }, function(){ return tripDiscard(trip); }); try{ renderTripsBody(); }catch(_){} return __f === 'discard' ? 'discarded' : (__f === 'retry' && !mpUnsaved.trips) ? undefined : 'failed'; /* r108 (المراجعة): المستدعي يعرف — كُتبت بعد إعادة المحاولة · أو تخلّى عنها صاحبها · أو ما زالت غير محفوظة */ }
 }
@@ -231,18 +232,19 @@ async function tripPlaceDataFor(ref){ // بيانات المكان للمدخل 
 }
 async function tripAutoPlace(trip, ref){
   const place = await tripPlaceDataFor(ref);
-  if (ref.sourceType === 'mylist' && tripSectionOf(ref.subcatId) === 'stay'){ const city = (trip.cities || []).find(function(c){ return c.cityId === ref.cityId; }); if (city){ city.stay = { name: (place && place.name) || ref.name || 'Stay', geo: (place && place.geo && typeof place.geo.lat === 'number') ? { lat: place.geo.lat, lng: place.geo.lng } : null }; await saveTrip(trip); delete resolvedTripCache[trip.id]; updateActiveTripBanner(); showActionToast('Set as where you stay · ' + (city.cityName || ''), [['Setup', "openTripBuilder({ tripId: '" + attrStr(trip.id) + "', stage: 1 })"]]); if (currentTab === 'Trips' && currentTripId === trip.id) openTripDetail(trip.id); return; } } /* ب-٨: الفندق إقامة لا محطة */
+  if (ref.sourceType === 'mylist' && tripSectionOf(ref.subcatId) === 'stay'){ const city = (trip.cities || []).find(function(c){ return c.cityId === ref.cityId; }); if (city){ city.stay = { name: (place && place.name) || ref.name || 'Stay', geo: (place && place.geo && typeof place.geo.lat === 'number') ? { lat: place.geo.lat, lng: place.geo.lng } : null }; await saveTrip(trip); delete resolvedTripCache[trip.id]; updateActiveTripBanner(); showActionToast('Set as where you stay · ' + (city.cityName || ''), [['Setup', "openTripBuilder({ tripId: '" + jsStr(trip.id) + "', stage: 1 })"]]); if (currentTab === 'Trips' && currentTripId === trip.id) openTripDetail(trip.id); return; } } /* ب-٨: الفندق إقامة لا محطة */
   const e = tripEntryFromPlace(Object.assign({}, ref, { name: ref.name }), place);
   const put = tripAddAuto(trip.plan, e, tripSpec(trip)); const slot = put.where !== 'tray'; let where; /* r107: الإضافة الواحدة — رحلة اليوم تأخذه محطةً في آخر مسارها (كان يُكتب في فترة لا تُعرض) */
   if (put.where === 'stop'){ const d = trip.plan.days[put.dayIdx]; where = (trip.plan.days.length > 1 ? tripDayLabel(d) + ' · ' : '') + 'stop ' + (put.index + 1) + ' · end of the route'; }
   else if (slot){ const d = trip.plan.days[put.dayIdx]; where = tripDayLabel(d) + ' · ' + TRIP_PERIOD_LABEL[put.period] + (put.where === 'alt' ? ' · alternative' : ''); }
   else { where = e.geo ? 'Program full · in the tray · ' + trip.plan.tray.length : 'No pin · in the tray'; }
   try{ mpTripCount('placesAdded', 1); if (!slot) mpTripCount('placesTrayed', 1); }catch(_){} /* r79 (ج · القرار ١٠) */
+  try{ if (ref.sourceType === 'community' && ref.sourceUid && ref.sourceUid !== currentUser.uid && place && place.url) mpTrack.statsPlaceList(ref.sourceUid + '_' + ref.cityId, place.url, 'trip_add'); }catch(_){} /* r115-د (٣): مكان من قائمة غيرك دخل رحلتي */
   // r78: لا علم مخزَّن للاكتمال — الرِّجل الجديدة بلا دقائق تجعل مسار اليوم «غير مكتمل» اشتقاقًا (التثبيت ٢)
   activeTripAdded.push(e.name); activeTripAddedRefs.push(e.id);
   await saveTrip(trip); delete resolvedTripCache[trip.id];
   updateActiveTripBanner();
-  const acts = slot ? [['Undo', 'undoTripAdd(' + (activeTripAdded.length - 1) + ')'], ['Change', "tripOpenMoveSheet('" + attrStr(trip.id) + "', '" + attrStr(e.id) + "')"]] : (e.geo ? [['Open', "switchTab('Trips'); openTripDetail('" + attrStr(trip.id) + "')"]] : [['Pin it', "switchTab('Places')"]]);
+  const acts = slot ? [['Undo', 'undoTripAdd(' + (activeTripAdded.length - 1) + ')'], ['Change', "tripOpenMoveSheet('" + jsStr(trip.id) + "', '" + jsStr(e.id) + "')"]] : (e.geo ? [['Open', "switchTab('Trips'); openTripDetail('" + jsStr(trip.id) + "')"]] : [['Pin it', "switchTab('Places')"]]);
   showActionToast((slot ? 'Added · ' : '') + where, acts);
   if (currentTab === 'Trips' && currentTripId === trip.id) openTripDetail(trip.id);
 }
