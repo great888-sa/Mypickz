@@ -6,7 +6,7 @@
 // المرحلة الثانية (هذه · ١٣ نوفمبر — بعد أول قياس على المحرّك الرسمي: ٢٩٤ خلية، ٢٩٣ طابقت المتوقَّع):
 //   الخلايا تجمّدت: كل باب حالة محتسبة في tests/rules-sim.js (صفّه المقيس = صفّه المتوقَّع، وإلا احمرّ التشغيل).
 //   المخالفة الوحيدة كانت بذر هذا الملف لا قاعدة ولا كود: الباب ٤٢ (المالك يقبل طلب rmA) لم يكن طلب rmA مزروعًا حين يفعل المالك، فرُفض التحديث على مستند غائب.
-//   بذره صُحّح هنا، ويبقى خارج الحصيلة (العنصر السادس في صفّه) حتى يُقاس مرة بعد التصحيح. قبول المالك نفسه محتسب أصلًا («M4.25 curatorRequests status change by OWNER allow»).
+//   بذره صُحّح هنا وقيس بعد التصحيح (١٣ نوفمبر: DDDDDA كالمتوقَّع) فصار محتسبًا كغيره — الأبواب الـ٤٩ كلها في الحصيلة. (العنصر السادس في صفّ باب يُبقيه «قيد القياس» خارج الحصيلة — لا باب يحمله الآن.) قبول المالك نفسه محتسب أصلًا («M4.25 curatorRequests status change by OWNER allow»).
 // النتيجة لكل خلية: A نجح النداء · D رفضته القواعد · s رُفض وابتُلع (النداء عاد بلا خطأ والأثر لم يقع) · W نجح ومسح جاره · X:رمز خطأ آخر.
 'use strict';
 const fs = require('fs');
@@ -107,7 +107,7 @@ module.exports = async function runRolesMatrix(env, OWNER, log){
     ['cityNotes.save · my note on a city', 'DDDDAD', function(mp, u){ return mp.cityNotes.save(u, 'c1', { text: 'note' }); }],
     ['requests.create · I never asked', 'DAADAA', function(mp, u){ return mp.requests.create(u, 'please'); }, null, async function(u){ await drop('curatorRequests/' + u); }],
     ['requests.again · declined 8 days ago', 'DAADAA', function(mp, u){ return mp.requests.again(u, 'again'); }],
-    ['requests.setStatus · accept A', 'DDDDDA', function(mp){ return mp.requests.setStatus('rmA', 'accepted'); }, null, async function(){ await plant('curatorRequests/rmA', { uid: 'rmA', text: 'first', at: Date.now(), status: 'pending' }); }, 'seed fixed 13 Nov (the request of rmA was planted only when rmA acted) — counted after one measured run'],
+    ['requests.setStatus · accept A', 'DDDDDA', function(mp){ return mp.requests.setStatus('rmA', 'accepted'); }, null, async function(){ await plant('curatorRequests/rmA', { uid: 'rmA', text: 'first', at: Date.now(), status: 'pending' }); }], /* بذره صُحّح ١٣ نوفمبر وقيس بعده: DDDDDA كالمتوقَّع — محتسب */
     ['reports.create · app report of 250 characters', 'DAADAA', function(mp, u){ return mp.reports.create(u, 'app', '', 'x'.repeat(250)); }],
     ['reports.removeMine · account deletion', 'DAAAAA', function(mp, u){ return mp.reports.removeMine(u); }],
     ['identity.put · a new place identity', 'DAADAA', function(mp, u){ return mp.identity.put('k_rm_new', { lat: 1, lng: 2, source: 'user_pin', n: 'X', cityId: '2988507', by: u, at: Date.now() }); }],
