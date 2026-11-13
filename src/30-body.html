@@ -342,8 +342,10 @@
       <button type="button" class="dash-door" onclick="openAdminCustomCats()"><span>🏷 Custom categories</span><span id="adminCatsCount">›</span></button>
       <button type="button" class="dash-door" onclick="openMostSavedStats()"><span>📊 Most saved</span><span>places · lists ›</span></button>
       <div class="gsec">System</div>
+      <button type="button" class="dash-door" onclick="openOwnerDashboard()"><span>📊 Owner dashboard</span><span>activity · funnels · cities ›</span></button>
       <button type="button" class="dash-door" onclick="openSystemStatusModal()"><span>🩺 System status</span><span id="adminPulseLine">›</span></button>
       <div class="dash-door plain"><span>📏 Rules</span><span id="adminRulesVer">…</span></div>
+      <button type="button" class="dash-door" onclick="adminResidueRun(true)" title="Counter documents whose list, trip or account no longer exists — removed once a day; tap to run now"><span>🧹 Counter cleanup</span><span id="adminResidueLine">›</span></button>
       <button type="button" class="dash-door" onclick="generateUsersReport()"><span>📄 Users report</span><span>›</span></button>
       <div id="usersStatsLine" style="display:none;"></div>
     </div>
