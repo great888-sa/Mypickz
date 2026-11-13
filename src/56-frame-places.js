@@ -139,7 +139,7 @@ function renderBookmarkedPlaces(body){
         const q = attrStr; /* r116 (المراجعة المستقلة ١): المرمِّز الواحد */
         const actions = [
           mpMapsTile(b, b.cityId), /* غ-١ · r75a-٢: الطقم بالمفكرة — أربع بلاطات (لا On map: المفكرة لا تحمل إحداثيات) */
-          { cls: 'bmk on', icon: 'bookmark', fill: true, label: 'Bookmark', on: "togglePlaceBookmark('" + q(b.url) + "', '" + q(b.name || 'Place') + "', '" + q(b.category) + "', '" + q(b.cityId) + "', '" + q(b.area) + "')", title: 'Bookmarked — tap to remove' },
+          { cls: 'bmk on', icon: 'bookmark', fill: true, label: 'Bookmark', on: "togglePlaceBookmark('" + q(b.url) + "', '" + q(b.name || 'Place') + "', '" + q(b.category) + "', '" + q(b.cityId) + "', '" + q(b.area) + "', undefined, undefined, 0)", title: 'Bookmarked — tap to remove' },
           { icon: 'trip', label: 'Trip', on: "plAddToTripFor('" + q(b.cityId) + "', '" + q(b.category) + "', '" + q(String(b.pid || '').replace(/^id:/, '')) + "', '" + q(b.name || 'Place') + "')", title: 'Add to a trip' },
           { icon: 'share', label: 'Share', on: "mpSendText('📍 ' + " + JSON.stringify(escapeHtml(b.name || 'Place')) + " + ('" + q(b.url) + "' ? '\\n' + '" + q(b.url) + "' : ''))", title: 'Send' }
         ];
@@ -1120,7 +1120,7 @@ document.addEventListener('click', (ev) => { const m = document.getElementById('
 function resetSessionState(){ try{ Object.keys(tripCopyPending).forEach(function(k){ delete tripCopyPending[k]; }); Object.keys(tripCopyUncounted).forEach(function(k){ delete tripCopyUncounted[k]; }); }catch(_){} /* الدفعة ٢: انتظار نسخ الحساب السابق لا ينتقل */ try{ mpData.ownerForget(); }catch(_){} try{ Object.keys(mpListOpened).forEach(function(k){ delete mpListOpened[k]; }); }catch(_){} /* r116-ح */ try{ msLast = null; plExportSel = null; }catch(_){} /* r116 (المراجعة ٩): لا أثر لحساب سابق */ try{ savedByReset(); }catch(_){} try{ mpData.sane.forgetNames(); }catch(_){} /* r118-و: الأسماء المتحقَّق منها تُنسى بتبدّل الحساب */ /* r117-أ: أساس علامات «saved by» وما عُلّق منها لحساب سابق لا يُطابَق عليه حساب آخر */ // r72n: كل ما يحمل بيانات حساب بالذاكرة يُصفَّر — يُستدعى عند الخروج وعند تبدّل المصادقة
   try{
     userListData = { customCities: [], customCountries: [], nickname: null, cityPlaceCounts: {}, following: [], placeBookmarks: {} }; cityListCityId = null; cityListCountry = null; myCityListData = null; myCityListLoadedFor = null; myCityListOldKeys = [];
-    userTrips = []; currentTripId = null; tripSavesMap = {}; listBookmarksMap = {}; sharedCityLists = [];
+    userTrips = []; currentTripId = null; tripSavesMap = {}; listBookmarksMap = {}; sharedCityLists = []; Object.keys(myCopiedLists).forEach(function(k){ delete myCopiedLists[k]; }); Object.keys(myCopiedPlaces).forEach(function(k){ delete myCopiedPlaces[k]; }); /* r119 (المراجعة المستقلة): «نسختُه» لا ينتقل من حساب إلى الذي يليه على الصفحة نفسها */
     if (typeof cmForgetSession === 'function') cmForgetSession(); /* r109: تبدّل الحساب يمسح ذاكرة الجلسة */ if (typeof plVisState !== 'undefined') Object.keys(plVisState).forEach(function(k){ delete plVisState[k]; });
     communityUsers = []; viewingUserUid = null; viewingUserData = null; viewingUserCities = []; communityUserTrips = []; communityViewingCityId = null;
     curators = null; curPage = null; curCity = null; curArchiveOf = null; personLayerOnly = null; Object.keys(curData).forEach(function(k){ delete curData[k]; }); cmSecCollapsed = {}; /* خ-٦ */
