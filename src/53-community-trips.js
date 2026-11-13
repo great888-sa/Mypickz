@@ -29,8 +29,7 @@ async function openCommunityTrip(tripId){
   resolvedTripCache['community_'+tripId] = await resolveTripPlaces(trip);
   // فتح رحلة مشتركة يُحتسَب كمشاهدة إضافية (نفس أهمية فتح الملف الشخصي نفسه)
   if (trip && trip.ownerId){
-    mpData.communityProfiles.bumpView(trip.ownerId).catch(()=>{});
-    if (viewingUserData && viewingUserData.uid === trip.ownerId) viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1;
+    Promise.resolve(mpData.communityProfiles.bumpView(trip.ownerId)).then(function(v){ if (v !== false && viewingUserData && viewingUserData.uid === trip.ownerId) viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1; }).catch(()=>{}); /* الدفعة ٢ (ك-١١): العدّاد المعروض بعد نجاح الكتابة، وملفي لا يُعدّ لي */
   }
   renderCommunityModal();
 }
@@ -51,7 +50,7 @@ function renderCommunityTripDetail(wrap){ // r77: رحلة الآخرين بال
       arr.forEach(function(e){ [e].concat(e.alts || []).forEach(function(x, k){
         if (!x._available){ __tcards += `<div class="row triprow dim">⚠️ This place is no longer available</div>`; return; }
         const ref = x._ref || x.ref || {}; const pl = x._p || {}; const ouid = ref.sourceUid || viewingUserUid || ''; const sCat = String(ref.subcatId || ''); const cityNm = ((trip.cities || []).find(function(c){ return c.cityId === (ref.cityId || trip.cityId); }) || {}).cityName || ref.cityName || trip.cityName || ''; /* r101-أ: مكان من مدينة قريبة يحمل اسمها */
-        __tcards += (k ? '<div class="pc-lab" style="margin:0 0 2px 6px;">or</div>' : '') + othersPlaceRowHtml({ id: ref.placeId || pl.id || hashUrl(pl.url || ''), name: pl.name || x.name || 'Place', url: pl.url, area: pl.area, picks: pl.picks, note: pl.note, geo: pl.geo }, { uid: ouid, nickname: (viewingUserData && viewingUserData.nickname) || 'a user' }, { id: ref.cityId || trip.cityId || '', name: cityNm }, sCat, ref.cityId || trip.cityId || '') + (x.alert ? '<div class="pc-lab" style="margin:-2px 0 8px 6px;">Alert · <span class="pc-val">' + escapeHtml(x.alert) + '</span></div>' : '');
+        __tcards += (k ? '<div class="pc-lab" style="margin:0 0 2px 6px;">or</div>' : '') + othersPlaceRowHtml({ id: ref.placeId || pl.id || hashUrl(pl.url || ''), name: pl.name || x.name || 'Place', url: pl.url, area: pl.area, picks: pl.picks, note: pl.note, geo: pl.geo, nolist: true /* r115: محطة رحلة لا صف قائمة */ }, { uid: ouid, nickname: (viewingUserData && viewingUserData.nickname) || 'a user' }, { id: ref.cityId || trip.cityId || '', name: cityNm }, sCat, ref.cityId || trip.cityId || '') + (x.alert ? '<div class="pc-lab" style="margin:-2px 0 8px 6px;">Alert · <span class="pc-val">' + escapeHtml(x.alert) + '</span></div>' : '');
       }); });
       html += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', __tcards, 'stop'); });
   });
@@ -70,7 +69,7 @@ async function openMostSavedStats(){
     let rowsHtml = '';
     if (mostSavedTab === 'places'){
       const rows = await mpData.placeCounts.top(30); // v1.40: placeFavoriteCounts = عدّاد الحفظ
-      rowsHtml = rows.length ? rows.map(function(d, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span><a href="' + attrVal(d.url || '#') + '" target="_blank" rel="noopener" class="stats-name">' + escapeHtml(d.name || '') + '</a></div><div class="pl-sub">' + (d.count || 0) + ' save' + (d.count === 1 ? '' : 's') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No saves recorded yet</div>';
+      rowsHtml = rows.length ? rows.map(function(d, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span>' + (isGoogleMapsUrl(String(d.url || '').trim()) ? '<a href="' + attrVal(mpSafeUrl(d.url)) + '" target="_blank" rel="noopener" class="stats-name">' + escapeHtml(d.name || '') + '</a>' : '<span class="stats-name">' + escapeHtml(d.name || '') + '</span>') /* r117 (المراجعة المستقلة): رابط العدّاد يكتبه صاحبه بلا فحص في القواعد — لا يصير رابطًا إلا إن كان رابط خرائط (كان javascript: يصل إلى href في لوحة المالك) */ + '</div><div class="pl-sub">' + (d.count || 0) + ' save' + (d.count === 1 ? '' : 's') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No saves recorded yet</div>';
     } else {
       const rows = (await cmPublicListsCached()).filter(function(l){ return (l.copyCount || 0) > 0; }) /* r109: من الباب الواحد */.sort(function(a, b){ return (b.copyCount || 0) - (a.copyCount || 0); }).slice(0, 30);
       rowsHtml = rows.length ? rows.map(function(l, i){ return '<div class="row rowblock"><div class="pn"><span class="stats-rank" style="display:inline-flex; margin-right:8px;">' + (i + 1) + '</span>' + escapeHtml(l.cityName || l.cityId || '') + '</div><div class="pl-sub">' + (l.copyCount || 0) + ' cop' + (l.copyCount === 1 ? 'y' : 'ies') + (l.nickname ? ' · by ' + escapeHtml(l.nickname) : '') + '</div></div>'; }).join('') : '<div class="mp-empty mini">No copies recorded yet</div>';
@@ -80,7 +79,11 @@ async function openMostSavedStats(){
 }
 
 // خ١-ب: البوابة (المشهد ١) تسبق نافذة الدخول/التسجيل (المشهد ٢) — النافذة موحَّدة (قرار المالك: الاسم داخلها)، والعنوان بحسب الزر
+let mpHadUser = false; /* r115-ب: في هذا التحميل دخل مستخدم — الخروج بعده لا يُعدّ رؤية بوابة */
+function gateSeen(){ /* r115-ب (ق٠٨-٢٧-١٦ · ق١١-١١-٠٤): «جهاز رأى البوابة اليوم» — مرة للجهاز في اليوم، من نقطة واحدة (openGate)، بعد معرفة حال الدخول، ولزائر لم يكن مسجَّلًا في هذا التحميل. مقام «وصل ← سجّل»: signup_done ÷ reserved_3 حدّ أدنى للتحويل (يشمل عائدًا انتهت جلسته). */
+  try{ if (document.body.classList.contains('auth-pending') || currentUser || mpHadUser) return false; const d = new Date(), p = function(n){ return String(n).padStart(2, '0'); }; const day = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); if (localStorage.getItem('mp_gate_seen') === day) return false; localStorage.setItem('mp_gate_seen', day); mpTrack.hit('reserved_3', { personal: true }); return true; }catch(_){ return false; } }
 function openGate(){
+  gateSeen();
   document.getElementById('authGateView').style.display = '';
   document.getElementById('authFormView').style.display = 'none';
   const b = document.getElementById('authBackdrop'); b.classList.add('show'); b.classList.add('gate-mode');
