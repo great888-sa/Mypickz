@@ -11,7 +11,8 @@ async function registerUserRecord(){
   try{
     const doc = await mpData.users.get(currentUser.uid);
     if (!doc.exists){
-      await mpData.users.merge(currentUser.uid, { email: currentUser.email || '', firstSeen: Date.now(), lastSeen: Date.now(), suspended: false, lastActiveDay: today });
+      try{ if (typeof mpSharerInit === 'function') await mpSharerInit(); }catch(_){} /* رمزي يُحسب قبل قراءة من جلبني — «رمزي لا يُنسب إليّ» كان يقارن برمز فارغ */
+      await mpData.users.merge(currentUser.uid, Object.assign({ email: currentUser.email || '', firstSeen: Date.now(), lastSeen: Date.now(), suspended: false, lastActiveDay: today }, (typeof mpArrivalFields === 'function') ? mpArrivalFields() : {})); /* r115-د (٥): من جلب المستخدم الجديد (رمز مستعار) ومن أي نوع وقناة — مرة عند أول تسجيل */
       await mpData.dailyStats.bump(today, { newSignupsToday: mpData.fieldInc(1), activeToday: mpData.fieldInc(1) });
     } else {
       const prevDay = doc.data().lastActiveDay;
@@ -25,7 +26,7 @@ async function registerUserRecord(){
 
 let allUsersCache = [];
 
-const EXPECTED_RULES = 'v3.14'; // ب-٢-١: + save بـstats_curators // r72t (M4.26 ٧): يُرفع مع كل نشرة — يُقارن بـ settings/app.rulesVersion الذي يكتبه المالك بعد النشر باللوحة
+const EXPECTED_RULES = 'v3.17'; // v3.17 (ق١١-١٢-٠٥): إصلاحات المراجعة الشاملة — المحور ١ (حقل المالك · الربط بالاتجاهين للسجلات الأربعة · أنواع الحقول · نافذة التاريخ …) · r117: «saved by» مربوط بسجل صاحبه · حذف أربعة مفاتيح أحداث · (v3.15 لم تُنشر منفردة) r116-أ: + city الاختياري بـplaceFavoriteCounts · ب-٢-١: + save بـstats_curators // r72t (M4.26 ٧): يُرفع مع كل نشرة — يُقارن بـ settings/app.rulesVersion الذي يكتبه المالك بعد النشر باللوحة
 async function checkRulesVersion(){ try{ const live = (await mpData.settings.rulesVersion()) || '—'; const ok = live === EXPECTED_RULES; logTiming('[RULES] live=' + live + ' expected=' + EXPECTED_RULES + (ok ? ' ✓' : ' ✗ DRIFT')); return { live: live, ok: ok }; }catch(e){ return { live: '?', ok: false }; } }
 /* ═══ ب-٢-٢-ب (المسودة v2-ب): نوافذ المالك — اللوحة قشرةً بثلاث مجموعات؛ كل نافذة فرعية داخل dashBackdrop فوقها وتعود إليها بـBack (adminBack يحدّث العدّادات) ═══ */
 function adminBack(){ closeModalById('dashBackdrop'); adminRefreshCounts(); }
@@ -34,12 +35,35 @@ async function adminRefreshCounts(){
   try{ const rp = await mpData.reports.all(); const el = document.getElementById('adminRepCount'); if (el) el.textContent = rp.length + ' ›'; }catch(e){}
   try{ const el = document.getElementById('adminCatsCount'); if (el) el.textContent = customItems.length + ' ›'; }catch(e){}
 }
+/* ═══ r116-ح (ق١١-١١-١٣ «نعم، فقط أ» · دَين stats-residue): بقايا العدّ بعد حذف حساب أو قائمة أو رحلة — مستندات يحمل معرّفها معرّف ما زال (stats_lists · stats_places ← القائمة · stats_trips ← الرحلة · stats_curators و stats_cards ← الحساب). القواعد تجعل حذفها لمالك التطبيق وحده، فيكنسها هو:
+   مرة في اليوم عند فتح لوحة الإدارة (وبضغط سطرها) · مستند العدّ يُحذف فقط حين تثبت قراءةٌ ناجحة أن أباه غير موجود — قراءة تعذّرت لا تُعدّ غيابًا · بسقوف: صفحة لكل مجموعة، وعدد آباء يُفحصون، وعدد يُحذف · مؤشّر لكل مجموعة يكمل منه في اليوم التالي. لا تعديل قاعدة. ═══ */
+const MP_RESIDUE_PAGE = 150;   /* مستندات عدّ تُسرد من كل مجموعة في الجولة */
+const MP_RESIDUE_CHECKS = 40;  /* آباء مختلفون تُقرأ حالتهم في الجولة — لكل مجموعة ميزانيتها (r116 · المراجعة المستقلة ٣: كانت ميزانية واحدة تستنفدها المجموعة الأولى فلا تُبلغ التالية أبدًا) */
+const MP_RESIDUE_CAP = 100;    /* مستندات تُحذف في الجولة */
+const MP_RESIDUE_OF = { stats_lists: 'userCityLists', stats_places: 'userCityLists', stats_trips: 'trips', stats_curators: 'users', stats_cards: 'users' };
+async function statsResidueSweep(force){
+  if (!isOwner) return null; const today = todayKey(); let st = {}; try{ st = JSON.parse(localStorage.getItem('mp_residue') || '{}') || {}; }catch(_){ st = {}; }
+  if (!force && st.day === today && st.last) return st.last;
+  const res = { day: today, removed: 0, checked: 0, kept: 0, errors: 0, more: false }; const cur = Object.assign({}, st.cur || {}); const known = {};
+  for (const coll of Object.keys(MP_RESIDUE_OF)){ let ids = []; try{ ids = await mpData.stats.pageIds(coll, cur[coll] || '', MP_RESIDUE_PAGE); }catch(e){ mpSwallow(e, 'residue list ' + coll); res.errors++; continue; }
+    let last = '', stopped = false, checkedHere = 0;
+    for (const id of ids){ const key = MP_RESIDUE_OF[coll] + '/' + String(id).split('__')[0];
+      if (!(key in known)){ if (checkedHere >= MP_RESIDUE_CHECKS){ stopped = true; break; } checkedHere++; res.checked++; try{ known[key] = await mpData.stats.parentExists(MP_RESIDUE_OF[coll], String(id).split('__')[0]); }catch(e){ mpSwallow(e, 'residue parent'); res.errors++; known[key] = null; /* لم تُعرف حاله: يبقى */ } }
+      if (known[key] === false){ if (res.removed >= MP_RESIDUE_CAP){ stopped = true; break; } try{ await mpData.stats.remove(coll, id); res.removed++; }catch(e){ mpSwallow(e, 'residue remove'); res.errors++; } } else res.kept++;
+      last = id; }
+    if (stopped || ids.length >= MP_RESIDUE_PAGE){ cur[coll] = last || cur[coll] || ''; res.more = true; } else cur[coll] = ''; /* بلغ آخر المجموعة: الجولة التالية من أولها */ }
+  try{ localStorage.setItem('mp_residue', JSON.stringify({ day: today, cur: cur, last: res })); }catch(_){}
+  logTiming('[RESIDUE] removed ' + res.removed + ' · parents checked ' + res.checked + ' · kept ' + res.kept + (res.errors ? ' · errors ' + res.errors : '') + (res.more ? ' · more next round' : '')); return res;
+}
+function statsResidueLine(r){ if (!r) return '›'; return (r.removed ? 'removed ' + r.removed : 'nothing to remove') + ' · checked ' + r.checked + (r.errors ? ' · ' + r.errors + ' unread' : '') + (r.more ? ' · more next time' : '') + ' ›'; }
+async function adminResidueRun(force){ const el = document.getElementById('adminResidueLine'); if (el && force) el.textContent = 'cleaning…'; let r = null; try{ r = await statsResidueSweep(!!force); }catch(e){ mpSwallow(e, 'residue'); } const now = document.getElementById('adminResidueLine'); if (now) now.textContent = statsResidueLine(r); return r; }
 async function openAdminPanel(){ // ر٧٢-أ-١ب: الباب الواحد للمالك — ب-٢-٢-ب: القشرة والمجموعات
   document.getElementById('usersStatsLine').innerHTML = '';
   document.getElementById('adminBackdrop').classList.add('show');
   await loadUsersForAdmin(); renderAdminStats();
   adminRefreshCounts();
   try{ const rv = await checkRulesVersion(); const el = document.getElementById('adminRulesVer'); if (el){ el.textContent = rv.live + (rv.ok ? ' ✓' : ' ✗ expected ' + EXPECTED_RULES); el.className = rv.ok ? 'ok' : 'no'; } }catch(e){} // r72t (M4.26 ٧)
+  adminResidueRun(false); /* r116-ح: كنس بقايا العدّ — مرة في اليوم، لا يحبس اللوحة */
   pulseSummary().then(function(t){ const el = document.getElementById('adminPulseLine'); if (el) el.textContent = t + ' ›'; }).catch(function(){}); /* سطر حالة النبضة على بابها */
 }
 function adminName(uid, pr){ return (pr && (pr.displayName || pr.nickname)) || ((allUsersCache.find(function(u){ return u.uid === uid; }) || {}).nickname) || String(uid || '').slice(0, 8); }
@@ -77,7 +101,7 @@ async function openAdminRequests(){ // r72p (٥) — ب-٢-٢-ب (v2-ب · ٣): 
 }
 async function adminDecideRequest(uid, status){
   if (!isOwner) return;
-  if (status === 'declined' && !(await mpConfirm('The person keeps their account; they can ask again later.', { title: '⭐ Decline this request?', ok: 'Decline', danger: true }))) return; /* ب-٢-٢-ب: Decline بورقة تأكيد */
+  if (status === 'declined' && !(await mpConfirm('The person keeps their account; they can ask again a week after their request.', { title: '⭐ Decline this request?', ok: 'Decline', danger: true }))) return; /* ب-٢-٢-ب: Decline بورقة تأكيد */
   try{ await mpData.requests.setStatus(uid, status); if (status === 'accepted'){ await mpData.profiles.merge(uid, { verified: true }); curators = null; } }catch(e){ mpSwallow(e, 'decide'); mpErrToast('Could not update', e); return; }
   showToast(status === 'accepted' ? 'Accepted — curator badge set ✓' : 'Declined'); openAdminRequests();
 }
