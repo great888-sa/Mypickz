@@ -126,6 +126,23 @@ async function ensureTripSaves(){
   const ids = (userListData && userListData.tripSaveIds) || {};
   Object.keys(ids).forEach(function(tripId){ if (ids[tripId]) tripSavesMap[tripId] = { tripId: tripId }; });
 }
+/* ═══ الدفعة ٢ (ص-٧): مرايا الموقوف ═══
+   المرايا الثلاث (listBookmarkIds · tripSaveIds · following) فهرس في مستندي، والحقيقة السجل. الموقوف يسحب سجله (حق الانسحاب) ولا يكتب مستنده، فتبقى مرآته تقول «ما زال».
+   الباب نفسه يعلّم الجهاز حين لا تُكتب مرآة (mp_mirror_dirty_<uid> — طبقة البيانات، فلا مستدعٍ ينساها).
+   عند التحميل: الموقوف — ومن سحب وهو موقوف ثم رُفع إيقافه على هذا الجهاز — تُطابَق مراياه بسجلاته (قراءة لكل مدخل مفكرة وحفظ، واستعلام واحد للمتابعات)؛ ما زال سجله يسقط من الذاكرة، ويُكتب التصحيح حين تُقبل الكتابة.
+   حدّ معلن: من رُفع إيقافه وفتح من جهاز آخر يرى المدخل حتى ينقره (النقر يصحّحه: الباب يجد أن لا سجل). */
+async function mpMirrorReconcile(){
+  if (!currentUser || !userListData) return 0; const uid = currentUser.uid; let dirty = false; try{ dirty = localStorage.getItem('mp_mirror_dirty_' + uid) === '1'; }catch(_){ }
+  if (!currentUserSuspended && !dirty) return 0;
+  let gone = null; try{ gone = await mpData.mirrors.gone(uid, userListData); }catch(e){ mpSwallow(e, 'mirror reconcile'); return 0; }
+  const n = gone.lists.length + gone.trips.length + gone.follows.length; if (!n){ if (!currentUserSuspended && gone.checked > 0) try{ localStorage.removeItem('mp_mirror_dirty_' + uid); }catch(_){ } return 0; } /* العلامة تُمحى بعد مطابقة فعلية فقط — تحميل فشل (مرايا فارغة) لا يمحوها (المراجعة المستقلة)؛ وبمرايا فارغة حقًّا تبقى بلا كلفة */
+  gone.lists.forEach(function(id){ delete userListData.listBookmarkIds[id]; if (listBookmarksMap) delete listBookmarksMap[id]; });
+  gone.trips.forEach(function(id){ delete userListData.tripSaveIds[id]; if (tripSavesMap) delete tripSavesMap[id]; });
+  if (gone.follows.length) userListData.following = (userListData.following || []).filter(function(x){ return gone.follows.indexOf(x) < 0; });
+  if (!currentUserSuspended){ try{ await mpData.mirrors.drop(uid, gone); localStorage.removeItem('mp_mirror_dirty_' + uid); }catch(e){ mpSwallow(e, 'mirror reconcile write'); } }
+  try{ logTiming('MIRROR · ' + n + ' entr' + (n === 1 ? 'y' : 'ies') + ' without a record dropped' + (currentUserSuspended ? ' (in memory — suspended)' : ' (written)')); }catch(_){ }
+  return n;
+}
 
 // معرّف آمن ومختصر لأي رابط (Firestore ما يقبل / بمعرّف المستند)
 
@@ -310,31 +327,34 @@ async function toggleListBookmark(ownerUid, cityId){
   if (!currentUser){ openAuthModal(); return; }
   if (!ownerUid || !cityId) return; /* r100-ج */
   if (ownerUid === currentUser.uid){ showToast('This is your list — bookmarks count others, not you'); return; } // ر٦٠: المبدأ التاسع بالواجهة كما بالقواعد
-  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   await ensureListBookmarks();
   const listId = ownerUid + '_' + cityId;
   const on = !listBookmarksMap[listId];
+  if (on && currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } /* الدفعة ٢ (ص-٧): الموقوف لا يضيف — لكنه يسحب ما وضعه (القاعدة تقبل حذف سجله وحده؛ كان التطبيق يمنع السحب أيضًا) */
   if (on){
     listBookmarksMap[listId] = { listId: listId, ownerUid: ownerUid, cityId: cityId };
     if (userListData){ userListData.listBookmarkIds = userListData.listBookmarkIds || {}; userListData.listBookmarkIds[listId] = true; } // ر٦٩ط: المرآة محليًّا فورًا
     mpTrack.hit('bookmark_add');
     mpData.users.flag(currentUser.uid, 'hasBookmarked').catch(()=>{});
   } else { delete listBookmarksMap[listId]; if (userListData && userListData.listBookmarkIds) delete userListData.listBookmarkIds[listId]; }
-  const c = (typeof viewingUserCities !== 'undefined' && viewingUserCities) ? viewingUserCities.find(function(x){ return x.id === cityId; }) : null;
-  if (c) c.bookmarkCount = Math.max(0, (c.bookmarkCount || 0) + (on ? 1 : -1));
+  const c = (typeof viewingUserCities !== 'undefined' && viewingUserCities && typeof viewingUserUid !== 'undefined' && viewingUserUid === ownerUid) ? viewingUserCities.find(function(x){ return x.id === cityId; }) : null; /* المراجعة الثانية: الصف المعروض لصاحب القائمة نفسها — كان يُؤخذ بمعرّف المدينة وحده فيتحرّك عدّاد مدينة شخص آخر مفتوحة صفحته */
+  const c0 = c ? (c.bookmarkCount || 0) : 0; /* الدفعة ٢ (المراجعة المستقلة): العدّاد المعروض يُحسب من قيمته قبل الفعل — كان يُقصّ عند الصفر ثم يُعاد +١، فيعرض ١ والخادم ٠ */
+  if (c) c.bookmarkCount = Math.max(0, c0 + (on ? 1 : -1));
   renderCommunityModal();
   try{
-    await mpData.bookmarks.toggleList(currentUser.uid, ownerUid, cityId, on);
-    logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → OK (record+counter+mirror written)'); // ر٦٩ن: تشخيص ميداني
+    const __st = await mpData.bookmarks.toggleList(currentUser.uid, ownerUid, cityId, on);
+    if (c) c.bookmarkCount = __st === 'counted' ? c0 + 1 : __st === 'uncounted' ? Math.max(0, c0 - 1) : c0; /* يتبع ما تحرّك فعلًا: already · released · none لم تحرّك عدّادًا */
+    logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → OK (' + __st + ')'); // ر٦٩ن: تشخيص ميداني
   }catch(e){
     mpSwallow(e, 'bookmark-list'); logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن · r100-هـ
     if (on) delete listBookmarksMap[listId]; else listBookmarksMap[listId] = { listId: listId, ownerUid: ownerUid, cityId: cityId };
-    if (c) c.bookmarkCount = Math.max(0, (c.bookmarkCount || 0) + (on ? -1 : 1));
+    if (userListData){ userListData.listBookmarkIds = userListData.listBookmarkIds || {}; if (on) delete userListData.listBookmarkIds[listId]; else userListData.listBookmarkIds[listId] = true; } /* المرآة المحلية ترتدّ مع الصف (كانت تبقى على التفاؤل) */
+    if (c) c.bookmarkCount = c0;
     renderCommunityModal();
     mpErrToast('Could not update bookmark', e); return;
   }
   renderCommunityModal(); // ر٦٩ط: العدّاد من الخادم بعد اكتمال الكتابة (كان يُقرأ قبلها فيبدو غير مستقر)
-  if (!on) showUndoToast('Removed from your bookmarks', function(){ toggleListBookmark(ownerUid, cityId); });
+  if (!on){ if (currentUserSuspended) showToast('Removed — can\'t be added back while suspended'); else showUndoToast('Removed from your bookmarks', function(){ toggleListBookmark(ownerUid, cityId); }); } /* الدفعة ٢ (المراجعة المستقلة): لا Undo لا يعمل — الموقوف لا يضيف */
 }
 // حفظ الرحلة — على رحلات الآخرين بعدّاده؛ المحفوظة مؤشر لأصل حي (التملك بالنسخ — المحطة ٤)
 function isSelfTripBookmarked(id){ return !!(userListData && userListData.tripSelfBookmarks && userListData.tripSelfBookmarks[id]); }
@@ -426,34 +446,34 @@ async function exportOtherList(ownerUid, cityId){
       const entry = d.categories[catId];
       const all = ((entry && entry.places) || []).filter(function(q){ return q && (q.name || q.url); });
       if (!all.length) return;
-      out += '\n' + catId + '\n';
+      out += '\n' + catLabelOf(catId) + '\n'; /* r117-ج (وُجد بمحطته): كان معرّف التصنيف الخام (coffee · other_cuisine) — الآن اسمه كما في الشاشة */
       all.forEach(function(q){
         out += '• ' + (q.name || 'Place') + (q.area ? ' — ' + q.area : '') + '\n';
         if (q.url) out += '  ' + q.url + '\n';
       });
     });
-    mpSendText(out + '\nSent via MyPickz · mypickz.app'); statsExportFor('olist', ownerUid + '_' + cityId); /* ب-٢-١ */
+    mpSendText(out + '\nSent via MyPickz · ' + mpShareUrl({ src: 'community', to: 'l.' + ownerUid + '_' + cityId })); statsExportFor('olist', ownerUid + '_' + cityId); /* ب-٢-١ · r115-د (٥) */
   }catch(e){ showToast('Could not build the message'); }
 }
 async function exportOtherTrip(tripId){
   try{
     const doc = await mpData.trips.getDoc(tripId);
     if (!doc.exists){ showToast('Trip is no longer available'); return; }
-    const t = { id: tripId, ...doc.data() }; tripNormalize(t);
+    const t = mpData.sane.trip({ id: tripId, ...doc.data() }); /* r118-و */ tripNormalize(t);
     const res = await resolveTripPlaces(t);
     let out = '🧳 ' + tripTitle(t) + ' — a MyPickz trip\n';
     (res.days || []).forEach(function(day){
       out += '\n' + tripDayLabel(day) + '\n';
       TRIP_PERIODS.forEach(function(p){ (day.periods[p] || []).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x, k){ const pl = x._p; out += (k ? '  or ' : '• ') + (pl ? (pl.name || x.name || 'Place') : 'Place no longer available') + '\n'; if (pl && pl.url) out += '  ' + pl.url + '\n'; }); }); });
     });
-    mpSendText(out + '\nSent via MyPickz · mypickz.app'); try{ if (t.ownerId && currentUser && t.ownerId !== currentUser.uid && mpIsVerified(t.ownerId)) mpTrack.statsCurator(t.ownerId, 'export'); }catch(_){} /* ب-٢-١ */
+    mpSendText(out + '\nSent via MyPickz · ' + mpShareUrl({ src: 'trip', to: t.ownerId ? 't.' + t.ownerId + '.' + t.id : '' })); try{ if (t.ownerId && currentUser && t.ownerId !== currentUser.uid && mpIsVerified(t.ownerId)) mpTrack.statsCurator(t.ownerId, 'export'); }catch(_){} /* ب-٢-١ */
   }catch(e){ showToast('Could not build the message'); }
 }
 async function toggleTripSave(tripId){
   if (!currentUser){ openAuthModal(); return; }
-  if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   await ensureTripSaves();
   const on = !tripSavesMap[tripId];
+  if (on && currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } /* الدفعة ٢ (ص-٧): الموقوف يسحب ولا يضيف */
   if (on){
     tripSavesMap[tripId] = { tripId: tripId };
     if (userListData){ userListData.tripSaveIds = userListData.tripSaveIds || {}; userListData.tripSaveIds[tripId] = true; }
@@ -462,16 +482,17 @@ async function toggleTripSave(tripId){
   if (currentTab === 'Community') renderCommunityModal();
   if (currentTab === 'Trips') renderTripsBody();
   try{
-    await mpData.tripSaves.toggle(currentUser.uid, tripId, on);
-    logTiming('SAVE trip ' + tripId + ' on=' + on + ' → OK (record+counter+mirror written)'); // ر٦٩ن
+    const __st = await mpData.tripSaves.toggle(currentUser.uid, tripId, on);
+    logTiming('SAVE trip ' + tripId + ' on=' + on + ' → OK (' + __st + ')'); // ر٦٩ن
   }catch(e){
     mpSwallow(e, 'trip-save'); logTiming('SAVE trip ' + tripId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن · r100-هـ
     if (on) delete tripSavesMap[tripId]; else tripSavesMap[tripId] = { tripId: tripId };
+    if (userListData){ userListData.tripSaveIds = userListData.tripSaveIds || {}; if (on) delete userListData.tripSaveIds[tripId]; else userListData.tripSaveIds[tripId] = true; } /* المرآة المحلية ترتدّ مع الصف */
     if (typeof viewingUserUid !== 'undefined' && viewingUserUid) renderCommunityModal();
     if (currentTab === 'Trips') renderTripsBody();
     mpErrToast('Could not update bookmark', e); return;
   }
   if (currentTab === 'Community') renderCommunityModal(); // العدّاد من الخادم بعد الكتابة
-  if (!on) showUndoToast('Removed from your bookmarked trips', function(){ toggleTripSave(tripId); });
+  if (!on){ if (currentUserSuspended) showToast('Removed — can\'t be added back while suspended'); else showUndoToast('Removed from your bookmarked trips', function(){ toggleTripSave(tripId); }); }
 }
 
