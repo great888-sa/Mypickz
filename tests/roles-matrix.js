@@ -2,8 +2,11 @@
 // مصفوفة الأدوار: طبقة البيانات الحقيقية (src/43-mpdata.js — الملف نفسه بلا نسخ) أمام القواعد الحقيقية على المحرّك الرسمي.
 // كل باب يُنادى كما يناديه التطبيق، بستة أدوار: زائر · مستخدم عادي · مستخدم ثانٍ (صاحب المحتوى المعروض) · موقوف · منتقٍ موثَّق · مالك التطبيق.
 // قبل كل نداء تُعاد قاعدة البيانات إلى عالم واحد معلوم (بقواعد معطَّلة) كي لا يؤثّر باب في باب.
-// المرحلة الأولى (هذه): قياس — أسطر RM و PS3 خارج الحصيلة، ومع كل خلية المتوقَّع بالقراءة؛ المخالفة تُطبع MISMATCH ولا تُسقط التشغيل.
-// المرحلة الثانية (بعد مراجعة الجدول المقيس): الخلايا تتجمّد حالاتٍ محتسبة.
+// المرحلة الأولى (١٢ نوفمبر): قياس — أسطر RM و PS3 خارج الحصيلة، ومع كل خلية المتوقَّع بالقراءة.
+// المرحلة الثانية (هذه · ١٣ نوفمبر — بعد أول قياس على المحرّك الرسمي: ٢٩٤ خلية، ٢٩٣ طابقت المتوقَّع):
+//   الخلايا تجمّدت: كل باب حالة محتسبة في tests/rules-sim.js (صفّه المقيس = صفّه المتوقَّع، وإلا احمرّ التشغيل).
+//   المخالفة الوحيدة كانت بذر هذا الملف لا قاعدة ولا كود: الباب ٤٢ (المالك يقبل طلب rmA) لم يكن طلب rmA مزروعًا حين يفعل المالك، فرُفض التحديث على مستند غائب.
+//   بذره صُحّح هنا، ويبقى خارج الحصيلة (العنصر السادس في صفّه) حتى يُقاس مرة بعد التصحيح. قبول المالك نفسه محتسب أصلًا («M4.25 curatorRequests status change by OWNER allow»).
 // النتيجة لكل خلية: A نجح النداء · D رفضته القواعد · s رُفض وابتُلع (النداء عاد بلا خطأ والأثر لم يقع) · W نجح ومسح جاره · X:رمز خطأ آخر.
 'use strict';
 const fs = require('fs');
@@ -55,6 +58,7 @@ module.exports = async function runRolesMatrix(env, OWNER, log){
       }
       await b.commit(); }); };
   const peek = async function(p){ let d = null; await env.withSecurityRulesDisabled(async function(ctx){ const s = await ctx.firestore().doc(p).get(); d = s.exists ? s.data() : null; }); return d; };
+  const plant = async function(p, d){ await env.withSecurityRulesDisabled(async function(ctx){ await ctx.firestore().doc(p).set(d); }); };
   const drop = async function(p){ await env.withSecurityRulesDisabled(async function(ctx){ await ctx.firestore().doc(p).delete(); }); };
   const P1 = { id: 'q1', name: 'Q', url: 'https://maps.app.goo.gl/rmq1', topPlace: true, topAt: 5 };
   const listData = function(u, city, pub){ return { ownerId: u, cityId: city, cityName: city, nickname: null, public: pub, sharedWith: [], catsV: 3, bookmarkCount: 0, viewCount: 0, copyCount: 0, categories: { coffee: { active: true, places: [P1] } } }; };
@@ -103,7 +107,7 @@ module.exports = async function runRolesMatrix(env, OWNER, log){
     ['cityNotes.save · my note on a city', 'DDDDAD', function(mp, u){ return mp.cityNotes.save(u, 'c1', { text: 'note' }); }],
     ['requests.create · I never asked', 'DAADAA', function(mp, u){ return mp.requests.create(u, 'please'); }, null, async function(u){ await drop('curatorRequests/' + u); }],
     ['requests.again · declined 8 days ago', 'DAADAA', function(mp, u){ return mp.requests.again(u, 'again'); }],
-    ['requests.setStatus · accept A', 'DDDDDA', function(mp){ return mp.requests.setStatus('rmA', 'accepted'); }],
+    ['requests.setStatus · accept A', 'DDDDDA', function(mp){ return mp.requests.setStatus('rmA', 'accepted'); }, null, async function(){ await plant('curatorRequests/rmA', { uid: 'rmA', text: 'first', at: Date.now(), status: 'pending' }); }, 'seed fixed 13 Nov (the request of rmA was planted only when rmA acted) — counted after one measured run'],
     ['reports.create · app report of 250 characters', 'DAADAA', function(mp, u){ return mp.reports.create(u, 'app', '', 'x'.repeat(250)); }],
     ['reports.removeMine · account deletion', 'DAAAAA', function(mp, u){ return mp.reports.removeMine(u); }],
     ['identity.put · a new place identity', 'DAADAA', function(mp, u){ return mp.identity.put('k_rm_new', { lat: 1, lng: 2, source: 'user_pin', n: 'X', cityId: '2988507', by: u, at: Date.now() }); }],
@@ -123,7 +127,7 @@ module.exports = async function runRolesMatrix(env, OWNER, log){
       cells++; const want = d[1][r]; if (c[0] !== want){ mismatches++; log('INFO  RM MISMATCH ' + ('0' + (i + 1)).slice(-2) + ' ' + role + ' · expected ' + want + ' · got ' + c + ' · ' + d[0]); }
       got += (c.length === 1 ? c : 'X'); }
     rows.push(got); log('INFO  RM ' + ('0' + (i + 1)).slice(-2) + ' ' + got.split('').join(' ') + '  (G A B S V O) · ' + d[0]); }
-  log('\nPS3 n=' + rows.length + ' doors × 6 roles (G A B S V O) · cells ' + cells + ' · mismatches ' + mismatches + ' (قياس — خارج الحصيلة)');
+  log('\nPS3 n=' + rows.length + ' doors × 6 roles (G A B S V O) · cells ' + cells + ' · mismatches ' + mismatches + ' (الصفوف محتسبة في الحصيلة — عدا ما عُلّم قيد القياس)');
   for (let i = 0; i < rows.length; i += 8) log('PS3 ' + ('0' + (i + 1)).slice(-2) + ': ' + rows.slice(i, i + 8).join(' '));
-  return { cells: cells, mismatches: mismatches };
+  return { cells: cells, mismatches: mismatches, rows: rows, doors: DOORS.map(function(d){ return { name: d[0], want: d[1], pending: d[5] || '' }; }) };
 };
