@@ -146,7 +146,7 @@ function renderAddresses(){
 // إرسال العنوان خارج التطبيق بتوقيع (قرار إرسال لا مشاركة بيانات) — مشاركة النظام، وإلا نسخ للحافظة
 async function sendAddr(cityId, catId, index){
   const cat = privateCategoryList().find(c => c.id === catId); const p = ((addrData[cityId] || {})[catId] || {}).places[index]; if (!p) return;
-  const text = `${cat ? cat.name : ''}${p.name ? ': ' + p.name : ''} — ${cityNameOf(cityId)}${p.note ? ' · ' + p.note : ''}${p.phone ? ' · ' + p.phone : ''}\n${p.url}\nSent via MyPickz · mypickz.app`;
+  const text = `${cat ? cat.name : ''}${p.name ? ': ' + p.name : ''} — ${cityNameOf(cityId)}${p.note ? ' · ' + p.note : ''}${p.phone ? ' · ' + p.phone : ''}\n${p.url}\nSent via MyPickz · ${mpShareUrl({ src: 'app' })}`;
   mpTrack.hit('share_link');
   try{
     if (navigator.share) await navigator.share({ text });
@@ -172,7 +172,7 @@ function addrModalRenderCityPanel(){
     items: cityListAllCities().filter(c => c.country).map(c => ({ id: c.id, name: c.name, icon: countryFlag(c.country) || '', selected: c.id === addrModalCity })) });
 }
 function addrModalPickCity(id){ addrModalCity = id; pickerRowClose('addrModalCity'); addrModalRenderCityPanel(); }
-async function addrModalAddCity(){ await addAddrCity(); if (addrCurrentCity) addrFillCountries(addrCurrentCity); }
+async function addrModalAddCity(){ await addAddrCity(); } /* r117-ج (وُجد بمحطته): كان يعيد ملء النافذة بمدينة تبويب العناوين بعد كل عودة — فإلغاء الإضافة يُسقط المدينة التي اختارها المستخدم في النافذة. مسار الإضافة نفسه يفتح النافذة على المدينة الجديدة عند اكتماله (openAddrModal)؛ والإلغاء لا يغيّر شيئًا */
 function addrSetMethod(paste){
   const pw = document.getElementById('addrPasteWrap');
   document.getElementById('addrMethodPaste').classList.toggle('on', paste);
@@ -250,7 +250,8 @@ async function cityDelSide(other){
     showToast('Removed from Addresses');
     renderAddresses(); if (currentTab === 'Places') renderPlacesBody();
   } else {
-    let __ok2 = false; const __att2 = async function(){ try{ await mpData.cityLists.remove(currentUser.uid, cityId); __ok2 = true; return true; }catch(e){ await mpSaveFailed('places', e, __att2, async function(){}); return __ok2; } }; if (!(await __att2())) return; /* r100-أ */ try{ await syncCommunityProfile(); }catch(e){} // ر٧٢-أ-١د: إلغاء المحتوى بمدينة قياسية يزامن الملف العام أيضًا
+    const __sbGone = await savedByGather(cityId); /* r117-أ: النسخ المعدودة في «saved by» تُجمع قبل حذف القائمة */
+    let __ok2 = false; const __att2 = async function(){ try{ await mpData.cityLists.remove(currentUser.uid, cityId); __ok2 = true; return true; }catch(e){ await mpSaveFailed('places', e, __att2, async function(){}); return __ok2; } }; if (!(await __att2())) return; /* r100-أ */ savedByRelease(__sbGone); /* r117-أ: الحذف نجح — عدّاداتها تنقص وسجلاتي تُحذف */ try{ await syncCommunityProfile(); }catch(e){} // ر٧٢-أ-١د: إلغاء المحتوى بمدينة قياسية يزامن الملف العام أيضًا
     if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
     if (cityDelCtx.isCustom && (await cityCountAddr(cityId)) === 0){ await removeCityListCity(cityId, { confirmed: true }); }
     else if (cityListCityId === cityId){ const rem = cityListAllCities().filter(c => c.country === cityListCountry && c.id !== cityId); cityListCityId = rem.length ? rem[0].id : null; }
@@ -304,10 +305,10 @@ async function saveAddrRun(){
       await commitPendingCityIfNeeded(cityId); // r18: تخليد المدينة المعلقة مع حفظ أول عنوان
       await mpData.privatePlaces.setCategory(currentUser.uid, cityId, catId, entry);
       await mpData.userLists.addPrivateCity(currentUser.uid, cityId);
-      if (userListData && !userListData.privateCities.includes(cityId)) userListData.privateCities.push(cityId);
+      if (userListData){ if (!Array.isArray(userListData.privateCities)) userListData.privateCities = []; /* r116-ح (وُجد بمحطة personal_save ١١ نوفمبر): الفهرس قد يغيب عن الكائن (تحميل هوية تعثّر — السطر ٧٨ في citylist) فكان هذا السطر يرمي بعد نجاح الكتابتين: العنوان محفوظ والنافذة تقول «Could not save» */ if (!userListData.privateCities.includes(cityId)) userListData.privateCities.push(cityId); }
       addrCurrentCity = cityId; if (userListData){ userListData.addrCity = cityId; mpData.userLists.merge(currentUser.uid, { addrCity: cityId }).catch(()=>{}); }
       closeModalById('addrBackdrop');
-      showToast('Saved ✓');
+      showToast('Saved ✓'); mpTrack.hit('personal_save', { personal: true }); /* r116-ح: عنوان شخصي حُفظ — بلا مدينة ولا تصنيف (خاص) */
       await loadAddresses(true);
     }catch(e){ err.textContent = 'Could not save — try again'; await mpSaveFailed('addresses', e, __attempt, async function(){ addrDiscard(); }); renderAddresses(); }
   };
@@ -344,25 +345,23 @@ async function doAccountDelete(){
   btn.disabled = true; const label = btn.textContent; btn.textContent = 'Deleting…';
   const uid = currentUser.uid;
   try{
-    // ١ — سجلاتي على محتوى الآخرين (العدّادات تتراجع بالدفعة المربوطة)
-    await ensureListBookmarks(); await ensureTripSaves();
+    // ١ — سجلاتي على محتوى الآخرين. الدفعة ٢ (قواعد v3.17 ١١): كل سجل يُطلق من بابه الواحد — −١ على عدّاده، أو السجل وحده حين لا عدّاد يُنقص (المصدر حُذف · صفر · لم يعد عامًّا · أنا موقوف). المرآة لا تُكتب: المستند الأم يُحذف في ٤.
+    //    كانت المتابعات تُحذف سجلاتٍ وحدها، وسجلات نسخ القوائم والرحلات دفعاتٍ بلا عدّاد: القاعدة ترفض ذلك والعدّاد فوق الصفر، فيبقى الحساب المحذوف معدودًا عند غيره.
+    await ensureListBookmarks(); await ensureTripSaves(); let __left = 0;
     for (const listId of Object.keys(listBookmarksMap || {})){
       const r = listBookmarksMap[listId];
-      try{ await mpData.bookmarks.toggleList(uid, r.ownerUid, r.cityId, false); }
-      catch(e){ try{ await mpData.bookmarks.removeRecord(uid, listId); }catch(_){ } }
+      try{ await mpData.bookmarks.toggleList(uid, r.ownerUid, r.cityId, false, { noMirror: true }); }catch(e){ __left++; mpSwallow(e, 'cascade bookmark'); }
     }
     for (const tripId of Object.keys(tripSavesMap || {})){
-      try{ await mpData.tripSaves.toggle(uid, tripId, false); }
-      catch(e){ try{ await mpData.tripSaves.removeRecord(uid, tripId); }catch(_){ } }
+      try{ await mpData.tripSaves.toggle(uid, tripId, false, { noMirror: true }); }catch(e){ __left++; mpSwallow(e, 'cascade trip save'); }
     }
-    // ٢ — متابعاتي
-    try{
-      const fids = await mpData.follows.mineAsFollower(uid);
-      for (const id of fids){ try{ await mpData.follows.remove(id); }catch(_){ } }
-    }catch(_){ }
-    try{ await mpData.copies.removeMine(uid); }catch(_){ } // r72t (M4.26 ٢): سجلات النسخ (بلا إنقاص العدّادات — سكربت الصيانة يعيد اشتقاقها)
+    // ٢ — متابعاتي ونسخي
+    try{ __left += (await mpData.follows.releaseMine(uid)) || 0; }catch(e){ __left++; mpSwallow(e, 'cascade follows'); }
+    try{ __left += (await mpData.copies.removeMine(uid)) || 0; }catch(e){ __left++; mpSwallow(e, 'cascade copies'); } // r72t (M4.26 ٢): سجلات النسخ · r117-أ: سجل حفظ المكان يُنقص عدّاده «saved by» بالدفعة نفسها · الدفعة ٢: وسجل نسخ القائمة والرحلة يُنقص copyCount على مصدره
     try{ await mpData.requests.removeMine(uid); }catch(_){ }
-    try{ await mpData.reports.removeMine(uid); }catch(_){ }
+    try{ await mpData.reports.removeMine(uid); }catch(e){ mpSwallow(e, 'cascade reports'); } /* الدفعة ٢ (قواعد v3.17 ١٢): الاستعلام صار مقبولًا لصاحب البلاغ */
+    try{ await mpData.cityNotes.removeMine(uid); }catch(e){ mpSwallow(e, 'cascade city notes'); } /* الدفعة ٢: رأيي في المدن */
+    if (__left) try{ logTiming('DELETE · ' + __left + ' record(s) on others\' content could not be released'); }catch(_){ }
     // ٣ — محتواي: الرحلات (تُترك حفوظ الآخرين لها صفوف degraded بتصميمها) ثم قوائم المدن والعناوين لكل مدينة معروفة
     // ر٦٧ (صيد المحاكاة): الحذف بالاستعلام المالكي ∪ المحلي — القائمة المحلية قد تكون ناقصة (تحميل لم يكتمل · جهاز آخر)
     const tripIds = new Set((userTrips || []).map(t => t.id));
@@ -374,10 +373,12 @@ async function doAccountDelete(){
         .filter(Boolean)
     )];
     try{ (await mpData.cityLists.byOwner(uid)).forEach(function(d){ const cid = String(d.id).split('_').slice(1).join('_'); if (cid && cityIds.indexOf(cid) < 0) cityIds.push(cid); }); }catch(e){ mpSwallow(e, 'cascade'); } // ر٦٧: ∪ استعلام المالك
+    try{ await savedByReleaseCities(cityIds); }catch(e){ mpSwallow(e, 'cascade'); } /* r117-أ: «saved by» — نسخي المعدودة تُطلق من القوائم نفسها قبل حذفها (لا تعتمد استعلام سجل النسخ) */
     for (const cid of cityIds){
       try{ await mpData.cityLists.remove(uid, cid); }catch(e){ mpSwallow(e, 'cascade'); }
       try{ await mpData.privatePlaces.remove(uid, cid); }catch(_){ } // العناوين: قاعدتها بمعرّف المستند فلا استعلام — مرآة privateCities هي الفهرس (قيد r58)
     }
+    try{ await mpData.cityLists.removeOrphanCats(uid); }catch(e){ mpSwallow(e, 'cascade orphan cats'); } /* الدفعة ٢: تصنيفات بقيت خارج المدن المعروفة */
     // ٤ — هويتي (المستند الأم أخيرًا — المرايا والفهارس تسكنه)
     try{ await mpData.profiles.remove(uid); }catch(_){ }
     const nick = (userListData && userListData.nickname) || '';
