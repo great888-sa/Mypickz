@@ -23,6 +23,7 @@
 // v3.17 (١٢ نوفمبر ٢٠٢٦ — إصلاحات المراجعة الشاملة · المحور ١ · ق١١-١٢-٠٥): + القسم ٣٢ (حالات النص الجديد) · قياسات القسم ٣١ صارت محتسبة (المتوقَّع لكل قياس تحت v3.17)
 //   · الحالات القائمة التي كانت تنشئ سجلًّا أو تحذفه وحده انقلبت إلى رفض (الربط بالاتجاهين) وحالتها تُبذر بقواعد معطَّلة كي يبقى ما بعدها كما هو
 //   · التواريخ الحرفية في معرّفات المستندات اليومية تُحوَّل عند النداء إلى أمس/اليوم/غدًا (نافذة التاريخ) — انظر DATE_MAP
+// r118-ي (١٢ نوفمبر ٢٠٢٦): + القسم ٣٣ — مصفوفة الأدوار (tests/roles-matrix.js): قياس خارج الحصيلة، أسطر RM و PS3
 // قياسات المراجعة الشاملة (١٢ نوفمبر ٢٠٢٦ · ق١١-١٢-٠٢): + القسم ٣١ — أسطر INFO خارج الحصيلة (الحالات المحتسبة تبقى ٦٧١) · خلاصتها أسطر «PS» آخر السجل
 'use strict';
 const fs = require('fs');
@@ -1628,6 +1629,12 @@ const no = (label, f) => expect(false, label, f);
     await ok('v3.17 trip create with title null and cityName null allow', () => x.doc('trips/t17n').set({ ownerId: X, public: false, sharedWith: [], title: null, cityName: null }));
   }
 
+
+  // ================= ٣٣) مصفوفة الأدوار (r118-ي · ق١١-١٢-٠٢) — قياس خارج الحصيلة: طبقة البيانات الحقيقية أمام القواعد الحقيقية، بستة أدوار =================
+  // التفاصيل في tests/roles-matrix.js. تُمسح قاعدة البيانات قبل كل خلية، فهذا القسم يأتي آخرًا. عطل فيه يُطبع ويمضي؛ ومهلة كلية تمنع التعليق.
+  try { const runRolesMatrix = require('./roles-matrix.js');
+    await Promise.race([runRolesMatrix(env, OWNER, function(m){ console.log(m); }), new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('roles matrix: 420 s limit')); }, 420000); })]);
+  } catch (e) { console.log('INFO  RM ABORTED · ' + String(e && (e.message || e.code) || e).slice(0, 200)); }
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
