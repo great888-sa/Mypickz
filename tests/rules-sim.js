@@ -23,6 +23,7 @@
 // v3.17 (١٢ نوفمبر ٢٠٢٦ — إصلاحات المراجعة الشاملة · المحور ١ · ق١١-١٢-٠٥): + القسم ٣٢ (حالات النص الجديد) · قياسات القسم ٣١ صارت محتسبة (المتوقَّع لكل قياس تحت v3.17)
 //   · الحالات القائمة التي كانت تنشئ سجلًّا أو تحذفه وحده انقلبت إلى رفض (الربط بالاتجاهين) وحالتها تُبذر بقواعد معطَّلة كي يبقى ما بعدها كما هو
 //   · التواريخ الحرفية في معرّفات المستندات اليومية تُحوَّل عند النداء إلى أمس/اليوم/غدًا (نافذة التاريخ) — انظر DATE_MAP
+// ١٣ نوفمبر ٢٠٢٦: القسم ٣٣ صار محتسبًا — ٤٨ بابًا من ٤٩ (كل باب حالة: صفّه المقيس = المتوقَّع)؛ الحصيلة ٩٤٢ + ٤٨ = ٩٩٠
 // r118-ي (١٢ نوفمبر ٢٠٢٦): + القسم ٣٣ — مصفوفة الأدوار (tests/roles-matrix.js): قياس خارج الحصيلة، أسطر RM و PS3
 // قياسات المراجعة الشاملة (١٢ نوفمبر ٢٠٢٦ · ق١١-١٢-٠٢): + القسم ٣١ — أسطر INFO خارج الحصيلة (الحالات المحتسبة تبقى ٦٧١) · خلاصتها أسطر «PS» آخر السجل
 'use strict';
@@ -1632,9 +1633,16 @@ const no = (label, f) => expect(false, label, f);
 
   // ================= ٣٣) مصفوفة الأدوار (r118-ي · ق١١-١٢-٠٢) — قياس خارج الحصيلة: طبقة البيانات الحقيقية أمام القواعد الحقيقية، بستة أدوار =================
   // التفاصيل في tests/roles-matrix.js. تُمسح قاعدة البيانات قبل كل خلية، فهذا القسم يأتي آخرًا. عطل فيه يُطبع ويمضي؛ ومهلة كلية تمنع التعليق.
+  // ١٣ نوفمبر: الخلايا تجمّدت بعد أول قياس على المحرّك الرسمي (٢٩٤ خلية · ٢٩٣ طابقت · المخالفة بذر المصفوفة نفسها — انظر رأس الملف).
+  //   كل باب حالة محتسبة: صفّه المقيس (ستة أدوار) = صفّه المتوقَّع. باب عُلّم «قيد القياس» يُطبع INFO ولا يُحتسب. والمصفوفة التي لم تجرِ أو انقطعت حالة فاشلة — لا خضرة بلا قياس.
   try { const runRolesMatrix = require('./roles-matrix.js');
-    await Promise.race([runRolesMatrix(env, OWNER, function(m){ console.log(m); }), new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('roles matrix: 420 s limit')); }, 420000); })]);
-  } catch (e) { console.log('INFO  RM ABORTED · ' + String(e && (e.message || e.code) || e).slice(0, 200)); }
+    const rm = await Promise.race([runRolesMatrix(env, OWNER, function(m){ console.log(m); }), new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('roles matrix: 420 s limit')); }, 420000); })]);
+    if (!rm || !rm.rows || !rm.doors || rm.rows.length !== rm.doors.length || !rm.rows.length){ fail++; console.log('FAIL  RM frozen  →  the roles matrix did not run (no rows measured)'); }
+    else rm.doors.forEach(function(d, i){ const got = rm.rows[i], n = ('0' + (i + 1)).slice(-2);
+      if (d.pending){ console.log('INFO  RM pending ' + n + ' [' + d.want + '] got ' + got + ' · ' + d.name + ' · ' + d.pending); return; }
+      if (got === d.want){ pass++; console.log('PASS  RM frozen ' + n + ' [' + d.want + '] ' + d.name); }
+      else { fail++; console.log('FAIL  RM frozen ' + n + ' ' + d.name + '  →  expected ' + d.want + ' | got ' + got); } });
+  } catch (e) { fail++; console.log('FAIL  RM frozen  →  ABORTED · ' + String(e && (e.message || e.code) || e).slice(0, 200)); }
 
   await env.cleanup();
   console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed');
