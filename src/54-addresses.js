@@ -329,7 +329,7 @@ async function deleteAddr(cityId, catId, index){
 function openDeletePreview(){
   document.getElementById('delCntPlaces').textContent = Object.values((myCityListData && myCityListData.categories) || {}).reduce((a, c) => a + ((c.places || []).length), 0) || '—';
   document.getElementById('delCntTrips').textContent = (typeof userTrips !== 'undefined' && userTrips) ? userTrips.length : '—';
-  document.getElementById('delCntFav').textContent = String(Object.keys(placeBmMap()).length + Object.keys(listBookmarksMap || {}).length + Object.keys(tripSavesMap || {}).length);
+  document.getElementById('delCntFav').textContent = String(Object.keys(placeBmMap()).length + Object.keys(listBmMap()).length + Object.keys(tripSaveMap()).length); /* r119: العدد من الخريطة المبنيّة — كان صفرًا حتى يفتح أحدٌ شاشة تبنيها */
   const prof = (typeof curators !== 'undefined' && curators && currentUser) ? curators.find(function(c){ return c.uid === currentUser.uid; }) : null; const pe = document.getElementById('delCntProfile'); if (pe) pe.textContent = prof ? ((typeof prof.followerCount === 'number' ? prof.followerCount : 0) + ' followers') : '1'; /* ب-٢-٢-أ٢: صفحة المنتقي بمتابعيها */
   delStep(1); openModalById('delBackdrop');
 }
@@ -340,6 +340,7 @@ function openDeletePreview(){
 async function doAccountDelete(){
   const btn = document.getElementById('delGo'); if (!btn || btn.disabled) return;
   if (!currentUser) return;
+  if (userListLoadFailed){ showToast('Reload first — your account did not load'); return; } /* r119 (المراجعة المستقلة): بلا مستند الحساب لا تُعرف سجلاتي على محتوى الآخرين — الحذف كان يتركها معدودة ويُبقي حجز الاسم */
   const ok = await requestReauth();
   if (!ok){ showToast('Identity not confirmed — nothing was deleted'); return; }
   btn.disabled = true; const label = btn.textContent; btn.textContent = 'Deleting…';
@@ -348,11 +349,12 @@ async function doAccountDelete(){
     // ١ — سجلاتي على محتوى الآخرين. الدفعة ٢ (قواعد v3.17 ١١): كل سجل يُطلق من بابه الواحد — −١ على عدّاده، أو السجل وحده حين لا عدّاد يُنقص (المصدر حُذف · صفر · لم يعد عامًّا · أنا موقوف). المرآة لا تُكتب: المستند الأم يُحذف في ٤.
     //    كانت المتابعات تُحذف سجلاتٍ وحدها، وسجلات نسخ القوائم والرحلات دفعاتٍ بلا عدّاد: القاعدة ترفض ذلك والعدّاد فوق الصفر، فيبقى الحساب المحذوف معدودًا عند غيره.
     await ensureListBookmarks(); await ensureTripSaves(); let __left = 0;
-    for (const listId of Object.keys(listBookmarksMap || {})){
-      const r = listBookmarksMap[listId];
+    const __lm = listBmMap(), __tm = tripSaveMap(); /* r119 */
+    for (const listId of Object.keys(__lm)){
+      const r = __lm[listId];
       try{ await mpData.bookmarks.toggleList(uid, r.ownerUid, r.cityId, false, { noMirror: true }); }catch(e){ __left++; mpSwallow(e, 'cascade bookmark'); }
     }
-    for (const tripId of Object.keys(tripSavesMap || {})){
+    for (const tripId of Object.keys(__tm)){
       try{ await mpData.tripSaves.toggle(uid, tripId, false, { noMirror: true }); }catch(e){ __left++; mpSwallow(e, 'cascade trip save'); }
     }
     // ٢ — متابعاتي ونسخي
