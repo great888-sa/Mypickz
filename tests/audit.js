@@ -681,6 +681,7 @@ function finish(){
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
   toastGuard();
+  bookmarkMapGuard();
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
   process.exit(fails === 0 ? 0 : 1);
 }
@@ -1204,6 +1205,21 @@ function toastGuard(){
   const cfgT = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')); const longT = [];
   cfgT.parts.filter(function(p){ return /\.js$/.test(p); }).forEach(function(p){ const t = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); const re = /(?:showToast|showUndoToast|mpErrToast)\('((?:[^'\\]|\\.)*)'/g; let m; while ((m = re.exec(t))){ const lit = m[1].replace(/\\'/g, "'"); if (lit.length > 98) longT.push(p + ': ' + lit.length + ' · ' + lit.slice(0, 50)); } });
   check(longT.length === 0, T + 'no fixed toast text is longer than two lines hold (98 characters) — a longer one loses its end', longT.slice(0, 4).join(' | '));
+}
+
+// ---------- §37c (r119 · ق١١-١٣-٠١): خريطتا التمييز وحفظ الرحلات تُقرآن من باب واحد يبنيهما عند أول قراءة ----------
+// شاشة ترسم زر التمييز من المتغيّر مباشرة ترسمه مطفأً قبل أن تُبنى الخريطة، ثم تحذف الضغطةُ التمييزَ (بلاغ المالك من الهاتف ١٣ نوفمبر — مقيس).
+function bookmarkMapGuard(){
+  const T = '§37c the bookmark maps are read through one door (r119): ';
+  const cfgB = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')); const bad = [];
+  cfgB.parts.filter(function(p){ return /\.js$/.test(p) && p !== '50-ui.js'; }).forEach(function(p){ const t = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); const re = /\b(listBookmarksMap|tripSavesMap)\b(?!\s*=\s*(?:null|\{\})\s*;)/g; let m; while ((m = re.exec(t))) bad.push(p + ': ' + t.slice(Math.max(0, m.index - 30), m.index + 40).replace(/\n/g, ' ')); });
+  check(bad.length === 0, T + 'outside src/50-ui.js the two variables are only reset (= null · = {}) — every screen asks listBmOn / tripSaveOn / listBmMap / tripSaveMap', bad.slice(0, 3).join(' | '));
+  const ui = fs.readFileSync(path.join(ROOT, 'src', '50-ui.js'), 'utf8');
+  const cl = fs.readFileSync(path.join(ROOT, 'src', '57-citylist.js'), 'utf8'); const lu = cl.slice(cl.indexOf('async function loadUserList(){'), cl.indexOf('\n}\n', cl.indexOf('async function loadUserList(){')));
+  check(/listBookmarksMap = null; tripSavesMap = null;/.test(lu), T + 'loadUserList resets both maps to null after the user document is read — the door rebuilds from the loaded mirror, not from the empty fallback (independent review: nothing else protected this line)');
+  const tr = fs.readFileSync(path.join(ROOT, 'src', '52-trips.js'), 'utf8');
+  check(/const bmTap = String\(o\.bmHandler \|\| ''\)\.replace\(\/\\\)\\s\*\$\/, ', ' \+ \(o\.bmOn \? 0 : 1\) \+ '\)'\);/.test(tr) && /on: bmTap,/.test(tr) && /if \(!mpTapAgrees\(want, !on\)\)/.test(ui), T + 'every list / trip card button carries what was drawn on it, and the handler does not write when the state disagrees');
+  check(/function listBmMap\(\)\{ if \(listBookmarksMap === null && currentUser\) listBmBuild\(\); return listBookmarksMap \|\| \{\}; \}/.test(ui) && /function tripSaveMap\(\)\{ if \(tripSavesMap === null && currentUser\) tripSaveBuild\(\); return tripSavesMap \|\| \{\}; \}/.test(ui), T + 'the door builds the map on first read (synchronously, from the loaded mirror)');
 }
 
 // ---------- §38 (r109 · ق١١-١٠-٠٣ — ميزانية القراءة): قراءات سوق المجتمع من باب واحد (cmMarketGet) بذاكرة جلسة ومهلة — لا نداء مباشر لاستعلامَي السوق خارجه · والرحلة تعدّ القراءات شاشةً شاشة ----------
