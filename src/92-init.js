@@ -23,6 +23,7 @@
       logTiming('User data loaded (bookmarks, My List, Trips) — login features ready');
       resolveAuthReady();
       if (user){ try{ await mpSharerInit(); mpArrivalOpen(); }catch(_){} try{ mpShareInOpen(); }catch(_){} } /* r115-د (٥): رمز المشارك جاهز · والرابط يفتح محتواه بعد الدخول */
+      try{ if (currentTab === 'Community') renderCommunityModal(); else if (currentTab === 'Curators') renderCuratorsBody(); else if (currentTab === 'Trips') renderTripsBody(); }catch(_){} /* r119: شاشة رُسمت قبل اكتمال تحميل الحساب تُعاد الآن بحاله (التمييز · الحفظ · المتابعة) */
       if (currentTab === 'Places') renderPlacesBody(); // خ٥/م٢-ج: أول تحميل واستعادة الجلسة والدخول والخروج — الوجهة الجديدة تتحدث مع كل تغيّر حالة
       enforceNickname(); // لا ننتظرها — تعمل فوق المحتوى الظاهر
     });
