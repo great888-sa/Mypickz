@@ -40,7 +40,7 @@ let tripCityFilter = '';             // ر٦٦ (القرار ١١ · البند 
 const TRIP_SOURCES = [['mine', 'My trips'], ['saved', 'My bookmarked'], ['savedCur', 'Saved from Curators'], ['savedCom', 'Saved from Community'], ['shared', 'Shared with me']]; // r72r-1
 let tripShowOpen = false;
 function tripSourceCounts(){ // r72w: عدد الرحلات لكل مصدر
-  const mine = (userTrips || []).filter(function(t){ return !t.source && !t.dayPlan; }).length; const saved = Object.keys(tripSavesMap || {}).length;
+  const mine = (userTrips || []).filter(function(t){ return !t.source && !t.dayPlan; }).length; const saved = Object.keys(tripSaveMap()).length; /* r119 */
   const curSet = {}; (curators || []).forEach(function(c){ curSet[c.uid] = true; }); const cur = (userTrips || []).filter(function(t){ return t.source && curSet[t.source.ownerId]; }).length; const com = (userTrips || []).filter(function(t){ return t.source && !curSet[t.source.ownerId]; }).length; // كمعيار renderSavedOthersTrips
   return { mine: mine, saved: saved, savedCur: cur, savedCom: com, shared: (sharedTrips || []).filter(function(t){ return !t.dayPlan; }).length }; } /* r103: خطة اليوم المشارَكة تُفتح من صفحة مدينة صاحبها لا من هنا */
 function tripToggleShowPanel(){ tripShowOpen = !tripShowOpen; tripSetSrcTitle(); const el = document.getElementById('tripShowPanel'); if (!el) return; const cnt = tripSourceCounts(); el.innerHTML = tripShowOpen ? pickerPanel({ id: 'tripShow', bare: true, onPick: 'tripPickSource', items: TRIP_SOURCES.map(function(x){ return { id: x[0], name: x[1], count: cnt[x[0]], selected: tripsSource === x[0] }; }) }) : ''; }
@@ -86,7 +86,7 @@ async function renderSavedTrips(){ // ر٦٤ (النموذج المستقر): ش
     return '<div class="row rowblock"><div class="pn" dir="auto">' + escapeHtml(tripTitle(t)) + '</div>'
       + '<div class="ps">' + tripMetaLine(t) + '</div>'
       + '<div class="rowacts"><button type="button" class="act" onclick="openTripDetail(\'' + t.id + '\')">View trip →</button>'
-      + '<button type="button" class="bmk-btn on" onclick="toggleTripSelfBookmark(\'' + t.id + '\')" title="Bookmarked — tap to remove">' + bmkSvg(true) + '</button>'
+      + '<button type="button" class="bmk-btn on" onclick="toggleTripSelfBookmark(\'' + t.id + '\', 0)" title="Bookmarked — tap to remove">' + bmkSvg(true) + '</button>'
       + '<button type="button" class="act" onclick="openExportPreview(\'trip\', \'' + t.id + '\')" title="Preview and send">📤</button>'
       + '<button type="button" class="act' + (t.public ? ' on' : '') + '" onclick="toggleTripPublicFor(\'' + t.id + '\')" title="' + (t.public ? 'Public — tap to make private' : 'Private — tap to make public') + '">' + '🌐' + '</button>'
       + '<button type="button" class="act' + (((t.sharedWith || []).length) ? ' on' : '') + '" onclick="shareTripFor(\'' + t.id + '\')" title="Share with someone by name">' + shareSvg() + '</button></div></div>'; // ر٦٩ش (N-061): صف ملكك ناقص التعديل
@@ -144,7 +144,7 @@ async function renderBookmarkedTripsInto(wrap){ // ر٦١: القالب المش
   if (!currentUser){ wrap.innerHTML = '<div class="mp-empty">Sign in to see your bookmarked trips.</div>'; return; }
   wrap.innerHTML = '<div class="mp-empty mini">Loading…</div>';
   await ensureTripSaves();
-  const recs = Object.keys(tripSavesMap || {}).map(k => tripSavesMap[k]);
+  const __tm = tripSaveMap(); const recs = Object.keys(__tm).map(k => __tm[k]);
   if (!recs.length){
     wrap.innerHTML = '<div class="mp-empty">🔖<br>Trips you save from curators and community appear here — your own trips live in My trips.</div>';
     return;
@@ -180,12 +180,12 @@ function openSavedTripInCommunity(ownerUid, tripId){
 }
 // إزالة سجل رحلة متدهورة: نحاول الدفعة المربوطة أولًا، وعند رفضها (الأصل غائب) نحذف السجل وحده
 async function removeDegradedTripSave(tripId){
-  const r = tripSavesMap && tripSavesMap[tripId]; if (!r) return;
-  delete tripSavesMap[tripId];
+  const __tm = tripSaveMap(); const r = __tm[tripId]; if (!r) return; /* r119 */
+  delete __tm[tripId];
   renderTripsBody();
   try{
     await mpData.tripSaves.toggle(currentUser.uid, tripId, false); /* الدفعة ٢: الباب الواحد يحذف السجل وحده حين لا عدّاد يُنقص */
-  }catch(e){ mpSwallow(e, 'trip-save remove'); tripSavesMap[tripId] = r; renderTripsBody(); mpErrToast('Could not remove bookmark', e); } /* كان الفشل صامتًا: الصف يختفي ويعود في الجلسة التالية (ك-٤) */
+  }catch(e){ mpSwallow(e, 'trip-save remove'); __tm[tripId] = r; renderTripsBody(); mpErrToast('Could not remove bookmark', e); } /* كان الفشل صامتًا: الصف يختفي ويعود في الجلسة التالية (ك-٤) */
 }
 function renderMyTripsModal(){
   const wrap = document.getElementById('myTripsBody');
@@ -223,7 +223,7 @@ function tripCardHtml(t){ // r77 (اللوحة ٧): بطاقة الرحلة — 
       { cls: 'flag', html: '🗑', on: "deleteTripById('" + attrStr(t.id) + "')", title: 'Delete this draft' }
     ] : [
       { html: 'Open →', on: "openTripDetail('" + attrStr(t.id) + "')", title: 'View trip' },
-      { cls: 'bmk' + (isSelfTripBookmarked(t.id) ? ' on' : ''), html: bmkSvg(isSelfTripBookmarked(t.id)), on: "toggleTripSelfBookmark('" + attrStr(t.id) + "')", title: isSelfTripBookmarked(t.id) ? 'Bookmarked — tap to remove' : 'Bookmark' },
+      { cls: 'bmk' + (isSelfTripBookmarked(t.id) ? ' on' : ''), html: bmkSvg(isSelfTripBookmarked(t.id)), on: "toggleTripSelfBookmark('" + attrStr(t.id) + "', " + (isSelfTripBookmarked(t.id) ? 0 : 1) + ")", title: isSelfTripBookmarked(t.id) ? 'Bookmarked — tap to remove' : 'Bookmark' },
       { html: '📤', on: "openExportPreview('trip', '" + attrStr(t.id) + "')", title: 'Preview and send' },
       { cls: (t.public ? 'on' : ''), html: '🌐', on: "toggleTripPublicFor('" + attrStr(t.id) + "')", title: t.public ? 'Public — tap to make private' : 'Private — tap to make public' },
       { cls: (((t.sharedWith || []).length) ? 'on' : ''), html: shareSvg(), on: "shareTripFor('" + attrStr(t.id) + "')", title: ((t.sharedWith || []).length) ? 'Shared with ' + t.sharedWith.length + ' — tap to manage' : 'Share with someone by name' },
@@ -280,7 +280,7 @@ function othersPlaceRowHtml(p, owner, cityObj, catId, tripCityId, extra, o){ o =
   const actions = [ /* r75a: البلاطات بأيقونات الطقم وأسمائها (وضع others) */
     mpMapsTile(p, cityObj, 'data-mpsrc="community" data-mpcat="' + attrVal(catId || '') + '"' + ((!mine && !p.nolist && p.url && owner.uid && cityObj && cityObj.id) ? ' data-mplist="' + attrVal(owner.uid + '_' + cityObj.id) + '"' : '')), /* غ-١ · r115-د (٣): قائمة المصدر على البلاطة — لعدّاد «المكان × القائمة» */
     (p.geo && typeof p.geo.lat === 'number' && cityObj) ? { cls: 'onmap', icon: 'map', label: 'On map', on: o.onMap || ("cmOpenPersonCityMap('" + attrStr(cityObj.id) + "', '" + attrStr(p.id || p.url) + "')"), title: 'Show on our map' } : { cls: 'onmap', icon: 'map', label: 'On map', disabled: true, title: 'No pin for this place yet' }, // ز-١-ب · r75a-٢: خريطتنا بلاطةً ثانية بالصف (قرار المالك) — لا «Map» بآخره
-    { cls: 'bmk' + (isBookmarked(okey) ? ' on' : ''), icon: 'bookmark', fill: isBookmarked(okey), label: 'Bookmark', on: "togglePlaceBookmark('" + okeyA + "', '" + safeName + "', '" + cat + "', '" + attrStr(cityObj ? cityObj.id : '') + "', '" + safeArea + "', '" + uidA + "', '" + safeUrl + "')", title: isBookmarked(okey) ? 'Bookmarked — tap to remove' : 'Bookmark' },
+    { cls: 'bmk' + (isBookmarked(okey) ? ' on' : ''), icon: 'bookmark', fill: isBookmarked(okey), label: 'Bookmark', on: "togglePlaceBookmark('" + okeyA + "', '" + safeName + "', '" + cat + "', '" + attrStr(cityObj ? cityObj.id : '') + "', '" + safeArea + "', '" + uidA + "', '" + safeUrl + "', " + (isBookmarked(okey) ? 0 : 1) + ")", title: isBookmarked(okey) ? 'Bookmarked — tap to remove' : 'Bookmark' },
     { icon: 'trip', label: 'Trip', on: "cmAddOthersPlaceToTrip('" + attrStr(tripCityId || (cityObj ? cityObj.id : '')) + "', '" + cat + "', '" + attrStr(p.id || '') + "', '" + uidA + "', '" + safeName + "')", title: 'Add to one of my trips' },
     { icon: 'share', label: 'Share', on: "cmExportOthersPlace('" + okeyA + "', '" + safeName + "', '" + safeUrl + "', '" + attrStr(owner.nickname || 'a user') + "', '" + safeArea + "', '" + safeCity + "', '" + cat + "')", title: 'Preview and send' },
     mine ? null : (placeCopyOf(owner.uid, (cityObj ? cityObj.id : ''), catId || '', p.id || hashUrl(p.url || '')) ? { cls: 'on', icon: 'check', label: 'Saved', on: "showToast('Already in your list — with credit')", title: 'In your list — with credit' } : { icon: 'save', label: 'Save', on: "saveOthersPlace('" + uidA + "', '" + attrStr(cityObj ? cityObj.id : '') + "', '" + cat + "', '" + attrStr(p.id || '') + "')", title: 'Copy into my list — with credit' }), // ز-١-ب: حي
@@ -292,7 +292,8 @@ function othersPlaceRowHtml(p, owner, cityObj, catId, tripCityId, extra, o){ o =
 function othersCard(o){ // ر٦٩ذ (N-062) · r72r-3: بطاقة القائمة/الرحلة بنمط بطاقة المكان — يسارًا الاسم وأزواج «عنوان/قيمة» · يمينًا Actions شبكة تلتف
   const acts = [];
   acts.push({ html: o.openLabel || 'Open →', on: o.openHandler, title: 'Open' });
-  if (!o.bmSelf) acts.push({ cls: 'bmk' + (o.bmOn ? ' on' : ''), html: bmkSvg(!!o.bmOn) + '<span class="bmk-cnt">' + (o.cnt || 0) + '</span>', on: o.bmHandler, title: o.bmOn ? 'Bookmarked — tap to remove' : 'Bookmark' });
+  const bmTap = String(o.bmHandler || '').replace(/\)\s*$/, ', ' + (o.bmOn ? 0 : 1) + ')'); /* r119: الزر يحمل ما رُسم عليه — المعالج لا يكتب إن خالفه الحال (mpTapAgrees). موضع واحد لكل بطاقات القوائم والرحلات */
+  if (!o.bmSelf) acts.push({ cls: 'bmk' + (o.bmOn ? ' on' : ''), html: bmkSvg(!!o.bmOn) + '<span class="bmk-cnt">' + (o.cnt || 0) + '</span>', on: bmTap, title: o.bmOn ? 'Bookmarked — tap to remove' : 'Bookmark' });
   if (o.exportHandler) acts.push({ html: '📤', on: o.exportHandler, title: 'Send' });
   if (!o.bmSelf && o.saveHandler){ acts.push(o.savedOn ? { cls: 'on', html: 'Saved ✓', on: o.unsaveHandler || '', title: 'In your trips — tap to remove your copy' } : { html: 'Save', on: o.saveHandler, title: 'Copy into my trips — with credit' }); } /* r74m: لا زر «Save 3» — بطاقة بلا معالج حفظ لا تعرض حفظًا */
   if (!o.bmSelf && o.reportKey) acts.push({ cls: 'flag', html: '⚑', on: "openReport('" + attrStr(o.reportKind || 'list') + "', '" + attrStr(o.reportKey) + "')", title: 'Report' });
