@@ -146,7 +146,7 @@ const MP_EXPECTED = [
   ["window.addEventListener('unhandledrejection'", { prod: 1, test: 2 }], // د-٤: نسخة الاختبار تسجّل الرفض غير الملتقَط في لوحة TIMING
   // خ٢ (٢٧ أغسطس): وجهة العناوين الشخصية تعرض روابطها بسماتها (data-mpsrc="app" · data-mppersonal="1") — إبرة إضافية بنسخة الاختبار
   //   حتى ترقية الإطار للإنتاج (حينها يصير العدد ٨/٣ بالملفين وتُوحَّد القيمة). القيمة إما رقم واحد للملفين أو {prod, test}.
-  ['data-mpsrc=', { prod: 7, test: 4 }], // r74b-٢: نافذة My List القديمة زالت برابطيها // ر٧٣-أب (١): زالت سمة الدليل الموروث // r72w: رحلة الآخرين تمرّ بالبطاقة الموحَّدة (community) // ر٥٢: رابط نافذة My Favorites المتقاعدة كان يحمل السمة — زال معها
+  ['data-mpsrc=', { prod: 8, test: 5 }], /* r115-د (٤): + بلاطة الخريطة في أماكني (data-mpsrc="mine") */ // r74b-٢: نافذة My List القديمة زالت برابطيها // ر٧٣-أب (١): زالت سمة الدليل الموروث // r72w: رحلة الآخرين تمرّ بالبطاقة الموحَّدة (community) // ر٥٢: رابط نافذة My Favorites المتقاعدة كان يحمل السمة — زال معها
   ['data-mppersonal=', { prod: 2, test: 1 }] // r74b-٢: نافذة My List القديمة زالت (بقي رابط وجهة العناوين) // ر٧٣-أب (١): data-mpowner زالت مع الدليل
 ];
 function countOcc(haystack, needle){ return haystack.split(needle).length - 1; }
@@ -312,12 +312,10 @@ const KNOWN_DEAD = ['requestReauth'];          // ر42: مبنية عمدًا ق
 const KNOWN_SOON = [ /* النص الظاهر → المرحلة التي تُزيله (الخطة §٢) */
   { re: /Available when Google sign-in arrives/, phase: 'هـ · Continue with Google' },
   { re: /App card &amp; home-screen icon<\/span><span class="soon">المرحلة ب/, phase: 'ب · بطاقة التطبيق وأيقونة الشاشة' },
-  { re: /from Google Maps, Share → MyPickz directly <span class="soon-tag">Soon/, phase: 'ب · ت٨ share_target' },
   { re: /soonChip\('Open now', 'Soon'/, phase: 'بلا موعد · لا ساعات عمل مخزَّنة' },
   { re: /Arrives with stage هـ <span class="soon-tag">هـ|Continue with Google<\/span><span class="soon">هـ/, phase: 'هـ · Continue with Google (الدرج · نافذة الحساب)' },
-  { re: /على أندرويد:<\/b> من خرائط جوجل، مشاركة ← MyPickz مباشرة <span class="soon-tag">قريبًا/, phase: 'ب · ت٨ share_target (العربية)' },
 ];
-const KNOWN_NO_OUTLET = ['stats_cards']; // ز-١-ج-٢ (الوثيقة الثامنة v1.17): الباقي بلا مخرج stats_cards وحده — ما فُتح مخرجه خرج من القائمة // r72p: مخارجها فُتحت بنسخة الاختبار (تحذير «opened» متوقع) — تُحذف من القائمة عند ترقية الإنتاج، لأن الفحص يشمل index.html القديم // M4.25 (١٧ سبتمبر): الخمس الجديدة مسجَّلة بوثيقة القدرات v1.14 قبل مخرجها (r72m · ر٧٢-ب · لوحة الإدارة) · نشرة التنظيف (٤ سبتمبر): كتلة favorites حُذفت من القواعد — خرجت من القائمة (الثامنة ج-١-ج أُغلق) // ر٥٢ (٣ سبتمبر): قدرات ٣٫٨ الأربع (listBookmarks · tripSaves · bookmarkCount · saveCount) فُتح مخرجها بدفعة كود الأفعال — أزيلت بمرآة الثامنة v1.4 // الوثيقة الدائمة الثامنة — قدرات بُنيت قبل موعدها
+const KNOWN_NO_OUTLET = []; /* r116-هـ: stats_cards فُتح مخرجه (كاتب statsCard وقارئ My stats) — القائمة فرغت */ // ز-١-ج-٢ (الوثيقة الثامنة v1.17): الباقي بلا مخرج stats_cards وحده — ما فُتح مخرجه خرج من القائمة // r72p: مخارجها فُتحت بنسخة الاختبار (تحذير «opened» متوقع) — تُحذف من القائمة عند ترقية الإنتاج، لأن الفحص يشمل index.html القديم // M4.25 (١٧ سبتمبر): الخمس الجديدة مسجَّلة بوثيقة القدرات v1.14 قبل مخرجها (r72m · ر٧٢-ب · لوحة الإدارة) · نشرة التنظيف (٤ سبتمبر): كتلة favorites حُذفت من القواعد — خرجت من القائمة (الثامنة ج-١-ج أُغلق) // ر٥٢ (٣ سبتمبر): قدرات ٣٫٨ الأربع (listBookmarks · tripSaves · bookmarkCount · saveCount) فُتح مخرجها بدفعة كود الأفعال — أزيلت بمرآة الثامنة v1.4 // الوثيقة الدائمة الثامنة — قدرات بُنيت قبل موعدها
 const CAP_COLORS_OUTSIDE_IDENTITY = { [TEST]: 139, [PROD]: 149 }; // ر42 = ١٤٩ (١٤ صريحًا · ١٣٥ متغيرًا) · ر43 = ١٤٠ · ر50 = ١٣٩ (سطر الخطأ صار صنفًا بالهوية) · سقف الإنتاج يُخفَّض عند ترقيته · يُخفَّض ولا يُرفع
 const CONTROL_CLASSES = ['btn', 'chip', 'act', 'actn', 'cta', 'csel', 'pl-src', 'mp-tab', 'dr-item', 'acc-item', 'switch-btn', 'pl-actbtn', 'addr-chip', 'pl-catpick', 'city-tab', 'area-chip', 'hcard', 'remove-btn', 'bmk-btn', 'reorder-btn', 'add-place-btn', 'quick-nav-btn', 'action-btn', 'status-toggle', 'mp-burger', 'mp-idchip', 'pw-eye', 'show-more-btn', 'pclose', 'prow', 'addmini'];
 const LIFE_PATHS = [ // مسارات الحياة العشرة — دالة مدخل مسمّاة لكل مسار: معرَّفة ومستدعاة
@@ -678,14 +676,154 @@ function finish(){
   dataMembersGuard();
   sessionGuard();
   uiParityGuard();
+  wiringGuard();
+  helpGuard();
   statsKeysGuard(TEST, test);
   dialogGuard(TEST, test);
+  toastGuard();
   console.log('\n' + (fails === 0 ? '✅ AUDIT PASSED' : '❌ AUDIT FAILED (' + fails + ')'));
   process.exit(fails === 0 ? 0 : 1);
 }
 
+// ---------- §43 (r115-أ · بيان r115 §٢-أ — «المشكلة عيّنة لصنف»): الإرشاد جدول واحد. الصنف: نصٌّ يصف الشاشة ولا يعرف حين تتغيّر —
+//            كانت ٢١ محطة تثبّت «Help يواكب» بجملة حرفية وقت كتابتها، فبقي في النص ما زال اسمه من الشاشة (Add from My places · Save this day · 1 · Pin the matches)،
+//            وانجرفت اللغتان (كائنان بلا مقابلة)، وظهر وسم البناء للمستخدم. هنا يُقابَل كل اسم مُبرَز بمصدر الشاشة وباللغة الأخرى في كل بناء.
+function helpGuard(){
+  const T = '§43 help is one table (r115): ';
+  const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts;
+  const hs = fs.readFileSync(path.join(ROOT, 'src', '60-help.js'), 'utf8');
+  const outside = parts.filter(function(p){ return p !== '60-help.js' && /\.(js|html)$/.test(p); }).map(function(p){ return fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); }).join('\n').replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ').replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1 '); /* r115 (مراجعة مستقلة): الاسم يُطلب في الكود لا في تعليق — «＋ Places» و«Not in My places» كانا في تعليقين فقط ومرّا */
+  const a = hs.indexOf('const HELP_TOPICS = ['), b = hs.indexOf('\n];', a); let topics = [];
+  try{ topics = (0, eval)('(' + hs.slice(hs.indexOf('[', a), b + 2) + ')'); }catch(e){ check(false, T + 'the topics table parses', String(e)); return; }
+  const GROUPS = ['places', 'trips', 'curators', 'community', 'addresses', 'cards', 'import', 'privacy', 'howto', 'settings', 'home'];
+  const ids = topics.map(function(t){ return t.id; });
+  const badShape = topics.filter(function(t){ return !(t.id && GROUPS.indexOf(t.dest) >= 0 && t.id.indexOf(t.dest + '.') === 0 && Array.isArray(t.tags) && Array.isArray(t.ui) && t.en && t.ar && t.en.h && t.ar.h && t.en.b && t.en.b.length > 40 && t.ar.b && t.ar.b.length > 30); }).map(function(t){ return t.id; });
+  const emptyG = GROUPS.filter(function(g){ return !topics.some(function(t){ return t.dest === g; }); });
+  check(topics.length >= 40 && new Set(ids).size === ids.length && badShape.length === 0 && emptyG.length === 0, T + 'every topic carries both languages (heading and text), its destination and its tags; every one of the eleven groups has topics (' + topics.length + ' topics)', 'bad: ' + badShape.join(' · ') + ' ‖ empty groups: ' + emptyG.join(' · '));
+  /* (٢) وسم البناء بيانات لا نص: لا في المواضيع ولا في المستوى الأول ولا في Symbols و Icons guide */
+  const TAG = /\br\d{2,3}[a-z]?(?:-[\u0600-\u06FF]+)?\b/;
+  const tagged = topics.filter(function(t){ return TAG.test(t.en.h + ' ' + t.en.b + ' ' + t.ar.h + ' ' + t.ar.b); }).map(function(t){ return t.id; });
+  const code = hs.slice(0, a) + hs.slice(b); const shown = code.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1 '); const strTag = (shown.match(/'(?:[^'\\\n]|\\.)*'/g) || []).filter(function(x){ return x.length > 12 && TAG.test(x); });
+  check(tagged.length === 0 && strTag.length === 0, T + 'no build tag in any text a user reads (topics · level one · Symbols · Icons guide) — tags are data', 'topics: ' + tagged.join(' · ') + ' ‖ strings: ' + strTag.map(function(x){ return x.slice(0, 70); }).join(' ‖ '));
+  /* (٣) كل اسم في ui: في نصَّي اللغتين وفي مصدر الشاشة */
+  const inSrc = function(n){ return outside.indexOf(n) >= 0 || outside.indexOf(n.replace(/&amp;/g, '&')) >= 0 || outside.indexOf(n.replace(/'/g, "\\'")) >= 0 || outside.indexOf(n.replace(/’/g, "'")) >= 0; };
+  const badUi = []; topics.forEach(function(t){ t.ui.forEach(function(n){ if (t.en.b.indexOf(n) < 0) badUi.push(t.id + ' · not in English · ' + n); else if (t.ar.b.indexOf(n) < 0) badUi.push(t.id + ' · not in Arabic · ' + n); else if (!inSrc(n)) badUi.push(t.id + ' · not on any screen · ' + n); }); });
+  const nUi = topics.reduce(function(x, t){ return x + t.ui.length; }, 0);
+  check(nUi >= 100 && badUi.length === 0, T + 'every button name a topic lists is written in both languages and exists in the app source outside Help (' + nUi + ' names)', badUi.join(' ‖ '));
+  /* (٤) كل اسم مُبرَز (<b> · <i>) في الإنجليزية: إما في ui وإما مسمًّى هنا بأنه ليس اسم زر — فاسم جديد لا يدخل بلا مقابلة */
+  const HELP_NOT_UI = ['Places outside …: Estepona', 'beside a town', 'Re-read N pins', 'They follow the list', 'Which …?', 'Where is …?', 'That pin is … km from …', 'city', 'public|private', 'shared N', 'what happened', 'who orders the stops', 'two', 'on your device', 'Already in your list', 'Same name as an older place of yours', 'Looks similar', "In a city you don't have yet", "In a city we don't cover yet", 'waits', 'A place link', 'Your saved lists', 'On Android']; /* عبارات مُبرَزة للتوكيد أو نماذج بنقاط ومتغيّرات — لا تكبر بلا سبب مكتوب */
+  const loose = [], usedNot = {}; topics.forEach(function(t){ const seen = {}; const re = /<(b|i)>([^<]+)<\/\1>/g; let m; while ((m = re.exec(t.en.b))){ const n0 = m[2].replace(/:$/, '').trim(); if (!/[A-Za-z]/.test(n0) || seen[n0]) continue; seen[n0] = 1;
+      const ps = (t.ui.indexOf(n0) >= 0) ? [n0] : n0.split(/ · | › /).map(function(x){ return x.replace(/^[^A-Za-z]+/, '').replace(/ ›$/, '').replace(/^N /, '').trim(); }).filter(function(x){ return x.length >= 3; }); /* اسم مركَّب (A · B › C) يُقابَل بأجزائه · ما دون ثلاثة أحرف ليس اسمًا */
+      ps.forEach(function(n){ if (t.ui.indexOf(n) >= 0) return; if (HELP_NOT_UI.indexOf(n) >= 0){ usedNot[n] = 1; return; } loose.push(t.id + ' · ' + n); }); } });
+  const staleNot = HELP_NOT_UI.filter(function(n){ return !usedNot[n]; });
+  check(loose.length === 0 && staleNot.length === 0 && HELP_NOT_UI.length <= 23, T + 'every emphasised name in a topic is either a listed button name or on the short not-a-button list, which only shrinks (' + HELP_NOT_UI.length + ')', 'unlisted: ' + loose.join(' ‖ ') + ' ‖ stale: ' + staleNot.join(' · '));
+  /* (٥) الانجراف المعاكس: اسم لاتيني مُبرَز في العربية يجب أن يكون في إنجليزية الموضوع نفسه */
+  const arOnly = []; topics.forEach(function(t){ const re = /<(b|i)>([^<]+)<\/\1>/g; let m; while ((m = re.exec(t.ar.b))){ const n = m[2].replace(/:$/, '').trim(); if (/[A-Za-z]/.test(n) && !/[\u0600-\u06FF]/.test(n) && t.en.b.indexOf(n) < 0) arOnly.push(t.id + ' · ' + n); } });
+  check(arOnly.length === 0, T + 'a button name emphasised in Arabic is in the English of the same topic', arOnly.join(' ‖ '));
+  /* (٦) مصدر واحد: الكائن القديم بقسميه لا يعود · أزرار البطاقة جدول واحد تقرؤه الصفحتان · فعل كل بطاقة باسم زر في الشاشة */
+  const acts = (hs.match(/const HELP_ACT = \{([^}]+)\}/) || [, ''])[1]; const actNames = (acts.match(/'[^']+'/g) || []).map(function(x){ return x.slice(1, -1); });
+  const actBad = actNames.filter(function(n){ const core = n.replace(/^＋ /, ''); return !/^Open (Curators|Community|Addresses)$/.test(n) && outside.indexOf(core) < 0; });
+  check(!/\bsections: \[/.test(hs) && !/my cities/.test(hs) && (hs.match(/CARD_ACTIONS\.map\(/g) || []).length === 2 && !/row\('maps', 'Google Maps'/.test(hs) && !/row\(mpIcon\('maps'/.test(hs) && actNames.length === 5 && actBad.length === 0, T + 'one source: no per-language sections object, the place-card buttons are one table read by Symbols and the Icons guide, and each card action is named as its button on the screen', 'action names not on screen: ' + actBad.join(' · '));
+  /* (٧) أصناف مسرح العرض خاصة به: «hd» صنف بطاقات الرئيسية — النموذج الأول سمّى المسرح به فانسكب تنسيقه عليها (وُجد بالقراءة ١١ نوفمبر) */
+  const css = fs.readFileSync(path.join(ROOT, 'src', '10-structure.css'), 'utf8') + fs.readFileSync(path.join(ROOT, 'src', '20-identity.css'), 'utf8');
+  const bareHd = (css.match(/(^|[},])[ \t]*\.hd\s*[{,]/gm) || []).length; const hdmOutside = /\bhdm\b|hdm-/.test(outside);
+  check(bareHd === 0 && !hdmOutside && /class="hdm"/.test(hs), T + 'the walkthrough stage has class names of its own: no bare .hd rule in the stylesheets, and hdm is used nowhere outside Help', 'bare .hd rules: ' + bareHd + ' · hdm outside Help: ' + hdmOutside);
+}
+
 // ---------- §41 (r110-ب · ق١١-١١-٠٢ — «المشكلة عيّنة لصنف»): واجهة واحدة لشكلَي محرّر الخطة. مصفوفة الخطة (§36) تحرس البيانات؛ هذا القسم يحرس الواجهة:
 //            أفعال صف المحطة وأبواب الإضافة تُرسم من قطع مشتركة بالأسماء والترتيب المعلنة في tests/ui-parity.js — ورسّاما الشكلين لا يكتبان فعل صف خارجها.
+function wiringGuard(){
+  /* r115-د (ق١١-١١-٠٥ · مراجعة القدرات v1.1): الصنف «مبنيّ بلا نداء». الفحص القديم (٨) يعدّ المجموعة مخدومة إن وُجد اسمها في الواجهة — فمرّت دالة كاتبة بلا أي نداء (stats_places · placeFavoriteCounts.bump)
+     وأحداث تقبلها القواعد ولا يُطلقها الكود. هنا يُقابَل كل طرف بمن *يناديه*؛ وما لا نداء له مسمًّى في قائمة لا تكبر، لكل اسم موعده. */
+  const T = '§42 built means wired (r115): ';
+  const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts.filter(function(p){ return /\.js$/.test(p); });
+  const src = {}; parts.forEach(function(p){ src[p] = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); }); const all = Object.keys(src).map(function(k){ return src[k]; }).join('\n');
+  /* (١) طبقة البيانات: كل دالة mpData.<ns>.<fn> لها نداء */
+  const UNWIRED_DATA = { /* الاسم: موعده أو سببه — r116: فرغ السجلّ: stats.placesOf و stats.listDays وُصلا بشاشة أثر القائمة (openListImpact)، والثلاث الباقية (userLists.get · cityLists.setVisibility · cities.links) حُذفت بلا نداء */
+  };
+  const defs = []; let ns = null; src['43-mpdata.js'].split('\n').forEach(function(line){ let m = line.match(/^    ([A-Za-z]\w*): \{/); if (m){ ns = m[1]; const re = /(?:[\s,{])([A-Za-z]\w*): (?:async )?function/g; let x; while ((x = re.exec(line))) defs.push(ns + '.' + x[1]); return; } if (/^    [A-Za-z]\w*: (?:async )?function/.test(line)){ ns = null; return; } if (ns){ m = line.match(/^\s{6}([A-Za-z]\w*): (?:async )?function/); if (m) defs.push(ns + '.' + m[1]); } });
+  const used = function(n){ return new RegExp('\\b' + n.replace('.', '\\.') + '\\b').test(all); };
+  const dead = defs.filter(function(n){ return !used(n) && !UNWIRED_DATA[n]; }); const stale = Object.keys(UNWIRED_DATA).filter(function(n){ return used(n) || defs.indexOf(n) < 0; });
+  check(defs.length >= 100 && dead.length === 0, T + 'every data-layer method is called somewhere (' + defs.length + ' methods · ' + Object.keys(UNWIRED_DATA).length + ' named as not yet wired)', 'no caller: ' + dead.join(' · '));
+  check(stale.length === 0 && Object.keys(UNWIRED_DATA).length <= 5, T + 'the not-yet-wired list only shrinks (data layer)', 'remove: ' + stale.join(' · '));
+  /* (٢) القياس: كل دالة يصدّرها mpTrack لها نداء خارج ملفها */
+  const tr = src['42-mptrack.js']; const exp = (tr.match(/return \{\s*\n\s*hit: hit,[^\n]*\n[^\n]*/) || [''])[0]; const names = (exp.match(/(\w+): \w+/g) || []).map(function(x){ return x.split(':')[0]; });
+  const others = Object.keys(src).filter(function(k){ return k !== '42-mptrack.js'; }).map(function(k){ return src[k]; }).join('\n'); const TRACK_INTERNAL = { closeSession: 'يناديها الملف نفسه عند إخفاء الصفحة' };
+  const deadT = names.filter(function(n){ return !new RegExp('mpTrack\\.' + n + '\\b').test(others) && !TRACK_INTERNAL[n]; });
+  check(names.length >= 12 && deadT.length === 0, T + 'every tracker function is called from the app (' + names.length + ' — statsPlaceList · savedBy · count included)', 'no caller: ' + deadT.join(' · '));
+  /* (٣) الأحداث: كل مفتاح تقبله القواعد يُطلقه الكود بنداء hit('k' أو count('k' — أو مسمًّى بموعده */
+  const rules = fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8'); const i = rules.indexOf('function eventKeysOk'); const keys = (rules.slice(i, rules.indexOf(']', i)).match(/'([a-z_0-9]+)'/g) || []).map(function(x){ return x.slice(1, -1); });
+  const UNWIRED_EVENTS = { /* r116-ح: الأربعة التي وُعد بإطلاقها أُطلقت (mylist_open · share_card · personal_open · personal_save). r117-ب (ق١١-١١-١٥): الأربعة الباقية (curator_view · curator_contact · curator_follow · session_depth) عوّضتها عدّادات أخرى فحُذفت من القواعد v3.16 — السجل فارغ: كل مفتاح تقبله القواعد يُطلق */ };
+  const allCode = all.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1 '); /* النداء في الكود لا في تعليق */
+  const fired = function(k){ return new RegExp("(?:hit|count)\\('" + k + "'").test(allCode); };
+  const mute = keys.filter(function(k){ return !fired(k) && !UNWIRED_EVENTS[k]; }); const staleE = Object.keys(UNWIRED_EVENTS).filter(function(k){ return fired(k) || keys.indexOf(k) < 0; });
+  check(keys.length === 21 && mute.length === 0, T + 'every event the rules accept is fired by a hit()/count() call (' + (keys.length - Object.keys(UNWIRED_EVENTS).length) + '/' + keys.length + ' · ' + Object.keys(UNWIRED_EVENTS).length + ' named with their slot)', 'never fired: ' + mute.join(' · '));
+  check(staleE.length === 0 && Object.keys(UNWIRED_EVENTS).length === 0, T + 'the not-yet-fired list only shrinks (events)', 'remove: ' + staleE.join(' · '));
+  /* (٣-ب) r115-أ: كل خطوة في عرض متحرّك تسمّي معالجًا معرَّفًا خارج ملف الإرشاد واسم زر مكتوبًا في الواجهة — زر يُحذف أو يُعاد تسميته يُسقط البناء لا يترك شرحًا يشير إلى لا شيء */
+  { const hs = src['60-help.js']; const steps = []; const re = /point: '([^']+)', ui: '([^']+)', fn: '([A-Za-z_$][\w$]*)', en: '[^']{12,}', ar: '[^']{8,}'/g; let m; while ((m = re.exec(hs))) steps.push({ point: m[1], ui: m[2], fn: m[3] });
+    const outside = Object.keys(src).filter(function(k){ return k !== '60-help.js'; }).map(function(k){ return src[k]; }).join('\n') + '\n' + fs.readFileSync(path.join(ROOT, 'src', '30-body.html'), 'utf8'); /* أسماء الأزرار المكتوبة في صفحة HTML الثابتة (نافذتا المكان والعنوان) تُحسب */
+    const demoIds = (hs.match(/\n  (\w+): \{ title: \{ en: /g) || []).map(function(x){ return x.replace(/\n  (\w+):.*/, '$1'); });
+    check(JSON.stringify(demoIds.slice().sort()) === JSON.stringify(['addresses', 'community', 'curators', 'places', 'trips']), T + 'each of the five destinations has a walkthrough', demoIds.join(' · '));
+    const badS = steps.filter(function(st){ return !new RegExp('function\\s+' + st.fn + '\\s*\\(').test(outside) || outside.indexOf(st.ui) < 0 || st.point.indexOf(st.fn) < 0; }).map(function(st){ return st.fn + ' / ' + st.ui; });
+    check(steps.length >= 17 && badS.length === 0, T + 'every walkthrough step names a real handler, a label written in the app, and points at that handler (' + steps.length + ' steps)', badS.join(' ‖ ')); }
+  /* (٤) قائمة الديون — تُطبع مع كل تشغيل (ق١١-١١-٠٥: الضمان في المستودع لا في الذاكرة). لكل دين شرط إغلاقه. لا تكبر بلا قرار. */
+  const OPEN_DEBTS = [
+    /* r117-د: دَين readers أُغلق — يوميات stats_lists يقرؤها أثر القائمة (openListImpact ← mpData.stats.listDays) منذ r116-د، والستة الأخرى لوحة المالك منذ r116-ب؛ سجل UNWIRED_DATA فارغ ويحرسه §42 */
+    ['thresholds', 'عتبات «لا توجد بيانات كافية» غير معايَرة — مسمّاة كلها في سجلّ UNCALIBRATED أدناه وعلى شاشاتها علامة not calibrated', 'تُغلق بمعايرتها من بيانات حقيقية (كل ثابت يخرج من السجلّ عند معايرته)'],
+    ['offline-save', 'كتابة لا تعود عند انقطاع الاتصال: Cancel و Save في المحرّر يبقيان متوقفين', 'دفعة بقياس سلوك Firestore على الخادم الحي'],
+    /* r117-ج: دَين handlers أُغلق — الثمانية الباقية نالت محطاتها (وفي خمسٍ منها وُجدت عيوب أُصلحت: tbAddCity · addrModalAddCity · curEditPlace · exportOtherList · زر 📤 للرحلة المشارَكة) */
+  ];
+  /* r116 (وُجد ١١ نوفمبر: نشرة v3.15 كُتبت والتطبيق ما زال ينتظر v3.14 — سطر Rules في لوحة المالك كان سيقول DRIFT بعد نشر صحيح): الإصدار الذي ينتظره التطبيق = إصدار ملف القواعد في رأسه */
+  { const rules = fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8'); const rv = (rules.match(/^\/\/ firestore rules (v\d+\.\d+)/) || [])[1] || ''; const ev = (src['61-admin-users.js'].match(/const EXPECTED_RULES = '(v\d+\.\d+)'/) || [])[1] || '';
+    check(!!rv && rv === ev, T + 'the rules version the app expects equals the version at the top of firestore.rules (' + rv + ')', 'file ' + rv + ' · app expects ' + ev); }
+  /* r117-أ/ب: نصّ القاعدتين في firestore.rules كما أُقرّ (ق١١-١١-١٥) — المحاكي الرسمي لا يعمل في بيئة الكتابة (يشغّله CI بـtests/rules-sim.js القسمين ٢٩ و٣٠)، فهذا حارس نصّي يمنع زوالهما صامتًا لا أكثر:
+     العدّاد +١ (إنشاءً وتحديثًا) بـ!exists && existsAfter لسجل صاحبه · −١ بـexists && !existsAfter · والمفاتيح الأربعة المحذوفة لا تعود إلى قائمة الأحداث · والتطبيق لا يكتب العدّاد إلا من باب واحد */
+  { const rules = fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8'); const body = rules.split('\n').filter(function(l){ return !/^\s*\/\//.test(l); }).join('\n'); const a0 = body.indexOf('match /placeFavoriteCounts/{docId} {'); const blk = a0 < 0 ? '' : body.slice(a0, body.indexOf('allow delete: if isOwner();', a0));
+    const n = function(t){ return blk.split(t).length - 1; };
+    check(blk.indexOf("copies/$(request.auth.uid + '__p_' + docId)") > 0 && n('!exists(savedRec()) && existsAfter(savedRec())') === 2 && n('exists(savedRec()) && !existsAfter(savedRec())') === 1 && n('request.resource.data.count == resource.data.count + 1') === 1 && n('request.resource.data.count >= 0') === 1, T + 'rules text: a place counter moves only with the saver’s own record in the same request (+1 create and update · −1)', 'create/update +1: ' + n('!exists(savedRec()) && existsAfter(savedRec())') + ' · −1: ' + n('exists(savedRec()) && !existsAfter(savedRec())'));
+    /* v3.16 (١-ب · ١-ج — ق١١-١١-١٨): الاتجاه الثاني للربط في قاعدة copies ومعرّف العدّاد وقراءة صاحب الحقل */
+    { const c0 = body.indexOf('match /copies/{docId} {'); const cb = c0 < 0 ? '' : body.slice(c0, body.indexOf('match /curatorCityNotes/', c0)); const m = function(t){ return cb.split(t).length - 1; };
+      check(m('&& (!isSaveRec() || saveCounted())') === 1 && m("&& (!isSaveRec() || saveReleased())") === 1 /* v3.17: الشرطان باقيان بنصّهما وبعدهما شروط سجلَّي القائمة والرحلة */ && m("docId.split('__')[1].matches('p_[a-f0-9]{16}')") === 1 && m('getAfter(saveCounter()).data.count == get(saveCounter()).data.count + 1') === 1 && m('getAfter(saveCounter()).data.count == get(saveCounter()).data.count - 1') === 1 && m('get(saveCounter()).data.count <= 0') === 1 && n("&& docId.matches('[a-f0-9]{16}')") === 2 && n("request.resource.data.url.matches('https?://.*')") === 1 && n('request.resource.data.name is string && request.resource.data.name.size() <= 120') === 1 && n('request.resource.data.url is string && request.resource.data.url.size() <= 400') === 1, T + 'rules text: a save record is created only with +1 on its counter and deleted only with −1 (or when there is nothing to lower) · counter ids are 16 hex on create and on every move · name and link are bounded strings, the link http(s)', 'create ' + m('&& (!isSaveRec() || saveCounted());') + ' · delete ' + m('&& (!isSaveRec() || saveReleased()));'));
+      check(m("((resource != null && resource.data.uid == request.auth.uid) || docId.split('__')[0] == request.auth.uid)") === 1, T + 'rules text: a copy record is readable by the owner of its uid field (the account-deletion query)', 'read rule changed'); }
+    /* v3.17 (ق١١-١٢-٠٥): نصوص المراجعة الشاملة — المحور ١. حارس نصّي يمنع زوالها صامتًا؛ السلوك نفسه يمتحنه CI (القسمان ٣١ و٣٢ في tests/rules-sim.js). */
+    { const has = function(t){ return body.split(t).length - 1; }; const want = [
+        ['request.resource.data.ownerId == resource.data.ownerId', 3, 'owner field pinned (trips · lists · category docs)'],
+        ['allow read: if isSignedIn() && request.auth.uid == userId;', 1, 'userLists read by its owner only'],
+        ['request.auth.uid != uid', 1, 'profile owner cannot move the visitors counters'],
+        ['&& bmCounted();', 1, 'bookmark record created only with its counter'], ['&& bmReleased());', 1, 'bookmark record deleted only when released'],
+        ['&& tsCounted();', 1, 'trip-save record created only with its counter'], ['&& tsReleased());', 1, 'trip-save record deleted only when released'],
+        ['&& followCounted();', 1, 'follow record created only with its counter'], ['&& followReleased());', 1, 'follow record deleted only when released'],
+        ["(request.resource.data.kind != 'list' || cntUp(copyList()))", 1, 'list-copy record created only with its counter'], ["resource.data.get('kind', '') != 'trip' || cntFree(copyTrip()))", 1, 'trip-copy record deleted only when released'],
+        [".data.kind == 'list')", 2, 'list copyCount moves only with a record of kind list (ق١١-١٢-٠٦)'], [".data.kind == 'trip')", 2, 'trip copyCount moves only with a record of kind trip'],
+        ["allow read: if docId == 'visits' || isOwner();", 1, 'analytics read by name'], ['request.resource.data.at >= request.time.toMillis() - 86400000', 1, 'curator request time near the server clock'],
+        ['math.abs(request.resource.data.lat - resource.data.lat) <= 0.01', 1, 'place identity proximity'],
+        ['allow list: if false;', 1, 'nicknames cannot be listed'], ["request.resource.data.keys().hasOnly(['uid', 'nickname'])", 1, 'nickname doc holds two fields'],
+        ['&& request.auth.uid == userId && !isSuspended();', 1, 'suspended user cannot create the users doc'],
+        ['resource.data.at + 604800000', 1, 'curator re-request after one week'],
+        ['isSignedIn() && resource.data.by == request.auth.uid); // v3.17', 0, ''],
+        ['function dayNear(d)', 1, 'date window helper'], ['&& anDay(docId)', 10, 'date window on the five daily analytics kinds'], ['&& shownFieldsOk()', 2, 'typed shown fields on lists (create · owner update)'], /* البند ١٤ (ربط الاسم) سُحب — ق٣-٤ مشروط، قياس ١٢ نوفمبر */ ['&& tripShownOk()', 2, 'typed shown fields on trips (create · owner update)']
+      ].filter(function(w){ return w[2]; }); const off = want.filter(function(w){ return has(w[0]) !== w[1]; }).map(function(w){ return w[2] + ' (' + has(w[0]) + '/' + w[1] + ')'; });
+      const rd = rules.indexOf("allow read: if isOwner() || (isSignedIn() && resource.data.by == request.auth.uid);") >= 0;
+      check(off.length === 0 && rd, T + 'rules text v3.17: the lines approved for the first-axis fixes are all present (' + want.length + ' markers + the reports read line)', (off.join(' · ') || 'reports read line missing')); }
+    const gone = ['curator_view', 'curator_contact', 'curator_follow', 'session_depth'].filter(function(k){ return body.indexOf("'" + k + "'") >= 0; });
+    check(gone.length === 0, T + 'rules text: the four removed event keys are not accepted again', 'back in the rules: ' + gone.join(' · '));
+    const all = Object.keys(src).map(function(k){ return src[k]; }).join('\n'); const direct = (all.match(/col\('placeFavoriteCounts'\)\.doc\([^)]*\)\.(?:set|update)\(/g) || []).length;
+    check(direct === 0 && all.indexOf('placeCounts.bump(') < 0, T + 'the app writes a place counter only inside a batch with the saver’s record (no bare set/update on placeFavoriteCounts)', 'bare writes: ' + direct); }
+  /* r117 (المراجعة المستقلة الثانية — مخطّط الرابط): كل href يُبنى من متغيّر في src/ يمرّ بالمرمِّز (mpSafeUrl · mpSafeHref) أو هو من قائمة الروابط التي يبنيها التطبيق نفسه — موضع جديد يرسم رابطًا خامًا يُحمرّ.
+     وتحتها الشبكة العامة: حارس النقر مسجَّل على الوثيقة، والمدقِّق يفحص المخطّط لا اسم الخادم وحده. */
+  { const all = Object.keys(src).map(function(k){ return src[k]; }).join('\n'); const BUILT = ['attrVal(nav)', 'attrVal(mh)', 'attrVal(href)', 'attrVal(tkMapHref(', 'escapeHtml(dayUrl)']; const SAFE = ['attrVal(mpSafeUrl(', 'escapeHtml(mpSafeUrl(', 'attrVal(mpSafeHref(']; const raw = []; const re = /href=\\?"' \+ ([^\n]{0,60})/g; let m; let seen = 0;
+    while ((m = re.exec(all))){ seen++; const t = m[1]; if (!SAFE.concat(BUILT).some(function(p){ return t.indexOf(p) === 0; })) raw.push(t.slice(0, 40)); }
+    check(seen >= 15 && raw.length === 0, T + 'every link built from a variable passes the scheme guard or is on the list of links the app builds itself (' + seen + ' sinks)', 'raw href: ' + raw.join(' ‖ '));
+    check(all.indexOf("document.addEventListener('click', mpLinkGuard, true); document.addEventListener('auxclick', mpLinkGuard, true);") > 0 && all.indexOf("if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;") > 0, T + 'the page-wide link guard is registered and the Maps link validator checks the scheme', 'guard or scheme check missing'); }
+  /* r117-د (ق١١-١١-١٦ — وسم Soon أُزيل عن مشاركة أندرويد): وجهة المشاركة في manifest.json هي صفحة البدء نفسها وبالمعاملات التي يلتقطها mpShareInCapture — صفحة البدء تتبدّل عند الانتقال للصفحة الرسمية، ووجهة تبقى على صفحة الاختبار كانت ستفتح المشارَك في غير التطبيق المثبَّت */
+  { let man = {}; try{ man = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8')); }catch(_){} const st = man.share_target || {}; const pr = st.params || {}; const cap = src['63-input-qr.js'] || '';
+    check(!!st.action && st.action === man.start_url && st.method === 'GET' && ['title', 'text', 'url'].every(function(k){ return typeof pr[k] === 'string' && cap.indexOf("q.get('" + pr[k] + "')") >= 0; }), T + 'manifest share_target opens the start page itself with the three parameters the app captures (' + (st.action || 'none') + ')', 'start_url ' + man.start_url + ' · action ' + st.action + ' · params ' + JSON.stringify(pr)); }
+  /* r116-أ: العتبات غير المعايَرة سجلّ بالاسم — كل ثابت فيه يُعرَّف في المصدر وعلى سطره علامة «غير معايَرة»؛ يخرج من السجل حين يُعايَر من بيانات حقيقية (دَين thresholds). */
+  const UNCALIBRATED = ['MP_POPULAR_MIN', 'MP_DASH_MIN_GATE', 'MP_DASH_MIN_SESSIONS', 'MP_DASH_MIN_PULSE', 'MP_DASH_MIN_LEGS', 'MP_IMPACT_MIN_VIEWS'];
+  { const all = Object.keys(src).map(function(k){ return src[k]; }).join('\n'); const badU = UNCALIBRATED.filter(function(n){ const m = all.match(new RegExp('\\n\\s*const ' + n + ' = [^\\n]*')); return !m || m[0].indexOf('غير معايَرة') < 0; });
+    check(badU.length === 0, T + 'uncalibrated thresholds are named constants carrying the mark (' + UNCALIBRATED.join(' · ') + ')', badU.join(' · ')); }
+  check(OPEN_DEBTS.length <= 9 && OPEN_DEBTS.every(function(d){ return d[1].length > 12 && d[2].length > 3; }), T + 'open debts (' + OPEN_DEBTS.length + ') — ' + OPEN_DEBTS.map(function(d){ return d[0] + ' → ' + d[2]; }).join(' ‖ '));
+}
 function uiParityGuard(){
   const T = '§41 one interface for both plan shapes (r110): ';
   const P = require(path.join(ROOT, 'tests', 'ui-parity.js'));
@@ -969,7 +1107,7 @@ function sortRedLinesGuard(){
 function handlerCoverageGuard(){
   const T = '§33 every handler has a station (r98): ';
   /* معالجات سبقت r110 يُبنى نصُّها ديناميًّا ولا محطة تسمّيها (قد تُضغط في محطة بزرّها المرسوم — لم يُقَس) — تُشطب كلٌّ عند محطتها؛ لا يُضاف إليها */
-  const HANDLERS_PENDING = new Set(['addrModalAddCity', 'cmSendCachedPlace', 'curEditPlace', 'curPickChip', 'exportOtherList', 'exportOwnTripRow', 'openSavedTripInCommunity', 'plAddToTripFor', 'plOpenCardAt', 'tbAddCity', 'tbAddCityToggle', 'tbSelCity']);
+  const HANDLERS_PENDING = new Set([]); /* r117-ج (ق١١-١١-١٥): الثمانية الباقية نالت محطاتها بنصوصها المرسومة (tests/r117b.page.js) — القائمة فارغة: كل معالج له محطة باسمه، واسم جديد بلا محطة يُحمرّ */
   /* دوال تظهر بصيغة نصّ معالج وليست معالج واجهة (رسالة داخل نص) */
   const NOT_HANDLERS = new Set(['showToast']);
   const parts = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')).parts; const names = new Set();
@@ -1057,6 +1195,17 @@ function namesGuard(){
   else check(st.status === 0 && /SELFTEST PASSED — 18\/18/.test(st.stdout || ''), T + 'the gazetteer builder passes its own sample (18/18)', String(st.stdout || st.stderr || '').split('\n').filter(function(l){ return /^FAIL/.test(l); }).join(' · '));
 }
 
+// ---------- §37b (r118 · ق١١-١٢-٠٩): قرص الرسالة يلتفّ إلى سطرين — ولا نصّ ثابت أطول مما يسعه السطران على ٣٩٠ ----------
+// القرص كان سطرًا واحدًا يُقطع بثلاث نقاط (نحو ٢٤ نصًّا قائمًا كانت تضيع نهايته). السطران يسعان نحو ٩٨ حرفًا (مقيس بالمتصفح: أطول نص قائم ٩٧ حرفًا في سطرين بلا قطع).
+function toastGuard(){
+  const T = '§37b the toast wraps to two lines (r118): ';
+  const cssT = fs.readFileSync(path.join(ROOT, 'src', '10-structure.css'), 'utf8'); const rule = (/\n\.toast\{[^}]*\}/.exec(cssT) || [''])[0];
+  check(/white-space:normal/.test(rule) && !/white-space:nowrap/.test(rule) && /width:max-content/.test(rule) && /max-width:88vw/.test(rule) && /max-height:calc\(2\.8em \+ 18px\)/.test(rule), T + 'the rule wraps, is as wide as its text up to 88vw, and is two lines high at most');
+  const cfgT = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'build.json'), 'utf8')); const longT = [];
+  cfgT.parts.filter(function(p){ return /\.js$/.test(p); }).forEach(function(p){ const t = fs.readFileSync(path.join(ROOT, 'src', p), 'utf8'); const re = /(?:showToast|showUndoToast|mpErrToast)\('((?:[^'\\]|\\.)*)'/g; let m; while ((m = re.exec(t))){ const lit = m[1].replace(/\\'/g, "'"); if (lit.length > 98) longT.push(p + ': ' + lit.length + ' · ' + lit.slice(0, 50)); } });
+  check(longT.length === 0, T + 'no fixed toast text is longer than two lines hold (98 characters) — a longer one loses its end', longT.slice(0, 4).join(' | '));
+}
+
 // ---------- §38 (r109 · ق١١-١٠-٠٣ — ميزانية القراءة): قراءات سوق المجتمع من باب واحد (cmMarketGet) بذاكرة جلسة ومهلة — لا نداء مباشر لاستعلامَي السوق خارجه · والرحلة تعدّ القراءات شاشةً شاشة ----------
 function sessionGuard(){
   /* §40 (r108 · ق١١-١٠-٠٤): the trip editor is a session — nothing writes the trip but the buttons. Before: 31 sites saved after one second and closing saved what was pending. */
@@ -1097,14 +1246,15 @@ function readsGuard(){
   /* the write door: every data-layer member that writes to a collection the market shows is in MP_MARKET_WRITES (or exempt by name with a reason) */
   const dl = fs.readFileSync(path.join(ROOT, 'src', '43-mpdata.js'), 'utf8');
   const tbl = {}; (dl.match(/\n  \['(\w*)', '(\w+)', function/g) || []).forEach(function(l){ const m = /\['(\w*)', '(\w+)'/.exec(l); tbl[(m[1] ? m[1] + '.' : '') + m[2]] = true; });
-  const exempt = { 'lists.bumpView': 1, 'trips.bumpView': 1, 'communityProfiles.bumpView': 1, 'follows.set': 1 }; /* views and the follower counter: they change neither what is shown nor who is shown */
+  const exempt = { 'lists.bumpView': 1, 'trips.bumpView': 1, 'communityProfiles.bumpView': 1, 'follows.set': 1, 'follows.releaseMine': 1 }; /* views and the follower counter: they change neither what is shown nor who is shown */
   const mem = []; const reM = /([A-Za-z_$][\w$]*): (?:async )?function\(/g; let mm; while ((mm = reM.exec(dl))) mem.push([mm.index, mm[1]]);
   const missing = []; let writers = 0;
   mem.forEach(function(it, i){ const body = dl.slice(it[0], i + 1 < mem.length ? mem[i + 1][0] : dl.indexOf('\nconst MP_MARKET_WRITES')); const ls = dl.lastIndexOf('\n', it[0]) + 1; const indent = (/^ */.exec(dl.slice(ls, it[0])) || [''])[0].length; const lineHead = dl.slice(ls, it[0]);
     let group = ''; if (!(indent === 4 && lineHead.trim() === '')){ const gs = dl.slice(0, it[0]).match(/\n    ([A-Za-z_$][\w$]*): \{/g) || []; group = gs.length ? /([A-Za-z_$][\w$]*): \{/.exec(gs[gs.length - 1])[1] : ''; }
-    const writes = /\.(set|update|delete)\(|\.commit\(/.test(body); const market = /col\('(trips|userCityLists|userCityListCats|communityProfiles)'\)|col\(coll\)|\bbatch\.(update|set)\(doc\.ref/.test(body) && /col\('(trips|userCityLists|userCityListCats|communityProfiles)'\)\.doc\([^)]*\)\.(set|update|delete)\(|b\.(set|delete|update)\(col\('(trips|userCityLists|userCityListCats|communityProfiles)'\)|b\.(set|delete|update)\(col\(coll\)|b\.(set|update)\((listRef|tripRef)|b\.update\(d\.ref|batch\.(update|set)\(doc\.ref/.test(body);
+    const door = /bound(On|Off)\(/.test(body) && /(bm|ts|cp|fl)Spec\(/.test(body); /* batch 2: the bound-record door writes the record and its counter on the source (lists · trips · profiles) — a member that goes through it is a market writer */
+    const writes = door || /\.(set|update|delete)\(|\.commit\(/.test(body); const market = door || /col\('(trips|userCityLists|userCityListCats|communityProfiles)'\)|col\(coll\)|\bbatch\.(update|set)\(doc\.ref/.test(body) && /col\('(trips|userCityLists|userCityListCats|communityProfiles)'\)\.doc\([^)]*\)\.(set|update|delete)\(|b\.(set|delete|update)\(col\('(trips|userCityLists|userCityListCats|communityProfiles)'\)|b\.(set|delete|update)\(col\(coll\)|b\.(set|update)\((listRef|tripRef)|b\.update\(d\.ref|batch\.(update|set)\(doc\.ref/.test(body);
     if (!writes || !market) return; writers++; const name = (group ? group + '.' : '') + it[1]; if (!tbl[name] && !exempt[name]) missing.push(name); });
-  check(writers >= 17 && missing.length === 0 && Object.keys(tbl).length >= 17 && /function cmWrote\(kind, id, pub, ownerUid\)/.test(all) && /if \(typeof cmWrote === 'function'\) cmWrote\.apply\(null, w\[2\]\(a\)\)/.test(dl), T + 'the write door: every data-layer write on what the market shows tells the community memory after it succeeds (MP_MARKET_WRITES · views and the follower counter are exempt by name)', 'writers ' + writers + ' · table ' + Object.keys(tbl).length + ' · missing: ' + (missing.join(', ') || 'none'));
+  check(writers >= 21 /* batch 2: the five bound-record doors and the two account-deletion releases are recognised by the door they go through */ && missing.length === 0 && Object.keys(tbl).length >= 18 /* batch 2: + cityLists.removeOrphanCats · copies.removeMine */ /* r118-ط: cityLists.removeKeys أُزيلت (القاعدة ترفضها — الترحيل صار بكتابة الحفظ الكاملة) فالجدول ١٦ */ && /function cmWrote\(kind, id, pub, ownerUid\)/.test(all) && /if \(typeof cmWrote === 'function'\) cmWrote\.apply\(null, w\[2\]\(a\)\)/.test(dl), T + 'the write door: every data-layer write on what the market shows tells the community memory after it succeeds (MP_MARKET_WRITES · views and the follower counter are exempt by name)', 'writers ' + writers + ' · table ' + Object.keys(tbl).length + ' · missing: ' + (missing.join(', ') || 'none'));
   check(!!fns.resetSessionState && /cmForgetSession\(\);/.test(fns.resetSessionState.body) && /Object\.keys\(plVisState\)\.forEach\(function\(k\)\{ delete plVisState\[k\]; \}\);/.test(fns.resetSessionState.body), T + 'an account change clears the community memory and the visibility-dot state (resetSessionState)');
   check(/const __free = setTimeout\(function\(\)\{ cmRefreshBusy = false; \}, CM_FLIGHT_MAX\);/.test(all) && /finally \{ clearTimeout\(__free\); cmRefreshBusy = false; \}/.test(all), T + 'the refresh guard is released after thirty seconds even when a read never settles');
   check(!!fns.viewCommunityUser && /const __seq = \+\+vcuSeq;/.test(fns.viewCommunityUser.body) && (fns.viewCommunityUser.body.match(/if \(!__mine\(\)\) return;/g) || []).length >= 5 && !/viewingUserCities\.push\(/.test(fns.viewCommunityUser.body), T + 'overlapping opens of a person: the latest call alone completes (the superseded one stops after every wait and never fills the shared array)');
@@ -1115,7 +1265,7 @@ function readsGuard(){
   const cityIn = Object.keys(fns).filter(function(n){ return /communityUserLayer = (cityId|\(what === 'places'\) \? cityId)/.test(fns[n].body); }); const tripIn = Object.keys(fns).filter(function(n){ return /viewingCommunityTripId = tripId|viewingSharedTrip = true/.test(fns[n].body); });
   check(cityIn.slice().sort().join() === 'curBrowse,openCommunityCityList' && cityIn.every(function(n){ return /cmOpenMark\(cityId/.test(fns[n].body); }) && tripIn.slice().sort().join() === 'openCommunityTrip,openSharedTripDetail' && tripIn.every(function(n){ return /cmVerifyTrip\(tripId\)/.test(fns[n].body); }) && !!fns.cmEnsureCity && /if \(c\._recheck\)/.test(fns.cmEnsureCity.body) && !!fns.cmStillOpen, T + 'the open points are known by name (a city: openCommunityCityList, curBrowse · a trip: openCommunityTrip, openSharedTripDetail) and each passes the check — a new way in must be added here', 'city: ' + cityIn.join(',') + ' · trip: ' + tripIn.join(','));
   const journey = fs.readFileSync(path.join(ROOT, 'tests', 'journey.js'), 'utf8');
-  check(/await must\('r109 · ميزانية القراءة في المجتمع/.test(journey) && /steps\.open\.listQ === 1 && steps\.open\.reads >= N \+ U && steps\.open\.reads <= N \+ U \+ 2/.test(journey) && /total <= 3 \* N \+ 2 \* U \+ 20/.test(journey), T + 'the journey counts billed reads screen by screen against the budget');
+  check(/await must\('r109 · ميزانية القراءة في المجتمع/.test(journey) && /steps\.open\.listQ === 1 && steps\.open\.reads >= N \+ U && steps\.open\.reads <= N \+ U \+ U \+ 2/.test(journey) && /total <= 3 \* N \+ 2 \* U \+ U \+ 20/.test(journey) /* r118-و (ق١١-١٢-٠٧): الميزانية تشمل قراءة سجل الاسم مرة لكل صاحب محتوى */, T + 'the journey counts billed reads screen by screen against the budget');
 }
 
 // ---------- §35 (r99 · ق١١-٠٣-٠٢ — مصفوفة الإفشال سقّاطة): كل خلية إمّا حكم وإمّا سبب عدم انطباق · الحُمر لا تزيد عن الأساس · خلية خضراء في الأساس لا تحمرّ ----------
