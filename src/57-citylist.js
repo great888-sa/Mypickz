@@ -23,7 +23,7 @@ function plMergeCat(local, remote, saved){ /* r100-أ (العائلة ٥ — ا�
   if (local) local.places = out; /* الكيان نفسه يبقى — مراجع الشاشة والمحطات إليه صالحة */ return local || { active: true, places: out };
 }
 let myCityListData = null; // بيانات المدينة الحالية بـMy List (المرحلة ١ من إعادة الهيكلة): { public, sharedWith, sharedWithNames, favoriteCount, categories:{} }
-let myCityListLoadedFor = null;
+let myCityListLoadedFor = null; const mpListOpened = {}; /* r116-ح: مدن عُدّ فتحها في هذه الجلسة */
 let myCityListLoadSeq = 0, myCityListLoading = false; /* r74m-٣ (سبب عطل الخريطة): تحميلان متزامنان لمدينتين كان الأبطأ منهما يكتب بياناته فوق الأحدث — فتظهر أماكن مدينة تحت اسم أخرى؛ الرقم التسلسلي يُسقط كل تحميل تجاوزه تحميل أحدث */
 let myCityListLoadFailed = false;   // القراءة فشلت — يُمنع كل حفظ حتى تنجح
 let myCityListLoadError = '';
@@ -74,6 +74,7 @@ async function loadUserList(){
     try{ const prof = await mpData.profiles.get(currentUser.uid); userListData.curatorSelf = !!(prof && prof.verified === true); }catch(e){} // ر٧٢-أ-١د: علم المنتقي لنافذة المكان والدرج
     if (data.myCities !== undefined){ try{ await mpData.userLists.merge(currentUser.uid, { myCities: mpData.fieldDelete() }); }catch(e){} } // ر٧٢-أ-١ح: تنظيف أثر «مدينتي» الملغى من الخاص (مرة)
     listBookmarksMap = null; tripSavesMap = null; // تُبنى من المرآة المحمَّلة لا من الفراغ
+    if (userListData && userListData.nickname && !currentUserSuspended){ const __nk = userListData.nickname; mpData.nicknames.ensure(currentUser.uid, __nk).then(function(r){ if (r !== 'ok') try{ logTiming('NICK · registry ' + r + ' · ' + __nk); }catch(_){} }, function(e){ mpSwallow(e, 'nick-ensure'); }); } /* r118-و: سجل اسمي يُكمَّل عند الدخول إن نقص — بلا انتظار */
   }catch(e){
     userListData = { customCities: [], customCountries: [], nickname: null }; userListLoadFailed = true;
     /* و-١: الفشل بصوت — سطر باللوحة ورسالة للمستخدم؛ لا إعادة محاولة تلقائية (اختيار ٢ بالبيان): المستخدم يعيد التحميل */
@@ -92,6 +93,7 @@ async function loadUserList(){
     }
   }catch(e){ currentUserSuspended = false; }
   refreshSuspendedBadge();
+  try{ await mpMirrorReconcile(); }catch(e){ mpSwallow(e, 'mirror reconcile'); } /* الدفعة ٢ (ص-٧): بلا قراءة لغير الموقوف */
 }
 
 // معرّف مستند Firestore لبيانات مدينة معيّنة بـMy List الخاصة بالمستخدم الحالي
@@ -119,7 +121,9 @@ async function loadMyCityList(cityId){
       if (!currentUserSuspended){
         try{
           await mpData.privatePlaces.save(currentUser.uid, cityId, priv);
-          await mpData.cityLists.removeKeys(currentUser.uid, cityId, legacyKeys);
+          /* r118-ط (ص-٥ · مقيس R2-11a/11b): حذف مفتاح واحد من categories على أم قديمة مرفوض (القاعدة تقبل زوال الحقل كله فقط)، فكان العنوان الخاص يبقى داخل مستند قد يكون عامًّا حتى أول حفظ كامل.
+             الآن كتابة الترحيل نفسها: العام إلى مستندات تصنيفاته والحقل القديم يزول كله — في الطلب الذي يلي نسخ الخاص إلى مستنده. */
+          await mpData.cityLists.save(currentUser.uid, cityId, { ownerId: currentUser.uid, cityId: cityId, cityName: cityNameOf(cityId) || cityId, public: data.public === true, sharedWith: Array.isArray(data.sharedWith) ? data.sharedWith : [], categories: split.pub });
           await mpData.userLists.addPrivateCity(currentUser.uid, cityId);
         }catch(e){}
       }
@@ -159,7 +163,7 @@ async function loadMyCityList(cityId){
     myCityListLoading = false; return;
   }
   myCityListLoadFailed = false;
-  myCityListLoadedFor = cityId; myCityListLoading = false;
+  myCityListLoadedFor = cityId; myCityListLoading = false; savedByRebase(cityId, (myCityListData || {}).categories); /* r117-أ: أساس علامات «saved by» لهذه القائمة */ if (!mpListOpened[cityId]){ mpListOpened[cityId] = true; mpTrack.hit('mylist_open', { city: cityId, depth: 1 }); } /* r116-ح: فتح قائمتي في مدينة — مرة للمدينة في الجلسة (إعادة التحميل بعد الحفظ لا تُعدّ) */
   try{ if (typeof dpReconcile === 'function') await dpReconcile(); }catch(_){} /* r103: خطط ما قبل r103 أو مزامنة مقطوعة تلحق بالقائمة مرة بالجلسة */
 }
 
@@ -175,6 +179,7 @@ async function saveMyCityList(){
     return;
   }
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
+  const __sbCity = cityListCityId; /* r117-أ: مدينة هذا الحفظ — تُلتقط الآن؛ بعد الانتظار قد تكون المدينة المختارة غيرها */
   // نفس فحص روابط خرائط جوجل الموجود أصلًا، مطبَّق على تصنيفات هذي المدينة فقط
   let invalidCount = 0;
   Object.keys(myCityListData.categories).forEach(itemId => {
@@ -201,7 +206,7 @@ async function saveMyCityList(){
       myCityListOldKeys = []; myCityListCatsDirty = false; myCityListSavedVis = null; /* r104 */
       if (Object.keys(priv).length) await mpData.privatePlaces.save(currentUser.uid, cityListCityId, priv);
       userListData.cityPlaceCounts = userListData.cityPlaceCounts || {}; if (userListData.cityPlaceCounts[cityListCityId]){ userListData.cityPlaceCounts[cityListCityId] = 0; try{ await saveUserListGeneral(); }catch(e){} }
-      delete __cmSummary.places; plSnapSaved(); mpSaveOk('places'); /* r100-أ */ try{ await syncCommunityProfile(); }catch(e){} try{ logTiming('SAVE · ' + cityListCityId + ' · 0 places · list removed'); }catch(_){} return true; // ر٧٢-أ-١د: لا مدينة شبح بالملف العام بعد حذف القائمة الفارغة · r87-3
+      delete __cmSummary.places; plSnapSaved(); savedBySaved(__sbCity, {}); /* r117-أ: القائمة فرغت وحُذف مستندها — علامات أساسها تُطلق */ mpSaveOk('places'); /* r100-أ */ try{ await syncCommunityProfile(); }catch(e){} try{ logTiming('SAVE · ' + cityListCityId + ' · 0 places · list removed'); }catch(_){} return true; // ر٧٢-أ-١د: لا مدينة شبح بالملف العام بعد حذف القائمة الفارغة · r87-3
     }
     /* r100-أ: ما تغيّر عن آخر حفظ يُقرأ من المخزن ويُدمج بالمعرّف ثم يُكتب وحده — المدن بلا لقطة (أول حفظ · تحميل فاشل) تُكتب كاملة كما كانت */
     let onlyCats = null;
@@ -211,6 +216,7 @@ async function saveMyCityList(){
       onlyCats = changed; try{ logTiming('SAVE · ' + cityListCityId + ' · cats changed ' + changed.length + '/' + Object.keys(pub).length); }catch(_){}
     }
     const visChanged = plVisChanged(meta); /* r104 */
+    const __sbMarks = savedByMarks(pub); /* r117-أ: علامات «saved by» كما تُكتب الآن */
     const __w = await mpData.cityLists.save(currentUser.uid, cityListCityId,
       { ownerId: currentUser.uid, cityId: cityListCityId, cityName: cityNameOf(cityListCityId) || cityListCityId, nickname: userListData.nickname || null, ...meta, categories: pub, catsV: CATS_VERSION }, onlyCats ? { onlyCats: onlyCats, syncVis: visChanged } : undefined); // ر٧٠ط · r100-أ · r104: تغيّر الرؤية يُسرى على كل مستندات التصنيفات في الدفعة نفسها
     if ((visChanged || !onlyCats) && plVisState[cityListCityId]){ delete plVisState[cityListCityId]; if (!(visChanged && onlyCats)) mpVisLine(cityListCityId, meta, 'in step again · full save'); } /* r105-أ: الختم نجح — لا خلاف بعد الآن (سطر VIS يصدر من طبقة البيانات) · r109 (المراجعة): الحفظ الكامل يكتب كل تصنيف بعلمَي الأم فيطفئ المؤشر هو أيضًا */
@@ -223,11 +229,12 @@ async function saveMyCityList(){
     const hasRealPlace = Object.values(myCityListData.categories).some(entry => (entry.places||[]).some(p => p.url && p.name));
     if (hasRealPlace) mpData.users.flag(currentUser.uid, 'hasMyListActivity').catch(()=>{});
     try{ logTiming('SAVE · ' + cityListCityId + ' · ' + livePlaces + ' places · ok'); }catch(_){} /* r87-3 (البند ٤): سطر لكل حفظ — الدليل لا الوعد */
-    plSnapSaved(); mpSaveOk('places'); /* r100-أ */ return true;
+    plSnapSaved(); savedBySaved(__sbCity, __sbMarks); /* r117-أ: الباب العام — سجلات «saved by» تطابق علامات النسخ بعد كل حفظ ناجح (المدينة والعلامات كما كُتبتا) */ mpSaveOk('places'); /* r100-أ */ return true;
   }catch(e){ try{ logTiming('SAVE · ' + cityListCityId + ' · FAILED · ' + ((e && e.code) || (e && e.message) || 'error')); }catch(_){}
     const cityAtFail = cityListCityId; /* r100-أ: ورقة Retry/Discard بدل toast؛ Discard يستعيد آخر لقطة (أو يعيد التحميل إن لم توجد) */
-    await mpSaveFailed('places', e, function(){ return saveMyCityList(); }, async function(){ if (cityListCityId !== cityAtFail || !myCityListData) return; if (myCityListSaved) myCityListData.categories = JSON.parse(JSON.stringify(myCityListSaved)); else { myCityListLoadedFor = null; await loadMyCityList(cityAtFail); } myCityListCatsDirty = false; renderPlacesMine(); });
-    renderPlacesMine(); return false; /* r100-أ: الحقيقة لمن يسأل — لا toast نجاح بعد فشل */
+    let __retryOk = false; /* r117 (المراجعة المستقلة الثانية): إعادة المحاولة التي نجحت حفظٌ نجح — كان يُعاد false فيعامله المستدعي فشلًا (ونسخة حُفظت للتوّ تُسحب من الذاكرة ويُعاد عدّها) */
+    await mpSaveFailed('places', e, async function(){ const r = await saveMyCityList(); if (r === true) __retryOk = true; return r; }, async function(){ if (cityListCityId !== cityAtFail || !myCityListData) return; if (myCityListSaved) myCityListData.categories = JSON.parse(JSON.stringify(myCityListSaved)); else { myCityListLoadedFor = null; await loadMyCityList(cityAtFail); } myCityListCatsDirty = false; renderPlacesMine(); });
+    renderPlacesMine(); return __retryOk; /* r100-أ: الحقيقة لمن يسأل — لا toast نجاح بعد فشل · r117: ونجاح الإعادة نجاح */
   }
 }
 
@@ -290,6 +297,7 @@ async function addCityListCity(){
   }
   cityListCountry = country.trim();
   cityListCityId = id;
+  return id; /* r117-ج: المعرّف عند الاكتمال — الإلغاء يعيد undefined، فالمستدعي (tbAddCity) يفرّق بين «أضاف» و«ألغى» */
 }
 
 async function removeCityListCity(cityId, opts){
@@ -299,7 +307,9 @@ async function removeCityListCity(cityId, opts){
   if (!(opts && opts.confirmed) && !(await mpConfirm('Any places saved under it will be lost. This cannot be undone.', { title: '🗑 Delete "' + city.name + '"?', ok: 'Delete city', danger: true }))) return; /* ب-٢-٢-أ٢ */
   userListData.customCities = (userListData.customCities || []).filter(c => c.id !== cityId);
   try{ if (typeof dpPrivatize === 'function') await dpPrivatize(cityId); }catch(e){ mpSwallow(e, 'dayplans-sync'); } /* r103 (المراجعة): حذف القائمة (أو دمجها) يعيد خططها خاصة */
-  try{ await mpData.cityLists.remove(currentUser.uid, cityId); }catch(e){} // خ٥/م٢-ب: عبر النواة
+  const __sbGone = (opts && opts.moved) ? [] : await savedByGather(cityId); /* r117-أ: نسخها المعدودة في «saved by» تُجمع قبل الحذف — إلا حين نُقلت أماكنها إلى مدينة أخرى (الدمج: opts.moved) فالنسخ باقية بعلاماتها */
+  let __rm = false; try{ await mpData.cityLists.remove(currentUser.uid, cityId); __rm = true; }catch(e){} // خ٥/م٢-ب: عبر النواة
+  if (__rm) savedByRelease(__sbGone); /* r117-أ: وتُطلق بعد نجاحه — عدّاد كل مكان ينقص واحدًا وسجلي يُحذف */
   if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
   if (cityListCityId === cityId){
     const all = cityListAllCities();
@@ -339,6 +349,7 @@ function userEnsurePlaces(id){
 function isGoogleMapsUrl(url){
   try{
     const u = new URL(url);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false; /* r117 (المراجعة المستقلة الثانية): كان يفحص اسم الخادم وحده — «javascript://maps.google.com/%0a…» له اسم خادم مقبول وكان يمرّ رابطًا للمكان */
     const host = u.hostname.replace(/^www\./,'');
     return host === 'google.com' && u.pathname.startsWith('/maps')
         || host === 'maps.google.com'
@@ -407,7 +418,7 @@ async function saveNickname(name){ /* منطق الحفظ القائم كما ه
   const clean = String(name || '').trim();
   if (!clean || clean.length < 3){ showToast('Nickname must be at least 3 characters'); return false; }
   if (clean.length > 24){ showToast('Nickname must be 24 characters or fewer'); return false; }
-  if (clean === current) return true;
+  if (clean === current){ try{ await mpData.nicknames.ensure(currentUser.uid, clean); }catch(e){ mpSwallow(e, 'nick-ensure'); } return true; } /* r118-و: إعادة حفظ الاسم نفسه تُكمل سجله إن نقص (كانت تعود بلا كتابة) */
   if (!/^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}_.'\- ]*$/u.test(clean)){ showToast('Letters, numbers, spaces, _ . - only'); return false; } /* r100-ج: لا HTML ولا فواصل مسار في معرّف nicknames — بعد فحص «لم يتغيّر» كي لا يُرفض اسم قديم يُعاد حفظه */
   const key = clean.toLowerCase();
   try{
@@ -542,7 +553,7 @@ let cmUndo = null; /* { kind, label, at, docs: { cityId: doc|null }, cities: [..
 function cmCityOf(id){ return cityListAllCities().find(function(c){ return c.id === id; }) || null; }
 function cmOthers(cityId){ const me = cmCityOf(cityId); return cityListAllCities().filter(function(c){ return c.id !== cityId && (!me || c.country === me.country) && !(pendingCity && pendingCity.id === c.id); }); }
 async function cmReadDoc(cityId){ const d = await mpData.cityLists.get(currentUser.uid, cityId); return d || null; }
-function cmMetaOf(doc){ const m = Object.assign({}, doc || {}); delete m.categories; delete m.index; delete m.splitV; delete m.cityId; delete m.cityName; delete m.ownerId; delete m.nickname; delete m.catsV; return m; }
+function cmMetaOf(doc){ const m = Object.assign({}, doc || {}); delete m.categories; delete m.index; delete m.splitV; delete m.cityId; delete m.cityName; delete m.ownerId; delete m.nickname; delete m.catsV; delete m.favoriteCount; delete m.bookmarkCount; delete m.viewCount; delete m.copyCount; /* r118-د (ك-٣): العدّادات ليست «بيانات وصفية» يعيدها صاحبها — القاعدة تشترطها أصفارًا عند الإنشاء وثابتة عند التعديل */ return m; }
 async function cmWriteDoc(cityId, cityName, meta, cats, prevDoc){ await mpData.cityLists.save(currentUser.uid, cityId, Object.assign({ public: false, sharedWith: [], sharedWithNames: {}, bookmarkCount: 0 }, meta || {}, { ownerId: currentUser.uid, cityId: cityId, cityName: cityName, nickname: userListData.nickname || null, categories: cats, catsV: CATS_VERSION })); const stale = Object.keys((prevDoc && prevDoc.categories) || {}).filter(function(k){ return !(k in cats); }); if (stale.length) await mpData.cityLists.dropCategoryKeys(currentUser.uid, cityId, stale); } /* الحفظ يدمج ولا يحذف الفرعيات الغائبة — تُحذف صراحةً (كما في saveMyCityList) */
 function cmCatsOf(doc){ const raw = (doc && doc.categories && typeof doc.categories === 'object') ? doc.categories : {}; const out = {}; Object.keys(raw).forEach(function(k){ if (isPrivateCategoryId(k)) return; const e = raw[k] || {}; out[k] = { active: e.active !== false, places: (e.places || []).filter(function(p){ return p && (p.name || p.url); }).map(function(p){ return Object.assign({}, p); }) }; }); return out; }
 function cmAppend(cats, k, list){ if (!list.length) return; cats[k] = cats[k] || { active: true, places: [] }; cats[k].active = true; cats[k].places = (cats[k].places || []).concat(list); }
@@ -558,7 +569,7 @@ async function cmMerge(fromId, toId){ if (!currentUser || !fromId || !toId || fr
   if (liveCountOf(catsB) !== nA + nB){ showToast('Count mismatch — nothing saved'); return false; }
   try{ await cmWriteDoc(toId, B.name, cmMetaOf(docB), catsB); }catch(e){ mpSwallow(e, 'merge-write'); showToast('Could not save ' + B.name); return false; }
   try{ const chk = cmCatsOf(await cmReadDoc(toId)); if (liveCountOf(chk) !== nA + nB){ showToast('Count mismatch after saving — ' + A.name + ' was kept'); cmLog('MERGE · ' + fromId + ' → ' + toId + ' · FAILED count'); return false; } }catch(_){}
-  await removeCityListCity(fromId, { confirmed: true });
+  await removeCityListCity(fromId, { confirmed: true, moved: true }); /* r117-أ (المراجعة المستقلة): أماكنها انتقلت إلى المدينة الأخرى بعلاماتها — لا يُطلق شيء من «saved by» */
   cmUndo = { kind: 'merge', label: 'Undo merge · ' + A.name + ' → ' + B.name, at: Date.now(), docs: undoDocs, cities: undoCities, names: { from: A.name, to: B.name } };
   cmLog('MERGE · ' + fromId + ' → ' + toId + ' · ' + nA + ' places · ' + B.name + ' now ' + (nA + nB)); showToast(A.name + ' → ' + B.name + ' · ' + nA + ' place' + (nA === 1 ? '' : 's') + ' ✓ — Undo is in City');
   await cmAfter([fromId, toId]); return true; }
@@ -592,9 +603,18 @@ async function cmMovePlace(fromId, catId, index, toId){ if (!currentUser || !fro
   cmLog('MOVE PLACE · ' + fromId + ' → ' + toId + ' · 1 place · ' + catId); showToast((p.name || 'Place') + ' → ' + B.name + ' ✓ — Undo is in City');
   await cmAfter([fromId, toId]); if (fromId === cityListCityId && typeof plCityEmptyAsk === 'function') plCityEmptyAsk(); /* r94 (ق١٠-٢٩-٠٩): نقل آخر مكان يفرغ المدينة → السؤال */ return true; }
 /* ── Undo للجلسة: يعيد مستندَي المدينتين وقيد المدن كما كانت ── */
-async function cmUndoLast(){ const u = cmUndo; if (!u || !currentUser) return false; if (currentUserSuspended){ showToast('Your account is suspended — you can’t save changes'); return false; } cmUndo = null; const ids = Object.keys(u.docs); userListData.customCities = JSON.parse(JSON.stringify(u.cities)); if (u.kind === 'towndel' && u.forget){ try{ if (typeof tkForget === 'function') tkForget(u.forget); }catch(_){} } /* r97: التراجع عن حذف البلدة يُنسي الأماكن المذكورة كالمحذوفة */
-  for (const id of ids){ const d = u.docs[id]; try{ if (d){ const c = cmCityOf(id); let cur = null; try{ cur = await cmReadDoc(id); }catch(_){} await cmWriteDoc(id, (c && c.name) || d.cityName || id, cmMetaOf(d), cmCatsOf(d), cur); } else { await mpData.cityLists.remove(currentUser.uid, id); } }catch(e){ mpSwallow(e, 'cm-undo'); showToast('Could not undo fully — check both cities'); } }
-  try{ await saveUserListGeneral(); }catch(_){} if (cityListCityId && !cmCityOf(cityListCityId)){ const all = cityListAllCities(); cityListCityId = all.length ? all[0].id : null; } cmLog('UNDO CITY · ' + u.kind + ' · ' + ids.join(' · ')); showToast('Undone · ' + u.names.from + (u.kind === 'split' ? ' back together' : '') + ' ✓'); await cmAfter(ids); return true; }
+async function cmUndoLast(){ const u = cmUndo; if (!u || !currentUser) return false; if (currentUserSuspended){ showToast('Your account is suspended — you can’t save changes'); return false; } cmUndo = null; const ids = Object.keys(u.docs); const __uCitiesBefore = JSON.parse(JSON.stringify(userListData.customCities || [])); /* r118-د */ userListData.customCities = JSON.parse(JSON.stringify(u.cities)); if (u.kind === 'towndel' && u.forget){ try{ if (typeof tkForget === 'function') tkForget(u.forget); }catch(_){} } /* r97: التراجع عن حذف البلدة يُنسي الأماكن المذكورة كالمحذوفة */
+  /* r118-د (ك-٣): الإعادة أولًا ثم الحذف — وأول فشل يوقف التراجع. كان يكمل بعد فشل إعادة المدينة المدموجة فيسحب أماكنها من الأخرى ثم يقول «Undone ✓»: الأماكن في لا مكان.
+     الآن: ما أُعيد يبقى، ما لم يُعَد لا يُمسّ، وUndo يعود متاحًا لمحاولة ثانية. */
+  const __uCur = {}; for (const id of ids){ try{ __uCur[id] = await cmReadDoc(id); }catch(_){ __uCur[id] = null; } }
+  const __uOrder = ids.filter(function(id){ return u.docs[id] && !__uCur[id]; }).concat(ids.filter(function(id){ return u.docs[id] && __uCur[id]; })).concat(ids.filter(function(id){ return !u.docs[id]; })); /* المفقودة تُعاد أولًا · ثم القائمة تُردّ إلى ما كانت · ثم ما أُنشئ يُحذف */
+  let __uDone = 0;
+  for (const id of __uOrder){ const d = u.docs[id]; try{ if (d){ const c = cmCityOf(id); await cmWriteDoc(id, (c && c.name) || d.cityName || id, cmMetaOf(d), cmCatsOf(d), __uCur[id]); } else { await mpData.cityLists.remove(currentUser.uid, id); } __uDone++; }
+    catch(e){ mpSwallow(e, 'cm-undo'); cmUndo = u; cmLog('UNDO CITY · stopped at ' + id + ' after ' + __uDone + ' · ' + ((e && e.code) || e));
+      if (!__uDone){ userListData.customCities = __uCitiesBefore; showToast('Could not undo — nothing was changed. Try Undo again'); }
+      else { try{ await saveUserListGeneral(); }catch(_){} showToast('Could not finish the undo — nothing was lost; some places are now in both cities. Try Undo again'); }
+      try{ await cmAfter(ids.filter(function(x){ return !!cmCityOf(x); })); }catch(_){} return false; } }
+  try{ await saveUserListGeneral(); }catch(_){} if (cityListCityId && !cmCityOf(cityListCityId)){ const all = cityListAllCities(); cityListCityId = all.length ? all[0].id : null; } cmLog('UNDO CITY · ' + u.kind + ' · ' + ids.join(' · ')); showToast('Undone · ' + u.names.from + (u.kind === 'split' ? ' back together' : '') + ' ✓'); await cmAfter(ids); savedByRecount(u.docs); /* r117-أ (المراجعة المستقلة الثانية): ما أعاده التراجع بعد حذف (بلدة · مكرّرات) أُطلق عدّه عند الحذف — يُعدّ من جديد؛ وما لم يُطلق (دمج · فصل) سجله قائم فلا يتغيّر */ return true; }
 /* ── الورقة «⚙ City» ── */
 async function cmOpen(){ const bd = document.getElementById('dashBackdrop'); const body = document.getElementById('dashBody'); if (!bd || !body || !cityListCityId) return; const A = cmCityOf(cityListCityId); if (!A) return; bd.classList.add('show'); dashSet('⚙ ' + A.name + ' · city', null); const cats = (myCityListData && myCityListData.categories) || {}; const n = liveCountOf(cats); const others = cmOthers(cityListCityId); const towns = cmTownsOf(cats);
   body.innerHTML = '<div id="cmBody"><div style="font-size:13px; line-height:1.5;"><b>' + escapeHtml(A.name) + '</b> · ' + n + ' place' + (n === 1 ? '' : 's') + (A.country ? ' · ' + escapeHtml(A.country) : '') + '</div>'
