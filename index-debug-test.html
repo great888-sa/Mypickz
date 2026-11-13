@@ -2592,22 +2592,23 @@ const MP_ICONS = {
 };
 function mpIcon(name, opt){ opt = opt || {}; const body = MP_ICONS[name]; if (!body) return ''; const sz = opt.size || 20; const fill = opt.fill ? 'currentColor' : 'none'; return '<svg class="mpi" data-ic="' + name + '" viewBox="0 0 24 24" width="' + sz + '" height="' + sz + '" fill="' + fill + '" stroke="currentColor" stroke-width="' + (opt.fill ? 1.5 : 2) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + body + '</svg>'; }
 // ر٥٨: الخريطتان من مرآة مستندك المحمَّل بالإقلاع — صفر استعلام (استعلام السجلات غير مُثبَت بالقواعد قصدًا)
-async function ensureListBookmarks(){
-  if (listBookmarksMap !== null || !currentUser) return;
-  listBookmarksMap = {};
-  const ids = (userListData && userListData.listBookmarkIds) || {};
-  Object.keys(ids).forEach(function(listId){
-    if (!ids[listId]) return;
-    const cut = listId.indexOf('_');
-    listBookmarksMap[listId] = { listId: listId, ownerUid: cut > 0 ? listId.slice(0, cut) : listId, cityId: cut > 0 ? listId.slice(cut + 1) : '' };
-  });
-}
-async function ensureTripSaves(){
-  if (tripSavesMap !== null || !currentUser) return;
-  tripSavesMap = {};
-  const ids = (userListData && userListData.tripSaveIds) || {};
-  Object.keys(ids).forEach(function(tripId){ if (ids[tripId]) tripSavesMap[tripId] = { tripId: tripId }; });
-}
+/* ═══ r119 (ق١١-١٣-٠١ — بلاغ المالك من الهاتف): الخريطتان تُبنيان عند أول قراءة، من أي شاشة ═══
+   كانتا تُبنيان فقط حين يستدعي أحدٌ ensure…؛ وسوق Community يرسم بطاقاته بلا استدعاء. فبعد دخول جديد تُرسم القائمة المميَّزة غير مضاءة وعدّادها ١،
+   وعند الضغط تُبنى الخريطة فيجد التطبيق أن صاحبها مميِّز فيعدّ ضغطته إلغاءً: ضغطة على زر «غير مميَّز» تحذف التمييز وتصفّر العدّاد (مقيس في المحاكي، وللرحلات كذلك).
+   البناء متزامن (من مرآة في الذاكرة — لا قراءة)، فلا سبب لتأجيله. كل شاشة تسأل listBmOn / tripSaveOn أو تأخذ الخريطة من listBmMap / tripSaveMap؛ لا قراءة مباشرة للمتغيّرين خارج هذا الملف (حارس التدقيق §37c). */
+function listBmBuild(){ listBookmarksMap = {}; const ids = (userListData && userListData.listBookmarkIds) || {};
+  Object.keys(ids).forEach(function(listId){ if (!ids[listId]) return; const cut = listId.indexOf('_');
+    listBookmarksMap[listId] = { listId: listId, ownerUid: cut > 0 ? listId.slice(0, cut) : listId, cityId: cut > 0 ? listId.slice(cut + 1) : '' }; }); }
+function tripSaveBuild(){ tripSavesMap = {}; const ids = (userListData && userListData.tripSaveIds) || {}; Object.keys(ids).forEach(function(tripId){ if (ids[tripId]) tripSavesMap[tripId] = { tripId: tripId }; }); }
+function listBmMap(){ if (listBookmarksMap === null && currentUser) listBmBuild(); return listBookmarksMap || {}; } /* بلا دخول: خريطة فارغة لا تُحفظ */
+function tripSaveMap(){ if (tripSavesMap === null && currentUser) tripSaveBuild(); return tripSavesMap || {}; }
+function listBmOn(listId){ return !!listBmMap()[listId]; }
+/* r119 (المراجعة المستقلة): «الضغطة تفعل ما يقوله الزر». الزر يحمل ما رُسم عليه (want: ١ = أضِف · ٠ = احذف). إن خالف المرسومُ الحالَ الآن (رُسمت الشاشة قبل اكتمال تحميل الحساب، أو تغيّرت الحال من جهاز آخر) لا يُكتب شيء — تُعاد الشاشة فتُظهر الحال الصحيحة.
+   بلا want (Undo · نداء داخلي) يبدّل الحال كما كان. */
+function mpTapAgrees(want, isOn){ return (want !== 0 && want !== 1) || (want === 1) === !isOn; }
+function tripSaveOn(tripId){ return !!tripSaveMap()[tripId]; }
+async function ensureListBookmarks(){ listBmMap(); } /* الاسمان القديمان باقيان لمن ينتظرهما — البناء نفسه */
+async function ensureTripSaves(){ tripSaveMap(); }
 /* ═══ الدفعة ٢ (ص-٧): مرايا الموقوف ═══
    المرايا الثلاث (listBookmarkIds · tripSaveIds · following) فهرس في مستندي، والحقيقة السجل. الموقوف يسحب سجله (حق الانسحاب) ولا يكتب مستنده، فتبقى مرآته تقول «ما زال».
    الباب نفسه يعلّم الجهاز حين لا تُكتب مرآة (mp_mirror_dirty_<uid> — طبقة البيانات، فلا مستدعٍ ينساها).
@@ -2775,13 +2776,14 @@ function hashUrl(str){
 }
 
 // مفكرة المكان — على مكانك بقائمتك بلا أي عدّاد (المبدأ التاسع)؛ الفك بضغط المصمتة نفسها + «تراجع»
-async function togglePlaceBookmark(url, name, category, cityId, area, ownerUid, mapsUrl){
+async function togglePlaceBookmark(url, name, category, cityId, area, ownerUid, mapsUrl, want){
   if (!currentUser){ openAuthModal(); return; }
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   if (!url || !cityId || !(/^(id|oid):./.test(url) || isGoogleMapsUrl(url))) return; /* r100-ج: المفتاح id:/oid: أو رابط Google ومدينة؛ ناقص أو غريب (javascript:) → لا كتابة — الاسم والتصنيف قد يغيبان في مفكرة قديمة فلا يُشترطان */
   const pid = hashUrl(url);
   const map = placeBmMap();
   const was = !!map[pid];
+  if (!mpTapAgrees(want, was)){ if (currentTab === 'Places') renderPlacesBody(); if (currentTab === 'Community') renderCommunityModal(); if (currentTab === 'Curators') renderCuratorsBody(); return; } /* r119 */
   const prev = map[pid];
   if (was){ delete map[pid]; }
   else {
@@ -2805,20 +2807,20 @@ async function togglePlaceBookmark(url, name, category, cityId, area, ownerUid, 
   if (was) showUndoToast('Removed from your bookmarks', function(){ togglePlaceBookmark(url, name, category, cityId, area, ownerUid, mapsUrl); });
 }
 // مفكرة القائمة — على قائمة مدينة لشخص بعدّاد (المبدأ التاسع) — سجل + عدّاد بدفعة ذرّية واحدة (قواعد ٣٫٨)
-async function toggleListBookmark(ownerUid, cityId){
+async function toggleListBookmark(ownerUid, cityId, want){
   if (!currentUser){ openAuthModal(); return; }
   if (!ownerUid || !cityId) return; /* r100-ج */
   if (ownerUid === currentUser.uid){ showToast('This is your list — bookmarks count others, not you'); return; } // ر٦٠: المبدأ التاسع بالواجهة كما بالقواعد
-  await ensureListBookmarks();
   const listId = ownerUid + '_' + cityId;
-  const on = !listBookmarksMap[listId];
+  const on = !listBmMap()[listId];
+  if (!mpTapAgrees(want, !on)){ renderCommunityModal(); return; } /* r119: المرسوم خالف الحال — لا كتابة، إعادة رسم */
   if (on && currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } /* الدفعة ٢ (ص-٧): الموقوف لا يضيف — لكنه يسحب ما وضعه (القاعدة تقبل حذف سجله وحده؛ كان التطبيق يمنع السحب أيضًا) */
   if (on){
-    listBookmarksMap[listId] = { listId: listId, ownerUid: ownerUid, cityId: cityId };
+    listBmMap()[listId] = { listId: listId, ownerUid: ownerUid, cityId: cityId };
     if (userListData){ userListData.listBookmarkIds = userListData.listBookmarkIds || {}; userListData.listBookmarkIds[listId] = true; } // ر٦٩ط: المرآة محليًّا فورًا
     mpTrack.hit('bookmark_add');
     mpData.users.flag(currentUser.uid, 'hasBookmarked').catch(()=>{});
-  } else { delete listBookmarksMap[listId]; if (userListData && userListData.listBookmarkIds) delete userListData.listBookmarkIds[listId]; }
+  } else { delete listBmMap()[listId]; if (userListData && userListData.listBookmarkIds) delete userListData.listBookmarkIds[listId]; }
   const c = (typeof viewingUserCities !== 'undefined' && viewingUserCities && typeof viewingUserUid !== 'undefined' && viewingUserUid === ownerUid) ? viewingUserCities.find(function(x){ return x.id === cityId; }) : null; /* المراجعة الثانية: الصف المعروض لصاحب القائمة نفسها — كان يُؤخذ بمعرّف المدينة وحده فيتحرّك عدّاد مدينة شخص آخر مفتوحة صفحته */
   const c0 = c ? (c.bookmarkCount || 0) : 0; /* الدفعة ٢ (المراجعة المستقلة): العدّاد المعروض يُحسب من قيمته قبل الفعل — كان يُقصّ عند الصفر ثم يُعاد +١، فيعرض ١ والخادم ٠ */
   if (c) c.bookmarkCount = Math.max(0, c0 + (on ? 1 : -1));
@@ -2829,7 +2831,7 @@ async function toggleListBookmark(ownerUid, cityId){
     logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → OK (' + __st + ')'); // ر٦٩ن: تشخيص ميداني
   }catch(e){
     mpSwallow(e, 'bookmark-list'); logTiming('BOOKMARK list ' + listId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن · r100-هـ
-    if (on) delete listBookmarksMap[listId]; else listBookmarksMap[listId] = { listId: listId, ownerUid: ownerUid, cityId: cityId };
+    if (on) delete listBmMap()[listId]; else listBmMap()[listId] = { listId: listId, ownerUid: ownerUid, cityId: cityId }; /* r119: من الباب — الخريطة قد تُعاد أثناء الكتابة (كان يرمي TypeError فلا ارتداد ولا رسالة) */
     if (userListData){ userListData.listBookmarkIds = userListData.listBookmarkIds || {}; if (on) delete userListData.listBookmarkIds[listId]; else userListData.listBookmarkIds[listId] = true; } /* المرآة المحلية ترتدّ مع الصف (كانت تبقى على التفاؤل) */
     if (c) c.bookmarkCount = c0;
     renderCommunityModal();
@@ -2906,11 +2908,12 @@ function mpSwallow(e, ctx){ // ر٦٤: بديل الابتلاع الصامت �
   try{ console.warn('[MyPickz][swallowed]', ctx || '', (e && e.code) || (e && e.message) || e); }catch(_){}
   try{ if (typeof logTiming === 'function') logTiming('[SWALLOWED] ' + (ctx || '') + ': ' + ((e && (e.code || e.message)) || String(e)).slice(0, 160)); }catch(_){} /* د-٤ */
 }
-async function toggleTripSelfBookmark(tripId){
+async function toggleTripSelfBookmark(tripId, want){
   if (!currentUser){ openAuthModal(); return; }
   if (currentUserSuspended){ showToast("Your account is suspended — you can't save changes"); return; }
   const map = (userListData.tripSelfBookmarks = userListData.tripSelfBookmarks || {});
   const was = !!map[tripId];
+  if (!mpTapAgrees(want, was)){ renderTripsBody(); return; } /* r119 */
   if (was) delete map[tripId]; else map[tripId] = true;
   renderTripsBody();
   try{ await mpData.tripSaves.setSelf(currentUser.uid, tripId, !was); mpTrack.hit('bookmark_add'); }
@@ -2951,16 +2954,16 @@ async function exportOtherTrip(tripId){
     mpSendText(out + '\nSent via MyPickz · ' + mpShareUrl({ src: 'trip', to: t.ownerId ? 't.' + t.ownerId + '.' + t.id : '' })); try{ if (t.ownerId && currentUser && t.ownerId !== currentUser.uid && mpIsVerified(t.ownerId)) mpTrack.statsCurator(t.ownerId, 'export'); }catch(_){} /* ب-٢-١ */
   }catch(e){ showToast('Could not build the message'); }
 }
-async function toggleTripSave(tripId){
+async function toggleTripSave(tripId, want){
   if (!currentUser){ openAuthModal(); return; }
-  await ensureTripSaves();
-  const on = !tripSavesMap[tripId];
+  const on = !tripSaveMap()[tripId];
+  if (!mpTapAgrees(want, !on)){ if (currentTab === 'Community') renderCommunityModal(); if (currentTab === 'Trips') renderTripsBody(); return; } /* r119 */
   if (on && currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } /* الدفعة ٢ (ص-٧): الموقوف يسحب ولا يضيف */
   if (on){
-    tripSavesMap[tripId] = { tripId: tripId };
+    tripSaveMap()[tripId] = { tripId: tripId };
     if (userListData){ userListData.tripSaveIds = userListData.tripSaveIds || {}; userListData.tripSaveIds[tripId] = true; }
     mpTrack.hit('trip_save');
-  } else { delete tripSavesMap[tripId]; if (userListData && userListData.tripSaveIds) delete userListData.tripSaveIds[tripId]; }
+  } else { delete tripSaveMap()[tripId]; if (userListData && userListData.tripSaveIds) delete userListData.tripSaveIds[tripId]; }
   if (currentTab === 'Community') renderCommunityModal();
   if (currentTab === 'Trips') renderTripsBody();
   try{
@@ -2968,7 +2971,7 @@ async function toggleTripSave(tripId){
     logTiming('SAVE trip ' + tripId + ' on=' + on + ' → OK (' + __st + ')'); // ر٦٩ن
   }catch(e){
     mpSwallow(e, 'trip-save'); logTiming('SAVE trip ' + tripId + ' on=' + on + ' → ERROR ' + ((e && (e.code + ' ' + (e.message || ''))) || e)); // ر٦٩ن · r100-هـ
-    if (on) delete tripSavesMap[tripId]; else tripSavesMap[tripId] = { tripId: tripId };
+    if (on) delete tripSaveMap()[tripId]; else tripSaveMap()[tripId] = { tripId: tripId };
     if (userListData){ userListData.tripSaveIds = userListData.tripSaveIds || {}; if (on) delete userListData.tripSaveIds[tripId]; else userListData.tripSaveIds[tripId] = true; } /* المرآة المحلية ترتدّ مع الصف */
     if (typeof viewingUserUid !== 'undefined' && viewingUserUid) renderCommunityModal();
     if (currentTab === 'Trips') renderTripsBody();
@@ -3290,7 +3293,7 @@ let tripCityFilter = '';             // ر٦٦ (القرار ١١ · البند 
 const TRIP_SOURCES = [['mine', 'My trips'], ['saved', 'My bookmarked'], ['savedCur', 'Saved from Curators'], ['savedCom', 'Saved from Community'], ['shared', 'Shared with me']]; // r72r-1
 let tripShowOpen = false;
 function tripSourceCounts(){ // r72w: عدد الرحلات لكل مصدر
-  const mine = (userTrips || []).filter(function(t){ return !t.source && !t.dayPlan; }).length; const saved = Object.keys(tripSavesMap || {}).length;
+  const mine = (userTrips || []).filter(function(t){ return !t.source && !t.dayPlan; }).length; const saved = Object.keys(tripSaveMap()).length; /* r119 */
   const curSet = {}; (curators || []).forEach(function(c){ curSet[c.uid] = true; }); const cur = (userTrips || []).filter(function(t){ return t.source && curSet[t.source.ownerId]; }).length; const com = (userTrips || []).filter(function(t){ return t.source && !curSet[t.source.ownerId]; }).length; // كمعيار renderSavedOthersTrips
   return { mine: mine, saved: saved, savedCur: cur, savedCom: com, shared: (sharedTrips || []).filter(function(t){ return !t.dayPlan; }).length }; } /* r103: خطة اليوم المشارَكة تُفتح من صفحة مدينة صاحبها لا من هنا */
 function tripToggleShowPanel(){ tripShowOpen = !tripShowOpen; tripSetSrcTitle(); const el = document.getElementById('tripShowPanel'); if (!el) return; const cnt = tripSourceCounts(); el.innerHTML = tripShowOpen ? pickerPanel({ id: 'tripShow', bare: true, onPick: 'tripPickSource', items: TRIP_SOURCES.map(function(x){ return { id: x[0], name: x[1], count: cnt[x[0]], selected: tripsSource === x[0] }; }) }) : ''; }
@@ -3336,7 +3339,7 @@ async function renderSavedTrips(){ // ر٦٤ (النموذج المستقر): ش
     return '<div class="row rowblock"><div class="pn" dir="auto">' + escapeHtml(tripTitle(t)) + '</div>'
       + '<div class="ps">' + tripMetaLine(t) + '</div>'
       + '<div class="rowacts"><button type="button" class="act" onclick="openTripDetail(\'' + t.id + '\')">View trip →</button>'
-      + '<button type="button" class="bmk-btn on" onclick="toggleTripSelfBookmark(\'' + t.id + '\')" title="Bookmarked — tap to remove">' + bmkSvg(true) + '</button>'
+      + '<button type="button" class="bmk-btn on" onclick="toggleTripSelfBookmark(\'' + t.id + '\', 0)" title="Bookmarked — tap to remove">' + bmkSvg(true) + '</button>'
       + '<button type="button" class="act" onclick="openExportPreview(\'trip\', \'' + t.id + '\')" title="Preview and send">📤</button>'
       + '<button type="button" class="act' + (t.public ? ' on' : '') + '" onclick="toggleTripPublicFor(\'' + t.id + '\')" title="' + (t.public ? 'Public — tap to make private' : 'Private — tap to make public') + '">' + '🌐' + '</button>'
       + '<button type="button" class="act' + (((t.sharedWith || []).length) ? ' on' : '') + '" onclick="shareTripFor(\'' + t.id + '\')" title="Share with someone by name">' + shareSvg() + '</button></div></div>'; // ر٦٩ش (N-061): صف ملكك ناقص التعديل
@@ -3394,7 +3397,7 @@ async function renderBookmarkedTripsInto(wrap){ // ر٦١: القالب المش
   if (!currentUser){ wrap.innerHTML = '<div class="mp-empty">Sign in to see your bookmarked trips.</div>'; return; }
   wrap.innerHTML = '<div class="mp-empty mini">Loading…</div>';
   await ensureTripSaves();
-  const recs = Object.keys(tripSavesMap || {}).map(k => tripSavesMap[k]);
+  const __tm = tripSaveMap(); const recs = Object.keys(__tm).map(k => __tm[k]);
   if (!recs.length){
     wrap.innerHTML = '<div class="mp-empty">🔖<br>Trips you save from curators and community appear here — your own trips live in My trips.</div>';
     return;
@@ -3430,12 +3433,12 @@ function openSavedTripInCommunity(ownerUid, tripId){
 }
 // إزالة سجل رحلة متدهورة: نحاول الدفعة المربوطة أولًا، وعند رفضها (الأصل غائب) نحذف السجل وحده
 async function removeDegradedTripSave(tripId){
-  const r = tripSavesMap && tripSavesMap[tripId]; if (!r) return;
-  delete tripSavesMap[tripId];
+  const __tm = tripSaveMap(); const r = __tm[tripId]; if (!r) return; /* r119 */
+  delete __tm[tripId];
   renderTripsBody();
   try{
     await mpData.tripSaves.toggle(currentUser.uid, tripId, false); /* الدفعة ٢: الباب الواحد يحذف السجل وحده حين لا عدّاد يُنقص */
-  }catch(e){ mpSwallow(e, 'trip-save remove'); tripSavesMap[tripId] = r; renderTripsBody(); mpErrToast('Could not remove bookmark', e); } /* كان الفشل صامتًا: الصف يختفي ويعود في الجلسة التالية (ك-٤) */
+  }catch(e){ mpSwallow(e, 'trip-save remove'); __tm[tripId] = r; renderTripsBody(); mpErrToast('Could not remove bookmark', e); } /* كان الفشل صامتًا: الصف يختفي ويعود في الجلسة التالية (ك-٤) */
 }
 function renderMyTripsModal(){
   const wrap = document.getElementById('myTripsBody');
@@ -3473,7 +3476,7 @@ function tripCardHtml(t){ // r77 (اللوحة ٧): بطاقة الرحلة — 
       { cls: 'flag', html: '🗑', on: "deleteTripById('" + attrStr(t.id) + "')", title: 'Delete this draft' }
     ] : [
       { html: 'Open →', on: "openTripDetail('" + attrStr(t.id) + "')", title: 'View trip' },
-      { cls: 'bmk' + (isSelfTripBookmarked(t.id) ? ' on' : ''), html: bmkSvg(isSelfTripBookmarked(t.id)), on: "toggleTripSelfBookmark('" + attrStr(t.id) + "')", title: isSelfTripBookmarked(t.id) ? 'Bookmarked — tap to remove' : 'Bookmark' },
+      { cls: 'bmk' + (isSelfTripBookmarked(t.id) ? ' on' : ''), html: bmkSvg(isSelfTripBookmarked(t.id)), on: "toggleTripSelfBookmark('" + attrStr(t.id) + "', " + (isSelfTripBookmarked(t.id) ? 0 : 1) + ")", title: isSelfTripBookmarked(t.id) ? 'Bookmarked — tap to remove' : 'Bookmark' },
       { html: '📤', on: "openExportPreview('trip', '" + attrStr(t.id) + "')", title: 'Preview and send' },
       { cls: (t.public ? 'on' : ''), html: '🌐', on: "toggleTripPublicFor('" + attrStr(t.id) + "')", title: t.public ? 'Public — tap to make private' : 'Private — tap to make public' },
       { cls: (((t.sharedWith || []).length) ? 'on' : ''), html: shareSvg(), on: "shareTripFor('" + attrStr(t.id) + "')", title: ((t.sharedWith || []).length) ? 'Shared with ' + t.sharedWith.length + ' — tap to manage' : 'Share with someone by name' },
@@ -3530,7 +3533,7 @@ function othersPlaceRowHtml(p, owner, cityObj, catId, tripCityId, extra, o){ o =
   const actions = [ /* r75a: البلاطات بأيقونات الطقم وأسمائها (وضع others) */
     mpMapsTile(p, cityObj, 'data-mpsrc="community" data-mpcat="' + attrVal(catId || '') + '"' + ((!mine && !p.nolist && p.url && owner.uid && cityObj && cityObj.id) ? ' data-mplist="' + attrVal(owner.uid + '_' + cityObj.id) + '"' : '')), /* غ-١ · r115-د (٣): قائمة المصدر على البلاطة — لعدّاد «المكان × القائمة» */
     (p.geo && typeof p.geo.lat === 'number' && cityObj) ? { cls: 'onmap', icon: 'map', label: 'On map', on: o.onMap || ("cmOpenPersonCityMap('" + attrStr(cityObj.id) + "', '" + attrStr(p.id || p.url) + "')"), title: 'Show on our map' } : { cls: 'onmap', icon: 'map', label: 'On map', disabled: true, title: 'No pin for this place yet' }, // ز-١-ب · r75a-٢: خريطتنا بلاطةً ثانية بالصف (قرار المالك) — لا «Map» بآخره
-    { cls: 'bmk' + (isBookmarked(okey) ? ' on' : ''), icon: 'bookmark', fill: isBookmarked(okey), label: 'Bookmark', on: "togglePlaceBookmark('" + okeyA + "', '" + safeName + "', '" + cat + "', '" + attrStr(cityObj ? cityObj.id : '') + "', '" + safeArea + "', '" + uidA + "', '" + safeUrl + "')", title: isBookmarked(okey) ? 'Bookmarked — tap to remove' : 'Bookmark' },
+    { cls: 'bmk' + (isBookmarked(okey) ? ' on' : ''), icon: 'bookmark', fill: isBookmarked(okey), label: 'Bookmark', on: "togglePlaceBookmark('" + okeyA + "', '" + safeName + "', '" + cat + "', '" + attrStr(cityObj ? cityObj.id : '') + "', '" + safeArea + "', '" + uidA + "', '" + safeUrl + "', " + (isBookmarked(okey) ? 0 : 1) + ")", title: isBookmarked(okey) ? 'Bookmarked — tap to remove' : 'Bookmark' },
     { icon: 'trip', label: 'Trip', on: "cmAddOthersPlaceToTrip('" + attrStr(tripCityId || (cityObj ? cityObj.id : '')) + "', '" + cat + "', '" + attrStr(p.id || '') + "', '" + uidA + "', '" + safeName + "')", title: 'Add to one of my trips' },
     { icon: 'share', label: 'Share', on: "cmExportOthersPlace('" + okeyA + "', '" + safeName + "', '" + safeUrl + "', '" + attrStr(owner.nickname || 'a user') + "', '" + safeArea + "', '" + safeCity + "', '" + cat + "')", title: 'Preview and send' },
     mine ? null : (placeCopyOf(owner.uid, (cityObj ? cityObj.id : ''), catId || '', p.id || hashUrl(p.url || '')) ? { cls: 'on', icon: 'check', label: 'Saved', on: "showToast('Already in your list — with credit')", title: 'In your list — with credit' } : { icon: 'save', label: 'Save', on: "saveOthersPlace('" + uidA + "', '" + attrStr(cityObj ? cityObj.id : '') + "', '" + cat + "', '" + attrStr(p.id || '') + "')", title: 'Copy into my list — with credit' }), // ز-١-ب: حي
@@ -3542,7 +3545,8 @@ function othersPlaceRowHtml(p, owner, cityObj, catId, tripCityId, extra, o){ o =
 function othersCard(o){ // ر٦٩ذ (N-062) · r72r-3: بطاقة القائمة/الرحلة بنمط بطاقة المكان — يسارًا الاسم وأزواج «عنوان/قيمة» · يمينًا Actions شبكة تلتف
   const acts = [];
   acts.push({ html: o.openLabel || 'Open →', on: o.openHandler, title: 'Open' });
-  if (!o.bmSelf) acts.push({ cls: 'bmk' + (o.bmOn ? ' on' : ''), html: bmkSvg(!!o.bmOn) + '<span class="bmk-cnt">' + (o.cnt || 0) + '</span>', on: o.bmHandler, title: o.bmOn ? 'Bookmarked — tap to remove' : 'Bookmark' });
+  const bmTap = String(o.bmHandler || '').replace(/\)\s*$/, ', ' + (o.bmOn ? 0 : 1) + ')'); /* r119: الزر يحمل ما رُسم عليه — المعالج لا يكتب إن خالفه الحال (mpTapAgrees). موضع واحد لكل بطاقات القوائم والرحلات */
+  if (!o.bmSelf) acts.push({ cls: 'bmk' + (o.bmOn ? ' on' : ''), html: bmkSvg(!!o.bmOn) + '<span class="bmk-cnt">' + (o.cnt || 0) + '</span>', on: bmTap, title: o.bmOn ? 'Bookmarked — tap to remove' : 'Bookmark' });
   if (o.exportHandler) acts.push({ html: '📤', on: o.exportHandler, title: 'Send' });
   if (!o.bmSelf && o.saveHandler){ acts.push(o.savedOn ? { cls: 'on', html: 'Saved ✓', on: o.unsaveHandler || '', title: 'In your trips — tap to remove your copy' } : { html: 'Save', on: o.saveHandler, title: 'Copy into my trips — with credit' }); } /* r74m: لا زر «Save 3» — بطاقة بلا معالج حفظ لا تعرض حفظًا */
   if (!o.bmSelf && o.reportKey) acts.push({ cls: 'flag', html: '⚑', on: "openReport('" + attrStr(o.reportKind || 'list') + "', '" + attrStr(o.reportKey) + "')", title: 'Report' });
@@ -4766,7 +4770,7 @@ async function deleteAddr(cityId, catId, index){
 function openDeletePreview(){
   document.getElementById('delCntPlaces').textContent = Object.values((myCityListData && myCityListData.categories) || {}).reduce((a, c) => a + ((c.places || []).length), 0) || '—';
   document.getElementById('delCntTrips').textContent = (typeof userTrips !== 'undefined' && userTrips) ? userTrips.length : '—';
-  document.getElementById('delCntFav').textContent = String(Object.keys(placeBmMap()).length + Object.keys(listBookmarksMap || {}).length + Object.keys(tripSavesMap || {}).length);
+  document.getElementById('delCntFav').textContent = String(Object.keys(placeBmMap()).length + Object.keys(listBmMap()).length + Object.keys(tripSaveMap()).length); /* r119: العدد من الخريطة المبنيّة — كان صفرًا حتى يفتح أحدٌ شاشة تبنيها */
   const prof = (typeof curators !== 'undefined' && curators && currentUser) ? curators.find(function(c){ return c.uid === currentUser.uid; }) : null; const pe = document.getElementById('delCntProfile'); if (pe) pe.textContent = prof ? ((typeof prof.followerCount === 'number' ? prof.followerCount : 0) + ' followers') : '1'; /* ب-٢-٢-أ٢: صفحة المنتقي بمتابعيها */
   delStep(1); openModalById('delBackdrop');
 }
@@ -4777,6 +4781,7 @@ function openDeletePreview(){
 async function doAccountDelete(){
   const btn = document.getElementById('delGo'); if (!btn || btn.disabled) return;
   if (!currentUser) return;
+  if (userListLoadFailed){ showToast('Reload first — your account did not load'); return; } /* r119 (المراجعة المستقلة): بلا مستند الحساب لا تُعرف سجلاتي على محتوى الآخرين — الحذف كان يتركها معدودة ويُبقي حجز الاسم */
   const ok = await requestReauth();
   if (!ok){ showToast('Identity not confirmed — nothing was deleted'); return; }
   btn.disabled = true; const label = btn.textContent; btn.textContent = 'Deleting…';
@@ -4785,11 +4790,12 @@ async function doAccountDelete(){
     // ١ — سجلاتي على محتوى الآخرين. الدفعة ٢ (قواعد v3.17 ١١): كل سجل يُطلق من بابه الواحد — −١ على عدّاده، أو السجل وحده حين لا عدّاد يُنقص (المصدر حُذف · صفر · لم يعد عامًّا · أنا موقوف). المرآة لا تُكتب: المستند الأم يُحذف في ٤.
     //    كانت المتابعات تُحذف سجلاتٍ وحدها، وسجلات نسخ القوائم والرحلات دفعاتٍ بلا عدّاد: القاعدة ترفض ذلك والعدّاد فوق الصفر، فيبقى الحساب المحذوف معدودًا عند غيره.
     await ensureListBookmarks(); await ensureTripSaves(); let __left = 0;
-    for (const listId of Object.keys(listBookmarksMap || {})){
-      const r = listBookmarksMap[listId];
+    const __lm = listBmMap(), __tm = tripSaveMap(); /* r119 */
+    for (const listId of Object.keys(__lm)){
+      const r = __lm[listId];
       try{ await mpData.bookmarks.toggleList(uid, r.ownerUid, r.cityId, false, { noMirror: true }); }catch(e){ __left++; mpSwallow(e, 'cascade bookmark'); }
     }
-    for (const tripId of Object.keys(tripSavesMap || {})){
+    for (const tripId of Object.keys(__tm)){
       try{ await mpData.tripSaves.toggle(uid, tripId, false, { noMirror: true }); }catch(e){ __left++; mpSwallow(e, 'cascade trip save'); }
     }
     // ٢ — متابعاتي ونسخي
@@ -5179,7 +5185,7 @@ function renderBookmarkedPlaces(body){
         const q = attrStr; /* r116 (المراجعة المستقلة ١): المرمِّز الواحد */
         const actions = [
           mpMapsTile(b, b.cityId), /* غ-١ · r75a-٢: الطقم بالمفكرة — أربع بلاطات (لا On map: المفكرة لا تحمل إحداثيات) */
-          { cls: 'bmk on', icon: 'bookmark', fill: true, label: 'Bookmark', on: "togglePlaceBookmark('" + q(b.url) + "', '" + q(b.name || 'Place') + "', '" + q(b.category) + "', '" + q(b.cityId) + "', '" + q(b.area) + "')", title: 'Bookmarked — tap to remove' },
+          { cls: 'bmk on', icon: 'bookmark', fill: true, label: 'Bookmark', on: "togglePlaceBookmark('" + q(b.url) + "', '" + q(b.name || 'Place') + "', '" + q(b.category) + "', '" + q(b.cityId) + "', '" + q(b.area) + "', undefined, undefined, 0)", title: 'Bookmarked — tap to remove' },
           { icon: 'trip', label: 'Trip', on: "plAddToTripFor('" + q(b.cityId) + "', '" + q(b.category) + "', '" + q(String(b.pid || '').replace(/^id:/, '')) + "', '" + q(b.name || 'Place') + "')", title: 'Add to a trip' },
           { icon: 'share', label: 'Share', on: "mpSendText('📍 ' + " + JSON.stringify(escapeHtml(b.name || 'Place')) + " + ('" + q(b.url) + "' ? '\\n' + '" + q(b.url) + "' : ''))", title: 'Send' }
         ];
@@ -6160,7 +6166,7 @@ document.addEventListener('click', (ev) => { const m = document.getElementById('
 function resetSessionState(){ try{ Object.keys(tripCopyPending).forEach(function(k){ delete tripCopyPending[k]; }); Object.keys(tripCopyUncounted).forEach(function(k){ delete tripCopyUncounted[k]; }); }catch(_){} /* الدفعة ٢: انتظار نسخ الحساب السابق لا ينتقل */ try{ mpData.ownerForget(); }catch(_){} try{ Object.keys(mpListOpened).forEach(function(k){ delete mpListOpened[k]; }); }catch(_){} /* r116-ح */ try{ msLast = null; plExportSel = null; }catch(_){} /* r116 (المراجعة ٩): لا أثر لحساب سابق */ try{ savedByReset(); }catch(_){} try{ mpData.sane.forgetNames(); }catch(_){} /* r118-و: الأسماء المتحقَّق منها تُنسى بتبدّل الحساب */ /* r117-أ: أساس علامات «saved by» وما عُلّق منها لحساب سابق لا يُطابَق عليه حساب آخر */ // r72n: كل ما يحمل بيانات حساب بالذاكرة يُصفَّر — يُستدعى عند الخروج وعند تبدّل المصادقة
   try{
     userListData = { customCities: [], customCountries: [], nickname: null, cityPlaceCounts: {}, following: [], placeBookmarks: {} }; cityListCityId = null; cityListCountry = null; myCityListData = null; myCityListLoadedFor = null; myCityListOldKeys = [];
-    userTrips = []; currentTripId = null; tripSavesMap = {}; listBookmarksMap = {}; sharedCityLists = [];
+    userTrips = []; currentTripId = null; tripSavesMap = {}; listBookmarksMap = {}; sharedCityLists = []; Object.keys(myCopiedLists).forEach(function(k){ delete myCopiedLists[k]; }); Object.keys(myCopiedPlaces).forEach(function(k){ delete myCopiedPlaces[k]; }); /* r119 (المراجعة المستقلة): «نسختُه» لا ينتقل من حساب إلى الذي يليه على الصفحة نفسها */
     if (typeof cmForgetSession === 'function') cmForgetSession(); /* r109: تبدّل الحساب يمسح ذاكرة الجلسة */ if (typeof plVisState !== 'undefined') Object.keys(plVisState).forEach(function(k){ delete plVisState[k]; });
     communityUsers = []; viewingUserUid = null; viewingUserData = null; viewingUserCities = []; communityUserTrips = []; communityViewingCityId = null;
     curators = null; curPage = null; curCity = null; curArchiveOf = null; personLayerOnly = null; Object.keys(curData).forEach(function(k){ delete curData[k]; }); cmSecCollapsed = {}; /* خ-٦ */
@@ -6599,6 +6605,7 @@ function isGoogleMapsUrl(url){
 async function saveUserListGeneral(){
   mpTrack.hit('mylist_save');
   if (!currentUser) return;
+  if (userListLoadFailed){ showToast('Could not load your account · please reload'); return; } /* r119 (المراجعة المستقلة · مهم): مستند الحساب لم يُقرأ — ما في الذاكرة بديل فارغ (اسم null · دول [])، وكتابته تمسح الاسم والدول على الخادم. كانت تُكتب بلا فعل من المستخدم (syncCitiesFromCityLists بعد الدخول) */
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   try{
     await mpData.userLists.merge(currentUser.uid, { customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], nickname: userListData.nickname || null });
@@ -7034,7 +7041,7 @@ async function renderSharedTripsInto(host){ // r72r-1: الرحلات المشا
   await ensureTripSaves();
   for (const t of sharedTrips){ if (!t.ownerName && t.ownerId){ const known = (typeof communityUsers !== 'undefined' && communityUsers.find(function(u){ return u.uid === t.ownerId; })); if (known) t.ownerName = known.nickname; else { try{ const p = await mpData.profiles.get(t.ownerId); t.ownerName = (p && p.nickname) || 'user'; }catch(e){ t.ownerName = 'user'; } } } }
   const __shared = sharedTrips.filter(function(t){ return !t.dayPlan; }); /* r103 */
-  host.innerHTML = __shared.length ? __shared.map(function(t){ return othersCard({ title: escapeHtml(tripTitle(t)) + (t.ownerId ? ' — ' + ownerLink(t.ownerId, t.ownerName) : ''), sub: tripMetaLine(t) + ' · Shared with you by name', bmOn: !!(tripSavesMap && tripSavesMap[t.id]), cnt: t.saveCount || 0, bmHandler: "toggleTripSave('" + attrStr(t.id) + "')", saveHandler: "copyOthersTrip('" + attrStr(t.id) + "')", savedOn: !!tripCopyOf(t.id), unsaveHandler: "removeMyTripCopy('" + attrStr(t.id) + "')", reportKind: 'trip', reportKey: t.id, exportHandler: "exportOtherTrip('" + attrStr(t.id) + "')" /* r117-ج (وُجد بمحطته): كان exportOwnTripRow — مسار رحلتي أنا لرحلة ليست لي: لا يُرسل شيئًا ويترك شاشة Trips على «Loading…». الآن نصّها بقارئ رحلات الآخرين، كزر القوائم المشارَكة */, openHandler: "openSharedTripDetail('" + attrStr(t.id) + "')" }); }).join('') : '<div class="mp-empty">No trips shared with you yet.</div>';
+  host.innerHTML = __shared.length ? __shared.map(function(t){ return othersCard({ title: escapeHtml(tripTitle(t)) + (t.ownerId ? ' — ' + ownerLink(t.ownerId, t.ownerName) : ''), sub: tripMetaLine(t) + ' · Shared with you by name', bmOn: tripSaveOn(t.id), cnt: t.saveCount || 0, bmHandler: "toggleTripSave('" + attrStr(t.id) + "')", saveHandler: "copyOthersTrip('" + attrStr(t.id) + "')", savedOn: !!tripCopyOf(t.id), unsaveHandler: "removeMyTripCopy('" + attrStr(t.id) + "')", reportKind: 'trip', reportKey: t.id, exportHandler: "exportOtherTrip('" + attrStr(t.id) + "')" /* r117-ج (وُجد بمحطته): كان exportOwnTripRow — مسار رحلتي أنا لرحلة ليست لي: لا يُرسل شيئًا ويترك شاشة Trips على «Loading…». الآن نصّها بقارئ رحلات الآخرين، كزر القوائم المشارَكة */, openHandler: "openSharedTripDetail('" + attrStr(t.id) + "')" }); }).join('') : '<div class="mp-empty">No trips shared with you yet.</div>';
 }
 async function renderSharedListsInto(host){ // r72r-1: القوائم المشارَكة معي — تُعرض بوجهة الأماكن (Show → Shared with me)
   await loadSharedCityLists(); await ensureListBookmarks(); // ر٦٩ج:
@@ -7042,7 +7049,7 @@ async function renderSharedListsInto(host){ // r72r-1: القوائم المشا
   host.innerHTML = sharedCityLists.length ? sharedCityLists.map(function(r){
     const owner = r.ownerId || String(r.docId || '').split('_')[0]; const cityId = r.cityId || String(r.docId || '').split('_').slice(1).join('_');
     const cityName = (allCities().find(function(x){ return x.id === cityId; }) || {}).name || cityId; const listId = owner + '_' + cityId;
-    return othersCard({ title: escapeHtml(cityName) + ' — ' + ownerLink(owner, r.ownerName), sub: 'Shared with you by name', bmOn: !!(listBookmarksMap && listBookmarksMap[listId]), cnt: r.bookmarkCount || 0, bmHandler: "toggleListBookmark('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", reportKind: 'list', reportKey: owner + '_' + cityId, saveHandler: "saveOthersList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", savedOn: !!myCopiedLists[owner + '_' + cityId], unsaveHandler: "showToast('Remove copied places from your list in Places')", exportHandler: "exportOtherList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", openHandler: "plOpenSharedList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')" });
+    return othersCard({ title: escapeHtml(cityName) + ' — ' + ownerLink(owner, r.ownerName), sub: 'Shared with you by name', bmOn: listBmOn(listId), cnt: r.bookmarkCount || 0, bmHandler: "toggleListBookmark('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", reportKind: 'list', reportKey: owner + '_' + cityId, saveHandler: "saveOthersList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", savedOn: !!myCopiedLists[owner + '_' + cityId], unsaveHandler: "showToast('Remove copied places from your list in Places')", exportHandler: "exportOtherList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')", openHandler: "plOpenSharedList('" + attrStr(owner) + "', '" + attrStr(cityId) + "')" });
   }).join('') : '<div class="mp-empty">No lists shared with you yet.</div>';
 }
 function plOpenSharedList(owner, cityId){ /* r74b-٢: فتح قائمة مشارَكة معي من وجهة الأماكن — عدّاد open_app (§١٧-ج) انتقل هنا من نافذة My List المحذوفة (كان openSharedCityList يسجّله على الفتح نفسه) */
@@ -7090,7 +7097,7 @@ async function cmLoadMarket(){
           const cityObj = { id: r.cityId, name: r.cityName || r.cityId }, who = { uid: owner, nickname: r.nickname || 'user' };
           return Object.keys(groups).map(function(c){ const cards = groups[c].map(function(q){ return othersPlaceRowHtml(q, who, cityObj, c, r.cityId); }).join(''); return placeGroupHtml(cityObj.name + ' · ' + catLabelOf(c), groups[c].length, '<button type="button" class="go" onclick="cmOpenList(\'' + attrStr(owner) + '\', \'' + attrStr(r.cityId) + '\')">Open list →</button>', cards); }).join('');
         }
-        return othersCard({ title: escapeHtml(r.cityName || r.cityId), sub: 'Places · ' + places + (r._matches ? ' · matches · ' + r._matches : ''), stat: (r.viewCount || 0) + ' views', bmSelf: mine, bmOn: !!(listBookmarksMap && listBookmarksMap[owner + '_' + r.cityId]), cnt: cnt, bmHandler: "toggleListBookmark('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')", reportKind: 'list', reportKey: owner + '_' + r.cityId, saveHandler: "saveOthersList('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')", savedOn: !!myCopiedLists[owner + '_' + r.cityId], unsaveHandler: "showToast('Remove copied places from your list in Places')", exportHandler: "openExportPreview('olist', '" + attrStr(owner + '_' + r.cityId) + "')", openHandler: "cmOpenList('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')" });
+        return othersCard({ title: escapeHtml(r.cityName || r.cityId), sub: 'Places · ' + places + (r._matches ? ' · matches · ' + r._matches : ''), stat: (r.viewCount || 0) + ' views', bmSelf: mine, bmOn: listBmOn(owner + '_' + r.cityId), /* r119 */ cnt: cnt, bmHandler: "toggleListBookmark('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')", reportKind: 'list', reportKey: owner + '_' + r.cityId, saveHandler: "saveOthersList('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')", savedOn: !!myCopiedLists[owner + '_' + r.cityId], unsaveHandler: "showToast('Remove copied places from your list in Places')", exportHandler: "openExportPreview('olist', '" + attrStr(owner + '_' + r.cityId) + "')", openHandler: "cmOpenList('" + attrStr(owner) + "', '" + attrStr(r.cityId) + "')" });
       }, 'cities'); /* r75c: «Xxx · 2 cities» */
     } else {
       let rows = (await cmPublicTripsCached()).filter(function(t){ return !(t && t.dayPlan); }); /* r103 · r109 */
@@ -7105,7 +7112,7 @@ rows.sort(function(a, b){ return communitySort === 'recent' ? String(b.updatedAt
       const nick = {}; (communityUsers || []).forEach(function(u){ nick[u.uid] = u.nickname; });
       host.innerHTML = cmGroupByOwner(rows, function(t){ return t.ownerId || ''; }, function(t){ return t.ownerName || nick[t.ownerId]; }, function(t){ // r72r-3
         const cnt = t.saveCount || 0; const title = t.customLabel ? (t.cityName + ' — ' + t.customLabel) : (t.cityName || 'Trip'); t.ownerName = t.ownerName || nick[t.ownerId]; cmCache.trips[t.id] = t; const mine = !!(currentUser && t.ownerId === currentUser.uid);
-        return othersCard({ title: escapeHtml(title), sub: tripMetaLine(t), lines: [['Saved by users', '· ' + (t.copyCount || 0)]], bmSelf: mine, bmOn: !!(tripSavesMap && tripSavesMap[t.id]), cnt: cnt, bmHandler: "toggleTripSave('" + attrStr(t.id) + "')", saveHandler: "copyOthersTrip('" + attrStr(t.id) + "')", savedOn: !!tripCopyOf(t.id), unsaveHandler: "removeMyTripCopy('" + attrStr(t.id) + "')", reportKind: 'trip', reportKey: t.id, exportHandler: "openExportPreview('otrip', '" + attrStr(t.id) + "')", openHandler: "openCommunityTrip('" + attrStr(t.id) + "')" });
+        return othersCard({ title: escapeHtml(title), sub: tripMetaLine(t), lines: [['Saved by users', '· ' + (t.copyCount || 0)]], bmSelf: mine, bmOn: tripSaveOn(t.id) /* r119 */, cnt: cnt, bmHandler: "toggleTripSave('" + attrStr(t.id) + "')", saveHandler: "copyOthersTrip('" + attrStr(t.id) + "')", savedOn: !!tripCopyOf(t.id), unsaveHandler: "removeMyTripCopy('" + attrStr(t.id) + "')", reportKind: 'trip', reportKey: t.id, exportHandler: "openExportPreview('otrip', '" + attrStr(t.id) + "')", openHandler: "openCommunityTrip('" + attrStr(t.id) + "')" });
       }, 'trips'); /* r75c: «Xxx · 3 trips» */
     }
   }catch(e){ mpSwallow(e, 'market'); host.innerHTML = '<div class="mp-empty">Could not load — try again. <button type="button" class="chip sm" onclick="cmMarketRefresh()">↻ Try again</button></div>'; }
@@ -7310,10 +7317,11 @@ function openConfirmModal(title, hint){ // ر٧٢-أ-٢ب: تأكيد بهوية
     document.getElementById('inputModalSelect').style.display = 'none'; document.getElementById('inputModalList').style.display = 'none';
     document.getElementById('inputModalError').textContent = hint || ''; document.getElementById('inputBackdrop').classList.add('show'); });
 }
-async function curToggleFollow(uid){ // ر٧٢-أ-٢: متابعة/إلغاء ذرّيًّا؛ الإفصاح مرة عند أول متابعة؛ لا متابعة للذات
+async function curToggleFollow(uid, want){ // ر٧٢-أ-٢: متابعة/إلغاء ذرّيًّا؛ الإفصاح مرة عند أول متابعة؛ لا متابعة للذات
   if (!currentUser){ openAuthModal(); return; } if (!uid || uid === currentUser.uid) return;
   if (!curIsFollowing(uid) && !(curators || []).some(function(c){ return c.uid === uid; }) && !(communityUsers || []).some(function(c){ return c.uid === uid; })){ let pr = null; try{ pr = await mpData.profiles.get(uid); }catch(_){} if (!pr){ showToast('User not found'); return; } } /* r100-ج: لا متابعة لمعرّف مجهول — قراءة واحدة فقط حين لا يكون في القوائم */
   const on = !curIsFollowing(uid);
+  if (!mpTapAgrees(want, !on)){ renderCuratorsBody(); return; } /* r119: زر رُسم «Follow» وأنا متابع (رُسم قبل اكتمال التحميل) لا يلغي المتابعة */
   if (on && currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; } /* الدفعة ٢ (المراجعة المستقلة): الموقوف يسحب ولا يضيف — كان يرسل طلبات مرفوضة ثم «Could not follow» */
   if (on && !(userListData && userListData.followDisclosed)){ const ok = await openConfirmModal('Follow this curator?', 'Following is visible to the curator — your name appears in their followers.'); if (!ok) return; userListData.followDisclosed = true; try{ await mpData.userLists.merge(currentUser.uid, { followDisclosed: true }); }catch(e){} }
   const u = (curators || []).find(function(c){ return c.uid === uid; }) || {}; let __fr = null; /* الدفعة ٢ (قواعد v3.17 ١١ · ق٣-١): المتابعة معدودة دائمًا ومن الباب الواحد — لا قرار «يُعدّ أم لا» من القائمة المحمَّلة */
@@ -7371,7 +7379,7 @@ function curHeadHtml(u, d){
   const me = curIsMe(u); const cities = d.cities.map(function(c){ return c.name; }); const fc = curFollowers(u); const bio = String(u.bio || '').trim();
   const nPlaces = d.cities.reduce(function(a, c){ return a + c.count; }, 0);
   return '<div class="curidn"><div class="curtop"><span class="curava">' + escapeHtml(curInitials(u)) + '</span><div class="curwho"><div class="curnm2">' + escapeHtml(curName(u)) + ' <span class="curvb">✧ ' + CUR_BADGE + '</span></div>' + (u.tagline ? '<div class="curtag2">' + escapeHtml(u.tagline) + '</div>' : (me ? '<div class="curtag2 dim">Add a tagline in your profile</div>' : '')) + '</div>' // r72q-1: الشعار تحت الاسم · لا مدن بالرأس
-    + (me ? '<button type="button" class="curfollow me" onclick="openMyStats()">📊 My stats</button>' : '<button type="button" class="curfollow' + (curIsFollowing(u.uid) ? ' on' : '') + '" onclick="curToggleFollow(\'' + attrStr(u.uid) + '\')">' + (curIsFollowing(u.uid) ? 'Following ✓' : '＋ Follow') + '</button>') + '</div>'
+    + (me ? '<button type="button" class="curfollow me" onclick="openMyStats()">📊 My stats</button>' : '<button type="button" class="curfollow' + (curIsFollowing(u.uid) ? ' on' : '') + '" onclick="curToggleFollow(\'' + attrStr(u.uid) + '\', ' + (curIsFollowing(u.uid) ? 0 : 1) + ')">' + (curIsFollowing(u.uid) ? 'Following ✓' : '＋ Follow') + '</button>') + '</div>'
     + (bio ? '<div class="curvoice">' + escapeHtml(bio) + '</div>' : '')
     + '<div class="curstats"><span>Top places <b>· ' + curTopPlaces(u, d, null).length + '</b></span>' + (fc !== null ? '<span>followers <b>· ' + fc + '</b></span>' : '') + '<span>cities <b>· ' + d.cities.length + '</b></span><span>views <b>· ' + (u.viewCount || 0) + '</b></span><span>' + curAgo(u) + '</span></div>'
     + '<div class="cursmall">' + (me ? '<button type="button" class="curic" onclick="curOpenFollowers()">👥 Followers' + (curFollowers(u) !== null ? ' (' + curFollowers(u) + ')' : '') + '</button><button type="button" class="curic" onclick="openMyProfile()">✎ Edit profile</button>' + (contactHref(u) ? '' : '<button type="button" class="curic" onclick="openMyProfile()">✉ Contact <span class="stage">add in profile</span></button>') : ((contactHref(u) ? '<a class="curic" href="' + attrVal(mpSafeHref(contactHref(u))) + '" target="_blank" rel="noopener" onclick="mpTrack.statsCurator(\'' + attrStr(u.uid) + '\', \'contact_click\')">✉ Contact</a>' : '<span class="curic">✉ Contact <span class="stage">not set</span></span>') + '<span class="curic">📤 Share <span class="stage">stage</span></span><button type="button" class="curic flag" onclick="openReport(\'profile\', \'' + attrStr(u.uid) + '\')" title="Report this profile">⚑</button>')) + '</div></div>'
@@ -7739,19 +7747,19 @@ function backToCommunityList(){
    سجلاتك هوية فقط ← الأصل الحي يعطي الاسم والعدّادات؛ تجميع دولة ← مدينة (روح المحدد بالمرجع)؛
    القائمة التي لم تعد عامة صف degraded بـ✕ — نمط Bookmarked trips نفسه */
 async function removeDegradedListBookmark(listId){
-  const r = listBookmarksMap && listBookmarksMap[listId]; if (!r) return;
-  delete listBookmarksMap[listId];
+  const __lm = listBmMap(); const r = __lm[listId]; if (!r) return; /* r119 */
+  delete __lm[listId];
   renderCommunityModal();
   try{
     await mpData.bookmarks.toggleList(currentUser.uid, r.ownerUid, r.cityId, false); /* الدفعة ٢: الباب الواحد يحذف السجل وحده حين لا عدّاد يُنقص */
-  }catch(e){ mpSwallow(e, 'bookmark remove'); listBookmarksMap[listId] = r; renderCommunityModal(); mpErrToast('Could not remove bookmark', e); } /* كان الفشل صامتًا: الصف يختفي ويعود في الجلسة التالية (ك-٤) */
+  }catch(e){ mpSwallow(e, 'bookmark remove'); __lm[listId] = r; renderCommunityModal(); mpErrToast('Could not remove bookmark', e); } /* كان الفشل صامتًا: الصف يختفي ويعود في الجلسة التالية (ك-٤) */
 }
 async function renderBookmarkedLists(wrap, cityName){ // r72s (قرار المالك): مفكرتي من الآخرين مجمَّعة بالمستخدم — كبسولته رأسًا، وتحته قوائمه المميَّزة بطاقاتٍ ثم أماكنه المميَّزة بمجموعة رأسها اسم القائمة (المدينة · الفرعي)
   if (!currentUser){ wrap.innerHTML = '<div class="mp-empty">Sign in to see your bookmarked lists.</div>'; return; }
   wrap.innerHTML = '<div class="mp-empty mini">Loading…</div>';
   await ensureListBookmarks();
   const cityF = communityScreenState[communityTab].city || '';
-  const recs = Object.keys(listBookmarksMap || {}).map(function(k){ return listBookmarksMap[k]; }).filter(function(r){ return !cityF || r.cityId === cityF; });
+  const __lm = listBmMap(); const recs = Object.keys(__lm).map(function(k){ return __lm[k]; }).filter(function(r){ return !cityF || r.cityId === cityF; });
   const pmap = placeBmMap(); const others = Object.keys(pmap).filter(function(k){ return pmap[k] && pmap[k].ownerUid; }).map(function(k){ return Object.assign({ pid: k }, pmap[k]); }).filter(function(b){ return !cityF || b.cityId === cityF; });
   if (!recs.length && !others.length){ wrap.innerHTML = '<div class="mp-empty">🔖<br>Lists and places you bookmark in the community appear here — the owner sees a count, not names.</div>'; return; }
   const byOwner = {}; const order = [];
@@ -7803,7 +7811,7 @@ function renderCommunityUserList(wrap){
     if (personLayerOnly !== 'trips') html += cities.map(c => { // ر٧٢-أ-٢د: من شريحة الرحلات تُعرض الرحلات فقط
       let n = 0; Object.keys(c.categories || {}).forEach(k => { const e = c.categories[k]; if (e && e.active === true && Array.isArray(e.places)) n += e.places.filter(p => p && (p.name || p.url)).length; }); /* خ-٦: العدّ بالاسم أو الرابط (الفهرس بلا رابط) */
       const views = c.viewCount || 0;
-      const bmOn = !!(listBookmarksMap && listBookmarksMap[u.uid + '_' + c.id]);
+      const bmOn = listBmOn(u.uid + '_' + c.id);
       // v1.40 (٦/د٢): مفكرة القائمة أيقونة خطية بعدّاد على محتوى الآخرين (المبدأ التاسع)
       const mine = !!(currentUser && u.uid === currentUser.uid); // ر٧٢-أ-١هـ: بطاقة السوق نفسها (Open → · 📤 · مفكرة بعدّاد · Save بوسمه) — صف أفعال واحد بكل الواجهات
       return othersCard({ title: escapeHtml(c.name), sub: n + (n === 1 ? ' place' : ' places'), stat: views + (views === 1 ? ' view' : ' views'), bmOn: bmOn, cnt: c.bookmarkCount || 0, bmSelf: mine, bmHandler: "toggleListBookmark('" + attrStr(u.uid) + "', '" + attrStr(c.id) + "')", reportKind: 'list', reportKey: u.uid + '_' + c.id, saveHandler: "saveOthersList('" + attrStr(u.uid) + "', '" + attrStr(c.id) + "')", savedOn: !!myCopiedLists[u.uid + '_' + c.id], unsaveHandler: "showToast('Remove copied places from your list in Places')", exportHandler: "exportOtherList('" + attrStr(u.uid) + "', '" + attrStr(c.id) + "')", openHandler: "openCommunityCityList('" + attrStr(c.id) + "')" });
@@ -7813,7 +7821,7 @@ function renderCommunityUserList(wrap){
       html += `<div class="pl-cathead"><span>🧳 Trips by ${escapeHtml(u.nickname || 'user')} · ${__utrips.length}${communityUserTripsCity ? ' · ' + escapeHtml((cities.find(c => c.id === communityUserTripsCity) || {}).name || '') : ''}</span></div>`
         + __utrips.map(t => {
           const tTitle = t.customLabel ? (t.cityName + ' — ' + t.customLabel) : t.cityName;
-          const tOn = !!(tripSavesMap && tripSavesMap[t.id]);
+          const tOn = tripSaveOn(t.id);
           const tCnt = t.saveCount || 0;
           // v1.40 (٦/د٢): فعل الحفظ بعدّاده على رحلات الآخرين — «Saved ✓» يُفَك بضغطه + «تراجع»
           return othersCard({ title: escapeHtml(tTitle), sub: tripMetaLine(t), bmOn: tOn, cnt: tCnt, bmSelf: !!(currentUser && u.uid === currentUser.uid), selfKind: 'trip', bmHandler: "toggleTripSave('" + attrStr(t.id) + "')", saveHandler: "copyOthersTrip('" + attrStr(t.id) + "')", savedOn: !!tripCopyOf(t.id), unsaveHandler: "removeMyTripCopy('" + attrStr(t.id) + "')", reportKind: 'trip', reportKey: t.id, exportHandler: "exportOtherTrip('" + attrStr(t.id) + "')", openHandler: "openCommunityTrip('" + attrStr(t.id) + "')" }); // ر٧٢-أ-٢ب/د · r72n: بطاقة رحلة السوق نفسها — صف أفعال واحد (Open → · 📤 · مفكرة · Save)
@@ -10504,7 +10512,7 @@ function logTiming(label){
 }
 // نسخة الاختبار فقط: ترفع الرسائل المنبثقة فوق لوحة التوقيت (كانت مغطاة بها كليًا ⇒ "لم تظهر رسالة" بكل الجولات السابقة)
 document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('toast'); if (t){ t.style.zIndex = '99999'; t.style.bottom = 'calc(30vh + 76px)'; } });
-window.__mpBuild = 'M2-ID-r118';
+window.__mpBuild = 'M2-ID-r119';
 /* د-٦: ملخص الشبكة سطرًا واحدًا مثبَّتًا: شهادة App Check · أول قراءة · الدخول (وتكراره) · الأخطاء · آخر خطوة بطيئة */
 let __netLineEl = null; const __net = { check: '', first: '', auth: [], errs: 0, slow: '', wait: '', blocked: '', imp: '', sort: '', save: '' };
 /* هـ-٧: السطر الأصفر يحمل ساعته «t=52s» (تتقدم كل ثانية — إن توقفت فالخيط الرئيسي متجمد لا الشبكة) · «BLOCKED 3.2s ×1» حين يتأخر نبض الثانية (شفرة مشغولة) · نتيجة مسبارَي الشبكة حين ينتظر هدف ٨ ثوانٍ: نفس الأصل (manifest.json) وخادم Firestore بـREST (settings/app الذي تقرأه القواعد للجميع) */
@@ -10623,6 +10631,7 @@ logTiming('Script started (t=0 reference)');
       logTiming('User data loaded (bookmarks, My List, Trips) — login features ready');
       resolveAuthReady();
       if (user){ try{ await mpSharerInit(); mpArrivalOpen(); }catch(_){} try{ mpShareInOpen(); }catch(_){} } /* r115-د (٥): رمز المشارك جاهز · والرابط يفتح محتواه بعد الدخول */
+      try{ if (currentTab === 'Community') renderCommunityModal(); else if (currentTab === 'Curators') renderCuratorsBody(); else if (currentTab === 'Trips') renderTripsBody(); }catch(_){} /* r119: شاشة رُسمت قبل اكتمال تحميل الحساب تُعاد الآن بحاله (التمييز · الحفظ · المتابعة) */
       if (currentTab === 'Places') renderPlacesBody(); // خ٥/م٢-ج: أول تحميل واستعادة الجلسة والدخول والخروج — الوجهة الجديدة تتحدث مع كل تغيّر حالة
       enforceNickname(); // لا ننتظرها — تعمل فوق المحتوى الظاهر
     });
@@ -10645,5 +10654,5 @@ logTiming('Script started (t=0 reference)');
 })();
 </script>
 </body>
-<!-- MyPickz build · profile=test · src=9ae38184 · parts=31 · built from src/ by scripts/build.js — do not edit this file by hand -->
+<!-- MyPickz build · profile=test · src=e2447128 · parts=31 · built from src/ by scripts/build.js — do not edit this file by hand -->
 </html>
