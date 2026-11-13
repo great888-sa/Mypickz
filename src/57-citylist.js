@@ -362,6 +362,7 @@ function isGoogleMapsUrl(url){
 async function saveUserListGeneral(){
   mpTrack.hit('mylist_save');
   if (!currentUser) return;
+  if (userListLoadFailed){ showToast('Could not load your account · please reload'); return; } /* r119 (المراجعة المستقلة · مهم): مستند الحساب لم يُقرأ — ما في الذاكرة بديل فارغ (اسم null · دول [])، وكتابته تمسح الاسم والدول على الخادم. كانت تُكتب بلا فعل من المستخدم (syncCitiesFromCityLists بعد الدخول) */
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
   try{
     await mpData.userLists.merge(currentUser.uid, { customCities: userListData.customCities || [], customCountries: userListData.customCountries || [], nickname: userListData.nickname || null });
