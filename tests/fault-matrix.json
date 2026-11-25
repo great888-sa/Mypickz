@@ -1,6 +1,6 @@
 {
- "build": "M2-ID-r119",
- "at": "2026-11-13",
+ "build": "M2-ID-r120",
+ "at": "2026-11-25",
  "modes": [
   "network",
   "permission",
@@ -458,7 +458,12 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
+    ],
+    "text": "One moment — still working on the previous place | Saved to My List · Faultville ✓"
    },
    "group": "places",
    "kind": "write"
@@ -539,7 +544,7 @@
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
      "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
     ],
-    "text": "Saved to My List · Faultville ✓"
+    "text": "One moment — still working on the previous place | Saved to My List · Faultville ✓"
    },
    "group": "places",
    "kind": "write"
@@ -630,6 +635,7 @@
    "why": "",
    "detail": {
     "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
      "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
     ],
@@ -728,7 +734,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not save | Not saved | Not saved",
+    "text": "Not saved | Not saved",
     "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
    },
    "group": "places",
@@ -740,7 +746,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not save | Not saved | Not saved",
+    "text": "Not saved | Not saved",
     "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
    },
    "group": "places",
@@ -753,6 +759,7 @@
    "why": "",
    "detail": {
     "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
      "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
     ],
@@ -779,6 +786,7 @@
    "why": "",
    "detail": {
     "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
      "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
     ],
@@ -881,8 +889,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not save | Not saved | Not saved",
-    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+    "text": "Could not read the list"
    },
    "group": "places",
    "kind": "write"
@@ -893,8 +900,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not save | Not saved | Not saved",
-    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+    "text": "Could not read the list"
    },
    "group": "places",
    "kind": "write"
@@ -963,8 +969,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not save | Not saved | Not saved",
-    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+    "text": "Could not read the list"
    },
    "group": "places",
    "kind": "write"
@@ -975,8 +980,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not save | Not saved | Not saved",
-    "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
+    "text": "Could not read the list"
    },
    "group": "places",
    "kind": "write"
@@ -1565,7 +1569,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Trip deleted | Trip deleted | 🗑 Delete this trip? | 🗑 Delete this trip?"
+    "text": "Trip deleted | 🗑 Delete this trip? | 🗑 Delete this trip? | Not saved | Not saved"
    },
    "group": "trips",
    "kind": "write"
@@ -1693,7 +1697,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1794588640613_ik2iu"
+     "trips/trip_1795634183849_x6vgc"
     ],
     "text": ""
    },
@@ -1718,7 +1722,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1794588642689_ukbwb"
+     "trips/trip_1795634185857_l979l"
     ],
     "text": ""
    },
@@ -1732,7 +1736,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "trips/trip_1794588643639_jp2vp"
+     "trips/trip_1795634186792_zl79a"
     ],
     "text": ""
    },
@@ -1938,10 +1942,10 @@
     "changed": [
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris",
-     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris_coffee",
-     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris_museums",
-     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris_parks",
-     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris_bakery"
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris_tk:Want to go",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_paris_tk:Saved",
+     "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl",
+     "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_isl_tk:مايوركا - ساحات"
     ],
     "text": ""
    },
@@ -2061,7 +2065,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not save | Not saved | Not saved",
+    "text": "Not saved | Not saved",
     "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
    },
    "group": "import",
@@ -2073,7 +2077,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "Could not save | Not saved | Not saved",
+    "text": "Not saved | Not saved",
     "note": "الذاكرة تحمل تعديلًا موسومًا Unsaved (صادق)"
    },
    "group": "import",
@@ -2086,6 +2090,7 @@
    "why": "",
    "detail": {
     "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
      "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
     ],
@@ -2112,6 +2117,7 @@
    "why": "",
    "detail": {
     "changed": [
+     "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA",
      "userCityListCats/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_fmA_coffee"
     ],
@@ -2856,7 +2862,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1794588709649_8zn6ow"
+     "reports/r_1795634251869_z9y9kc"
     ],
     "text": "Thanks — reported"
    },
@@ -2888,7 +2894,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1794588711440_sf4xfe"
+     "reports/r_1795634253634_iyjzwu"
     ],
     "text": "Thanks — reported"
    },
@@ -3349,7 +3355,7 @@
     "changed": [
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-     "nicknames/faultnick1794588735961",
+     "nicknames/faultnick1795634277907",
      "stats/users"
     ],
     "text": "Account created ✓"
@@ -3378,7 +3384,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1794588737539"
+     "nicknames/faultnick1795634279470"
     ],
     "text": "Account created ✓ | Account created ✓"
    },
@@ -3395,7 +3401,7 @@
      "users/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "userLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB",
      "stats/users",
-     "nicknames/faultnick1794588738255"
+     "nicknames/faultnick1795634280175"
     ],
     "text": "Account created ✓"
    },
@@ -3526,7 +3532,7 @@
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_3196359",
      "userCityLists/uBBBBBBBBBBBBBBBBBBBBBBBBBBB_3203789"
     ],
-    "text": "Nickname saved ✓ | Nickname saved ✓"
+    "text": "Could not save nickname — you don't have access | Nickname saved ✓"
    },
    "group": "account",
    "kind": "write"
@@ -3682,7 +3688,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": ""
+    "text": "Could not load users — you don't have access"
    },
    "group": "admin",
    "kind": "read"
@@ -3860,7 +3866,7 @@
    "v": "ok",
    "why": "",
    "detail": {
-    "text": "No public trips yet — make a trip public to see its views and saves here"
+    "text": "No public trips yet — make a trip public to see its opens and copies here"
    },
    "group": "drawer",
    "kind": "read"
@@ -3915,7 +3921,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1794588780502_gv0tkd"
+     "reports/r_1795634322449_4eq9nm"
     ],
     "text": "Thanks — we will look into it"
    },
@@ -3940,8 +3946,8 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1794588782553_t4gq69",
-     "reports/r_1794588782553_o7asf4"
+     "reports/r_1795634324500_65rqp4",
+     "reports/r_1795634324500_bwhj08"
     ],
     "text": "Thanks — we will look into it | Thanks — we will look into it"
    },
@@ -3955,7 +3961,7 @@
    "why": "",
    "detail": {
     "changed": [
-     "reports/r_1794588783541_8rsh2n"
+     "reports/r_1795634325479_ynvtrv"
     ],
     "text": "Thanks — we will look into it"
    },
