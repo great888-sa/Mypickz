@@ -105,7 +105,11 @@
     var px = press(xb); if (px && px.out && px.out.then) await px.out; await wait(80);
     o.olist = [px && px.code, sent.length, sent[0] || '', !!(q('#tripShareBackdrop') && q('#tripShareBackdrop').classList.contains('show'))];
     /* قائمة زالت: رسالة ولا إرسال */
+    cmCache.lists['uCR117_nowhere'] = { ownerId: 'uCR117', cityId: 'nowhere', public: true }; /* المحور ١ (المراجعة ١١): الزائلة تخرج من ذاكرة السوق */
     sent.length = 0; toasts.length = 0; await exportOtherList('uCR117', 'nowhere'); o.olistGone = [sent.length, toasts.slice()];
+    o.olistEvict = [typeof cmCache.lists['uCR117_nowhere']];
+    /* خطأ غير الرفض (انقطاع): رسالة البناء لا «لم تعد متاحة»، ولا إخراج من الذاكرة */
+    cmCache.lists['uCR117_r117a'] = cmCache.lists['uCR117_r117a'] || { ownerId: 'uCR117', cityId: 'r117a', public: true }; sent.length = 0; toasts.length = 0; globalThis.__readFail = 'userCityLists/uCR117_r117a'; try{ await exportOtherList('uCR117', 'r117a'); } finally { globalThis.__readFail = null; } o.olistNet = [sent.length, toasts.slice(), typeof cmCache.lists['uCR117_r117a']];
   }catch(e){ o.err5 = String(e && e.stack || e); }
 
   /* ── (٦) Send as text لرحلتي: exportOwnTripRow · ورحلة مشارَكة معي ترسل نصّها بقارئها (لا بمسار رحلتي) ── */
@@ -121,6 +125,11 @@
     sent.length = 0; toasts.length = 0; currentTripId = 'trip_r117h'; var mt0 = (q('#myTripsBody') || {}).innerHTML;
     var ps = press(sb); if (ps && ps.out && ps.out.then) await ps.out; await wait(260);
     o.shared = [ps && ps.code, sent.length, (sent[0] || '').split('\n')[0], /Sent via MyPickz/.test(sent[0] || ''), currentTripId, (q('#myTripsBody') || {}).innerHTML === mt0, toasts.slice()];
+    /* المحور ١: رحلة غيري زالت (قراءتها مرفوضة — القاعدة تقرأ بياناتها): رسالة «لم تعد متاحة» ولا إرسال */
+    cmCache.trips['trip_nowhere_r117'] = { id: 'trip_nowhere_r117', ownerId: 'uCR117', public: true };
+    sent.length = 0; toasts.length = 0; await exportOtherTrip('trip_nowhere_r117'); o.sharedGone = [sent.length, toasts.slice()];
+    o.sharedEvict = [typeof cmCache.trips['trip_nowhere_r117']];
+    sent.length = 0; toasts.length = 0; globalThis.__readFail = 'trips/trip_shr117'; try{ await exportOtherTrip('trip_shr117'); } finally { globalThis.__readFail = null; } o.sharedNet = [sent.length, toasts.slice(), sharedTrips.some(function(t){ return t.id === 'trip_shr117'; })];
     host.remove();
   }catch(e){ o.err6 = String(e && e.stack || e); }
 
