@@ -3,14 +3,14 @@
 
   <!-- خ١: الشريط العلوي — القائمة + شارة الهوية (المشهد ٦) -->
   <div class="mp-topbar" id="mpTopbar">
-    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+    <div style="display:flex; align-items:center; gap:8px; flex:1 0 auto; min-width:0;"><!-- r120 (ق١١-٢٥-٠٢): هذه المجموعة لا تنكمش — الشريحة هي التي تضيق ويُقصّ اسمها، فلا تُغطّى كلمة MyPickz بأي خط -->
       <button type="button" class="mp-burger" onclick="openAccountModal()" aria-label="Menu">☰</button>
       <button type="button" class="mp-burger" onclick="openHelpFor(currentTab)" aria-label="Help" title="How this screen works">?</button>
       <button type="button" class="mp-sym" onclick="openSymbols()" title="What each button and status means">Symbols</button><!-- r87-2 (كلمة المالك ١٢:٥٥ · ١٣:٠٤): ظاهرة لا مدفونة -->
       <span class="mp-wordmark" style="margin-left:auto; padding-left:6px;">MyPickz</span>
     </div>
     <button type="button" class="mp-idchip" id="accountChipBtn" onclick="toggleChipMenu()" style="display:none;">
-      <span class="mini-av" id="accountChipAv" style="background:var(--ink);">··</span><span id="accountChipLabel">Account</span><span class="sus" id="accountChipSus" style="display:none;">· Suspended</span>
+      <span class="curmk" id="accountChipCur" style="display:none;">✧</span><span class="lbl" id="accountChipLabel">Account</span><span class="sus" id="accountChipSus" style="display:none;">Suspended</span>
     </button>
     <button type="button" class="mp-idchip" id="guestChipBtn" onclick="openGate()"><span class="mini-av" style="background:var(--ink-soft);">👤</span><span>Sign in</span></button>
     <!-- قرار المالك ٢٧ أغسطس: الشارة تفتح قائمة صغيرة (حسابي · خروج) — الدرج من ☰ الظاهر -->
@@ -256,13 +256,14 @@
       <div id="delStep2" style="display:none;">
         <p class="ctx" style="text-align:center; margin:0 0 10px;">Type <b>DELETE</b> to confirm permanent deletion.</p>
         <input id="delWord" class="modal-input" oninput="checkDelWord()" placeholder="Type DELETE" style="text-align:center; letter-spacing:2px;">
+        <div id="delLeft" class="ctx" style="display:none; margin:10px 0 0; padding:9px 11px; border:1px solid var(--line); border-radius:10px; line-height:1.55; text-align:start;"></div>
         <button class="btn btn-danger wide" id="delGo" style="margin-top:10px;" onclick="doAccountDelete()" disabled>Delete my account forever</button>
       </div>
       <div id="delStep3" style="display:none;">
         <div style="font-size:40px;">🕊</div>
         <h3>Account deleted</h3>
-        <p class="ctx" style="text-align:center; line-height:1.7; margin:0 0 12px;">Your account and all your data were permanently deleted.<br>Your nickname is now free for anyone to use.<br>Thank you for trying MyPickz.</p>
-        <button class="btn btn-ghost wide"  onclick="delStep(1)">Back to preview</button>
+        <p class="ctx" id="delDoneText" style="text-align:center; line-height:1.7; margin:0 0 12px;">Your account and all your data were permanently deleted.<br>Your nickname is now free for anyone to use.<br>Thank you for trying MyPickz.</p>
+        <button class="btn btn-ghost wide"  onclick="delDone()">Close</button>
       </div>
     </div>
   </div>
@@ -271,7 +272,6 @@
   <div class="modal-backdrop" id="accountBackdrop" onclick="closeAccountModalOnBackdrop(event)">
     <div class="modal night drawer">
       <div class="acc-head card" id="accountCard" onclick="openFromDrawer(openMyProfile)">
-        <span class="mini-av" id="accountAv">··</span>
         <div class="meta">
           <div class="acc-name" id="accountName">—</div>
           <div class="acc-mail" id="accountEmail">—</div>
@@ -280,7 +280,7 @@
         <button type="button" class="x" onclick="event.stopPropagation(); closeAccountModal()" aria-label="Close">✕</button>
       </div>
       <div class="dr-head">Me</div>
-      <button type="button" class="dr-item" onclick="openFromDrawer(openMyStats)"><span>📊 My stats</span><span class="dim mini">reach · lists · trips ›</span></button>
+      <button type="button" class="dr-item" onclick="openFromDrawer(openMyStats)"><span>📊 My dashboard</span><span class="dim mini">reach · lists · trips ›</span></button>
       <button type="button" class="dr-item" id="drFollowersItem" style="display:none;" onclick="openFromDrawer(curOpenFollowers)"><span>👥 Followers</span><span class="dim mini" id="drFollowersCount">›</span></button>
       <button type="button" class="dr-item" id="drCuratorItem" onclick="openFromDrawer(openCuratorRequest)"><span>⭐ Become a curator</span><span class="dim mini" id="drCuratorStatus">request ›</span></button>
       <div class="dr-head">App</div>
@@ -339,6 +339,7 @@
       <button type="button" class="dash-door" onclick="openAdminCuratorPicker()"><span>📊 Curator stats</span><span>pick a curator ›</span></button>
       <div class="gsec">Content</div>
       <button type="button" class="dash-door" onclick="openAdminReports()"><span>⚑ Reports</span><span id="adminRepCount">›</span></button>
+      <button type="button" class="dash-door" onclick="openAdminReview()"><span>🛡 Content review</span><span id="adminRevCount">›</span></button>
       <button type="button" class="dash-door" onclick="openAdminCustomCats()"><span>🏷 Custom categories</span><span id="adminCatsCount">›</span></button>
       <button type="button" class="dash-door" onclick="openMostSavedStats()"><span>📊 Most saved</span><span>places · lists ›</span></button>
       <div class="gsec">System</div>
