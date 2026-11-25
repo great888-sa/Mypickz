@@ -11,8 +11,7 @@ async function loadCommunityUserTrips(uid){
 }
 let cmTripOpening = null;
 async function openCommunityTrip(tripId){
-  try{ const __t = (cmCache.trips && cmCache.trips[tripId]) || (communityUserTrips || []).find(function(t){ return t.id === tripId; }); if (__t && currentUser && __t.ownerId !== currentUser.uid) mpData.trips.bumpView(tripId).catch(function(){}); }catch(_){} // r72t (M4.26 ٣)
-  mpTrack.statsTrip(tripId, 'view_total');
+  try{ const __t = (cmCache.trips && cmCache.trips[tripId]) || (communityUserTrips || []).find(function(t){ return t.id === tripId; }); if (__t && currentUser && __t.ownerId !== currentUser.uid && mpViewOnce('trip', tripId)) mpData.trips.bumpView(tripId).catch(function(){}); }catch(_){} // r72t (M4.26 ٣)
   const __op = (cmTripOpening = tripId + '#' + Date.now() + Math.random()); /* r109-ب (المراجعة): حالة العرض تُضبط بعد التحقق لا قبله — رسمٌ متزامن لا يعرض الخطة من الذاكرة، وفتحٌ أحدث لا يلغيه فتح أقدم */
   let trip = communityUserTrips.find(t => t.id === tripId) || (communityUserDayPlans || []).find(t => t.id === tripId) || (typeof sharedTrips !== 'undefined' ? (sharedTrips || []).find(t => t.id === tripId) : null) || cmCache.trips[tripId]; // ر٦٩ذ: من السوق مباشرة · r103: خطة يوم من الشرائح (عامة أو مشارَكة معي)
   let __fresh = false; if (!trip){ const __v = await cmVerifyTrip(tripId); if (cmTripOpening !== __op) return; if (__v.ok){ trip = __v.trip; __fresh = true; } else if (__v.err){ mpErrToast('Could not open this trip', __v.err); return; } } /* r109 (المراجعة الثانية): كان النداء على mpData.trips.get — عضو غير موجود — فالمسار يقول «no longer available» دائمًا؛ التدقيق §39 يمنع الصنف */ /* r109 (المراجعة الثانية): كان النداء على mpData.trips.get — عضو غير موجود — فالمسار يقول «no longer available» دائمًا؛ التدقيق §39 يمنع الصنف */
@@ -21,6 +20,7 @@ async function openCommunityTrip(tripId){
     if (__v.gone){ cmTripGone(tripId, trip.ownerId); showToast('This trip is no longer available'); renderCommunityModal(); return; }
     if (__v.err){ mpErrToast('Could not open this trip', __v.err); return; }
     const __t = __v.trip; const __swap = function(arr){ const i = (arr || []).findIndex(function(t){ return t.id === tripId; }); if (i >= 0) arr[i] = __t; }; __swap(communityUserTrips); __swap(communityUserDayPlans); if (cmCache.trips[tripId]) cmCache.trips[tripId] = __t; trip = __t; }
+  if (!(currentUser && trip.ownerId === currentUser.uid) && mpViewOnce('tripstat', tripId)) mpTrack.statsTrip(tripId, 'view_total'); if (currentUser && trip.ownerId !== currentUser.uid){ mpViewerMark('t', tripId); if (trip.public === true) mpViewerMark('p', trip.ownerId); /* r120 (ق١١-١٨-٢٢ · المراجعة ٣٤): ومن فتح رحلة عامة لي */ } /* r120 (ق١١-١٤-٠٩ · ق١١-١٤-١١): مشاهد الأسبوع */ /* r120 (ع-٣): عدّاد المشاهدة الثاني للرحلة بالتعريف نفسه — مرة في الجلسة (My stats يعرض الأكبر من العدّادين) · المراجعة المستقلة ١٥: بعد ثبوت الرحلة، وصاحبها لا يُعدّ لنفسه (كان فتحه رحلته يرفع مشاهداتها) */
   viewingCommunityTripId = tripId;
   if (!communityUserTrips.find(t => t.id === tripId)){ if (trip.dayPlan){ if (!(communityUserDayPlans || []).some(t => t.id === tripId)) communityUserDayPlans.push(trip); } else communityUserTrips.push(trip); } /* r103: خطة اليوم لا تدخل قائمة رحلات الشخص */
   if (!viewingUserUid){ cmDirect = true; viewingUserUid = trip.ownerId; viewingUserData = (communityUsers || []).find(u => u.uid === trip.ownerId) || { uid: trip.ownerId, nickname: trip.ownerName || 'user', publicCityIds: [] }; viewingUserCities = []; } // ر٦٩غ: الفتح من السوق مباشرة — عرض الرحلة يعيش بطبقة صاحبها
@@ -29,7 +29,7 @@ async function openCommunityTrip(tripId){
   resolvedTripCache['community_'+tripId] = await resolveTripPlaces(trip);
   // فتح رحلة مشتركة يُحتسَب كمشاهدة إضافية (نفس أهمية فتح الملف الشخصي نفسه)
   if (trip && trip.ownerId){
-    Promise.resolve(mpData.communityProfiles.bumpView(trip.ownerId)).then(function(v){ if (v !== false && viewingUserData && viewingUserData.uid === trip.ownerId) viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1; }).catch(()=>{}); /* الدفعة ٢ (ك-١١): العدّاد المعروض بعد نجاح الكتابة، وملفي لا يُعدّ لي */
+    if (mpViewOnce('profile', trip.ownerId)) Promise.resolve(mpData.communityProfiles.bumpView(trip.ownerId)).then(function(v){ if (v !== false && viewingUserData && viewingUserData.uid === trip.ownerId) viewingUserData.viewCount = (viewingUserData.viewCount||0) + 1; }).catch(()=>{}); /* الدفعة ٢ (ك-١١): العدّاد المعروض بعد نجاح الكتابة، وملفي لا يُعدّ لي */
   }
   renderCommunityModal();
 }
@@ -42,7 +42,8 @@ function renderCommunityTripDetail(wrap){ // r77: رحلة الآخرين بال
   let html = `<button type="button" class="backchip" onclick="backFromCommunityTrip()" style="margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back</button>
   <h4 style="text-align:center; margin:4px 0 4px; font-family:'Cairo',sans-serif;" dir="auto">${escapeHtml(tripTitle(trip))}</h4><div class="ctx" style="text-align:center; margin-bottom:8px;">${escapeHtml(tripMetaLine(trip))}</div>`;
   if (!tripHasPlan(trip)){ wrap.innerHTML = html + '<div class="mp-empty mini">This trip uses the old format.</div>'; return; }
-  if (trip.dayPlan){ const d0 = (resolved.days || [])[0]; wrap.innerHTML = html + '<div class="ctx" style="margin:0 0 6px;">' + (tripIsDayTrip(trip) ? '🚞 Day trip' : '🏙 In the city') + ' · ' + escapeHtml(trip.cityName || '') + ' <span class="dim">· stops only — start point and times are the owner\'s</span></div>' + (d0 ? dpViewerDayHtml(trip, d0) : '<div class="mp-empty mini">No stops in this plan.</div>'); return; } /* r103: خطة يوم عند المشاهد — المحطات بلا انطلاق ولا أوقات */
+  const __mem = tripNamedMember(trip); const __memDay = function(day){ const city = tripCityOfDay(trip, day) || (trip.cities || [])[0] || null; return day.mode === 'daytrip' ? tripDayTripViewHtml(trip, day, city, true) : tripRouteTabHtml(trip, day, city, true); }; /* المراجعة ٣١ (قيس): يوم «Day trip» بعرض صاحبه الخطّي — فيه ملاحظة الرِجل و«optional» */ /* r120 (المحور ٤ — ق١١-١٨-٠٥): من سمّاه صاحبها يرى مسار اليوم كما وضعه (الانطلاق · الأوقات · الدقائق · المدد) — بعرض القراءة القائم؛ المشاهد العام كما كان */
+  if (trip.dayPlan){ const d0 = (resolved.days || [])[0]; wrap.innerHTML = html + '<div class="ctx" style="margin:0 0 6px;">' + (tripIsDayTrip(trip) ? '🚞 Day trip' : '🏙 In the city') + ' · ' + escapeHtml(trip.cityName || '') + ' <span class="dim">· ' + (__mem ? 'shared with you by name — start point and times as the owner set them' : 'stops only — start point and times are the owner\'s') + '</span></div>' + (d0 ? (__mem ? __memDay(d0) : dpViewerDayHtml(trip, d0)) : '<div class="mp-empty mini">No stops in this plan.</div>'); return; } /* r103: خطة يوم عند المشاهد — المحطات بلا انطلاق ولا أوقات */
   (resolved.days || []).forEach(function(day){
     const es = tripDayEntries(day); if (!es.length) return;
     html += `<div class="dayhead"><span class="daynum">${day.n}</span><span class="daytitle">${escapeHtml(tripDayLabel(day).toUpperCase())}${day.date ? ' · ' + escapeHtml(tripDateLabel(day.date)) : ''}</span><span class="dayline"></span></div>`;
@@ -53,6 +54,8 @@ function renderCommunityTripDetail(wrap){ // r77: رحلة الآخرين بال
         __tcards += (k ? '<div class="pc-lab" style="margin:0 0 2px 6px;">or</div>' : '') + othersPlaceRowHtml({ id: ref.placeId || pl.id || hashUrl(pl.url || ''), name: pl.name || x.name || 'Place', url: pl.url, area: pl.area, picks: pl.picks, note: pl.note, geo: pl.geo, nolist: true /* r115: محطة رحلة لا صف قائمة */ }, { uid: ouid, nickname: (viewingUserData && viewingUserData.nickname) || 'a user' }, { id: ref.cityId || trip.cityId || '', name: cityNm }, sCat, ref.cityId || trip.cityId || '') + (x.alert ? '<div class="pc-lab" style="margin:-2px 0 8px 6px;">Alert · <span class="pc-val">' + escapeHtml(x.alert) + '</span></div>' : '');
       }); });
       html += placeGroupHtml(TRIP_PERIOD_LABEL[p], arr.length, '', __tcards, 'stop'); });
+    if (__mem) html += '<div class="pc-lab" style="margin:8px 0 2px;">Day route · as the owner set it</div>' + __memDay(day);
+    else if (day.mode === 'daytrip') html += dpViewerDayHtml(trip, day, tripCityOfDay(trip, day)); /* r120 (ع٤-١٨ — قيس · ق١١-١٨-٠٩): يوم «Day trip» محطاته في day.stops لا في الفترات — كان المشاهد العام يرى عنوان اليوم وحده. بعرض خطة اليوم العامة نفسه: بلا انطلاق ولا أوقات ولا دقائق */
   });
   wrap.innerHTML = html;
 }
@@ -81,7 +84,7 @@ async function openMostSavedStats(){
 // خ١-ب: البوابة (المشهد ١) تسبق نافذة الدخول/التسجيل (المشهد ٢) — النافذة موحَّدة (قرار المالك: الاسم داخلها)، والعنوان بحسب الزر
 let mpHadUser = false; /* r115-ب: في هذا التحميل دخل مستخدم — الخروج بعده لا يُعدّ رؤية بوابة */
 function gateSeen(){ /* r115-ب (ق٠٨-٢٧-١٦ · ق١١-١١-٠٤): «جهاز رأى البوابة اليوم» — مرة للجهاز في اليوم، من نقطة واحدة (openGate)، بعد معرفة حال الدخول، ولزائر لم يكن مسجَّلًا في هذا التحميل. مقام «وصل ← سجّل»: signup_done ÷ reserved_3 حدّ أدنى للتحويل (يشمل عائدًا انتهت جلسته). */
-  try{ if (document.body.classList.contains('auth-pending') || currentUser || mpHadUser) return false; const d = new Date(), p = function(n){ return String(n).padStart(2, '0'); }; const day = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); if (localStorage.getItem('mp_gate_seen') === day) return false; localStorage.setItem('mp_gate_seen', day); mpTrack.hit('reserved_3', { personal: true }); return true; }catch(_){ return false; } }
+  try{ if (document.body.classList.contains('auth-pending') || currentUser || mpHadUser) return false; const day = mpDayKey(); /* r120 (المراجعة ٣٤): «مرة للجهاز في اليوم» بيوم الإحصاء نفسه الذي يُكتب فيه الحدث — كان يوم الجهاز */ if (localStorage.getItem('mp_gate_seen') === day) return false; localStorage.setItem('mp_gate_seen', day); mpTrack.hit('reserved_3', { personal: true }); return true; }catch(_){ return false; } }
 function openGate(){
   gateSeen();
   document.getElementById('authGateView').style.display = '';
@@ -119,7 +122,7 @@ function mpOpenThen(openFn, after){ /* يفتح نافذة ويستدعي after 
   const opened = Array.from(document.querySelectorAll('.modal-backdrop.show')).find(b => !before.has(b));
   if (!opened || !window.MutationObserver) return opened || null;
   const isDash = opened.id === 'dashBackdrop'; /* نوافذ القشرة: Back صريح (لا عودة بالإغلاق) — المراقب يستهلك علم ✕ فقط */
-  if (isDash && !__dashBack && typeof after === 'function'){ const t = document.getElementById('dashTitle'); dashSet(t ? t.textContent : '', function(){ closeModalById('dashBackdrop'); after(); }); }
+  if (isDash && !__dashBack && typeof after === 'function'){ __dashBack = function(){ closeModalById('dashBackdrop'); after(); }; const b = document.getElementById('dashBackBtn'); if (b) b.classList.remove('hidden'); /* ق١١-١٤-٠٤: زرّ Back يُضاف للشاشة المفتوحة نفسها — لا عبر dashSet (شاشة جديدة برقم جديد كانت تُسقط رسم الشاشة التي فُتحت للتوّ: قاسته محطة الدرج) */ }
   __mpWatched.add(opened.id);
   const obs = new MutationObserver(function(){
     if (!opened.classList.contains('show')){ obs.disconnect(); __mpWatched.delete(opened.id); if (window.__mpNoReopen){ window.__mpNoReopen = false; return; } if (!isDash && typeof after === 'function') after(); }
@@ -131,12 +134,13 @@ function openFromDrawer(openFn){
   closeAccountModal(); window.__mpFromDrawer = true;
   try{ mpOpenThen(openFn, function(){ if (currentUser) openAccountModal(); }); } finally { window.__mpFromDrawer = false; }
 }
-function closeModalById(id){ document.getElementById(id).classList.remove('show'); }
+function closeModalById(id){ if (id === 'delBackdrop' && typeof mpDeleting !== 'undefined' && mpDeleting) return; /* r120 (المراجعة ٢٣ — قيس): نافذة الحذف لا تُغلق والحذف جارٍ — ما خلفها (مفكرة · متابعة · ملف) كان يُكتب بعد أن حُذف كل شيء */ document.getElementById(id).classList.remove('show'); }
 const __mpWatched = new Set(); /* ب-٢-٢-أ٢: النوافذ التي يرصدها mpOpenThen الآن — علم «لا عودة» يُرفع لها وحدها فلا يبقى معلَّقًا */
 function mpNoReopenFor(id){ if (__mpWatched.has(id)) window.__mpNoReopen = true; }
-function mpCloseAll(id){ mpNoReopenFor(id); closeModalById(id); if (id === 'dashBackdrop' && typeof tkPinOrigin !== 'undefined') tkPinOrigin = ''; } /* r90: ✕ ينسى الورقة الأصل لمسار Pin */ /* ب-٢-٢-أ: ✕ بالقشرة الموحَّدة — إغلاق النافذة بلا إعادة فتح الدرج */
+function mpCloseAll(id){ if (id === 'delBackdrop' && typeof mpDeleting !== 'undefined' && mpDeleting) return; /* r120 (المراجعة ٢٤ — قيس): ✕ والحذف جارٍ لا يفعل شيئًا — كان يترك علم «لا تُعِد الفتح» مضاءً */ mpNoReopenFor(id); closeModalById(id); if (id === 'dashBackdrop' && typeof tkPinOrigin !== 'undefined') tkPinOrigin = ''; } /* r90: ✕ ينسى الورقة الأصل لمسار Pin */ /* ب-٢-٢-أ: ✕ بالقشرة الموحَّدة — إغلاق النافذة بلا إعادة فتح الدرج */
 let __dashBack = null; /* ب-٢-٢-أ: معالج Back الحالي لنافذة dashBackdrop (null = لا طبقة سابقة فيُخفى الزر) */
-function dashSet(title, backFn){ const t = document.getElementById('dashTitle'); if (t) t.textContent = title || ''; __dashBack = (typeof backFn === 'function') ? backFn : null; const b = document.getElementById('dashBackBtn'); if (b) b.classList.toggle('hidden', !__dashBack); }
+let __dashGen = 0; /* ق١١-١٤-٠٤ (مقيس): رقم الشاشة في الورقة المشتركة — كل شاشة تُفتح ترفعه؛ من انتظر قراءة يسأل قبل أن يرسم: أما زلتُ الشاشة المعروضة؟ (فتحٌ أقدم أبطأ كان يرسم فوق الأحدث) */
+function dashSet(title, backFn){ __dashGen++; const t = document.getElementById('dashTitle'); if (t) t.textContent = title || ''; __dashBack = (typeof backFn === 'function') ? backFn : null; const b = document.getElementById('dashBackBtn'); if (b) b.classList.toggle('hidden', !__dashBack); }
 function dashBack(){ const f = __dashBack; if (f) f(); else closeModalById('dashBackdrop'); }
 
 /* ب-٢-٢-أ٢ (القرار ١ من ٦): الورقة السفلية — بديل confirm()/prompt() المتصفح. mpSheet(o) يعيد وعدًا: 'ok' للفعل الأساسي · 'alt' للبديل الاختياري · 'alt2' لبديل ثانٍ (r75c) · null للإلغاء (زر Cancel أو النقر خارجها أو السحب لأسفل).
@@ -207,7 +211,7 @@ async function saveHome(){
 // النبذة (المشهد ٤): مرة واحدة بالعمر — العلم بمستند المستخدم؛ بعدها اختيار الوجهة إن لم تُختر
 async function runOnboardingIfNeeded(){
   if (!currentUser || !userListData) return;
-  if (userListLoadFailed) return; /* و-١: الهوية لم تُقرأ — لا دليل ولا كتابة guideSeen على مستند لم نره */
+  if (userListLoadFailed || !mpAccountReady()) return; /* r120: والحساب محمَّل */ /* و-١: الهوية لم تُقرأ — لا دليل ولا كتابة guideSeen على مستند لم نره */
   if (userListData.guideSeen === true){ markIntroSeen(); } /* و-٢: الحقيقة المخزَّنة تعيد العلم المحلي (localStorage + الكعكة) إن ضاع */
   else {
     openHelpModal();
@@ -227,7 +231,8 @@ async function consumePendingShare(){
   const r = parseMapsShare(t); const c = inferCityFrom(r.parts || []);
   if (c && c.id !== cityListCityId){ plSessionCity = c.id; try{ await selectCityListCity(c.id); }catch(e){} }
   switchTab('Places'); if (!cityListCityId){ showToast('Pick a city first, then paste again'); return; }
-  openPlPlaceModal(null, null); plParseShare(t); /* r93-٣: النص إلى المحلّل مباشرة */
+  if (openPlPlaceModal(null, null) === false){ pendingShareText = t; return; } /* r120 (المراجعة ٢٨): النافذة لم تُفتح (حفظ مكان جارٍ) — النص لا يُكتب في نموذج الحفظ الجاري، ويبقى منتظرًا */
+  plParseShare(t); /* r93-٣: النص إلى المحلّل مباشرة */
 }
 // أ-١٢-١: الوجهة الافتراضية — يدويًّا ما اختاره؛ وإلا: له أماكن → الأماكن على مدينته؛ وإلا → المجتمع
 function totalMyPlaces(){ const c = (userListData && userListData.cityPlaceCounts) || {}; return Object.keys(c).reduce(function(a, k){ return a + (Number(c[k]) || 0); }, 0); }
