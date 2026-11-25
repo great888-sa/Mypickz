@@ -4,7 +4,8 @@
 async function enforceNickname(){
   if (!currentUser) return;
   if (signUpInProgress){ logTiming('[NICK] skip: signUpInProgress'); return; }      // التسجيل يحجز الاسم بنفسه — لا نافذة زائفة أثناء ذلك
-  if (userListLoadFailed){ logTiming('[NICK] skip: userLists read failed'); return; }    // تعذّر التحقق شبكيًا — لا نحبس المستخدم بخطأ مؤقت
+  if (userListLoadFailed){ logTiming('[NICK] skip: userLists read failed'); return; }
+  if (!mpAccountReady()){ logTiming('[NICK] skip: account not loaded for this user'); return; } /* r120: معالج دخول سبقه حدث أحدث لا يسأل الداخل الآن عن اسم لم يُقرأ حسابه بعد */    // تعذّر التحقق شبكيًا — لا نحبس المستخدم بخطأ مؤقت
   if (userListData.nickname){ logTiming('[NICK] ok: nickname="' + userListData.nickname + '"'); updateUserUI(); if (!signUpInProgress) runOnboardingIfNeeded(); return; } // خ١: الشارة بعد الاسم · خ١-ب: النبذة والوجهة مرة واحدة
   if (nicknameFlowActive){ logTiming('[NICK] skip: flow already active'); return; }
   logTiming('[NICK] ⚠️ no nickname on server → prompting');
@@ -74,12 +75,7 @@ function doSignOut(){
 
 
 
-// ٢/أ: لون حتمي مشتق من الاسم المستعار — الشارة نفسها بكل مكان (الشريط، نافذة الحساب، ولاحقًا ترويسة "حسابي")
-const AV_COLORS = ['#3D5A80','#6B4E71','#4A6D7C','#5B6B3A','#7A4F3A','#3F6B5E','#5C5A8A','#7A5C2E']; // v1.37: لوحة الشارة الثمانية — لا زعفران ولا لون خطر
-function avatarColor(name){
-  let h = 0; for (const ch of String(name || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return AV_COLORS[h % AV_COLORS.length];
-}
+/* r120 (ق١١-٢٥-٠٢): دائرة الحرفين الملوّنة حُذفت من كل الأماكن (كانت موضع صورة لم تُبنَ) — الشريحة اسم وحده؛ المنتقي بإطار زعفراني وعلامة ✧ قبل اسمه، والموقوف بإطاره الأحمر */
 // v1.37 — الشارة تعلن الإيقاف (القرار ٢٠٢٦-٠٨-٣١-٠٧): إطار خطر ليلي رفيع ونص الحالة؛ الحرفان باقيان
 function refreshSuspendedBadge(){
   const chip = document.getElementById('accountChipBtn'), sus = document.getElementById('accountChipSus');
@@ -88,10 +84,8 @@ function refreshSuspendedBadge(){
   chip.classList.toggle('suspended', on);
   sus.style.display = on ? '' : 'none';
 }
-function avatarInitials(name){
-  const n = String(name || '').trim();
-  return n ? n.slice(0, 2) : '··';
-}
+function mpMeCurator(){ return !!(currentUser && ((typeof curators !== 'undefined' && (curators || []).some(function(c){ return c.uid === currentUser.uid; })) || (userListData && userListData.curatorSelf))); } /* بلا قراءة: من علم الحساب المحمَّل (curatorSelf) أو قائمة المنتقين إن كانت في الذاكرة */
+function mpChipCurator(){ const chip = document.getElementById('accountChipBtn'), mk = document.getElementById('accountChipCur'); if (!chip || !mk) return; const on = mpMeCurator(); chip.classList.toggle('curator', on); mk.style.display = on ? '' : 'none'; }
 function updateUserUI(){ /* r74b-٣: الكتلة الخفية الموروثة (شاشة الدليل) حُذفت — كانت تحمل أيقونة الزر القديم ولافتته ولافتة الزائر التي اعتمد عليها شرط الخروج المبكر هنا؛ الشارة بالشريط العلوي هي الواجهة الوحيدة للحساب */
   const chipBtn = document.getElementById('accountChipBtn');
   if (currentUser){
@@ -100,11 +94,8 @@ function updateUserUI(){ /* r74b-٣: الكتلة الخفية الموروثة 
     if (chipBtn){
       chipBtn.style.display = '';
       const nick = userListData.nickname || '';
-      const av = document.getElementById('accountChipAv');
-      av.textContent = avatarInitials(nick);
-      av.style.background = avatarColor(nick);
       document.getElementById('accountChipLabel').textContent = nick || 'Account';
-      refreshSuspendedBadge();
+      refreshSuspendedBadge(); mpChipCurator();
     }
   } else {
     if (chipBtn) chipBtn.style.display = 'none';
@@ -118,8 +109,9 @@ function updateUserUI(){ /* r74b-٣: الكتلة الخفية الموروثة 
     listBookmarksMap = null; tripSavesMap = null; viewingUserUid = null; plPanel = null; addrPanel = null;
     mpSheetAbort(); /* r100-ب: ورقة معلّقة تُحسم فلا يبقى مفتاح انشغال محجوزًا بعد الخروج */
     if (typeof TB !== 'undefined' && TB){ TB = null; } try{ if (typeof tbSessionClear === 'function'){ tbSessionClear(); tbSessionOffered = false; } }catch(_){} /* r108: الخروج لا يترك نسخة التحرير على الجهاز */ /* r101-ب (المراجعة المستقلة): منشئ مفتوح لا يحفظ بعد الخروج */
-    document.querySelectorAll('.modal-backdrop.show').forEach(function(b){ if (b.id !== 'authBackdrop') b.classList.remove('show'); });
+    document.querySelectorAll('.modal-backdrop.show').forEach(function(b){ if (b.id !== 'authBackdrop' && !(b.id === 'delBackdrop' && typeof delCurStep !== 'undefined' && delCurStep === 3)) b.classList.remove('show'); }); /* r120: شاشة «Account deleted» تبقى فوق بوابة الدخول */
     openGate();
+    if (typeof delCurStep !== 'undefined' && delCurStep === 3 && document.getElementById('delBackdrop').classList.contains('show')) openModalById('delBackdrop'); /* r120 (قيس في المتصفح): البوابة فُتحت بعد شاشة «Account deleted» فغطّتها — آخر ما يُفتح هو الأعلى، فتُرفع الشاشة فوق البوابة */
   }
 }
 
