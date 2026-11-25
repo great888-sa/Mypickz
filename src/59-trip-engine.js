@@ -18,6 +18,7 @@ const TRIP_RHYTHM = { // ═══ جدول الإيقاع (البيان v1.2 ·
     restaurants_dish: { role: 'meal', periods: ['midday', 'evening'], minutes: 75 }, restaurants_cuisine: { role: 'meal', periods: ['midday', 'evening'], minutes: 75 },
     shopping_store: { role: 'visit', periods: ['afternoon', 'evening'], minutes: 120 }, shopping_product: { role: 'visit', periods: ['afternoon', 'evening'], minutes: 60 },
     parks_gardens: { role: 'sight', periods: ['morning', 'afternoon'], minutes: 75 }, squares_streets: { role: 'sight', periods: ['morning', 'afternoon', 'evening'], minutes: 60 },
+    boat_tours: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 180 }, /* r120 (ق١١-٢٤-١٣): انتقل إلى Corniche & Marinas ودوره في بناء الرحلة يبقى كما كان تحت Beaches (جولة ثلاث ساعات صباحًا أو عصرًا) — لا يصير «مشهد ساعة» بانتقاله */
     corniche_marinas: { role: 'sight', periods: ['afternoon', 'evening'], minutes: 60 }, tower_bridge_views: { role: 'sight', periods: ['afternoon', 'evening'], minutes: 60 },
     nature: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 180 }, beaches: { role: 'excursion', periods: ['morning', 'afternoon'], minutes: 180 },
     landmarks: { role: 'sight', periods: ['morning', 'afternoon'], minutes: 90 }, tours_venues: { role: 'sight', periods: ['morning', 'afternoon'], minutes: 120 },
