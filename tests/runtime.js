@@ -90,6 +90,27 @@ const fail = (n, w) => { fails++; console.log('FAIL  ' + n + (w ? '  →  ' + w 
       state.missingKeys.length === 0
         ? pass('key functions at top level ' + f)
         : fail('key functions at top level ' + f, 'missing: ' + state.missingKeys.join(', '));
+      if (f === 'index-debug-test.html') {
+        // r120 (ق١١-٢٥-٠٢): تخطيط حقيقي لا يقيسه jsdom — شريحة الاسم بأطول اسم مسموح (٢٤ حرفًا عريضًا) لا تمسّ كلمة MyPickz ولا تخرج عن العرض، بثلاثة عروض هواتف
+        const lay = [];
+        for (const vw of [360, 390, 430]) {
+          await page.setViewport({ width: vw, height: 700 });
+          lay.push(await page.evaluate((vw) => {
+            try {
+              const u0 = currentUser, d0 = userListData, s0 = currentUserSuspended; const out = [];
+              [['WWWWWWWWWWWWWWWWWWWWWWWW', true, false], ['Daleel', true, true], ['Daleel', false, false]].forEach(function(c){
+                currentUser = { uid: 'u_layout', email: 'a@b.c' }; userListData = { nickname: c[0], curatorSelf: c[1] }; currentUserSuspended = c[2]; updateUserUI();
+                const chip = document.getElementById('accountChipBtn'), r = chip.getBoundingClientRect(), w = document.querySelector('.mp-wordmark').getBoundingClientRect(), l = document.getElementById('accountChipLabel');
+                out.push({ gap: Math.round(r.left - w.right), right: Math.round(r.right), sw: document.documentElement.scrollWidth, cut: l.scrollWidth > l.clientWidth, w: Math.round(r.width), cur: chip.classList.contains('curator'), av: !!document.getElementById('accountChipAv') });
+              });
+              currentUser = u0; userListData = d0; currentUserSuspended = s0; updateUserUI();
+              return { vw: vw, out: out };
+            } catch (e) { return { vw: vw, err: String(e && e.message || e) }; }
+          }, vw));
+        }
+        const badLay = lay.filter(x => x.err || x.out.some(o => o.gap < 0 || o.right > x.vw || o.sw > x.vw || o.av) || !x.out[0].cut || !x.out[0].cur || x.out[2].cut || x.out[2].cur);
+        badLay.length === 0 ? pass('name chip never covers the wordmark or leaves the screen (360 · 390 · 430; longest name is cut, a short one is whole) ' + f) : fail('name chip layout ' + f, JSON.stringify(badLay).slice(0, 400));
+      }
       await page.close();
     }
   } catch (e) {
