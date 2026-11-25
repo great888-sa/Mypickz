@@ -21,11 +21,13 @@ function privateCategoryList(){
 function addrCountOf(cityId){ return Object.values(addrData[cityId] || {}).reduce((a, e) => a + ((e.places || []).length), 0); }
 async function loadAddresses(force){
   if (!currentUser) return;
+  if (!mpAccountReady()) return; /* r120 (المراجعة المستقلة ١ · مهم · مقيس): فهرس مدن العناوين من الحساب — على حساب لم يُحمَّل كانت الذاكرة تُبنى «بلا عناوين» وتُثبَّت، ثم يكتب حفظُ عنوان [الجديد] فوق تصنيف فيه عناوين. المعالج يعيد التحميل حين يصل الحساب */
   if (addrLoaded && !force){ renderAddresses(); return; }
-  const idx = (userListData && userListData.privateCities) || [];
+  const __who = currentUser.uid, __gen = mpSessionGen; const idx = (userListData && userListData.privateCities) || [];
   const cities = Array.from(new Set(idx)).filter(Boolean);
   const prev = addrData || {}; addrData = {}; let readFailed = false; /* r100-أ: قراءة فاشلة لا تمسح ما كان على الشاشة ولا تُحدّث اللقطة */
-  await Promise.all(cities.map(async c => { try{ addrData[c] = await mpData.privatePlaces.get(currentUser.uid, c); }catch(e){ readFailed = true; mpSwallow(e, 'addresses-load'); addrData[c] = prev[c] || {}; } }));
+  await Promise.all(cities.map(async c => { try{ addrData[c] = await mpData.privatePlaces.get(__who, c); }catch(e){ readFailed = true; mpSwallow(e, 'addresses-load'); addrData[c] = prev[c] || {}; } }));
+  if (!mpSameUser(__who, __gen)){ addrData = {}; return; } /* قراءة وصلت والداخل غير صاحبها */
   addrCities = cities.filter(c => addrCountOf(c) > 0); if (!readFailed) addrSnap(); else showToast('Could not load your addresses — showing what was on screen');
   // المدينة المعروضة: المحفوظة، وإلا مدينة أكثر العناوين
   const saved = userListData && userListData.addrCity;
@@ -229,7 +231,7 @@ async function openCityDeleteChooser(cityId, from){ /* r75c (البند ١٠): �
   if (v === 'alt2') return cityDelSide(true);
 }
 async function cityCountList(cityId){ // عدد أماكن قائمة المدينة (للطرف الآخر)
-  try{ const d = await mpData.cityLists.get(currentUser.uid, cityId); if (!d || !d.categories) return 0;
+  try{ if (typeof plSaveWait === 'function') await plSaveWait(cityId); /* r120 (أ-١٠ — قيس): العدد بعد حفظ في الطريق لا قبله */ const d = await mpData.cityLists.get(currentUser.uid, cityId); if (!d || !d.categories) return 0;
     return Object.values(d.categories).reduce((a, e) => a + ((e && e.places) ? e.places.length : 0), 0); }catch(e){ return 0; }
 }
 async function cityCountAddr(cityId){
@@ -251,10 +253,10 @@ async function cityDelSide(other){
     renderAddresses(); if (currentTab === 'Places') renderPlacesBody();
   } else {
     const __sbGone = await savedByGather(cityId); /* r117-أ: النسخ المعدودة في «saved by» تُجمع قبل حذف القائمة */
-    let __ok2 = false; const __att2 = async function(){ try{ await mpData.cityLists.remove(currentUser.uid, cityId); __ok2 = true; return true; }catch(e){ await mpSaveFailed('places', e, __att2, async function(){}); return __ok2; } }; if (!(await __att2())) return; /* r100-أ */ savedByRelease(__sbGone); /* r117-أ: الحذف نجح — عدّاداتها تنقص وسجلاتي تُحذف */ try{ await syncCommunityProfile(); }catch(e){} // ر٧٢-أ-١د: إلغاء المحتوى بمدينة قياسية يزامن الملف العام أيضًا
+    let __ok2 = false; const __att2 = async function(){ try{ await mpData.cityLists.remove(currentUser.uid, cityId); plListGone(cityId); __ok2 = true; return true; }catch(e){ await mpSaveFailed('places', e, __att2, async function(){}); return __ok2; } }; if (!(await __att2())) return; /* r100-أ */ savedByRelease(__sbGone); /* r117-أ: الحذف نجح — عدّاداتها تنقص وسجلاتي تُحذف */ try{ await syncCommunityProfile(); }catch(e){} // ر٧٢-أ-١د: إلغاء المحتوى بمدينة قياسية يزامن الملف العام أيضًا
     if (myCityListLoadedFor === cityId){ myCityListData = null; myCityListLoadedFor = null; }
-    if (cityDelCtx.isCustom && (await cityCountAddr(cityId)) === 0){ await removeCityListCity(cityId, { confirmed: true }); }
-    else if (cityListCityId === cityId){ const rem = cityListAllCities().filter(c => c.country === cityListCountry && c.id !== cityId); cityListCityId = rem.length ? rem[0].id : null; }
+    if (cityDelCtx.isCustom && (await cityCountAddr(cityId)) === 0){ await removeCityListCity(cityId, { confirmed: true }); /* r120 (ع-٤): ومفاتيح أعدادها تُحذف هناك */ }
+    else { await mpCityCountsSave(cityId, { n: 0, pin: 0, from: 0 }); /* r120 (ع-٤ — شقيق): القائمة حُذفت من هذا الباب والمدينة باقية ⇒ أعدادها صفر (كان عددها القديم يبقى) */ if (cityListCityId === cityId){ const rem = cityListAllCities().filter(c => c.country === cityListCountry && c.id !== cityId); cityListCityId = rem.length ? rem[0].id : null; } }
     showToast('Removed from My List');
     renderPlacesBody(); 
   }
@@ -277,6 +279,7 @@ async function removeAddrCity(cityId){
 }
 async function saveAddr(){ return mpBusyRun('addr-save', saveAddrRun, '#addrSaveBtn'); } /* r100-ب: نقرة ثانية أثناء الحفظ تُتجاهل والزر معطَّل */
 async function saveAddrRun(){
+  if (!mpAccountGate()) return; if (!addrLoaded){ try{ await loadAddresses(true); }catch(_){} if (!addrLoaded){ showToast('Could not load your addresses — try again'); return; } } /* r120: التصنيف يُكتب كله من الذاكرة — عناويني تُحمَّل أولًا إن لم تكن محمَّلة، ولا يُكتب على ما لم يُقرأ */
   const name = document.getElementById('addrName').value.trim();
   const url = document.getElementById('addrUrl').value.trim();
   const note = document.getElementById('addrNote').value.trim();
@@ -337,74 +340,117 @@ function openDeletePreview(){
    الترتيب: سجلاتي على محتوى الآخرين بدفعاتها المربوطة (تُنقص عدّاداتهم، وبديل degraded عند غياب الأصل)
    ← متابعاتي ← محتواي (رحلات · قوائم مدن · عناوين) ← هويتي (الملف · حجز الاسم · السجل · المستند الأم)
    ← حساب المصادقة بإعادة التوثيق. لا صمت: أي توقف يظهر برسالته. */
+/* ═══ r120 (ق١١-١٧-٠٦ — «نعم» ١٧ نوفمبر ١١:٤٥ · قياس المراجعة المستقلة ٢٢): حذف الحساب لا يدّعي ما لم يقع ═══
+   قيس: كل خطوة كانت داخل «حاول وتجاهل» إلا حذف حساب الدخول — قاعدة البيانات ترفض كل شيء، فيُحذف الدخول وتقول الشاشة «all your data were permanently deleted»؛
+   خطوة واحدة تفشل فيبقى بندها (قائمة عامة · ملف · ملاحظة · معرّفه في مشاركة غيره) للأبد بصمت؛ وما أُنشئ من جهاز آخر (مفكرة · حفظ رحلة · عناوين · اسم بُدّل) يبقى لأن الحذف يأخذه من ذاكرة الجلسة.
+   الآن: (١) الحساب يُقرأ من الخادم أولًا · (٢) ما يراه غيره أو يدلّ عليه إن فشل منه شيء يتوقف الحذف قبل حساب الدخول — الحساب باقٍ والإعادة ممكنة · (٣) السجلات الصغيرة على محتوى غيره تُحاوَل وتُعدّ ولا توقف (يكنسها المالك) ·
+   (٤) الشاشة تقول ما وقع · (٥) أثناء الحذف لا حفظ من هذا الجهاز (mpAccountGate · saveTrip)، وما في الطريق يصل أولًا. مستندا الحساب (users · userLists) يُحذفان آخرًا: توقّفٌ قبلهما يُبقي حسابًا يُحمَّل ويُعاد منه. */
+let mpDeleting = false; let mpDelRun = 0; let __delReauthAt = 0, __delReauthFor = '';
+function mpDelFlag(on){ mpDeleting = !!on; try{ document.body.classList.toggle('mp-deleting', !!on); }catch(_){ } } /* r120 (المراجعة ٢٤ — قيس في المتصفح): الشريطان فوق كل نافذة (٧٠٠ فوق ١٠١) — والحذف جارٍ تُرفع نافذته فوقهما (10-structure.css) فلا يُبلغ الدرج ولا التبويبات ولا شريحة الحساب */
+function mpDelCarry(uid){ try{ return localStorage.getItem('mp_del_left_' + uid) === '1'; }catch(_){ return false; } } /* سجلات صغيرة بقيت في محاولة سابقة لهذا الحساب على هذا الجهاز — شاشة النهاية لا تنساها بعد إعادة تحميل. مفتاح لكل حساب (المراجعة ٢٤ — قيس: مفتاح واحد للجهاز كان حذفُ حساب آخر يمسحه) */
+async function mpGoneFinish(){ /* r120 (ق١١-١٧-١٠): حساب دخل وشاهد حذفه قائم. يُحاوَل إتمام حذف حساب الدخول (ينجح إن كان الدخول للتوّ — وهو حال من انقطع حذفه عند آخر خطوة ثم دخل من جديد)؛ وإلا يُخرَج برسالته: القواعد ترفض كل كتابة له، وسؤاله عن اسم مستعار كان حلقة لا تنتهي */
+  const who = currentUser && currentUser.uid; const same = function(){ return !!who && !!currentUser && currentUser.uid === who; }; /* المراجعة ٢٦ (قيس): حساب آخر دخل والنداء في الطريق — لا يُخرَج هو ولا تُعرض له الرسالة */
+  try{ await mpData.auth.deleteSelf(); const some = mpDelCarry(who); try{ localStorage.removeItem('mp_del_left_' + who); }catch(_){ } showToast(some ? 'Your account was deleted — some small records may not have been removed' : 'Your account was deleted'); } /* علامة «بقيت سجلات صغيرة» من المحاولة التي انقطعت تُقال هنا وتُمسح — هذا المسار لا يمرّ بشاشة النهاية */
+  catch(e){ mpSwallow(e, 'gone · sign-in account'); if (!same()) return; showToast(String((e && e.code) || '') === 'auth/requires-recent-login' ? 'This account was deleted — sign in once more to finish removing it' : 'This account was deleted'); try{ await mpData.auth.signOut(); }catch(e2){ mpSwallow(e2, 'gone · sign out'); } } }
+function delDone(){ closeModalById('delBackdrop'); delCurStep = 1; } /* زر «Close» في شاشة النهاية */
+function delDialogForget(){ if (mpDeleting) return; const bd = document.getElementById('delBackdrop'); if (bd && bd.classList.contains('show')) bd.classList.remove('show'); delCurStep = 1; } /* حساب دخل: نافذة حذف بقيت من غيره (شاشة نهاية لم تُغلق · خطوة كُتبت فيها DELETE) لا تُعرض له (المراجعة ٢٤ — قيس) */
+function delStopped(btn, kind, left, o){ /* kind: 'left' بقي ما يوقف · 'auth' البيانات أُزيلت وحساب الدخول باقٍ · 'read' لم يُقرأ الحساب فلم يُحذف شيء · 'odd' خطأ غير متوقع */ btn.disabled = false; btn.textContent = 'Try again'; const el = document.getElementById('delLeft'); o = o || {};
+  const text = kind === 'auth' ? ((o.small ? 'Your data were removed — except some small records (such as a bookmark, a follow, a view or a request) that could not be — but the sign-in account could not be deleted. ' : 'Your data were removed, but the sign-in account could not be deleted. ') + (o.login ? 'Confirm your password again and try again.' : 'Check your connection and try again.'))
+    : kind === 'read' ? 'Your account could not be read from the server, so nothing was deleted. Check your connection and try again.'
+    : kind === 'odd' ? ('Deletion stopped on something unexpected (' + left + ') — your sign-in account is still here. Try again.')
+    : ('Deletion did not finish — your sign-in account is still here. Some of your content may already be deleted. Not removed yet: ' + left.join(' · ') + '. Check your connection and try again.');
+  if (el){ el.textContent = text; el.style.display = ''; } showToast(kind === 'auth' ? 'Your data were removed — the sign-in account is still here · try again' : (kind === 'read' ? 'Nothing was deleted — your account could not be read' : 'Deletion did not finish — your sign-in account is still here')); try{ logTiming('DELETE · stopped · ' + kind + (kind === 'left' ? ' · ' + left.join(' · ') : '')); }catch(_){ } }
 async function doAccountDelete(){
   const btn = document.getElementById('delGo'); if (!btn || btn.disabled) return;
   if (!currentUser) return;
-  if (userListLoadFailed){ showToast('Reload first — your account did not load'); return; } /* r119 (المراجعة المستقلة): بلا مستند الحساب لا تُعرف سجلاتي على محتوى الآخرين — الحذف كان يتركها معدودة ويُبقي حجز الاسم */
-  const ok = await requestReauth();
-  if (!ok){ showToast('Identity not confirmed — nothing was deleted'); return; }
-  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Deleting…';
-  const uid = currentUser.uid;
+  if (!mpAccountReady()){ showToast(userListLoadFailed ? 'Reload first — your account did not load' : 'Your account is still loading — try again in a moment'); return; } /* r120: المتابعات والمفكرات والاسم تُؤخذ من الحساب المحمَّل — حذفٌ قبل تحميله يترك سجلاتها عند غيره وحجز الاسم (لا تُطلق) */ /* r120 (المراجعة المستقلة): يتوقف وإن كان التحميل ما زال جاريًا — لا حذف من حساب افتراضي فارغ */
+  if (__delReauthFor !== currentUser.uid || Date.now() - __delReauthAt > 240000){ const who = currentUser.uid; const ok = await requestReauth(); if (!ok){ showToast('Identity not confirmed — nothing was deleted'); return; } if (!currentUser || currentUser.uid !== who) return; __delReauthAt = Date.now(); __delReauthFor = who; } /* «Try again» في الدقائق الأربع نفسها لا يسأل كلمة المرور ثانية — لصاحب التأكيد وحده (المراجعة ٢٣: كانت تنتقل إلى حساب دخل بعده) */
+  if (mpDeleting || !currentUser) return; mpDelFlag(true); const run = ++mpDelRun; /* ضغطتان وتأكيد الهوية مفتوح للاثنتين: الثانية لا تجري (والزر المعطّل يصدّ ما بعدهما) */
+  btn.disabled = true; btn.textContent = 'Deleting…'; { const el = document.getElementById('delLeft'); if (el){ el.style.display = 'none'; el.textContent = ''; } }
+  const uid = currentUser.uid; const must = []; let __left = 0, __some = false; const carry = mpDelCarry(uid); const GONE = { gone: true };
+  const alive = function(){ return mpDelRun === run && !!currentUser && currentUser.uid === uid; }; /* المراجعة ٢٣ (قيس): خروج أو حساب آخر والسلسلة تنتظر خطوة — تُترك: لا تكتب بعدها ولا تعرض شيئًا لغير صاحبها */
+  const miss = function(what){ if (must.indexOf(what) < 0) must.push(what); };
+  const need = async function(what, fn){ if (!alive()) throw GONE; try{ return await fn(); }catch(e){ if (e === GONE) throw e; mpSwallow(e, 'delete · ' + what); miss(what); return null; } }; /* ما يراه غيره أو يدلّ عليه: فشله يوقف الحذف */
+  const soft = async function(what, fn){ if (!alive()) throw GONE; try{ return (await fn()) || 0; }catch(e){ if (e === GONE) throw e; mpSwallow(e, 'cascade ' + what); __some = true; return 0; } }; /* سجل صغير: ما عُرف عدده يُعدّ، وخطوة رمت لا يُعرف كم تركت (المراجعة ٢٣: كانت تُعدّ «١» وقد تركت ثلاثًا) — ولا يوقف */
+  const small = function(){ return !!(__left || __some || carry); };
+  const stop = function(kind, left, o){ if (!alive()) return; if (small()) try{ localStorage.setItem('mp_del_left_' + uid, '1'); }catch(_){ } delStopped(btn, kind, left, o); };
   try{
+    // ٠ — ما في الطريق يُنتظر وصوله (بسقف)، وحفظ قائمة لم يبلغ كتابته بعدُ لا يكتب والحذف جارٍ (plSaveNow يسأل العلم قبل الكتابة نفسها)؛ ثم الحساب كما هو في الخادم الآن (ما أُنشئ من جهاز آخر)
+    try{ await Promise.all(Object.keys(plSaveBusy).concat(Object.keys(plSaveNext)).map(function(c){ return plSaveWait(c); })); }catch(_){ } try{ await tripSaveWaitAll(); }catch(_){ }
+    if (!alive()) throw GONE;
+    let fresh = null; try{ const d = await mpData.userLists.getServer(uid); fresh = (d && d.exists) ? (d.data() || {}) : {}; }catch(e){ mpSwallow(e, 'delete · account read'); }
+    if (!alive()) throw GONE;
+    if (!fresh){ stop('read'); return; }
+    const onIds = function(a, b){ const o = {}; [a, b].forEach(function(m){ Object.keys(m || {}).forEach(function(k){ if (m[k]) o[k] = true; }); }); return Object.keys(o); };
     // ١ — سجلاتي على محتوى الآخرين. الدفعة ٢ (قواعد v3.17 ١١): كل سجل يُطلق من بابه الواحد — −١ على عدّاده، أو السجل وحده حين لا عدّاد يُنقص (المصدر حُذف · صفر · لم يعد عامًّا · أنا موقوف). المرآة لا تُكتب: المستند الأم يُحذف في ٤.
-    //    كانت المتابعات تُحذف سجلاتٍ وحدها، وسجلات نسخ القوائم والرحلات دفعاتٍ بلا عدّاد: القاعدة ترفض ذلك والعدّاد فوق الصفر، فيبقى الحساب المحذوف معدودًا عند غيره.
-    await ensureListBookmarks(); await ensureTripSaves(); let __left = 0;
-    const __lm = listBmMap(), __tm = tripSaveMap(); /* r119 */
-    for (const listId of Object.keys(__lm)){
-      const r = __lm[listId];
-      try{ await mpData.bookmarks.toggleList(uid, r.ownerUid, r.cityId, false, { noMirror: true }); }catch(e){ __left++; mpSwallow(e, 'cascade bookmark'); }
-    }
-    for (const tripId of Object.keys(__tm)){
-      try{ await mpData.tripSaves.toggle(uid, tripId, false, { noMirror: true }); }catch(e){ __left++; mpSwallow(e, 'cascade trip save'); }
-    }
-    // ٢ — متابعاتي ونسخي
-    try{ __left += (await mpData.follows.releaseMine(uid)) || 0; }catch(e){ __left++; mpSwallow(e, 'cascade follows'); }
-    try{ __left += (await mpData.copies.removeMine(uid)) || 0; }catch(e){ __left++; mpSwallow(e, 'cascade copies'); } // r72t (M4.26 ٢): سجلات النسخ · r117-أ: سجل حفظ المكان يُنقص عدّاده «saved by» بالدفعة نفسها · الدفعة ٢: وسجل نسخ القائمة والرحلة يُنقص copyCount على مصدره
-    try{ await mpData.requests.removeMine(uid); }catch(_){ }
-    try{ await mpData.reports.removeMine(uid); }catch(e){ mpSwallow(e, 'cascade reports'); } /* الدفعة ٢ (قواعد v3.17 ١٢): الاستعلام صار مقبولًا لصاحب البلاغ */
-    try{ await mpData.cityNotes.removeMine(uid); }catch(e){ mpSwallow(e, 'cascade city notes'); } /* الدفعة ٢: رأيي في المدن */
-    if (__left) try{ logTiming('DELETE · ' + __left + ' record(s) on others\' content could not be released'); }catch(_){ }
-    // ٣ — محتواي: الرحلات (تُترك حفوظ الآخرين لها صفوف degraded بتصميمها) ثم قوائم المدن والعناوين لكل مدينة معروفة
+    for (const listId of onIds((userListData && userListData.listBookmarkIds), fresh.listBookmarkIds)){ const cut = listId.indexOf('_'); const ownerUid = cut > 0 ? listId.slice(0, cut) : listId, cityId = cut > 0 ? listId.slice(cut + 1) : '';
+      __left += await soft('bookmark', async function(){ try{ await mpData.bookmarks.toggleList(uid, ownerUid, cityId, false, { noMirror: true }); return 0; }catch(e){ mpSwallow(e, 'cascade bookmark'); return 1; } }); }
+    for (const tripId of onIds((userListData && userListData.tripSaveIds), fresh.tripSaveIds)){ __left += await soft('trip save', async function(){ try{ await mpData.tripSaves.toggle(uid, tripId, false, { noMirror: true }); return 0; }catch(e){ mpSwallow(e, 'cascade trip save'); return 1; } }); }
+    // ٢ — متابعاتي ونسخي ومشاهداتي وطلبي وبلاغاتي
+    __left += await soft('follows', function(){ return mpData.follows.releaseMine(uid); });
+    __left += await soft('copies', function(){ return mpData.copies.removeMine(uid); }); // r72t (M4.26 ٢): سجلات النسخ · r117-أ: سجل حفظ المكان يُنقص عدّاده «saved by» بالدفعة نفسها · الدفعة ٢: وسجل نسخ القائمة والرحلة يُنقص copyCount على مصدره
+    __left += await soft('old pins', function(){ return mpData.identity.stripMine(uid); }); /* الموقوف تُرفض كتابته هنا بالقاعدة — يكنسها المالك */
+    __left += await soft('viewers', function(){ return mpData.viewers.removeMine(uid); }); __left += await soft('place viewers', function(){ return mpData.placeViewers.removeMine(uid); });
+    __left += await soft('requests', async function(){ await mpData.requests.removeMine(uid); return 0; }); __left += await soft('reports', async function(){ await mpData.reports.removeMine(uid); return 0; });
+    if (__left || __some) try{ logTiming('DELETE · small records not released: ' + __left + (__some ? ' + unknown (a step failed)' : '')); }catch(_){ }
+    // ٣ — ما يراه غيري أو يدلّ عليّ: خروجي من مشاركاتهم · ملاحظاتي · رحلاتي · قوائمي · عناويني
+    if (await need('your place in lists shared with you', function(){ return mpData.cityLists.leaveShares(uid); })) miss('your place in lists shared with you');
+    if (await need('your place in trips shared with you', function(){ return mpData.trips.leaveShares(uid); })) miss('your place in trips shared with you');
+    await need('your city notes', function(){ return mpData.cityNotes.removeMine(uid); });
     // ر٦٧ (صيد المحاكاة): الحذف بالاستعلام المالكي ∪ المحلي — القائمة المحلية قد تكون ناقصة (تحميل لم يكتمل · جهاز آخر)
     const tripIds = new Set((userTrips || []).map(t => t.id));
-    try{ (await mpData.trips.byOwner(uid)).forEach(function(d){ tripIds.add(d.id); }); }catch(e){ mpSwallow(e, 'cascade'); }
-    for (const id of tripIds){ try{ await mpData.trips.remove(id); }catch(_){ } }
+    await need('your trips', async function(){ (await mpData.trips.byOwner(uid)).forEach(function(d){ tripIds.add(d.id); }); });
+    for (const id of tripIds){ await need('your trips', function(){ return mpData.trips.remove(id); }); }
     const cityIds = [...new Set(
       (typeof cityListAllCities === 'function' ? cityListAllCities() : []).map(c => c && c.id)
-        .concat(((userListData && userListData.privateCities) || []))
+        .concat((userListData && userListData.privateCities) || []).concat(Array.isArray(fresh.privateCities) ? fresh.privateCities : []) /* مدن فيها عناوين — من الذاكرة ومن الخادم */
         .filter(Boolean)
     )];
-    try{ (await mpData.cityLists.byOwner(uid)).forEach(function(d){ const cid = String(d.id).split('_').slice(1).join('_'); if (cid && cityIds.indexOf(cid) < 0) cityIds.push(cid); }); }catch(e){ mpSwallow(e, 'cascade'); } // ر٦٧: ∪ استعلام المالك
-    try{ await savedByReleaseCities(cityIds); }catch(e){ mpSwallow(e, 'cascade'); } /* r117-أ: «saved by» — نسخي المعدودة تُطلق من القوائم نفسها قبل حذفها (لا تعتمد استعلام سجل النسخ) */
+    await need('your lists', async function(){ (await mpData.cityLists.byOwner(uid)).forEach(function(d){ const cid = String(d.id).split('_').slice(1).join('_'); if (cid && cityIds.indexOf(cid) < 0) cityIds.push(cid); }); }); // ر٦٧: ∪ استعلام المالك
+    __left += await soft('saved-by', async function(){ await savedByReleaseCities(cityIds); return 0; }); /* r117-أ: الشبكة الثانية لعدّادات «saved by» */
     for (const cid of cityIds){
-      try{ await mpData.cityLists.remove(uid, cid); }catch(e){ mpSwallow(e, 'cascade'); }
-      try{ await mpData.privatePlaces.remove(uid, cid); }catch(_){ } // العناوين: قاعدتها بمعرّف المستند فلا استعلام — مرآة privateCities هي الفهرس (قيد r58)
+      await need('your lists', function(){ return mpData.cityLists.remove(uid, cid); });
+      await need('your addresses', function(){ return mpData.privatePlaces.remove(uid, cid); }); /* العناوين: قاعدتها بمعرّف المستند (لا تقرأ بياناته) — حذف غير الموجود مقبول، ففشله فشل حقيقي يوقف في كل مدينة لا في مدن الفهرس وحدها (المراجعة ٢٣: مدينة غابت عن الفهرس كان فشلها يُتجاهل بلا عدّ ولا سطر) */
     }
-    try{ await mpData.cityLists.removeOrphanCats(uid); }catch(e){ mpSwallow(e, 'cascade orphan cats'); } /* الدفعة ٢: تصنيفات بقيت خارج المدن المعروفة */
-    // ٤ — هويتي (المستند الأم أخيرًا — المرايا والفهارس تسكنه)
-    try{ await mpData.profiles.remove(uid); }catch(_){ }
-    const nick = (userListData && userListData.nickname) || '';
-    if (nick){ try{ await mpData.nicknames.remove(nick.toLowerCase()); }catch(e){ mpSwallow(e, 'cascade'); } }
-    try{ await mpData.users.remove(uid); }catch(e){ mpSwallow(e, 'cascade'); }
-    try{ await mpData.userLists.remove(uid); }catch(_){ }
+    await need('your lists', function(){ return mpData.cityLists.removeOrphanCats(uid); });
+    if (must.length){ stop('left', must); return; }
+    // ٤ — هويتي: الملف والاسم، ثم سجل الحساب، ثم مستند الحساب أخيرًا (المرايا والفهارس تسكنه — وبقاؤه يُبقي الحساب قابلًا للتحميل والإعادة)
+    await need('your public profile', function(){ return mpData.profiles.remove(uid); });
+    const nicks = [...new Set([(userListData && userListData.nickname) || '', fresh.nickname || ''].map(function(n){ return String(n || '').toLowerCase(); }).filter(Boolean))]; /* اسم بُدّل من جهاز آخر: حجزه من مستند الخادم */
+    for (const nk of nicks){ await need('your nickname', async function(){ const d = await mpData.nicknames.get(nk); if (!alive()) throw GONE; if (d && d.exists && ((d.data() || {}).uid === uid)) await mpData.nicknames.remove(nk); }); } /* المراجعة ٢٣ (قيس): القاعدة ترفض حذف حجز غائب أو لغيري — يُقرأ أولًا: غائب (تحرّر في محاولة سابقة · بُدّل) أو لغيري ⇒ لا شيء لي أحذفه. كان الرفض يوقف الحذف للأبد */
+    if (must.length){ stop('left', must); return; }
+    await need('your account record', function(){ return mpData.users.remove(uid); });
+    if (must.length){ stop('left', must); return; }
+    await need('your account record', function(){ return mpData.userLists.remove(uid); });
+    if (must.length){ stop('left', must); return; }
+    // ٤ب — الشاهد (ق١١-١٧-١٠ · قواعد v3.18 ١١): قبل حذف حساب الدخول يكتب الحساب أنه حُذف — بعدها ترفض القواعد كل كتابة باسمه (جهاز ثانٍ ما زال داخلًا · كتابة متأخرة)، والمالك يعرف من زال فيكنس بقاياه. يُكتب آخرًا: لو كُتب أولًا ثم توقف الحذف لبقي حساب حيّ موقوفًا.
+    await need('your account record', async function(){ const sd = await mpData.suspensions.get(uid); if (!alive()) throw GONE; if (sd && sd.exists) return; /* شاهدي من محاولة سابقة، أو إيقاف المالك (يوقف كتابته أصلًا — لا شاهد فوقه) */ try{ await mpData.suspensions.markDeleted(uid); }catch(e){ if (String((e && e.code) || '') !== 'permission-denied') throw e; mpSwallow(e, 'delete · marker refused by the rules'); /* المراجعة ٢٦ (قيس): قواعد لم تُنشر فيها فقرة الشاهد بعد ترفض كتابته — الحذف يمضي كما كان قبلها، لا يتوقف وبياناته قد زالت. (بقواعدها لا يُرفض إلا لحساب أُوقف للتوّ — وهو موقوف الكتابة أصلًا.) */ } });
+    if (must.length){ stop('left', must); return; }
     // ٥ — حساب المصادقة
-    await mpData.auth.deleteSelf();
-    delStep(3);
+    if (!alive()) throw GONE;
+    try{ await mpData.auth.deleteSelf(); }catch(e){ mpSwallow(e, 'delete · sign-in account'); const login = String((e && e.code) || '') === 'auth/requires-recent-login'; if (login) __delReauthAt = 0; /* التأكيد انتهت مدته عند المزوّد: الإعادة تسأل كلمة المرور */ /* الشاهد يبقى (ق١١-١٧-١٣ — المراجعة ٢٦ قاست): سحبه عند ردٍّ ضاع والحذف وقع فعلًا كان يعيد الجهاز الثاني يكتب. بقاؤه ليس فخًّا: «Try again» تُكمل، وإعادة الدخول تُتمّ حذف حساب الدخول (mpGoneFinish) */
+      stop('auth', null, { small: small(), login: login }); return; }
+    try{ localStorage.removeItem('mp_del_left_' + uid); }catch(_){ }
+    if (currentUser && currentUser.uid !== uid) return; /* حساب آخر دخل وطلب حذف حساب الدخول في الطريق: شاشة «Account deleted» ليست له (المراجعة ٢٤ — قيس) */
+    { const t = document.getElementById('delDoneText'); if (t) t.innerHTML = !small() ? 'Your account and all your data were permanently deleted.<br>Your nickname is now free for anyone to use.<br>Thank you for trying MyPickz.'
+        : 'Your account and your data were permanently deleted.<br>' + ((__some || carry) ? 'Some small records (such as a bookmark, a follow, a view or a request) may not have been removed.' : (__left + ' small record' + (__left === 1 ? '' : 's') + ' (such as a bookmark, a follow, a view or a request) could not be removed right now.')) + '<br>Your nickname is now free for anyone to use.<br>Thank you for trying MyPickz.'; }
+    delStep(3); openModalById('delBackdrop'); /* قيس (الكود القديم والجديد): معالج الخروج يغلق كل النوافذ عند زوال الحساب — فلم تُرَ شاشة النهاية قط. تُفتح هنا، ومعالج الخروج يُبقي نافذة الحذف وهي على خطوتها الثالثة */
   }catch(e){
-    btn.disabled = false; btn.textContent = label;
-    showToast('Deletion stopped — ' + mpErrText(e) + ' · nothing else was removed'); /* r100-د */
-  }
+    if (e === GONE) return; /* خرج صاحبها أو دخل غيره: لا رسالة لغير صاحبها */
+    mpSwallow(e, 'delete'); stop('odd', mpErrText(e));
+  } finally { if (mpDelRun === run) mpDelFlag(false); }
 }
 let delCurStep = 1;
-function delBack(){ /* ب-٢-٢-أ٢ (v3 · ١٢): Back بالخطوة ٢ يعود إلى ١ · بالخطوة ١ يغلق (فيعود إلى Settings) */ if (delCurStep === 2) delStep(1); else closeModalById('delBackdrop'); }
+function delBack(){ /* ب-٢-٢-أ٢ (v3 · ١٢): Back بالخطوة ٢ يعود إلى ١ · بالخطوة ١ يغلق (فيعود إلى Settings) */ /* r120: والحذف جارٍ لا رجوع ولا إغلاق — delStep و closeModalById يصدّان */ if (delCurStep === 2) delStep(1); else closeModalById('delBackdrop'); }
 function delStep(n){
+  if (mpDeleting && n !== 3) return; /* r120 (المراجعة ٢٣): والحذف جارٍ لا تتبدّل الخطوة إلا إلى نهايتها */
   delCurStep = n; const bk = document.getElementById('delBackBtn'); if (bk) bk.classList.toggle('hidden', n === 3);
   [1,2,3].forEach(i => { document.getElementById('delStep' + i).style.display = (i === n) ? '' : 'none'; document.getElementById('delDot' + i).classList.toggle('on', i <= n); });
-  if (n === 2){ const w = document.getElementById('delWord'); w.value = ''; setTimeout(() => w.focus(), 50); }
+  if (n === 2){ const w = document.getElementById('delWord'); w.value = ''; setTimeout(() => w.focus(), 50); const b = document.getElementById('delGo'); if (b) b.textContent = 'Delete my account forever'; checkDelWord(); /* الكلمة مُسحت: الزر يعود معطّلًا حتى تُكتب — بعد محاولة توقفت كان يبقى مفعَّلًا بلا كلمة */ const l = document.getElementById('delLeft'); if (l){ l.style.display = 'none'; l.textContent = ''; } /* r120 (ق١١-١٧-٠٦): دخول جديد إلى الخطوة يبدأ نظيفًا — لا «Try again» ولا قائمة من محاولة سابقة */ }
 }
 function checkDelWord(){ // ر٥٩: المطابقة تفعّل الزر — وجولة التدقيق أثبتت سطور الحذف الذاتي قائمة بالقواعد الحية أصلًا (لا شرط نشرة)
   const w = document.getElementById('delWord');
-  const b = document.getElementById('delGo');
+  const b = document.getElementById('delGo'); if (mpDeleting) return; /* r120 (المراجعة ٢٣ — قيس): الكتابة في الحقل والحذف جارٍ كانت تعيد الزر مفعَّلًا */
   if (b) b.disabled = String((w && w.value) || '').trim().toUpperCase() !== 'DELETE';
 }
 
