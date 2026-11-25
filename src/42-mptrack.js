@@ -6,14 +6,19 @@
    الميزانية: تباطؤ بعد ١٥ كتابة · مقعد محجوز لإغلاق الجلسة · سقف صلب ٣٠.
    كل فشل صامت دائمًا ولا يُسجَّل بمصيدة الأخطاء (منع التضخيم الذاتي).
    ========================================================= */
+/* r120 (ق١١-١٨-٢٠ · ٢٥ — المحور ٥): يوم الإحصاء واحد في كل كتابة وقراءة — **يوم الرياض (UTC+3، بلا توقيت صيفي)**. كان أربعة مواضع بيوم UTC وموضع بيوم الجهاز، فاليوم الواحد يُقرأ بتعريفين.
+   القاعدة تقبل يوم الخادم أو ما قبله أو ما بعده (dayNear) وأسبوعه كذلك (weekNear) — ويوم الرياض داخلهما دائمًا (حُسب لـ٩٦٠٠ ساعة). تغيير المنطقة هنا وحده. */
+const MP_STATS_TZ_MS = 3 * 3600000;
+function mpDayKey(ms){ return new Date((typeof ms === 'number' ? ms : Date.now()) + MP_STATS_TZ_MS).toISOString().slice(0, 10); }
+function mpDayHour(ms){ return new Date((typeof ms === 'number' ? ms : Date.now()) + MP_STATS_TZ_MS).getUTCHours(); }
+function mpWeekKey(ms){ /* معرّف الأسبوع = تاريخ أحده بيوم الرياض */ const d = new Date((typeof ms === 'number' ? ms : Date.now()) + MP_STATS_TZ_MS); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - d.getUTCDay() * 864e5).toISOString().slice(0, 10); }
 const mpTrack = (function(){
   const FLUSH_MS = 60000, SLOW_AFTER = 15, HARD_CAP = 30, ERR_CAP = 20;
   const buf = new Map();
   let writesUsed = 0, errUsed = 0, slowFactor = 1, timer = null, busy = false;
   let sessStart = Date.now(), sessDepth = 0, closed = false;
   let diag = null; /* يُسند بنسخة الاختبار فقط (أسفل الملف) */
-  const dayStr = function(){ const d = new Date(), p = function(n){ return String(n).padStart(2,'0'); };
-    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()); };
+  const dayStr = function(){ return mpDayKey(); }; /* r120: كان يوم الجهاز */
   const cityOkId = function(){ /* v3.13 (ر٧٣-ب): المدينة الحقيقية = معرّف المعجم أو الجزيرة من «مدني» (المدينة المفتوحة بالأماكن) — غيرها 'all' */
     const id = String(typeof cityListCityId !== 'undefined' && cityListCityId ? cityListCityId : '');
     if (!/^(\d{3,9}|i_[a-z0-9_]{2,30})$/.test(id)) return 'all';
@@ -80,6 +85,7 @@ const mpTrack = (function(){
           for (const entry of buf){
             if (room <= 0) break;
             const path = entry[0], fields = entry[1];
+            if (/^stats_(lists|trips|places|curators)\//.test(path) && !(typeof currentUser !== 'undefined' && currentUser)) continue; /* r120 (ق١١-١٤-٠٥ · قواعد v3.18 ٢ — مقيس): هذه المخازن للموقّعين. عدٌّ في الطابور والمستخدم خرج يبقى حتى يعود موقّع — كان يُرسل فيُرفض فيُسقط */
             const portions = portionsOf(fields), inc = {}; let any = false;
             for (const k in portions){ inc[k] = firebase.firestore.FieldValue.increment(portions[k]); any = true; }
             if (!any){ buf.delete(path); continue; }
@@ -118,13 +124,13 @@ const mpTrack = (function(){
       const cat = personal ? 'all' : catSlug(opts.cat);
       add('analytics/events_' + dayStr() + '__' + city + '__' + cat, event, 1);
       if (!personal){
-        add('analytics/hours_' + dayStr() + '__' + city, 'h' + String(new Date().getHours()).padStart(2,'0'), 1);
+        add('analytics/hours_' + dayStr() + '__' + city, 'h' + String(mpDayHour()).padStart(2,'0'), 1);
         if (opts.depth) sessDepth++;
       }
     }catch(_){}
   }
   function statsCurator(uid, field){ // r72p (M4.25 ٩): إحصاء المنتقي — page_view · follow · contact_click · ref_social · ref_card · export · save (v3.14 · ب-٢-١: الحفظ بإسناد لمنتقٍ، يوميًّا)
-    try{ if (!uid || !/^[A-Za-z0-9]{20,40}$/.test(uid)) return; const day = new Date().toISOString().slice(0, 10);
+    try{ if (!uid || !/^[A-Za-z0-9]{20,40}$/.test(uid)) return; const day = mpDayKey();
       if (field === 'page_view'){ const k = 'mp_cv_' + uid + '_' + day; try{ if (localStorage.getItem(k)) return; localStorage.setItem(k, '1'); }catch(_){} } // مرة لكل زائر يوميًّا
       add('stats_curators/' + uid + '__' + day, field, 1);
       if (field === 'page_view'){ const ref = (new URLSearchParams(location.search).get('ref') || '').toLowerCase(); if (/^(ig|tt|sc)$/.test(ref)) add('stats_curators/' + uid + '__' + day, 'ref_social', 1); else if (/^(card|qr|link)$/.test(ref)) add('stats_curators/' + uid + '__' + day, 'ref_card', 1); }
@@ -134,13 +140,13 @@ const mpTrack = (function(){
     try{ if (!/^[A-Za-z0-9]{20,40}$/.test(String(uid)) || !/^[A-Za-z0-9_-]{4,40}$/.test(String(cardId))) return false; const k = 'mp_cardv_' + uid + '_' + cardId, day = dayStr(); try{ if (localStorage.getItem(k) === day) return false; localStorage.setItem(k, day); }catch(_){} add('stats_cards/' + uid + '__' + cardId, 'view_total', 1); return true; }catch(_){ return false; }
   }
   function statsCity(cityId, field){ // r72m (M4.25 ١١): مدينة × يوم — open · place_added · trip_built (مدن الدليل فقط: معرّف صغير بلا mylist_)
-    try{ if (!cityId || /^mylist_/.test(cityId) || !/^[a-z0-9_-]{1,40}$/.test(cityId)) return; const day = new Date().toISOString().slice(0, 10); add('stats_cities/' + cityId + '__' + day, field, 1); }catch(_){}
+    try{ if (!cityId || /^mylist_/.test(cityId) || !/^[a-z0-9_-]{1,40}$/.test(cityId)) return; const day = mpDayKey(); add('stats_cities/' + cityId + '__' + day, field, 1); }catch(_){}
   }
   function statsList(listId, field, opts){
     try{
       if (!/^[A-Za-z0-9_-]{1,60}$/.test(String(listId))) return;
       add('stats_lists/' + listId, field, 1); // r72m (M4.25 ٩): مفاتيح §١٧-ج — open_app · open_community · open_curator · copy_from (لا open_total)
-      if (opts && opts.daily) add('stats_lists/' + listId + '__' + new Date().toISOString().slice(0, 10), field, 1); // ب-٢-١: نسخة يومية للمفتاح (المعرّف اليومي مسموح بالقواعد منذ v3.3) — نمو الحفظ بالقائمة لـMy stats
+      if (opts && opts.daily) add('stats_lists/' + listId + '__' + mpDayKey(), field, 1); // ب-٢-١: نسخة يومية للمفتاح (المعرّف اليومي مسموح بالقواعد منذ v3.3) — نمو الحفظ بالقائمة لـMy stats
     }catch(_){}
   }
   function statsTrip(tripId, field){
@@ -222,6 +228,7 @@ const mpTrack = (function(){
       const d = a.dataset || {};
       if (d.mppersonal === '1'){ hit('personal_place_open', { personal: true }); return; }
       hit('place_open', { cat: d.mpcat, city: d.mpcity });
+      if (d.mpview && typeof mpPlaceView === 'function') mpPlaceView(a.getAttribute('href') || '', d.mpvcity, d.mplist); /* r120 (ق١١-١٤-٠٨): فتح مكان غيري في الخرائط = أول تفاعل */
       if (d.mplist) statsPlaceList(d.mplist, a.getAttribute('href') || '', 'open_total'); /* r115-د (٣): فتح مكان من قائمة غيرك — المكان × القائمة التي فُتح منها */
     }catch(_){}
   }, true);
