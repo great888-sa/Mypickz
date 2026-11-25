@@ -16,6 +16,18 @@ const run = (cmd, args, timeout) => cp.spawnSync(cmd, args, { cwd: ROOT, encodin
 const log = line => { fs.appendFileSync(outFile, line + '\n'); console.log(line); };
 const base = cp.spawnSync('git', ['status', '--short', 'src'], { cwd: ROOT, encoding: 'utf8' }).stdout.trim();
 if (base && !process.env.MUTATE_DIRTY_OK){ console.error('mutate: src/ has uncommitted changes in this copy — run on a clean copy (or MUTATE_DIRTY_OK=1)'); process.exit(2); }
+/* المحور ١ (ق١١-١٣-٠٥): أداة الطفرات ترفض محطات تابعة — المحطات المختارة تُشغَّل أولًا على الكود السليم (وحدها بعد الأساس، كما ستُشغَّل مع كل طفرة).
+   إن احمرّت بلا طفرة فكل طفرة «تُقتل» زورًا (تعتمد على محطة ليست في القائمة)؛ الأداة تتوقف وتسمّي السبب بدل أن تكتب أحكامًا لا معنى لها. MUTATE_SKIP_BASE=1 للتخطّي في تشغيل متوازٍ بعد أول نسخة. */
+if (!process.env.MUTATE_SKIP_BASE){
+  const refuse = (why, detail) => { console.error('mutate: REFUSED — ' + why + (detail ? ' (' + detail + ')' : '')); fs.appendFileSync(outFile, 'REFUSED\t' + why + '\t' + (detail || '') + '\n'); process.exit(2); };
+  const b0 = run(process.execPath, ['scripts/build.js', 'test'], 120000); if (b0.status !== 0) refuse('the clean code does not build');
+  const a0 = run(process.execPath, ['tests/audit.js'], 180000); /* المراجعة المستقلة (٩): تدقيق أحمر على الكود السليم يجعل كل طفرة «قُتلت بالتدقيق» */
+  if (a0.status !== 0) refuse('the audit is red on clean code — every mutation would be "killed by audit"', ((a0.stdout || '').split('\n').filter(l => /^FAIL/.test(l))[0] || '').slice(0, 160));
+  const s0 = run(process.execPath, ['tests/tools/subset.js'].concat(spec.stations), 590000); const out0 = ((s0.stdout || '') + (s0.stderr || '')).split('\n');
+  if (s0.status === null || s0.status > 1) refuse('the chosen stations could not be run (no station with that name, a timeout, or a broken environment)', (out0.filter(Boolean).pop() || '').slice(0, 160));
+  if (s0.status !== 0) refuse('the chosen stations do not pass on clean code when run on their own — they depend on a station outside the list: add it to "stations", or make the station stand alone (tests/tools/solo.js lists them)', (out0.filter(l => /^FAIL/.test(l))[0] || '').slice(0, 200));
+  log('BASE\tGREEN\taudit and stations pass on clean code');
+}
 spec.muts.forEach((m, i) => {
   if (i % step !== start) return;
   const fp = path.join(ROOT, m.file); const orig = fs.readFileSync(fp, 'utf8'); const n = orig.split(m.find).length - 1;
