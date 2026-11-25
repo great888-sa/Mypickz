@@ -167,6 +167,10 @@ const OPS = [
     ctx: { K1: 'الهدف رحلة متعددة الأيام', K2: 'الهدف رحلة متعددة الأيام', K3c: { d: 'replace', shape: 'any' }, K3l: 'يُفحص مرة' } },
   { id: 'v.copyUndo', name: 'Copy into a trip ثم ↶', where: 'view', covers: ['dpUndoLast'],
     run: "await dpAddToTrip(P.ids.K2, P.ids.K3, { mode: 'new' }); await dpUndoLast();", ctx: { K1: 'الهدف رحلة متعددة الأيام', K2: 'الهدف رحلة متعددة الأيام', K3c: KEEP, K3l: 'يُفحص مرة' } },
+  /* ── r120 (ق١١-٢٤-١٦ ٣): كنس المحجوب — سطر مكان حجبه المالك يخرج من رحلة صاحبه (مكان من القائمة حذفه الكنس · محطة مكتوبة حُجب اسمها) ── */
+  { id: 'v.blockedSweep', name: 'كنس المحجوب: سطر المكان يخرج من الرحلة', where: 'view', covers: ['tkTripsSweep'],
+    run: "var __g0 = mpGuide.blockPlaces, __rs = tkReviewSend, __ids = []; tkReviewSend = function(){ return false; }; if (K === 'K2' || K === 'K3l'){ mpGuide.blockPlaces = {}; mpGuide.blockPlaces[tkListKey(currentUser.uid, 'Typed peak', 'pmA')] = { at: 1 }; } else __ids = ['m1']; try{ await tkTripsSweep('pmA', __ids); } finally { mpGuide.blockPlaces = __g0; tkReviewSend = __rs; }",
+    ctx: { K1: { d: -1, shape: 'same' }, K2: { d: -1, shape: 'same' }, K3c: { d: -1, shape: 'same', order: true }, K3l: { d: -1, shape: 'same' } } },
 ];
 /* دوال تحفظ الرحلة ولا تمسّ الخطة — خارج المصفوفة بسببها (يقرؤها التدقيق §36) */
 const NOT_PLAN = {
