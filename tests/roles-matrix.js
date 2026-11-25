@@ -110,7 +110,7 @@ module.exports = async function runRolesMatrix(env, OWNER, log){
     ['requests.setStatus · accept A', 'DDDDDA', function(mp){ return mp.requests.setStatus('rmA', 'accepted'); }, null, async function(){ await plant('curatorRequests/rmA', { uid: 'rmA', text: 'first', at: Date.now(), status: 'pending' }); }], /* بذره صُحّح ١٣ نوفمبر وقيس بعده: DDDDDA كالمتوقَّع — محتسب */
     ['reports.create · app report of 250 characters', 'DAADAA', function(mp, u){ return mp.reports.create(u, 'app', '', 'x'.repeat(250)); }],
     ['reports.removeMine · account deletion', 'DAAAAA', function(mp, u){ return mp.reports.removeMine(u); }],
-    ['identity.put · a new place identity', 'DAADAA', function(mp, u){ return mp.identity.put('k_rm_new', { lat: 1, lng: 2, source: 'user_pin', n: 'X', cityId: '2988507', by: u, at: Date.now() }); }],
+    ['identity.put · a new place identity', 'DAADAA', function(mp, u){ return mp.identity.put('k_rm_new', { lat: 1, lng: 2, source: 'user_pin', n: 'X', cityId: '2988507', at: Date.now() }); }],
     ['dailyStats.bump · today +1', 'DAAAAA', function(mp){ return mp.dailyStats.bump(TODAY, { activeToday: mp.fieldInc(1) }); }],
     ['settings.mergeApp', 'DDDDDA', function(mp){ return mp.settings.mergeApp({ probe: 1 }); }],
     ['users.merge · my own document', 'DAADAA', function(mp, u){ return mp.users.merge(u, { lastSeen: 1 }); }],
