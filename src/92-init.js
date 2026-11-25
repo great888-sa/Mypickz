@@ -1,3 +1,26 @@
+/* المحور ١ (ق١١-١٣-٠٥): معالج تبدّل حال الدخول صار دالة باسمها — محطة «الدخول الحقيقي» في الرحلة تشغّله هو نفسه (كان دالة بلا اسم داخل الإقلاع فلم يُمتحن قط؛ عيوب r119 الثلاثة خرجت من هذه اللحظة). لا تغيير في جسمه. */
+async function mpAuthChanged(user){
+  logTiming('onAuthStateChanged fired (auth state known) · ' + (user ? 'signed-in' : 'guest')); /* غ-١: الحدث يُسجَّل للزائر والمستخدم — الكلمة تميّزهما في السطر الأصفر (ق١٠-١٦-٠٣) */ document.body.classList.remove('auth-pending'); // r72s: الشاشات تظهر بعد معرفة الحالة — البوابة أولًا للزائر
+  if (!user || !currentUser || user.uid !== currentUser.uid) resetSessionState();
+  if (!user) try{ localStorage.removeItem('mp_vp'); }catch(_){} /* r120 (المراجعة المستقلة ٥ — قيس: كانت تُمسح مع كل فتح للتطبيق فيجري الكنس كل مرة): ذاكرة «كُنس هذا الأسبوع» تُمسح عند الخروج وحذف الحساب فقط — فتح التطبيق بموقّع يُبقيها */ // r72n (ملاحظة المالك ٣): لا أثر لحساب سابق قبل تحميل الجديد
+  const __other = !!user && (!currentUser || currentUser.uid !== user.uid);
+  currentUser = user; const __gen = mpSessionGen; if (user) mpHadUser = true; /* r115-ب */ try{ mpCardArrivalCount(); }catch(_){} /* r116-هـ: وصول برمز بطاقة يُعدّ الآن — بعد معرفة من الداخل وقبل أن يُستهلك الوصول */
+  updateUserUI(); if (__other) try{ delDialogForget(); }catch(_){} /* r120 (المراجعتان ٢٤ و٢٥ — قيس): نافذة حذف بقيت من حساب سابق لا تُعرض لمن دخل — وحدث دخول للحساب نفسه لا يغلق نافذته هو */
+  syncOwnerMode(); // وضع المالك يتحدد هنا حصرًا: تطابق uid مع settings/app.ownerUid
+  const tasks = [loadUserList(), registerUserRecord(), loadUserTrips(), loadSharedCityLists()]; // v1.40: مفكرات الأماكن تأتي مع userLists (placeBookmarks)
+  if (isOwner) tasks.push(linkOwnerUid());
+  await Promise.all(tasks);
+  if (__gen !== mpSessionGen || (currentUser ? currentUser.uid : null) !== (user ? user.uid : null)) return; /* r120: حدث دخول أحدث تولّى أثناء التحميل (خروج · حساب آخر · أو المستخدم نفسه بعد خروج) — هذا المعالج لا يكمل؛ الأحدث يكمل ويُعلن الجاهزية */
+  await syncCitiesFromCityLists(); // ز-١-ج-٢: «مدني» يشمل كل مدينة لي فيها قائمة (مثل قوائم الدليل المهاجَرة بمعرّف المعجم)
+  if (user) mpViewerPrune(); /* r120 (ق١١-١٤-٢٤): سجلات مشاهداتي الأقدم من أربعة أسابيع */
+  logTiming('User data loaded (bookmarks, My List, Trips) — login features ready');
+  resolveAuthReady();
+  if (user){ try{ await mpSharerInit(); mpArrivalOpen(); }catch(_){} try{ mpShareInOpen(); }catch(_){} } /* r115-د (٥): رمز المشارك جاهز · والرابط يفتح محتواه بعد الدخول */
+  try{ if (currentTab === 'Community') renderCommunityModal(); else if (currentTab === 'Curators') renderCuratorsBody(); else if (currentTab === 'Trips') renderTripsBody(); }catch(_){} try{ if (currentTab === 'Addresses') loadAddresses(true); }catch(_){} /* r120: العناوين تُحمَّل بفهرس الحساب الذي وصل */ /* r119: شاشة رُسمت قبل اكتمال تحميل الحساب تُعاد الآن بحاله (التمييز · الحفظ · المتابعة) */
+  try{ if (typeof mpWarnCheck === 'function') mpWarnCheck(); }catch(_){} /* r120 (ق١١-٢٤-١٥ و): إنذار المحتوى — مرة عند الفتح التالي، بلا انتظار */
+  if (currentTab === 'Places') renderPlacesBody(); // خ٥/م٢-ج: أول تحميل واستعادة الجلسة والدخول والخروج — الوجهة الجديدة تتحدث مع كل تغيّر حالة
+  enforceNickname(); // لا ننتظرها — تعمل فوق المحتوى الظاهر
+}
 (async function init(){
   await initFirebase();
   logTiming('Firebase SDK loaded + initialized');
@@ -6,27 +29,12 @@
   // الطلبات دي مستقلة عن بعض — نشغلها بالتوازي بدل التتابع، يقلل وقت التحميل بشكل ملموس
   await Promise.all([
     loadOwnerUid(),
-    loadCategoryTemplate()
+    loadCategoryTemplate(),
+    tkGuideLoad() /* r120 (ق١١-٢٤-١٥): قوائم السماح والحجب — قراءة واحدة عند الإقلاع */
   ]); /* ر٧٣-أب (١): الدليل الموروث ومحمّلاته أُزيلت — المدن من المعجم بـ«مدني» */
   logTiming('Initial app data loaded (ownerUid, categories)');
   if (auth) {
-    mpData.auth.onChange(async (user) => {
-      logTiming('onAuthStateChanged fired (auth state known) · ' + (user ? 'signed-in' : 'guest')); /* غ-١: الحدث يُسجَّل للزائر والمستخدم — الكلمة تميّزهما في السطر الأصفر (ق١٠-١٦-٠٣) */ document.body.classList.remove('auth-pending'); // r72s: الشاشات تظهر بعد معرفة الحالة — البوابة أولًا للزائر
-      if (!user || !currentUser || user.uid !== currentUser.uid) resetSessionState(); // r72n (ملاحظة المالك ٣): لا أثر لحساب سابق قبل تحميل الجديد
-      currentUser = user; if (user) mpHadUser = true; /* r115-ب */ try{ mpCardArrivalCount(); }catch(_){} /* r116-هـ: وصول برمز بطاقة يُعدّ الآن — بعد معرفة من الداخل وقبل أن يُستهلك الوصول */
-      updateUserUI();
-      syncOwnerMode(); // وضع المالك يتحدد هنا حصرًا: تطابق uid مع settings/app.ownerUid
-      const tasks = [loadUserList(), registerUserRecord(), loadUserTrips(), loadSharedCityLists()]; // v1.40: مفكرات الأماكن تأتي مع userLists (placeBookmarks)
-      if (isOwner) tasks.push(linkOwnerUid());
-      await Promise.all(tasks);
-      await syncCitiesFromCityLists(); // ز-١-ج-٢: «مدني» يشمل كل مدينة لي فيها قائمة (مثل قوائم الدليل المهاجَرة بمعرّف المعجم)
-      logTiming('User data loaded (bookmarks, My List, Trips) — login features ready');
-      resolveAuthReady();
-      if (user){ try{ await mpSharerInit(); mpArrivalOpen(); }catch(_){} try{ mpShareInOpen(); }catch(_){} } /* r115-د (٥): رمز المشارك جاهز · والرابط يفتح محتواه بعد الدخول */
-      try{ if (currentTab === 'Community') renderCommunityModal(); else if (currentTab === 'Curators') renderCuratorsBody(); else if (currentTab === 'Trips') renderTripsBody(); }catch(_){} /* r119: شاشة رُسمت قبل اكتمال تحميل الحساب تُعاد الآن بحاله (التمييز · الحفظ · المتابعة) */
-      if (currentTab === 'Places') renderPlacesBody(); // خ٥/م٢-ج: أول تحميل واستعادة الجلسة والدخول والخروج — الوجهة الجديدة تتحدث مع كل تغيّر حالة
-      enforceNickname(); // لا ننتظرها — تعمل فوق المحتوى الظاهر
-    });
+    mpData.auth.onChange(mpAuthChanged);
   } else {
     resolveAuthReady(); // ما فيش Firebase أصلًا — منعرقلش أي حاجة
   }
