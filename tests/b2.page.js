@@ -45,11 +45,14 @@
   }catch(e){ o.errB = String(e && e.stack || e); }
 
   try{ /* (ب١) المصدر لم يُقرأ لانقطاع (لا لرفض): لا يُحكم بالإطلاق — الخطأ يُرمى والسجل باقٍ */
-    reset(); await five(true); var l9 = T.get('userCityLists/' + L); l9.public = false; T.seed('userCityLists/' + L, l9); T.readFail('userCityLists/' + L);
-    o.srcNet = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, false); }), recs()[0], mir()[0]];
+    reset(); await five(true); var l9 = T.get('userCityLists/' + L); l9.public = false; T.seed('userCityLists/' + L, l9); T.susp(true); T.readFail('userCityLists/' + L); /* قواعد v3.18: سحبٌ عن قائمة خاصة يُقبل من الدفعة الأولى بلا قراءة — القراءة تُبلغ حين تُرفض الأولى لسبب آخر (هنا: الموقوف لا يكتب مرآته) */
+    o.srcNet = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, false); }), recs()[0], mir()[0]]; T.susp(false); T.readFail(null);
+    /* (ب١-٢ · قواعد v3.18) القائمة صارت خاصة لا أقرؤها (رفضٌ لا انقطاع) وأنا موقوف: لا قراءة تسعف بقيمة العدّاد ولا مرآة تُكتب — السجل يخرج بعدّاده بـ−١ بلا المرآة، وهو الطريق الوحيد */
+    reset(); await five(true); var l9b = T.get('userCityLists/' + L); l9b.public = false; T.seed('userCityLists/' + L, l9b); var c9b = num('userCityLists/' + L, 'bookmarkCount'); T.susp(true);
+    o.privSusp = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, false); }), recs()[0], c9b, num('userCityLists/' + L, 'bookmarkCount')]; T.susp(false);
     listBookmarksMap = {}; listBookmarksMap[L] = { listId: L, ownerUid: O, cityId: CITY }; userListData.listBookmarkIds = {}; userListData.listBookmarkIds[L] = true; tripSavesMap = {}; tripSavesMap[TR] = { tripId: TR }; userListData.tripSaveIds = {}; userListData.tripSaveIds[TR] = true;
     var tgl0 = mpData.tripSaves.toggle; mpData.tripSaves.toggle = function(){ return Promise.reject(Object.assign(new Error('net'), { code: 'unavailable' })); }; toasts.length = 0; __mpLastToast = { t: '', at: 0 };
-    try{ await toggleListBookmark(O, CITY); __mpLastToast = { t: '', at: 0 }; await toggleTripSave(TR); } finally { mpData.tripSaves.toggle = tgl0; }
+    T.batchFail(1); /* انقطاع على دفعة السحب الأولى (كان يُصنع بقراءة مصدر خاص منقطعة — المسار لم يعد يقرؤه) */ try{ await toggleListBookmark(O, CITY); __mpLastToast = { t: '', at: 0 }; await toggleTripSave(TR); } finally { mpData.tripSaves.toggle = tgl0; T.batchFail(null); }
     o.uiRollback = [!!listBookmarksMap[L], userListData.listBookmarkIds[L] === true, !!tripSavesMap[TR], userListData.tripSaveIds[TR] === true, toasts.filter(function(t){ return /Could not update bookmark/.test(t); }).length]; listBookmarksMap = null; tripSavesMap = null; T.readFail(null);
   }catch(e){ o.errB1 = String(e && e.stack || e); } finally { T.readFail(null); }
 
@@ -58,8 +61,8 @@
     var f1 = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, false); }), T.rsince(rmk).length, recs()[0]]; T.batchFail(null);
     T.noT(true); T.batchFail(2); var f2 = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, false); }), recs()[0], cnt()[0]]; T.batchFail(null); T.noT(false);
     reset(); T.seed('tripSaves/' + uid + '__' + TR, { at: 1 }); T.batchFail(2); var f3 = [await tr(function(){ return mpData.tripSaves.toggle(uid, TR, false); }), recs()[1]]; T.batchFail(null);
-    reset(); await five(true); var lz = T.get('userCityLists/' + L); lz.public = false; T.seed('userCityLists/' + L, lz); T.readFail('listBookmarks/' + uid + '__' + L);
-    var f4 = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, false); }), recs()[0], mir()[0]]; lz.public = true; T.seed('userCityLists/' + L, lz);
+    reset(); await five(true); var lz = T.get('userCityLists/' + L); lz.public = false; T.seed('userCityLists/' + L, lz); T.susp(true); /* v3.18: كما في (ب١) — فحص سجلي يُبلغ بعد رفض الدفعة الأولى */ T.readFail('listBookmarks/' + uid + '__' + L);
+    var f4 = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, false); }), recs()[0], mir()[0]]; T.susp(false); lz.public = true; T.seed('userCityLists/' + L, lz);
     var f5 = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, true); }), cnt()[0]]; T.readFail(null); /* سجلي قائم وفحصه انقطع: لا إعادة عدّ */
     T.noT(true); T.batchFail(2); reset(); var f6 = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, true); }), recs()[0], cnt()[0]]; T.batchFail(null); T.noT(false); /* إعادة الإنشاء الصريحة انقطعت: انقطاع لا «لا صلاحية» */
     o.faults = [f1, f2, f3, f4, f5, f6];
@@ -228,7 +231,7 @@
 
   var ioKeep = isOwner;
   try{ /* (ط٢) مالك التطبيق: القواعد تقبل كتاباته كلها، فبابه يقرأ قبل أن يكتب — لا نقص بلا سجل · لا نزول تحت الصفر · لا ملف شبح · ولا عدّ على مصدر مغلق */
-    reset(); T.boss(true); isOwner = true;
+    reset(); T.boss(true); isOwner = true; globalThis.__bossSync(isOwner);
     var lo = T.get('userCityLists/' + L); lo.bookmarkCount = 2; T.seed('userCityLists/' + L, lo); var uo = T.get('userLists/' + uid) || {}; uo.listBookmarkIds = uo.listBookmarkIds || {}; uo.listBookmarkIds[L] = true; T.seed('userLists/' + uid, uo);
     var o1 = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, false); }), cnt()[0], mir()[0]]; /* مرآة بلا سجل */
     T.seed('follows/' + uid + '_' + O, { followerUid: uid, curatorUid: O, at: 1 });
@@ -251,11 +254,11 @@
     /* مشاهدة ملف غائب: لا ملف شبح يُنشأ */
     var o10 = [await tr(function(){ return mpData.communityProfiles.bumpView('uB2ghost'); }), !!T.get('communityProfiles/uB2ghost')];
     /* علم الصفحة لم يُضبط (قراءة الإقلاع فشلت) والحساب مالك في القواعد: الباب يسأل مرة ثم يقرأ قبل أن يكتب */
-    isOwner = false; var ou0 = ownerUid; ownerUid = null; mpData.ownerForget(); var lr = T.get('userCityLists/' + L); lr.bookmarkCount = 2; T.seed('userCityLists/' + L, lr); var ur = T.get('userLists/' + uid) || {}; ur.listBookmarkIds = ur.listBookmarkIds || {}; ur.listBookmarkIds[L] = true; T.seed('userLists/' + uid, ur);
+    isOwner = false; globalThis.__bossSync(isOwner); var ou0 = ownerUid; ownerUid = null; mpData.ownerForget(); var lr = T.get('userCityLists/' + L); lr.bookmarkCount = 2; T.seed('userCityLists/' + L, lr); var ur = T.get('userLists/' + uid) || {}; ur.listBookmarkIds = ur.listBookmarkIds || {}; ur.listBookmarkIds[L] = true; T.seed('userLists/' + uid, ur);
     var rp = T.rmark(); var o11 = [await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, false); }), cnt()[0], T.rsince(rp).filter(function(k){ return k === 'settings/app'; }).length];
     rp = T.rmark(); await tr(function(){ return mpData.bookmarks.toggleList(uid, O, CITY, false); }); o11.push(T.rsince(rp).filter(function(k){ return k === 'settings/app'; }).length); ownerUid = ou0; mpData.ownerForget();
     o.boss = [o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11];
-  }catch(e){ o.errI2 = String(e && e.stack || e); } finally { T.boss(false); T.noT(false); isOwner = ioKeep; try{ mpData.ownerForget(); }catch(_){ } }
+  }catch(e){ o.errI2 = String(e && e.stack || e); } finally { T.boss(false); T.noT(false); isOwner = ioKeep; globalThis.__bossSync(isOwner); try{ mpData.ownerForget(); }catch(_){ } }
 
   try{ /* (ي) ك-١١ · ملفي وقائمتي لا يُعدّان لي: لا كتابة تُرسل */
     var m9 = T.mark(); var b1 = await mpData.communityProfiles.bumpView(uid); var b2 = await mpData.lists.bumpView(uid, 'paris');
