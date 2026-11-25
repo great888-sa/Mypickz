@@ -171,7 +171,7 @@
     try{ await saveOthersPlace('uQA', CITY, 'coffee', 'q1'); await wait(80); } finally { currentUserSuspended = sus0; }
     o.suspended = [T.since(m8).length, T.denies() - dn8, toasts.some(function(t){ return /suspended/.test(t); }), mine('Bind Cafe').length];
     /* (ق) Most saved: رابط العدّاد يكتبه صاحبه — لا يصير رابطًا إلا رابط خرائط */
-    var io0 = isOwner; isOwner = true; mostSavedTab = 'places'; await openMostSavedStats(); await wait(60); var ms = document.getElementById('dashBody').innerHTML; isOwner = io0; try{ closeModalById('dashBackdrop'); }catch(_){}
+    var io0 = isOwner; isOwner = true; globalThis.__bossSync(isOwner); mostSavedTab = 'places'; await openMostSavedStats(); await wait(60); var ms = document.getElementById('dashBody').innerHTML; isOwner = io0; globalThis.__bossSync(isOwner); try{ closeModalById('dashBackdrop'); }catch(_){}
     o.mostSaved = [/<span class="stats-name">Bad Link 117<\/span>/.test(ms) && /<span class="stats-name">Sneaky Link 117<\/span>/.test(ms), /javascript:/i.test(ms), /<a href="https:\/\/maps\.app\.goo\.gl\/r117xgood"[^>]*class="stats-name">Good Link 117<\/a>/.test(ms), delete window.__pwn117];
   }catch(e){ o.errQ = String(e && e.stack || e); }
 
