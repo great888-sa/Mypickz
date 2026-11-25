@@ -62,21 +62,21 @@
     o.evList = [m1 - m0, m2 - m1];
     /* فتح العناوين الشخصية بزر التبويب المرسوم */
     var tabWas = currentTab; var ccity = cityListCityId, ccs = (userListData.customCities || []).slice(); cityListCityId = '2267057'; userListData.customCities = ccs.concat([{ id: '2267057', name: 'Lisbon', country: 'Portugal' }]); /* مدينة معجم مفتوحة: حدث غير شخصي كان سيذهب إلى مستندها — والشخصي إلى العام وحده */ var p0 = evN('personal_open'); var tb = document.querySelector('.mp-tab[data-tab="Addresses"]'); var okTab = press(tb); await wait(60); var p1 = evN('personal_open');
-    var cu = currentUser; currentUser = null; switchTab('Places'); switchTab('Addresses'); await wait(30); currentUser = cu; var p2 = evN('personal_open'); /* زائر لا يُعدّ */
+    var cu = currentUser; currentUser = null; globalThis.__actorSync(currentUser); switchTab('Places'); switchTab('Addresses'); await wait(30); currentUser = cu; globalThis.__actorSync(currentUser); var p2 = evN('personal_open'); /* زائر لا يُعدّ */
     o.evPersonal = [okTab, p1 - p0, p2 - p1, Object.keys(mpTrack._buf).filter(function(p){ return (mpTrack._buf[p].personal_open || 0) > 0; }).every(function(p){ return /__all__all$/.test(p); })];
     cityListCityId = ccity; userListData.customCities = ccs; switchTab(tabWas === 'Addresses' ? 'Places' : tabWas); await wait(30);
     /* بطاقة أُرسلت صورةً */
-    var s0 = evN('share_card'); var ecc = exportCardCanvases, ush = navigator.share, ucs = navigator.canShare, sef = statsExportFor, cep = closeExportPreview, F0 = window.File;
-    exportCardCanvases = function(){ return { canvases: [{ toBlob: function(cb){ cb({ size: 1 }); } }], model: { title: 't' } }; }; window.File = function(parts, name){ this.name = name; }; statsExportFor = function(){}; closeExportPreview = function(){};
+    var s0 = evN('share_card'); var ecc = exportCardCanvases, ush = navigator.share, ucs = navigator.canShare, cep = closeExportPreview, F0 = window.File;
+    exportCardCanvases = function(){ return { canvases: [{ toBlob: function(cb){ cb({ size: 1 }); } }], model: { title: 't' } }; }; window.File = function(parts, name){ this.name = name; }; closeExportPreview = function(){};
     try{ navigator.canShare = function(){ return true; }; navigator.share = function(){ return Promise.resolve(); }; await sendExportCard('list'); var s1 = evN('share_card');
       navigator.share = function(){ return Promise.reject(Object.assign(new Error('x'), { name: 'AbortError' })); }; await sendExportCard('list'); var s2 = evN('share_card'); /* المستخدم ألغى: لا يُعدّ */
-    } finally { exportCardCanvases = ecc; window.File = F0; statsExportFor = sef; closeExportPreview = cep; try{ navigator.share = ush; navigator.canShare = ucs; }catch(_){} }
+    } finally { exportCardCanvases = ecc; window.File = F0; closeExportPreview = cep; try{ navigator.share = ush; navigator.canShare = ucs; }catch(_){} }
     o.evCard = [s1 - s0, s2 - s1];
   }catch(e){ o.errE = String(e && e.stack || e); }
 
   /* ── (ح) معالجات قديمة بلا محطة باسمها (دَين handlers) — بنصّ المعالج المرسوم ── */
   try{
-    var sent = []; var mst = mpSendText; mpSendText = function(t){ sent.push(String(t)); }; var sef2 = statsExportFor; statsExportFor = function(){}; var ech = exportCardHtml; exportCardHtml = function(){ return '<div id="xpFake2"></div>'; };
+    var sent = []; var mst = mpSendText; mpSendText = function(t){ sent.push(String(t)); }; var ech = exportCardHtml; exportCardHtml = function(){ return '<div id="xpFake2"></div>'; };
     try{
       /* plAddToTripFor: بلاطة Trip على بطاقة مكاني حين لا رحلة نشطة */
       var at0 = (typeof activeTripId !== 'undefined') ? activeTripId : null; try{ activeTripId = null; }catch(_){}
@@ -88,7 +88,7 @@
       var b1 = Array.prototype.filter.call(document.querySelectorAll('#tripShareBackdrop button'), function(b){ return /cmSendCachedPlace\('hp1'\)/.test(b.getAttribute('onclick') || ''); })[0]; sent.length = 0; var okS = press(b1);
       o.hPlace = [okS, sent.length, /Their Cafe/.test(sent[0] || ''), /maps\.app\.goo\.gl\/hp1/.test(sent[0] || ''), /amal/.test(sent[0] || ''), document.getElementById('tripShareBackdrop').classList.contains('show')]; delete cmCache.places['hp1'];
       try{ closeExportPreview(); }catch(_){}
-    } finally { mpSendText = mst; statsExportFor = sef2; exportCardHtml = ech; }
+    } finally { mpSendText = mst; exportCardHtml = ech; }
   }catch(e){ o.errHn = String(e && e.stack || e); }
 
   showToast = st0; window.__mpSheetAuto = a0; o.toasts = toasts.slice(-6);
