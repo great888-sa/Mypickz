@@ -125,7 +125,8 @@ async function mpSendText(text){
   try{
     if (navigator.share) await navigator.share({ text });
     else { await navigator.clipboard.writeText(text); showToast('Copied — paste it anywhere'); }
-  }catch(e){}
+    return true; /* r120 (المراجعة المستقلة ٣٥): أُرسلت أو نُسخت فعلًا */
+  }catch(e){ return false; } /* أُلغيت ورقة المشاركة أو فشل النسخ — ليست مشاركة تُعدّ لأحد */
 }
 let undoTimer = null;
 function showUndoToast(msg, undoFn){
