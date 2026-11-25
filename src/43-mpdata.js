@@ -16,6 +16,27 @@ const mpData = (function(){
   }
   const del = function(){ return firebase.firestore.FieldValue.delete(); };
   const col = function(name){ return db.collection(name); };
+  /* r120 (ق١١-١٤-١١ · ق١١-١٤-١٢ · ق١١-١٤-١٤ · قواعد v3.18 ٣ و٥): الأسبوع كما تحسبه القاعدة — أسبوع التقويم الميلادي من الأحد إلى السبت بالتوقيت العالمي، ومعرّفه تاريخ أحده (YYYY-MM-DD). */
+  function mpWeekIds(k){ /* آخر k أسبوعًا، الأقدم أولًا والحالي آخرًا — r120: أسبوع الرياض (mpWeekKey) */ const sun = +new Date(mpWeekKey() + 'T00:00:00Z'); const out = [];
+    for (let i = (k || 1) - 1; i >= 0; i--) out.push(new Date(sun - i * 7 * 864e5).toISOString().slice(0, 10)); return out; }
+  async function mpWeekMark(recName, cntName, uid, key, known){ /* key = المصدر والأسبوع بلا الحساب. known = الجهاز يعرف أن حسابي معدود هذا الأسبوع */
+    const cnt = col(cntName).doc(key);
+    const vOnly = async function(){ try{ await cnt.update({ v: inc(1) }); return 'seen'; }catch(e){ if (e && (e.code === 'permission-denied' || e.code === 'not-found')) return false; throw e; } };
+    if (known) return vOnly();
+    const b = db.batch(); b.set(col(recName).doc(uid + '__' + key), { uid: uid, at: firebase.firestore.FieldValue.serverTimestamp() }); b.set(cnt, { n: inc(1), v: inc(1) }, { merge: true });
+    try{ await b.commit(); return 'new'; }catch(e){ if (!(e && e.code === 'permission-denied')) throw e; }
+    return vOnly(); /* جهاز آخر عدّ حسابي هذا الأسبوع (السجل قائم): المشاهدة وحدها */ }
+  async function mpWeekRead(cntName, srcKey, k){ const ws = mpWeekIds(k); const docs = await Promise.all(ws.map(function(w){ return col(cntName).doc(srcKey + '__' + w).get(); }));
+    return ws.map(function(w, i){ const x = docs[i].exists ? (docs[i].data() || {}) : {}; return { week: w, n: Number(x.n) || 0, v: Number(x.v) || 0 }; }); }
+  function mpRuleWeek(back){ /* r120 (المراجعة المستقلة ٣٤): أسبوع ساعة الخادم (UTC) كما تحسبه القاعدة v3.18 (٧) — للتنظيف وحده. أسبوع الإحصاء (الرياض) يسبقه ثلاث ساعات كل سبت، فتنظيف يُحسب به يطلب حذفًا ترفضه القاعدة ثم يُعلَّم «تمّ» */ const d = new Date(); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - d.getUTCDay() * 864e5 - (back || 0) * 7 * 864e5).toISOString().slice(0, 10); }
+  function mpWeekOld(w){ /* أسبوع خرج من الخمسة الأخيرة (الجاري وأربعة قبله) — بأسبوع القاعدة */ return /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(w)) && String(w) < mpRuleWeek(4); }
+  async function mpWeekPruneMine(recName, uid){ /* r120 (ق١١-١٤-٢٤): سجلاتي التي مضى عليها أربعة أسابيع تُحذف وحدها — العدّادات باقية. يعيد عدد ما حُذف */ const snap = await col(recName).where('uid', '==', uid).get(); let n = 0;
+    for (const d of snap.docs){ const w = String(d.id).split('__').pop(); if (!mpWeekOld(w)) continue; try{ await d.ref.delete(); n++; }catch(e){ mpSwallow(e, recName + '.pruneMine'); } } return n; }
+  async function mpWeekRemoveMine(recName, cntName, uid){ const snap = await col(recName).where('uid', '==', uid).get(); let left = 0;
+    for (const d of snap.docs){ const cnt = col(cntName).doc(String(d.id).split('__').slice(1).join('__'));
+      try{ const b = db.batch(); b.delete(d.ref); b.update(cnt, { n: inc(-1) }); await b.commit(); }
+      catch(e){ try{ await d.ref.delete(); }catch(e2){ left++; mpSwallow(e2, recName + '.removeMine'); } } }
+    return left; }
   // القرار ١٢: رفض النقص عند الصفر (الأرضية بالقواعد ٣٫٦) يُبتلع — السحب تم والعدّاد صفر؛ غيره يُرمى
   /* ═══ r118-و (ك-٧ · ص-٩ · ك-١٦ · ق١١-١٢-٠٢ · ق١١-١٢-٠٧): مستند ليس لي يُطبَّع عند القراءة ═══
      القواعد تضمن نوع الحقول العليا (v3.17 ٧) ولا تمرّ على عناصر المصفوفات، والمستندات السابقة لها قد تحمل أي شيء؛ ومن يكتب مباشرة يكتب ما شاء.
@@ -46,10 +67,12 @@ const mpData = (function(){
     if (dropped) try{ logTiming('NAMES · ' + dropped + ' shown name(s) not registered to their owner — shown as user'); }catch(_){} return items; };
   /* r118-ج (ك-٢): عدّادات يحرّكها الآخرون — لا تُرسل في كتابة المالك أبدًا. كانت تُرسل كما حُمّلت، فإن تغيّر أحدها بفعل زائر رأت القاعدة أن المالك «غيّر العدّاد» ورفضت الحفظ كله حتى إعادة التحميل. */
   const OWNER_COUNTER_KEYS = ['favoriteCount', 'bookmarkCount', 'viewCount', 'copyCount', 'saveCount'];
-  const stripCounters = function(d){ OWNER_COUNTER_KEYS.forEach(function(k){ delete d[k]; }); return d; };
+  const HOLD_KEYS = ['suspended', 'sharedWithHeld', 'publicHeld']; /* r120 (ق١١-١٥-٠٦ — قيس: شاشة حُمّلت والحساب موقوف كانت تعيد كتابة «موقوف» بعد رفع الإيقاف): حقول الإيقاف يكتبها مالك التطبيق وحده (holdAll · holdOrRestore) — لا تُرسل في حفظ صاحب المحتوى */
+  const stripCounters = function(d){ OWNER_COUNTER_KEYS.forEach(function(k){ delete d[k]; }); HOLD_KEYS.forEach(function(k){ delete d[k]; }); Object.keys(d).forEach(function(k){ if (k.charAt(0) === '_') delete d[k]; }); /* r120 (ق١١-١٥-٠٩ — قيس: مدير المدن كان يكتب _visStale في مستند القائمة): ما يبدأ بـ«_» حقل داخلي لذاكرة الشاشة — لا يُكتب من أي باب */ return d; };
+  const LOADER_KEYS = ['_visStale', '_unreadable']; /* ما يضعه المحمِّل على ما يعيده */
   /* ═══ الدفعة ٢ (قواعد v3.17 ١١ · ك-٤ · ك-٥ · ص-٧ · ص-٨): باب واحد لكل سجل مربوط بعدّاده — المفكرة · حفظ الرحلة · نسخ القائمة والرحلة · المتابعة ═══
-     القاعدة: السجل يُنشأ فقط مع +١ على عدّاده بالطلب نفسه، ويُحذف فقط مع −١ به، أو وحده حين لا عدّاد يُنقص (المصدر حُذف · العدّاد عند الصفر · المصدر لم يعد عامًّا ولا مشارَكًا معي · صاحب السجل موقوف).
-     الباب يحاول الدفعة المربوطة أولًا. عند رفضها يقرأ ولا يخمّن: سجلي ثم المصدر؛ ثم إعادة واحدة بقيمة صريحة إن كان العدّاد قائمًا (ظهور increment لقاعدة السجل مقيس على المحرّك الرسمي لا على الخادم الحي)، وإلا السجل وحده.
+     القاعدة: السجل يُنشأ فقط مع +١ على عدّاده بالطلب نفسه، ويُحذف فقط مع −١ به، أو وحده حين لا عدّاد يُنقص (قواعد v3.18: المصدر حُذف · العدّاد عند الصفر — «المصدر لم يعد مفتوحًا لي» و«صاحب السجل موقوف» لم تعودا إطلاقًا: السجل يخرج بعدّاده).
+     الباب يحاول الدفعة المربوطة أولًا. عند رفضها يقرأ ولا يخمّن: سجلي ثم المصدر؛ ثم −١ بلا المرآة (الموقوف لا يكتب مستنده · مصدر صار خاصًّا لا يُقرأ)، ثم إعادة بقيمة صريحة إن قُرئ العدّاد قائمًا (ظهور increment لقاعدة السجل مقيس على المحرّك الرسمي لا على الخادم الحي)، وإلا السجل وحده.
      ما ترفضه القاعدة بعد ذلك يُرمى للمستدعي كما هو. كان swallowFloor يعيد «نجح» على كل رفض نقص: يزول السجل من الشاشة وهو باقٍ على الخادم (ك-٤).
      s: { rec · src · field · data() · mirror(b, on) أو null · open(بيانات المصدر) ⇒ هل يُعدّ لي عليه }
      on ⇒ 'counted' · 'already' (سجلي قائم — لا عدّ ثانٍ). off ⇒ 'uncounted' · 'released' (السجل وحده) · 'none' (لا سجل لي). */
@@ -66,7 +89,7 @@ const mpData = (function(){
   const mirrorAlone = async function(s, on){ if (!s.mirror) return; try{ const b = db.batch(); s.mirror(b, on); await b.commit(); }catch(_){ if (!on) mirrorDirty(s); } }; /* المرآة فهرس في مستندي — إصلاحها لا يُسقط الفعل */
   const recExists = function(s){ return s.exists ? s.exists() : s.rec.get().then(function(d){ return d.exists; }); };
   const srcRead = async function(s){ try{ const d = await s.src.get(); return d.exists ? (d.data() || {}) : null; }catch(e){ if (!denied(e)) throw e; return null; } }; /* null = غير موجود أو لا يُقرأ لي (حُذف · لم يعد عامًّا ولا مشارَكًا معي) — حالة إطلاق. غير الرفض (انقطاع) يُرمى: لا يُحكم على ما لم يُقرأ */
-  const recAlone = async function(s){ /* السجل وحده: القاعدة تقبله في حالات الإطلاق الأربع فقط — في غيرها ترفضه فيُرمى رفضها (السجل باقٍ والمستدعي يعرف) */
+  const recAlone = async function(s){ /* السجل وحده: القاعدة تقبله في حالتَي الإطلاق فقط (v3.18: المصدر حُذف · العدّاد عند الصفر) — في غيرها ترفضه فيُرمى رفضها (السجل باقٍ والمستدعي يعرف) */
     try{ const b = db.batch(); b.delete(s.rec); if (s.mirror) s.mirror(b, false); await b.commit(); }
     catch(e){ if (!denied(e) || !s.mirror) throw e; await s.rec.delete(); mirrorDirty(s); } /* الموقوف لا يكتب مرآته: السجل بطلبه وحده (حق الانسحاب) */
     return 'released'; };
@@ -91,12 +114,15 @@ const mpData = (function(){
       let mine = false; try{ mine = await recExists(s); }catch(x){ throw pick(e, x); }
       if (!mine){ await mirrorAlone(s, false); return { state: 'none' }; } /* لا سجل لي: المرآة وحدها تُصحَّح */
       const src = await srcRead(s);
-      return { n: (src && s.open(src)) ? Math.max(0, Number(src[s.field]) || 0) : 0 }; };
+      return { n: src ? Math.max(0, Number(src[s.field]) || 0) : 0 }; }; /* قواعد v3.18 (١): العدّاد يُنقَص ولو لم يعد المصدر مفتوحًا لي — n = ما على المصدر إن قُرئ (٠ = غائب · لا يُقرأ · عند الصفر) */
+    const bare = async function(v){ const b = db.batch(); b.delete(s.rec); b.update(s.src, kv(s.field, v)); await b.commit(); await mirrorAlone(s, false); return 'uncounted'; }; /* السجل وعدّاده بلا المرآة: الموقوف لا يكتب مستنده، والمرآة تُصحَّح بعدها أو تُعلَّم */
     if (await bossNow()){ const r0 = await look(null); if (r0.state) return r0.state; if (r0.n > 0){ await take(inc(-1)); return 'uncounted'; } return recAlone(s); } /* حذف المالك تقبله القواعد دائمًا (isOwner() في قاعدتَي السجل والعدّاد) — لا إعادة تلزمه هنا، بخلاف الإنشاء */
     try{ await take(inc(-1)); return 'uncounted'; }
     catch(e){ if (!soft(e)) throw e; const r = await look(e); if (r.state) return r.state;
-      if (r.n > 0){ try{ await take(r.n - 1); return 'uncounted'; }catch(e3){ if (!soft(e3)) throw e3; } }
-      return recAlone(s); }
+      /* قواعد v3.18 (١ · ق١١-١٤-٠٢): السجل يخرج بعدّاده دائمًا — مصدر صار خاصًّا لا يُقرأ لي، أو أنا موقوف (المرآة هي المرفوضة لا العدّاد): −١ بلا المرآة. كان السجل يخرج وحده فيبقى العدّاد زائدًا واحدًا */
+      if (s.mirror){ try{ return await bare(inc(-1)); }catch(e2){ if (!soft(e2)) throw pick(e, e2); } } /* بلا مرآة هذه هي الدفعة الأولى نفسها — لا تُعاد (المراجعة المستقلة ١٦) */
+      if (r.n > 0){ try{ return await bare(r.n - 1); }catch(e3){ if (!soft(e3)) throw pick(e, e3); } }
+      return recAlone(s); } /* لم يبقَ إلا ما لا عدّاد فيه يُنقَص: المصدر حُذف أو عدّاده عند الصفر — القاعدة تقبل السجل وحده فيهما فقط */
   };
   const openDoc = function(uid){ return function(d){ return d.public === true || (Array.isArray(d.sharedWith) && d.sharedWith.indexOf(uid) >= 0); }; };
   const countable = function(d){ return d.hasAnyPublicContent === true || d.verified === true; };
@@ -136,6 +162,36 @@ const mpData = (function(){
         patch.tripSelfBookmarks[tripId] = on ? true : firebase.firestore.FieldValue.delete();
         return col('userLists').doc(uid).set(patch, { merge: true });
       }
+    },
+    /* r120 (ق١١-١٤-٠٩ · ق١١-١٤-١١ · قواعد v3.18 ٣): المشاهدون أسبوعيًّا — سجل لكل حساب لكل مصدر لكل أسبوع، ومستند أسبوعه بحقلين: n الحسابات (لا يتحرّك إلا بسجله، فلا يُضخَّم) و v المشاهدات (كل جلسة مرة).
+       النوع: l قائمة · t رحلة · p ملف. السجل (من شاهد ماذا في أي أسبوع) يقرؤه صاحبه ومالك التطبيق؛ مستند الأسبوع يقرؤه صاحب المحتوى. */
+    viewers: {
+      week: function(back){ return mpWeekIds((back || 0) + 1)[0]; },
+      ok: function(kind, srcId){ return /^[ltp]$/.test(String(kind)) && /^[A-Za-z0-9_-]{1,80}$/.test(String(srcId)) && String(srcId).indexOf('__') < 0; }, /* معرّف فيه «__» لا تقبله القاعدة (أربعة مقاطع) */
+      mark: async function(uid, kind, srcId, known){ /* 'new' = حسابي عُدّ الآن في الأسبوع (n و v) · 'seen' = معدود من قبل، زادت المشاهدات وحدها (v) · false = المصدر لي أو ليس مفتوحًا لي (القاعدة ترفض) */
+        if (!uid || !this.ok(kind, srcId)) return false; return mpWeekMark('viewers', 'viewerCounts', uid, kind + '__' + srcId + '__' + this.week(), known); },
+      weeks: async function(kind, srcId, k){ /* لصاحب المحتوى: آخر k أسبوعًا، الأقدم أولًا — قراءة مستند لكل أسبوع */
+        if (!this.ok(kind, srcId)) return []; return mpWeekRead('viewerCounts', kind + '__' + srcId, k || 8); },
+      isOld: function(w){ return mpWeekOld(w); }, ruleWeek: function(){ return mpRuleWeek(0); }, pruneMine: function(uid){ return mpWeekPruneMine('viewers', uid); },
+      removeMine: async function(uid){ return mpWeekRemoveMine('viewers', 'viewerCounts', uid); } /* حذف الحساب: كل سجل يخرج بـ n أسبوعه (−١)؛ v (مشاهدات وقعت) تبقى. يعيد عدد ما بقي */
+    },
+    /* r120 (ق١١-١٤-١٢ · قواعد v3.18 ٥): نموّ أسبوعي لكل مكان في قائمة صاحبه — بالشكل نفسه: سجل لكل حساب لكل مكان لكل قائمة لكل أسبوع، ومستند أسبوعه n و v. يقرؤه صاحب القائمة. */
+    placeViewers: {
+      ok: function(listId, hex){ return /^[A-Za-z0-9_-]{1,60}$/.test(String(listId)) && String(listId).indexOf('__') < 0 && /^[a-f0-9]{16}$/.test(String(hex)); },
+      mark: async function(uid, listId, hex, known){ if (!uid || !this.ok(listId, hex)) return false; return mpWeekMark('placeViewers', 'placeViewerCounts', uid, listId + '__' + hex + '__' + mpWeekIds(1)[0], known); },
+      weeks: async function(listId, hex, k){ if (!this.ok(listId, hex)) return []; return mpWeekRead('placeViewerCounts', listId + '__' + hex, k || 8); },
+      nowOf: async function(listId, hexes){ /* هذا الأسبوع لأماكن القائمة — مستند لكل مكان */ const self = this, w = mpWeekIds(1)[0], out = {};
+        await Promise.all((hexes || []).filter(function(h){ return self.ok(listId, h); }).map(function(h){ return col('placeViewerCounts').doc(listId + '__' + h + '__' + w).get().then(function(d){ const x = d.exists ? (d.data() || {}) : {}; out[h] = { n: Number(x.n) || 0, v: Number(x.v) || 0 }; }); })); return out; },
+      pruneMine: function(uid){ return mpWeekPruneMine('placeViewers', uid); },
+      removeMine: async function(uid){ return mpWeekRemoveMine('placeViewers', 'placeViewerCounts', uid); }
+    },
+    /* r120 (ق١١-١٤-٠٩ · قواعد v3.18 ٤): «views» المكان — مستند لكل بصمة رابط، يُنشأ بأول مشاهدة (حُفظ المكان أم لم يُحفظ). عدّاد مفتوح للموقّعين: يقبل التضخيم ولا يدخل ترتيبًا. */
+    placeViews: {
+      add: async function(hex, cityId){ if (!/^[a-f0-9]{16}$/.test(String(hex))) return false; const d = col('placeViews').doc(String(hex));
+        try{ await d.update({ n: inc(1) }); return true; }catch(e){ if (!(e && (e.code === 'not-found' || e.code === 'permission-denied'))) throw e; }
+        const data = { n: 1 }; if (/^([0-9]{3,9}|i_[a-z0-9_]{2,30})$/.test(String(cityId || ''))) data.city = String(cityId); /* المدينة تتجمّد عند الإنشاء — مدينة خاصة لا تُكتب */
+        try{ await d.set(data); return true; }catch(e2){ if (e2 && e2.code === 'permission-denied') return false; throw e2; } },
+      byCity: async function(cityId){ const out = {}; const snap = await col('placeViews').where('city', '==', String(cityId)).limit(100).get(); snap.docs.forEach(function(d){ out[d.id] = Number((d.data() || {}).n) || 0; }); return out; } /* سقف المئة كاستعلام «saved by» */
     },
     placeCounts: {
       // v1.40 · القرار ٠٩: placeFavoriteCounts دلالتها عدّاد الحفظ (saved by) — كاتبها فعل Save بالمرحلة الثالثة
@@ -259,6 +315,7 @@ const mpData = (function(){
         return { state: state, counter: state === 'counted' || state === 'uncounted' };
       },
       followersOf: async function(curatorUid, limit){ const snap = await col('follows').where('curatorUid', '==', curatorUid).limit(limit || 50).get(); const ids = []; snap.forEach(function(d){ ids.push(d.data().followerUid); }); return ids; }, // للمنتقي عن نفسه (القواعد: الطرفان)
+      mineSet: async function(uid){ /* r120 (ق١١-١٥-٠٤): من أتابعهم فعلًا — بسجلاتي، باستعلام واحد من الخادم (كما في مطابقة المرايا) */ const q = await col('follows').where('followerUid', '==', uid).get({ source: 'server' }); const have = {}; q.forEach(function(d){ const c = String(((d.data() || {}).curatorUid) || ''); if (d.id === uid + '_' + c) have[c] = true; }); return have; },
       releaseMine: async function(uid){ /* الدفعة ٢: حذف الحساب — كل متابعة تُطلق من الباب (−١ على عدّاد المتابَع، أو السجل وحده حين لا عدّاد يُنقص). كان يحذف السجلات وحدها: القاعدة v3.17 ترفضه والعدّاد فوق الصفر، فيبقى الحساب المحذوف معدودًا. يعيد عدد ما بقي مرفوضًا. */
         const snap = await col('follows').where('followerUid', '==', uid).get(); const ids = []; let left = 0;
         const stray = []; snap.forEach(function(d){ const c = String(((d.data() || {}).curatorUid) || ''); if (c && d.id === uid + '_' + c) ids.push(c); else stray.push(d.id); });
@@ -335,18 +392,20 @@ const mpData = (function(){
       get: function(key){ return col('nicknames').doc(key).get(); },
       set: function(key, data){ return col('nicknames').doc(key).set(data); }, /* ر٧٣-أب (٢) */
       remove: function(key){ return col('nicknames').doc(key).delete(); }, // ر٥٩ (نشرة التنظيف: حذف ذاتي بحقل الهوية)
+      keysOf: async function(uid){ const snap = await col('nicknames').where('uid', '==', uid).get(); const out = []; snap.forEach(function(d){ out.push(d.id); }); return out; }, /* r120 (ق١١-١٧-١٠ · قواعد v3.18 ١٢): المالك — حجوز حساب محذوف (السرد له وحده) */
+      swap: function(newKey, data, oldKey){ /* r120 (ق١١-١٤-٢٧): حجز الجديد وتحرير القديم وكتابة الاسم في مستند الحساب — طلب واحد: تنجح الثلاث معًا أو تفشل معًا، فلا حجز يتيم ولا اسم بلا حجزه */ const b = db.batch(); b.set(col('nicknames').doc(newKey), data); if (oldKey && oldKey !== newKey) b.delete(col('nicknames').doc(oldKey)); b.set(col('userLists').doc(data.uid), { nickname: data.nickname }, { merge: true }); return b.commit(); },
       /* r118-و (ق١١-١٢-٠٧): سجل اسمي قائم وصحيح — القارئ عند غيري لا يعرض اسمًا بلا سجل لصاحبه، فحساب قديم نقص سجله يظهر «user» حتى يُكمَّل. يُنادى عند الدخول وعند إعادة حفظ الاسم نفسه.
          يعيد: ok (قائم لي) · created (كان غائبًا) · fixed (لي بحقل ناقص) · conflict (لغيري — لا يُمسّ؛ صاحب الحساب يختار اسمًا آخر). */
       ensure: async function(uid, nickname){ const name = String(nickname || '').trim(); if (!uid || !name) return 'none'; const key = name.toLowerCase(); const d = await col('nicknames').doc(key).get(); if (!d.exists){ await col('nicknames').doc(key).set({ uid: uid, nickname: name }); delete nickSeen[key]; return 'created'; } const x = d.data() || {}; if (x.uid !== uid) return 'conflict'; if (x.nickname !== name){ await col('nicknames').doc(key).set({ uid: uid, nickname: name }); return 'fixed'; } return 'ok'; }
     },
     cityLists: { // r72t (M4.26 · أ-١٤): التقسيم — الأم فهرسًا + مستند لكل تصنيف؛ الطبقة تعيد الشكل القديم (categories) لكل الواجهات · انتقالي: مستند قديم بلا splitV يُقرأ كما هو
       _compose: async function(parent, id){ // الأم (+ الفرعية إن كانت مقسَّمة) → مستند بالشكل القديم — r72u: الاستعلام يثبت شرط القراءة (قاعدة Firestore: لا استعلام على قوائم الآخرين بلا قيد public/sharedWith)
-        if (!parent) return null; if (parent.cityId && parent.cityName) rememberCity(parent.cityId, parent.cityName, parent.country); if (parent.splitV !== 1){ if (parent.categories) mpFixAreaPlaces(parent.categories); return parent; } // ب-٦
+        if (!parent) return null; LOADER_KEYS.forEach(function(k){ delete parent[k]; }); /* r120 (ق١١-١٥-٠٩ — قيس): حقول المحمِّل الداخلية تُحسب من هذه القراءة وحدها — ما كُتب منها في مستند قديمًا لا يُصدَّق */ if (parent.cityId && parent.cityName) rememberCity(parent.cityId, parent.cityName, parent.country); if (parent.splitV !== 1){ if (parent.categories){ mpData.cityLists._legacyHide(parent); mpFixAreaPlaces(parent.categories); } return parent; } // ب-٦
         const me = currentUser && currentUser.uid; let q = col('userCityListCats').where('ownerId', '==', parent.ownerId).where('cityId', '==', parent.cityId);
         if (parent.ownerId !== me && !isOwner){ if (parent.public === true) q = q.where('public', '==', true); else if (me && (parent.sharedWith || []).indexOf(me) >= 0) q = q.where('sharedWith', 'array-contains', me); else return Object.assign({}, parent, { categories: {} }); }
         logTiming('[DATA] compose ' + parent.cityId + ' · cats query…'); const snap = await q.get(); logTiming('[DATA] compose ' + parent.cityId + ' · ' + snap.size + ' cats'); /* هـ-٨ */
         const cats = {}; const visStale = []; const pPub = parent.public === true, pShared = mpData.cityLists._sharedKey(parent.sharedWith);
-        snap.forEach(function(d){ const c = d.data(); if (!c || typeof c.catId !== 'string') return; cats[c.catId] = { active: c.active !== false, places: parent.ownerId === me ? (c.places || []) : sanePlaces(c.places) /* r118-و */ }; if (parent.ownerId === me && ((c.public === true) !== pPub || mpData.cityLists._sharedKey(c.sharedWith) !== pShared)) visStale.push(d.id); }); /* r104 (ق١١-٠٦-٠١): للمالك — التصنيفات التي يخالف علمها الأم تُعاد للمُحمِّل ليصلحها */
+        snap.forEach(function(d){ const c = d.data(); if (!c || typeof c.catId !== 'string') return; cats[c.catId] = { active: c.active !== false, places: parent.ownerId === me ? (c.places || []) : sanePlaces(c.places).filter(function(q){ return !tkOthersHide(parent, q); }) /* r118-و · r120 (ق١١-٢٤-١٥ · ق١١-٢٤-١٨): المحجوب — بقرار المالك أو بوسم الفرز — لا يظهر لغير صاحبه */ }; if (parent.ownerId === me && ((c.public === true) !== pPub || mpData.cityLists._sharedKey(c.sharedWith) !== pShared)) visStale.push(d.id); }); /* r104 (ق١١-٠٦-٠١): للمالك — التصنيفات التي يخالف علمها الأم تُعاد للمُحمِّل ليصلحها */
         const out = Object.assign({}, parent, { categories: mpFixAreaPlaces(cats) }); // ب-٦
         if (visStale.length) out._visStale = visStale;
         if (!snap.size && Array.isArray(parent.index) && parent.index.length) out._unreadable = true; /* r104: الأم تقول إن فيها أماكن والاستعلام عاد صفرًا — التصنيفات غير مقروءة لهذا الحساب (لا «لا أماكن») */
@@ -356,31 +415,36 @@ const mpData = (function(){
       },
       _indexCats: function(parent){ const seen = {}; (parent && Array.isArray(parent.index) ? parent.index : []).forEach(function(e){ if (e && e.catId) seen[e.catId] = 1; }); return Object.keys(seen).length; }, /* r105-ج: عدد التصنيفات التي يذكرها الفهرس */
       composeRow: function(row){ /* r105-ب (قياس): صف الفهرس (من publicByOwner/getIndex) يحمل الأم كاملة — التركيب منه يوفّر قراءة الأم الثانية عند فتح المدينة */ if (!row || row.splitV !== 1 || !row.ownerId || !row.cityId) return null; const parent = Object.assign({}, row); delete parent.categories; delete parent._indexOnly; return mpData.cityLists._compose(parent, row.ownerId + '_' + row.cityId); },
-      _indexOf: function(categories){ const ix = []; Object.keys(categories || {}).forEach(function(k){ (((categories[k] || {}).places) || []).forEach(function(p){ if (!p || !(p.name || p.url)) return; const o = { id: p.id || '', name: p.name || '', catId: k }; if (p.topPlace === true) o.top = true; if (p.topAt || p.updatedAt) o.at = p.topAt || p.updatedAt; if (p.updatedAt) o.up = p.updatedAt; /* خ-٦: ختم التعديل وحده — Latest يقرؤه من الفهرس (قرار r73y: المعدَّل لا Top) */ ix.push(o); }); }); return ix; },
+      _indexOf: function(categories){ const ix = []; Object.keys(categories || {}).forEach(function(k){ (((categories[k] || {}).places) || []).forEach(function(p){ if (!p || !(p.name || p.url)) return; const o = { id: p.id || '', name: p.name || '', catId: k }; if (p.topPlace === true) o.top = true; if (p.topAt || p.updatedAt) o.at = p.topAt || p.updatedAt; if (p.updatedAt) o.up = p.updatedAt; /* خ-٦: ختم التعديل وحده — Latest يقرؤه من الفهرس (قرار r73y: المعدَّل لا Top) */ if (p.hold === 'guidelines') o.h = 1; /* r120 (ق١١-٢٤-١٨): وسم الفرز يصل قارئ الفهرس مع الفهرس نفسه — بلا قراءة زائدة */ ix.push(o); }); }); return ix; },
+      _legacyHide: function(parent){ /* r120 (ق١١-٢٤-١٨): مستند قديم غير مقسَّم يحمل أماكنه في الأم — الحجب نفسه لغير صاحبه، في القراءة المركَّبة وقراءة الفهرس */ if (parent && parent.categories && !(currentUser && parent.ownerId === currentUser.uid)) Object.keys(parent.categories).forEach(function(k){ const c = parent.categories[k]; if (c && Array.isArray(c.places)) c.places = c.places.filter(function(q){ return !tkOthersHide(parent, q); }); }); return parent; },
       _fromIndex: function(parent){ // للشاشات الجماعية: categories مصغَّرة من الفهرس (اسم · معرّف · top · at) بلا قراءة فرعية
         parent = saneParent(parent); /* r118-و */ if (parent && parent.cityId && parent.cityName) rememberCity(parent.cityId, parent.cityName, parent.country);
-        if (!parent || parent.splitV !== 1) return parent; const cats = {}; (parent.index || []).forEach(function(e){ (cats[e.catId] = cats[e.catId] || { active: true, places: [] }).places.push({ id: e.id, name: e.name, topPlace: e.top === true, topAt: e.at, updatedAt: e.up, _index: true }); });
+        if (!parent || parent.splitV !== 1) return mpData.cityLists._legacyHide(parent); const cats = {}; (parent.index || []).forEach(function(e){ if (tkOthersHide(parent, e)) return; /* r120 (ق١١-٢٤-١٥ · ق١١-٢٤-١٨): ما حجبه المالك أو وسمه الفرز لا يظهر لغير صاحبه */ (cats[e.catId] = cats[e.catId] || { active: true, places: [] }).places.push({ id: e.id, name: e.name, topPlace: e.top === true, topAt: e.at, updatedAt: e.up, _index: true }); });
         return Object.assign({}, parent, { categories: cats, _indexOnly: true });
       },
       publicLists: async function(){ // ر٦١ (السوق): القوائم العامة — بالفهرس (لا قراءة فرعية)
         const snap = await col('userCityLists').where('public', '==', true).limit(100).get();
         const rows = []; snap.forEach(function(d){ try{ rows.push(mpData.cityLists._fromIndex({ id: d.id, ...d.data() })); }catch(e){ try{ logTiming('SANE · list ' + d.id + ' skipped · ' + e); }catch(_){} } }); await saneNames(rows.map(function(r){ return { uid: r.ownerId, obj: r }; })); return rows; /* r118-و: مستند لا يُقرأ يُتجاوز والباقي يُعرض · الاسم المعروض مُتحقَّق منه */
       },
+      publicAll: async function(){ /* r120 (ق١١-٢٤-٠٨ ب): لوحة المالك — كل القوائم العامة بلا قصّ السوق عند ١٠٠ (قراءة لكل قائمة؛ النداء من ownerAccData وحده وبذاكرة عشر دقائق) */
+        const snap = await col('userCityLists').where('public', '==', true).get(); const rows = []; snap.forEach(function(d){ try{ rows.push(mpData.cityLists._fromIndex({ id: d.id, ...d.data() })); }catch(e){ try{ logTiming('SANE · list ' + d.id + ' skipped · ' + e); }catch(_){} } }); return rows; },
       getIndex: async function(uid, cityId){ const d = await col('userCityLists').doc(uid + '_' + cityId).get(); return d.exists ? mpData.cityLists._fromIndex(d.data()) : null; }, /* خ-٦: الأم وحدها (الفهرس) — للشاشات الجماعية قبل فتح المدينة */
-      catDoc: async function(uid, cityId, catId){ const d = await col('userCityListCats').doc(uid + '_' + cityId + '_' + catId).get(); if (!d.exists) return null; const c = d.data(); const mineC = (typeof currentUser !== 'undefined' && currentUser && currentUser.uid === uid); return { active: c.active !== false, places: mineC ? (c.places || []) : sanePlaces(c.places) /* r118-و */ }; }, /* خ-٦: مستند تصنيف واحد — Latest والبحث يقرآن المعنيّ فقط لا المدينة كلها */
+      catDoc: async function(uid, cityId, catId){ const d = await col('userCityListCats').doc(uid + '_' + cityId + '_' + catId).get(); if (!d.exists) return null; const c = d.data(); const mineC = (typeof currentUser !== 'undefined' && currentUser && currentUser.uid === uid); return { active: c.active !== false, places: mineC ? (c.places || []) : sanePlaces(c.places).filter(function(q){ return !tkOthersHide({ ownerId: uid, cityId: cityId }, q); }) /* r118-و · r120 (ق١١-٢٤-١٨ — قيس: هذا الطريق (Latest · Search · Popular) كان يعرض ما حجبه المالك أيضًا) */ }; }, /* خ-٦: مستند تصنيف واحد — Latest والبحث يقرآن المعنيّ فقط لا المدينة كلها */
       get: async function(uid, cityId){ const d = await col('userCityLists').doc(uid + '_' + cityId).get(); return d.exists ? mpData.cityLists._compose(d.data(), d.id) : null; },
       save: async function(uid, cityId, data, opts){ // r72m: المشتقات · r72t: الفرعية + الفهرس بدفعة ذرّية؛ الأم بلا categories · r100-أ: opts.onlyCats = مفاتيح الفرعية التي تُكتب (الأم تُكتب دائمًا بفهرسها الكامل)
         const id = uid + '_' + cityId; const cats = (data && data.categories) || null; const parent = stripCounters(Object.assign({}, data, listDerived(data, (typeof mpIsVerified === 'function') ? mpIsVerified(uid) === true : false))); /* r118-ب · r118-ج */ const only = opts && Array.isArray(opts.onlyCats) ? opts.onlyCats : null;
         if (!cats){ return col('userCityLists').doc(id).set(parent, { merge: true }); }
         delete parent.categories; parent.index = mpData.cityLists._indexOf(cats); parent.splitV = 1;
+        if (only && opts && Array.isArray(opts.indexBase)){ const mine = {}; only.forEach(function(k){ mine[k] = true; }); parent.index = opts.indexBase.filter(function(e){ return e && !mine[e.catId]; }).concat(parent.index.filter(function(e){ return mine[e.catId]; })); } /* r120 (ق١١-١٥-٠٩ — قيس): كاتبٌ يكتب تصنيفات بعينها ومعه فهرس الخادم الآن (indexBase) — مداخل ما لا يكتبه تبقى كما في الخادم، ومداخل ما يكتبه من عنده. كان الفهرس كله من نسخته، فيخرج منه ما أضافه جهاز آخر */
         const isPublic = data.public === true; const shared = data.sharedWith || [];
         /* r104 (ق١١-٠٦-٠١ · السبب الجذري لعطل مونترو): منذ r100-أ تُكتب التصنيفات المتغيّرة وحدها، و🌐/المشاركة لا يغيّران تصنيفًا — فبقيت نسخة شرط القراءة بالفرعية خاصة بينما الأم عامة (والعكس عند الإلغاء).
            opts.syncVis: مستندات التصنيفات القائمة التي لن تُكتب كاملة تأخذ العلمين في الدفعة نفسها (ذرّيًّا مع الأم) — قراءة واحدة بالاستعلام قبل الدفعة. */
         let visDocs = []; if (opts && opts.syncVis && only){ const vs = await col('userCityListCats').where('ownerId', '==', uid).where('cityId', '==', cityId).get(); vs.forEach(function(d){ if (only.indexOf(String(d.id).slice(id.length + 1)) < 0) visDocs.push(d.id); }); }
-        const b = db.batch(); b.set(col('userCityLists').doc(id), Object.assign({}, parent, { categories: del() }), { merge: true });
+        const gone = { categories: del() }; LOADER_KEYS.forEach(function(k){ gone[k] = del(); }); /* ما كُتب منها قديمًا يُمحى مع أول حفظ */
+        const b = db.batch(); b.set(col('userCityLists').doc(id), Object.assign({}, parent, gone), { merge: true });
         Object.keys(cats).forEach(function(k){ if (only && only.indexOf(k) < 0) return; const e = cats[k] || {}; b.set(col('userCityListCats').doc(id + '_' + k), { ownerId: uid, cityId: cityId, catId: k, public: isPublic, sharedWith: shared, active: e.active !== false, places: (e.places || []).filter(function(p){ return p && (p.name || p.url); }), updatedAt: Date.now() }); });
         visDocs.forEach(function(docId){ b.set(col('userCityListCats').doc(docId), { public: isPublic, sharedWith: shared }, { merge: true }); });
-        await b.commit(); if (opts && opts.syncVis && only) mpVisLine(cityId, data, 'stamped · ' + (visDocs.length + only.length) + '/' + (visDocs.length + only.length) + ' cats'); return { visCats: visDocs.length }; /* r105-ج */
+        const __wrote = Object.keys(cats).some(function(k){ return !only || only.indexOf(k) >= 0; }); await b.commit(); try{ if (__wrote && !(opts && opts.heal) && typeof cmUndoStale === 'function') cmUndoStale(cityId); }catch(_){} /* r120 (ق١١-٢٥-٠٥): أماكن هذه المدينة كُتبت — لقطة تراجع أقدم لم تعد تصف حالها · المراجعة ٤٠ (قيس): حفظٌ لم يكتب تصنيفًا (مغادرة المدينة بلا تعديل · تبديل الرؤية) لا يُسقطها، ولا تعبئة المعرّفات الآلية (heal) */ if (opts && opts.syncVis && only) mpVisLine(cityId, data, 'stamped · ' + (visDocs.length + only.length) + '/' + (visDocs.length + only.length) + ' cats'); return { visCats: visDocs.length }; /* r105-ج */
       },
       _sharedKey: function(arr){ return (Array.isArray(arr) ? arr.map(String).slice().sort() : []).join(','); }, /* r104: مقارنة sharedWith بلا اعتبار للترتيب */
       repairVisibility: async function(docIds, isPublic, shared){ /* r104: العلاج الذاتي عند تحميل قائمتي — المعرّفات جاءت من القراءة نفسها (لا قراءة إضافية) · دفعة واحدة */
@@ -402,12 +466,13 @@ const mpData = (function(){
       },
       holdAll: async function(uid, hold, opts){ /* r109-ب (ق١١-١٠-٠٥ — قياس: بعد الإيقاف القائمة الأم مخفية ومستند تصنيفها `public: true` واستعلام حساب آخر يعيد المكان): الإيقاف كامل — كل قائمة وكل مستند تصنيف تحتها في الكتابة نفسها. الأم تحفظ ما كان (publicHeld · sharedWithHeld) والتصنيفات تتبع الأم دائمًا (r104) فلا تحتاج حفظًا خاصًّا: عند الرفع تأخذ علمَي الأم المستعادَين. تكرار الإيقاف على موقوف لا يمحو المحفوظ. opts.onlyOutOfStep: يكتب ما يخالف وحده (علاج حساب أُوقف قبل هذه الدفعة). */
         const ps = await col('userCityLists').where('ownerId', '==', uid).get(); const cs = await col('userCityListCats').where('ownerId', '==', uid).get();
+        let goneAcc = {}; if (!hold){ const heldIds = []; ps.forEach(function(doc){ const d = doc.data() || {}; if (d.suspended === true) (Array.isArray(d.sharedWithHeld) ? d.sharedWithHeld : (Array.isArray(d.sharedWith) ? d.sharedWith : [])).forEach(function(x){ heldIds.push(x); }); }); if (heldIds.length) goneAcc = await mpData.stats.accountsGone(heldIds); } /* r120 (ق١١-١٥-٠٤ — قيس: رفع الإيقاف كان يعيد إلى المشاركة حسابًا حُذف أثناءه): من لم يعد موجودًا لا يعود، واسمه يُمحى */
         const only = !!(opts && opts.onlyOutOfStep); const pOps = [], cOps = []; const flags = {}; let nL = 0, nC = 0;
         ps.forEach(function(doc){ const d = doc.data() || {}; const u = { suspended: hold }; let write = true;
           if (hold){ if (d.suspended === true){ flags[doc.id] = { public: false, sharedWith: [] }; write = d.public === true || (Array.isArray(d.sharedWith) && d.sharedWith.length > 0); if (write){ u.public = false; u.sharedWith = []; } else return; }
             else { u.sharedWithHeld = Array.isArray(d.sharedWith) ? d.sharedWith : []; u.sharedWith = []; u.publicHeld = d.public === true; u.public = false; flags[doc.id] = { public: false, sharedWith: [] }; } }
           else { if (d.suspended !== true){ flags[doc.id] = { public: d.public === true, sharedWith: Array.isArray(d.sharedWith) ? d.sharedWith : [] }; return; } /* المراجعة: الرفع على غير محتجز (إعادة بعد فشل جزئي · ضغطتان) لا يكتب «خاصة» فوق قائمة عادت — تصنيفاتها تتبع علمَيها الحاليين */
-            u.sharedWith = Array.isArray(d.sharedWithHeld) ? d.sharedWithHeld : (Array.isArray(d.sharedWith) ? d.sharedWith : []); u.sharedWithHeld = del(); u.public = d.publicHeld === true; u.publicHeld = del(); flags[doc.id] = { public: u.public, sharedWith: u.sharedWith }; }
+            u.sharedWith = (Array.isArray(d.sharedWithHeld) ? d.sharedWithHeld : (Array.isArray(d.sharedWith) ? d.sharedWith : [])).filter(function(x){ return !goneAcc[x]; }); { const dropN = Object.keys((d.sharedWithNames && typeof d.sharedWithNames === 'object') ? d.sharedWithNames : {}).filter(function(x){ return goneAcc[x]; }); if (dropN.length){ u.sharedWithNames = {}; dropN.forEach(function(x){ u.sharedWithNames[x] = del(); }); } } u.sharedWithHeld = del(); u.public = d.publicHeld === true; u.publicHeld = del(); flags[doc.id] = { public: u.public, sharedWith: u.sharedWith }; }
           nL++; pOps.push([col('userCityLists').doc(doc.id), u]); });
         cs.forEach(function(doc){ const d = doc.data() || {}; const f = flags[uid + '_' + d.cityId] || { public: false, sharedWith: [] }; /* تصنيف بلا أم يُخفى */
           const same = (d.public === true) === (f.public === true) && mpData.cityLists._sharedKey(d.sharedWith) === mpData.cityLists._sharedKey(f.sharedWith); if (only && same) return; nC++; cOps.push([col('userCityListCats').doc(doc.id), { public: f.public === true, sharedWith: f.sharedWith || [] }]); });
@@ -417,6 +482,14 @@ const mpData = (function(){
         return { lists: nL, cats: nC };
       },
       sharedWith: function(uid){ return col('userCityLists').where('sharedWith', 'array-contains', uid).get(); }, /* ر٧٣-أب (٢) */
+      headNow: async function(uid, cityId){ /* r120 (ق١١-١٥-٠٩): مستند القائمة كما هو في الخادم الآن لكاتبٍ يكتب بعض تصنيفاتها — الرؤية والمشاركة · الفهرس · وهل هي مقسَّمة. لا مستند ⇒ exists:false (خاصة بلا مشاركة، فهرس فارغ) */ const d = await col('userCityLists').doc(uid + '_' + cityId).get(); if (!d.exists) return { exists: false, split: true, index: [], vis: { public: false, sharedWith: [], sharedWithNames: {} } }; const x = d.data() || {}; return { exists: true, split: x.splitV === 1, index: Array.isArray(x.index) ? x.index.slice() : [], vis: { public: x.public === true, sharedWith: Array.isArray(x.sharedWith) ? x.sharedWith.slice() : [], sharedWithNames: (x.sharedWithNames && typeof x.sharedWithNames === 'object') ? Object.assign({}, x.sharedWithNames) : {} } }; },
+      visNow: async function(uid, cityId){ /* r120 (ق١١-١٥-٠٦): الرؤية والمشاركة كما هي في الخادم الآن — الحفظ يكتب فوقها ما غيّره صاحبها، لا ذاكرة شاشته. null = لا مستند */ const d = await col('userCityLists').doc(uid + '_' + cityId).get(); if (!d.exists) return null; const x = d.data() || {}; return { public: x.public === true, sharedWith: Array.isArray(x.sharedWith) ? x.sharedWith.slice() : [], sharedWithNames: (x.sharedWithNames && typeof x.sharedWithNames === 'object') ? Object.assign({}, x.sharedWithNames) : {} }; },
+      leaveShares: async function(uid){ /* r120 (ق١١-١٤-٢١ · قواعد v3.18 ٩): حذف الحساب يُخرجني من قوائم شاركني فيها غيري — معرّفي من القائمة ومن مستندات تصنيفاتها، واسمي من خريطة الأسماء. يعيد عدد ما لم يخرج */
+        const FV = firebase.firestore.FieldValue; let left = 0; const lists = await col('userCityLists').where('sharedWith', 'array-contains', uid).get();
+        for (const d of lists.docs){ try{ const patch = { sharedWith: FV.arrayRemove(uid) }; patch['sharedWithNames.' + uid] = FV.delete(); await d.ref.update(patch); }catch(e){ left++; mpSwallow(e, 'leave list share'); } }
+        const cats = await col('userCityListCats').where('sharedWith', 'array-contains', uid).get();
+        for (const d of cats.docs){ try{ await d.ref.update({ sharedWith: FV.arrayRemove(uid) }); }catch(e){ left++; mpSwallow(e, 'leave cat share'); } }
+        return left; },
       publicByOwnerRaw: function(uid){ return col('userCityLists').where('ownerId', '==', uid).where('public', '==', true).get(); },
       setNicknameAll: async function(uid, nickname){ const snap = await col('userCityLists').where('ownerId', '==', uid).get(); const b = db.batch(); snap.forEach(function(d){ b.update(d.ref, { nickname: nickname }); }); return b.commit(); }, /* ر٧٣-أب (٢) */
       publicByOwner: async function(uid){ const snap = await col('userCityLists').where('ownerId', '==', uid).where('public', '==', true).get(); const rows = []; snap.forEach(function(d){ try{ rows.push(mpData.cityLists._fromIndex(d.data())); }catch(e){ try{ logTiming('SANE · list ' + d.id + ' skipped · ' + e); }catch(_){} } }); await saneNames(rows.map(function(r){ return { uid: r.ownerId, obj: r }; })); return rows; }, // ر٧٢-أ-١هـ · r72t: بالفهرس · r118-و
@@ -438,7 +511,9 @@ const mpData = (function(){
         await Promise.all(chunks.map(async function(chunk){ try{ const snap = await withTimeout(col('placeIdentity').where(firebase.firestore.FieldPath.documentId(), 'in', chunk).get(), 8000); snap.forEach(function(d){ out[d.id] = d.data(); }); }catch(e){ mpSwallow(e, 'identity.getMany'); await Promise.all(chunk.map(async function(k){ try{ const d = await withTimeout(col('placeIdentity').doc(k).get(), 8000); if (d.exists) out[k] = d.data(); }catch(_){} })); } }));
         return out; },
       get: async function(key){ const d = await col('placeIdentity').doc(key).get(); return d.exists ? d.data() : null; },
-      put: function(key, rec){ return col('placeIdentity').doc(key).set(rec); }
+      put: function(key, rec){ /* r120 (ق١١-١٤-٢٢ · ق١١-١٥-٠١ · قواعد v3.18 ٦): الدبوس العامّ بلا معرّف كاتبه — ولا يُدوَّن في أي مخزن آخر */ const pub = Object.assign({}, rec); delete pub.by; return col('placeIdentity').doc(key).set(pub); },
+      stripMine: async function(uid){ /* r120 (المراجعة المستقلة ٦ — قيس في سلسلة حذف الحساب): دبابيس ثبّتُّها قبل r120 ما زالت تحمل معرّفي في مستند يقرؤه الجميع — حذف الحساب ينزعه منها (الدبوس باقٍ في موضعه). يعيد عدد ما لم يُنزع */ const snap = await col('placeIdentity').where('by', '==', uid).get(); let left = 0; for (const d of snap.docs){ try{ await d.ref.update({ by: firebase.firestore.FieldValue.delete() }); }catch(e){ left++; mpSwallow(e, 'identity.stripMine'); } } return left; },
+      stripBy: async function(limit){ /* r120 (ق١١-١٤-٢٢): دبابيس كُتبت قبل v3.18 تحمل معرّف كاتبها في مستند عامّ — مالك التطبيق ينزعه (الترتيب بالحقل لا يعيد إلا ما يحمله). يعيد عدد ما نُزع */ const snap = await col('placeIdentity').orderBy('by').limit(limit || 50).get(); let n = 0; for (const d of snap.docs){ await d.ref.update({ by: firebase.firestore.FieldValue.delete() }); n++; } return n; },
     },
 
     analytics: { /* ر٧٣-أب (٢): الزيارات · دفعة الزيادات (mpTrack) · قراءة مستند · أحداث يوم (الإدارة) */
@@ -454,7 +529,7 @@ const mpData = (function(){
       /* r116-ب: أيام النشاط بمدى واحد على معرّف المستند (اليوم) — للمالك وحده */
       range: async function(fromDay, toDay){ const snap = await col('dailyStats').orderBy(firebase.firestore.FieldPath.documentId()).startAt(fromDay).endAt(toDay).limit(40).get(); const out = {}; snap.forEach(function(doc){ if (/^\d{4}-\d{2}-\d{2}$/.test(doc.id) && doc.id >= fromDay && doc.id <= toDay) out[doc.id] = doc.data() || {}; }); return out; } },
     stats: { /* ب-٢-١ (My stats): قراءات مفردة متوازية — القواعد تثبت القراءة المفردة لصاحبها/المالك ولا تثبت الاستعلام بالمدى (القسمان ٤-هـ · ٤-ح) · الغائب = {} */
-      _day: function(d){ return new Date(d).toISOString().slice(0, 10); },
+      _day: function(d){ return mpDayKey(+new Date(d)); }, /* r120: يوم الرياض */
       _days: function(n){ const out = []; const t = Date.now(); for (let i = 0; i < (n || 30); i++) out.push(mpData.stats._day(t - i * 86400000)); return out; }, // اليوم أولًا
       _get: async function(coll, id){ try{ const d = await col(coll).doc(id).get(); return d.exists ? (d.data() || {}) : {}; }catch(e){ mpSwallow(e, 'stats ' + coll); return {}; } },
       listDoc: function(listId){ return mpData.stats._get('stats_lists', listId); },
@@ -462,8 +537,10 @@ const mpData = (function(){
       listDays: async function(listId, n){ const days = mpData.stats._days(n); const rows = await Promise.all(days.map(function(d){ return mpData.stats._get('stats_lists', listId + '__' + d); })); return days.map(function(d, i){ return Object.assign({ day: d }, rows[i]); }); },
       curatorDays: async function(uid, n){ const days = mpData.stats._days(n); const rows = await Promise.all(days.map(function(d){ return mpData.stats._get('stats_curators', uid + '__' + d); })); return days.map(function(d, i){ return Object.assign({ day: d }, rows[i]); }); },
       /* r116-ح (ق١١-١١-١٣): كنس بقايا العدّ من جهة المالك — صفحة معرّفات مرتّبة تبدأ من مؤشّر · وجود المستند الأب بقراءة مفردة (الرفض يُرمى ولا يُقرأ «غائبًا») · حذف مستند عدّ واحد. القواعد: القراءة والحذف لمالك التطبيق. */
+      idsWithPrefix: async function(coll, prefix, limit){ const snap = await col(coll).orderBy(firebase.firestore.FieldPath.documentId()).startAt(prefix).endAt(prefix + '\uf8ff').limit(limit || 100).get(); const ids = []; snap.forEach(function(d){ ids.push(d.id); }); return ids; }, /* r120 (المراجعة ٢٦ — قيس): معرّفات تبدأ ببادئة، بحدّ أعلى — pageIds بلا نهاية كانت تقرأ ستين مستندًا لغير المقصود في كل نداء */
       pageIds: async function(coll, fromId, limit){ let q = col(coll).orderBy(firebase.firestore.FieldPath.documentId()); if (fromId) q = q.startAt(fromId); const snap = await q.limit(limit || 100).get(); const ids = []; snap.forEach(function(d){ ids.push(d.id); }); return ids; },
       parentExists: async function(coll, id){ const d = await col(coll).doc(id).get(); return d.exists === true; },
+      accountsGone: async function(uids){ /* r120 (ق١١-١٥-٠٤): لمالك التطبيق — أيّ هذه الحسابات لم يعد موجودًا (users/{uid} غائب). قراءة فشلت = لا يُعرف = ليس غائبًا */ const gone = {}; const list = (uids || []).filter(function(u, i, a){ return u && a.indexOf(u) === i; }); await Promise.all(list.map(async function(u){ try{ if (!(await col('users').doc(u).get()).exists) gone[u] = true; }catch(e){ mpSwallow(e, 'accountsGone'); } })); return gone; },
       remove: function(coll, id){ return col(coll).doc(id).delete(); },
       /* r116-ب: أيام مدينة واحدة بمدى واحد على معرّف المستند (المدينة__اليوم) — للمالك وحده */
       cityRange: async function(cityId, fromDay, toDay){ const pre = String(cityId) + '__'; const snap = await col('stats_cities').orderBy(firebase.firestore.FieldPath.documentId()).startAt(pre + fromDay).endAt(pre + toDay).limit(40).get(); const sum = { open: 0, place_added: 0, trip_built: 0 }; snap.forEach(function(doc){ if (doc.id.indexOf(pre) !== 0) return; const d = doc.data() || {}; Object.keys(sum).forEach(function(k){ if (typeof d[k] === 'number') sum[k] += d[k]; }); }); return sum; },
@@ -475,6 +552,8 @@ const mpData = (function(){
       app: async function(){ const d = await col('settings').doc('app').get(); return d.exists ? d.data() : null; }, /* ر٧٣-أب (٢) */
       mergeApp: function(data){ return col('settings').doc('app').set(data, { merge: true }); },
       watchApp: function(cb, err){ return col('settings').doc('app').onSnapshot(cb || function(){}, err || function(){}); }, /* هـ-٥: مستمع دائم يبقي قناة Firestore مفتوحة طوال الجلسة — بلا قراءات إضافية ما لم يتغير المستند */
+      guidelines: async function(){ const d = await col('settings').doc('guidelines').get(); return d.exists ? d.data() : null; }, /* r120 (ق١١-٢٤-١٥): قوائم السماح والحجب — يقرؤها كل تطبيق، ويكتبها المالك وحده (قاعدة settings القائمة) */
+      saveGuidelines: function(data){ return col('settings').doc('guidelines').set(data); },
       getCategoryTemplate: async function(){ const d = await col('settings').doc('category-template').get(); return d.exists ? d.data() : null; },
       rulesVersion: async function(){ const d = await col('settings').doc('app').get(); return d.exists ? (d.data().rulesVersion || '') : ''; }, // r72t (M4.26 ٧)
       saveCategoryTemplate: function(data){ return col('settings').doc('category-template').set(data, { merge: true }); }, /* ر٧٣-أب (١): الحفظ عبر الطبقة (كان نداءً مباشرًا) */
@@ -484,6 +563,7 @@ const mpData = (function(){
       // ر٥٦: استفتاء الأصل الحي للرحلة المحفوظة (متصفح Bookmarked trips)
       getDoc: function(tripId){ return col('trips').doc(tripId).get(); },
       bumpView: function(tripId){ return col('trips').doc(tripId).update({ viewCount: inc(1) }); }, // r72t (M4.26 ٣): مشاهدة من غير المالك
+      publicAll: async function(){ const snap = await col('trips').where('public', '==', true).get(); const rows = []; snap.forEach(function(d){ rows.push(saneTrip({ id: d.id, ...d.data() })); }); return rows; }, /* r120 (ق١١-٢٤-٠٨ ب): لوحة المالك — كل الرحلات العامة بلا قصّ */
       publicTrips: async function(){
         const snap = await col('trips').where('public', '==', true).limit(100).get();
         const rows = []; snap.forEach(function(d){ rows.push(saneTrip({ id: d.id, ...d.data() })); }); return rows; /* r118-و */
@@ -492,18 +572,30 @@ const mpData = (function(){
         return col('trips').doc(tripId).delete().catch(async function(e){ if (!(e && e.code === 'permission-denied') || typeof currentUser === 'undefined' || !currentUser) throw e; const snap = await col('trips').where('ownerId', '==', currentUser.uid).get(); let there = false; snap.forEach(function(d){ if (d.id === tripId) there = true; }); if (there) throw e; }); },
       byOwner: function(uid){ return col('trips').where('ownerId', '==', uid).get(); },
       sharedWith: function(uid){ return col('trips').where('sharedWith', 'array-contains', uid).get(); }, /* ر٧٣-أب (٢) */
-      save: function(trip, extra){ return col('trips').doc(trip.id).set(stripCounters(Object.assign({}, trip, extra || {})), { merge: true }); }, /* r118-ج: الرحلة تُرسل بلا عدّاداتها */
+      visNow: async function(tripId){ /* r120 (ق١١-١٥-٠٦): كما في القوائم — وقراءة مرفوضة لرحلتي = الرحلة لم تعد في الخادم (قاعدة الرحلات لا تميّز الغائب لصاحبه؛ رحلته القائمة يقرؤها دائمًا) ⇒ null */ let d; try{ d = await col('trips').doc(tripId).get(); }catch(e){ if (e && e.code === 'permission-denied') return null; throw e; } if (!d.exists) return null; const x = d.data() || {}; return { public: x.public === true, sharedWith: Array.isArray(x.sharedWith) ? x.sharedWith.slice() : [], sharedWithNames: (x.sharedWithNames && typeof x.sharedWithNames === 'object') ? Object.assign({}, x.sharedWithNames) : {} }; },
+      leaveShares: async function(uid){ /* r120 (ق١١-١٤-٢١ · قواعد v3.18 ٩) */ const FV = firebase.firestore.FieldValue; let left = 0; const snap = await col('trips').where('sharedWith', 'array-contains', uid).get();
+        for (const d of snap.docs){ try{ const patch = { sharedWith: FV.arrayRemove(uid) }; patch['sharedWithNames.' + uid] = FV.delete(); await d.ref.update(patch); }catch(e){ left++; mpSwallow(e, 'leave trip share'); } } return left; },
+      save: function(trip, extra, omit){ const p = stripCounters(Object.assign({}, trip, extra || {})); (omit || []).forEach(function(k){ delete p[k]; }); /* r120 (ق١١-١٥-٠٦): حفظ عادي لا يرسل الرؤية والمشاركة — ما في الخادم يبقى */ return col('trips').doc(trip.id).set(p, { merge: true }); }, /* r118-ج: الرحلة تُرسل بلا عدّاداتها */
       publicByOwner: async function(uid){ const snap = await col('trips').where('ownerId', '==', uid).where('public', '==', true).get(); const rows = []; snap.forEach(function(d){ rows.push(saneTrip({ id: d.id, ...d.data() })); }); return rows; } /* r118-و */ // ر٧٢-أ-١ (إعادة البناء): رحلاته العامة لصفحة المنتقي
     },
     suspensions: {
       allIds: async function(){ const snap = await col('suspensions').get(); const ids = new Set(); snap.forEach(function(d){ ids.add(d.id); }); return ids; }, // ر٧٢-أ-١ب (المالك)
       set: function(uid, data){ return col('suspensions').doc(uid).set(data); },
       get: function(uid){ return col('suspensions').doc(uid).get(); }, /* ر٧٣-أب (٢) */
+      markDeleted: function(uid){ return col('suspensions').doc(uid).set({ deleted: true, at: Date.now() }); }, /* r120 (ق١١-١٧-١٠ · قواعد v3.18 ١١): شاهد حذف الحساب — يكتبه صاحبه قبل حذف حساب الدخول؛ بعده ترفض القواعد كل كتابة باسمه */
+      deletedList: async function(limit){ const snap = await col('suspensions').where('deleted', '==', true).limit(limit || 20).get(); const out = []; snap.forEach(function(d){ out.push({ uid: d.id, at: Number((d.data() || {}).at) || 0 }); }); return out; }, /* المالك: الحسابات المحذوفة بشاهدها */
       remove: function(uid){ return col('suspensions').doc(uid).delete(); }
+    },
+    warnings: { /* r120 (ق١١-٢٤-١٥ هـ · قواعد v3.18 ١٣): إنذارات المحتوى — يكتبها مالك التطبيق بعد التحقق، ويقرؤها صاحبها وحده */
+      get: async function(uid){ const d = await col('warnings').doc(uid).get(); return d.exists ? d.data() : null; },
+      all: async function(){ const snap = await col('warnings').get(); const out = {}; snap.forEach(function(d){ out[d.id] = d.data(); }); return out; }, /* المالك */
+      set: function(uid, data){ return col('warnings').doc(uid).set(data); },
+      remove: function(uid){ return col('warnings').doc(uid).delete(); }
     },
     // القرار ١ (٢٦ أغسطس): الإيقاف احتجاز كامل (العام + المشاركة بالاسم)، والرفع استعادة كاملة — البوابة البشرية هي قرار الرفع
     holdOrRestore: async function(snap, hold){
       if (snap.empty) return;
+      let goneAcc = {}; if (!hold){ const heldIds = []; snap.forEach(function(doc){ const d = doc.data() || {}; if (d.suspended === true) (Array.isArray(d.sharedWithHeld) ? d.sharedWithHeld : (Array.isArray(d.sharedWith) ? d.sharedWith : [])).forEach(function(x){ heldIds.push(x); }); }); if (heldIds.length) goneAcc = await mpData.stats.accountsGone(heldIds); } /* r120 (ق١١-١٥-٠٤): كما في القوائم */
       const ops = [];
       snap.forEach(doc => {
         const d = doc.data();
@@ -516,7 +608,8 @@ const mpData = (function(){
           u.publicHeld = d.public === true;
           u.public = false;
         } else {
-          u.sharedWith = Array.isArray(d.sharedWithHeld) ? d.sharedWithHeld : (Array.isArray(d.sharedWith) ? d.sharedWith : []);
+          u.sharedWith = (Array.isArray(d.sharedWithHeld) ? d.sharedWithHeld : (Array.isArray(d.sharedWith) ? d.sharedWith : [])).filter(function(x){ return !goneAcc[x]; });
+          Object.keys((d.sharedWithNames && typeof d.sharedWithNames === 'object') ? d.sharedWithNames : {}).forEach(function(x){ if (goneAcc[x]) u['sharedWithNames.' + x] = del(); });
           u.sharedWithHeld = del();
           u.public = d.publicHeld === true;
           u.publicHeld = del();
@@ -590,15 +683,15 @@ function syncOwnerMode(){
 
 // يربط حساب Firebase الحالي كمالك معتمد لو لم يكن settings/app.ownerUid مربوطًا بعد (شبكة أمان للربط الأولي)
 async function linkOwnerUid(){
-  if (!currentUser) return;
+  if (!currentUser) return; const __who = currentUser.uid, __gen = mpSessionGen;
   try{
-    const __app2 = await mpData.settings.app();
+    const __app2 = await mpData.settings.app(); if (!mpSameUser(__who, __gen)) return; /* r120 */
     const savedUid = __app2 ? __app2.ownerUid : null;
-    if (savedUid && savedUid !== currentUser.uid) return; // مالك مربوط أصلًا بحساب آخر — لا نلمسه تلقائيًا
+    if (savedUid && savedUid !== __who) return; // مالك مربوط أصلًا بحساب آخر — لا نلمسه تلقائيًا
     /* r118-ح (ق١١-١٢-٠١): بريد المالك لا يُكتب في settings/app (مستند مقروء للجميع) — لا كود ولا قاعدة يقرؤه؛ والحقل القائم يُحذف عند أول دخول للمالك. الكتابة فقط عند الربط الأول أو لحذف الحقل. */
-    if (savedUid && !(__app2 && ('ownerEmail' in __app2))){ ownerUid = currentUser.uid; return; }
-    await mpData.settings.mergeApp({ ownerUid: currentUser.uid, ownerEmail: mpData.fieldDelete() });
-    ownerUid = currentUser.uid;
+    if (savedUid && !(__app2 && ('ownerEmail' in __app2))){ ownerUid = __who; return; }
+    await mpData.settings.mergeApp({ ownerUid: __who, ownerEmail: mpData.fieldDelete() });
+    if (mpSameUser(__who, __gen)) ownerUid = __who;
   }catch(e){ /* صامت */ }
 }
 
