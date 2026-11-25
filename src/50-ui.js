@@ -60,6 +60,7 @@ const authReadyPromise = new Promise(res => { resolveAuthReady = res; }); // ي�
 let listBookmarksMap = null;   // {listId: record} — تُحمّل عند أول حاجة
 let tripSavesMap = null;       // {tripId: record}
 const viewBumped = {};         // مشاهدة القائمة تُحسب مرة بالجلسة
+function mpViewOnce(kind, id){ const k = kind + ':' + id; if (viewBumped[k]) return false; viewBumped[k] = true; return true; } /* r120 (ق١١-١٤-٠٢ · ع-٣): تعريف واحد للمشاهدة — مرة لكل مصدر في الجلسة: الرحلة (بعدّاديها) والملف كالقائمة (كانت تُعدّ مع كل فتح، فالرقم «فتحات» لا «جلسات»). صفحة المنتقي page_view لها تعريفها الأضيق من قبل: مرة للجهاز في اليوم (mptrack) */
 function placeBmMap(){ return (userListData && userListData.placeBookmarks && typeof userListData.placeBookmarks === 'object') ? userListData.placeBookmarks : {}; }
 // ر٦٨: مفتاح مفكرة مكانك = هوية العنصر (المعرّف) لا بصمة الرابط — روابط متطابقة لا تتشارك الحالة (ع٣)
 function isBookmarked(key){ return !!(key && placeBmMap()[hashUrl(key)]); } // المفتاح: رابط (محتوى الآخرين) أو 'id:…' (مكانك)
@@ -71,6 +72,53 @@ function shareSvg(){
 }
 function placeSearchKey(p, catId){ const c = plCatsAll().find(function(x){ return x.id === catId; }); return pickerNormalize([p.name, p.area, (p.picks || []).map(function(x){ return x.name; }).join(' '), c ? c.name + ' ' + c.section : ''].join(' ')); }
 function flagsHtml(flags){ return (flags || []).indexOf('fine_dining') >= 0 ? '<span class="pl-flag">Fine dining</span>' : ''; } // ر٧٠ط: شارة العلامة
+/* r120 (ق١١-١٤-٠٢ · ع-٦ · ع-٤): أعداد المدينة الثلاثة بباب واحد — كل كاتب لعدد الأماكن يكتب معه «المثبَّت» و«من الآخرين» بالتعريف نفسه، فلا تنجرف الثلاثة عن بعضها.
+   mpCityTally يعدّ من التصنيفات · mpCityCountsPut يضع في الذاكرة وفي رقعة الدمج (t = null: المفاتيح تُحذف بعلامة الحذف — دمجٌ بلا علامة لا يحذف مفتاحًا) ولا يترك خريطة فارغة في الرقعة (خريطة فارغة في دمج تستبدل الحقل كله). يعيد true إن خالف ما في الذاكرة. */
+/* r120 (ق١١-١٤-٠٩ · ق١١-١٤-١١ · ق١١-١٤-١٢ · قواعد v3.18 ٣ و٥): مشاهد الأسبوع — أول فتح لمصدر غيري في الجلسة يزيد مشاهدات أسبوعه (v)، وأول مرة لحسابي في الأسبوع يكتب معها سجلي وحسابات الأسبوع (n).
+   مذكّرة على الجهاز (مفتاح واحد للأسبوع والحساب) تقول «حسابي معدود هذا الأسبوع» فتُكتب المشاهدة وحدها؛ جهاز آخر في الأسبوع نفسه: القاعدة ترفض تكرار السجل فتُكتب المشاهدة وحدها. */
+const MP_VM_MAX = 400; /* أقصى مفاتيح المذكّرة في الأسبوع — ما زاد يُعدّ صحيحًا بلا تذكير (طلب مرفوض ثم المشاهدة وحدها) */
+function mpVmMemo(uid, w){ let memo = null; try{ memo = JSON.parse(localStorage.getItem('mp_vm') || 'null'); }catch(_){} if (!memo || memo.w !== w || memo.u !== uid || !memo.s || typeof memo.s !== 'object') memo = { w: w, u: uid, s: {} }; return memo; }
+function mpVmKeep(uid, w, key){ try{ if (!currentUser || currentUser.uid !== uid) return; /* خروجٌ والطلب في الطريق: المذكّرة مُسحت ولا تعود (المراجعة المستقلة · مقيس) */ const cur = mpVmMemo(uid, w); if (cur.s[key] || Object.keys(cur.s).length >= MP_VM_MAX) return; cur.s[key] = 1; localStorage.setItem('mp_vm', JSON.stringify(cur)); }catch(_){} }
+function mpViewerMark(kind, srcId){ try{ if (!currentUser || currentUserSuspended || !mpData.viewers.ok(kind, srcId)) return; const uid = currentUser.uid, w = mpData.viewers.week(), key = kind + '__' + srcId;
+    if (!mpViewOnce('vm-' + kind, srcId)) return; /* مرة في الجلسة */
+    mpData.viewers.mark(uid, kind, srcId, !!mpVmMemo(uid, w).s[key]).then(function(r){ if (r) mpVmKeep(uid, w, key); /* طلب رُفض لا يُذكَّر: قد يكون السبب قواعد لم تُنشر بعد أو مصدرًا أُغلق — الجلسة التالية تعيد المحاولة (المراجعة المستقلة · مقيس) */ }).catch(function(e){ mpSwallow(e, 'viewer mark'); }); }catch(_){} }
+async function mpListVisNow(cityId){ /* r120 (ق١١-١٥-٠٨ — قيس: الاستيراد وتراجعه وتراجع مدير المدن و«أصلح» كانت تكتب الرؤية والمشاركة من ذاكرة الشاشة أو من نسخة أقدم — فيعود من خرج من المشاركة، وتعود «عامة» قائمةٌ جُعلت خاصة من جهاز آخر): مسار لا يقصد تغيير الرؤية ولا المشاركة يكتب ما في مستند القائمة في الخادم الآن منهما. لا مستند ⇒ خاصة بلا مشاركة. القراءة ترمي إن فشلت — لا كتابة بحالٍ لم تُعرف */ await plSaveWait(cityId); /* r120 (ق١١-١٦-٠٣ · القاعدة ٥ — قيس: «أصلح» وحفظٌ يُخرج مشاركًا في الطريق ⇒ يُختم التصنيف بمن خرج بعد أن كتب الحفظ خروجه): يقرأ بعد أن يفرغ طابور حفظ المدينة */ const v = await mpData.cityLists.visNow(currentUser.uid, cityId); return v || { public: false, sharedWith: [], sharedWithNames: {} }; }
+async function mpListHeadNow(cityId){ /* r120 (ق١١-١٥-٠٩ — قيس: استيراد يُنفَّذ وحفظٌ للمدينة في الطريق ⇒ الحفظ يكتب فهرسه الأقدم بعده فيخرج المكان المستورَد من الفهرس): مستند القائمة كما هو في الخادم الآن — بعد أن يصل حفظ المدينة الجاري، كما يفعل مدير المدن (cmReadDoc) */ await plSaveWait(cityId); return mpData.cityLists.headNow(currentUser.uid, cityId); }
+function mpVisResolve(mem, base, srv){ /* r120 (ق١١-١٥-٠٦ — قيس: حفظٌ من شاشة قديمة كان يعيد من خرج من المشاركة، ويعيد «عامة» قائمةً جُعلت خاصة من جهاز آخر): الرؤية والمشاركة لا تُكتبان من ذاكرة الشاشة — يُكتب ما غيّره صاحبها منذ آخر ما حُمّل أو كُتب (base) فوق ما في الخادم الآن (srv).
+   يعيد { public, sharedWith, names (ما يبقى)، write (خريطة الأسماء كما تُكتب: ومعها علامة حذف لكل اسم في الخادم لا يبقى)، differs (الناتج يخالف الخادم) } */
+  const arr = function(a){ return Array.isArray(a) ? a : []; }, obj = function(o){ return (o && typeof o === 'object') ? o : {}; };
+  const mSw = arr(mem.sharedWith), bSw = arr(base.sharedWith), sSw = arr(srv.sharedWith), mN = obj(mem.sharedWithNames), sN = obj(srv.sharedWithNames);
+  const added = mSw.filter(function(u){ return bSw.indexOf(u) < 0; }), removed = bSw.filter(function(u){ return mSw.indexOf(u) < 0; });
+  const sw = sSw.filter(function(u){ return removed.indexOf(u) < 0; }); added.forEach(function(u){ if (sw.indexOf(u) < 0) sw.push(u); });
+  const pub = ((mem.public === true) !== (base.public === true)) ? mem.public === true : srv.public === true;
+  const names = {}; sw.forEach(function(u){ const n = (added.indexOf(u) >= 0 && mN[u]) ? mN[u] : ((u in sN) ? sN[u] : mN[u]); if (n) names[u] = n; });
+  const write = Object.assign({}, names); Object.keys(sN).forEach(function(u){ if (!(u in names)) write[u] = mpData.fieldDelete(); });
+  const key = function(a){ return a.slice().sort().join(','); };
+  return { public: pub, sharedWith: sw, names: names, write: write, differs: pub !== (srv.public === true) || key(sw) !== key(sSw) }; }
+function mpViewerPrune(){ /* r120 (ق١١-١٤-٢٤ · قواعد v3.18 ٧): سجلات مشاهداتي تبقى أربعة أسابيع — مرة في الأسبوع لكل جهاز وحساب يحذف التطبيق ما مضى عليه ذلك (العدّادات باقية). استعلامان عن سجلاتي أنا */
+  try{ if (!currentUser || currentUserSuspended) return; const uid = currentUser.uid, w = mpData.viewers.ruleWeek(); /* r120 (المراجعة ٣٤): مرة في أسبوع القاعدة — التنظيف يحكمه ما تقبل القاعدة حذفه */ let st = null; try{ st = JSON.parse(localStorage.getItem('mp_vp') || 'null'); }catch(_){} if (st && st.w === w && st.u === uid) return;
+    Promise.all([mpData.viewers.pruneMine(uid), mpData.placeViewers.pruneMine(uid), mpFollowMirrorTidy(uid)]).then(function(){ try{ if (currentUser && currentUser.uid === uid) localStorage.setItem('mp_vp', JSON.stringify({ w: w, u: uid })); }catch(_){} }).catch(function(e){ mpSwallow(e, 'viewer prune'); }); }catch(_){} }
+async function mpFollowMirrorTidy(uid){ /* r120 (ق١١-١٥-٠٤ — قيس: «من أتابع» يبقى يحمل معرّف من حُذف حسابه): مرة في الأسبوع يُطابَق بسجلات متابعتي (استعلام واحد) — من لا سجل له يخرج. بلا متابَعين: بلا قراءة */
+  { const fol = (userListData && Array.isArray(userListData.following)) ? userListData.following.slice() : []; if (!fol.length) return 0; const __gen = mpSessionGen; const have = await mpData.follows.mineSet(uid); if (!mpSameUser(uid, __gen)) return 0; const gone = fol.filter(function(c){ return !have[c]; }); if (!gone.length) return 0;
+    await mpData.mirrors.drop(uid, { lists: [], trips: [], follows: gone }); if (!mpSameUser(uid, __gen)) return 0; userListData.following = (userListData.following || []).filter(function(c){ return gone.indexOf(c) < 0; }); return gone.length; } } /* فشلها يُرمى: ذاكرة «هذا الأسبوع» لا تُكتب فتُعاد عند الفتح التالي (المراجعة المستقلة ٧) */
+function mpPlaceViewerMark(listId, hex){ /* أول تفاعل في الجلسة مع مكان في قائمة غيري — نموّ المكان الأسبوعي لصاحب القائمة */ try{ if (!currentUser || currentUserSuspended || !mpData.placeViewers.ok(listId, hex)) return; const uid = currentUser.uid, w = mpData.viewers.week(), key = 'q__' + listId + '__' + hex;
+    if (!mpViewOnce('pv-' + listId, hex)) return;
+    mpData.placeViewers.mark(uid, listId, hex, !!mpVmMemo(uid, w).s[key]).then(function(r){ if (r) mpVmKeep(uid, w, key); }).catch(function(e){ mpSwallow(e, 'place viewer mark'); }); }catch(_){} }
+const MP_CITY_COUNT_FIELDS = ['cityPlaceCounts', 'cityPinCounts', 'cityFromCounts'];
+function mpCityTally(categories){ let n = 0, pin = 0, from = 0; Object.keys(categories || {}).forEach(function(k){ (((categories[k] || {}).places) || []).forEach(function(q){ if (!q || !(q.name || q.url)) return; n++; if (q.geo && typeof q.geo.lat === 'number') pin++; if (q.source && q.source.ownerId) from++; }); }); return { n: n, pin: pin, from: from }; }
+function mpCityCountsPut(patch, cityId, t){ const v = t ? [t.n, t.pin, t.from] : null; let changed = false;
+  MP_CITY_COUNT_FIELDS.forEach(function(f, i){ const m = (userListData[f] && typeof userListData[f] === 'object') ? userListData[f] : (userListData[f] = {}); patch[f] = patch[f] || {};
+    if (v){ if (m[cityId] !== v[i]) changed = true; m[cityId] = v[i]; patch[f][cityId] = v[i]; }
+    else { if (cityId in m) changed = true; delete m[cityId]; patch[f][cityId] = mpData.fieldDelete(); } });
+  return changed; }
+function mpCityCountsNone(cityId){ return !MP_CITY_COUNT_FIELDS.some(function(f){ return !!(userListData[f] || {})[cityId]; }); } /* لا شيء معدودًا لهذه المدينة — صفرٌ لها لا يُكتب (مدينة جديدة فارغة لا تكلّف كتابة) */
+/* الكتابة الواحدة لكل الكتّاب: pairs = [[cityId, t], …] (t = null يحذف). لا تُرسل إن لم يتغيّر شيء · وإن فشلت عادت الذاكرة إلى ما كانت — فالحفظ التالي يرى الفرق ويعيد المحاولة (كانت الذاكرة تسبق الخادم فلا يُعاد أبدًا) ·
+   والإرجاع يمسّ كائن الجلسة التي بدأت الكتابة وحده (ملتقَط قبل الانتظار): تبدّل الحساب أثناءه لا يُكتب عليه شيء من حساب سابق (المراجعة المستقلة ١٠ · ١١). uid: صاحب المستند الملتقط عند النداء. */
+async function mpCityCountsWrite(uid, pairs){ if (!uid || !pairs || !pairs.length) return false; const data = userListData; /* مستند هذه الجلسة — الإرجاع يُكتب فيه هو لا في ما صار userListData بعد الانتظار */ const was = pairs.map(function(x){ return MP_CITY_COUNT_FIELDS.map(function(f){ const m = data[f] || {}; return (x[0] in m) ? [m[x[0]]] : null; }); }); const patch = {}; let changed = false;
+  pairs.forEach(function(x){ if (mpCityCountsPut(patch, x[0], x[1])) changed = true; }); if (!changed) return false;
+  try{ await mpData.userLists.merge(uid, patch); return true; }
+  catch(e){ pairs.forEach(function(x, j){ MP_CITY_COUNT_FIELDS.forEach(function(f, i){ const m = data[f]; if (!m || typeof m !== 'object') return; if (was[j][i]) m[x[0]] = was[j][i][0]; else delete m[x[0]]; }); }); mpSwallow(e, 'city counts'); return false; } }
+function mpCityCountsSave(cityId, t){ if (!currentUser || !cityId) return Promise.resolve(false); return mpCityCountsWrite(currentUser.uid, [[cityId, t]]); }
 function liveCountOf(categories){ return Object.values(categories || {}).reduce(function(a, e){ return a + ((e && e.places) || []).filter(function(q){ return q && (q.name || q.url); }).length; }, 0); }
 function doc0Exists(data){ return !!(data && (data.ownerId || data.cityId || data.categories)); }
 function bmkSvg(on){
@@ -133,9 +181,9 @@ async function ensureTripSaves(){ tripSaveMap(); }
    عند التحميل: الموقوف — ومن سحب وهو موقوف ثم رُفع إيقافه على هذا الجهاز — تُطابَق مراياه بسجلاته (قراءة لكل مدخل مفكرة وحفظ، واستعلام واحد للمتابعات)؛ ما زال سجله يسقط من الذاكرة، ويُكتب التصحيح حين تُقبل الكتابة.
    حدّ معلن: من رُفع إيقافه وفتح من جهاز آخر يرى المدخل حتى ينقره (النقر يصحّحه: الباب يجد أن لا سجل). */
 async function mpMirrorReconcile(){
-  if (!currentUser || !userListData) return 0; const uid = currentUser.uid; let dirty = false; try{ dirty = localStorage.getItem('mp_mirror_dirty_' + uid) === '1'; }catch(_){ }
+  if (!currentUser || !userListData) return 0; const uid = currentUser.uid, __gen = mpSessionGen; let dirty = false; try{ dirty = localStorage.getItem('mp_mirror_dirty_' + uid) === '1'; }catch(_){ }
   if (!currentUserSuspended && !dirty) return 0;
-  let gone = null; try{ gone = await mpData.mirrors.gone(uid, userListData); }catch(e){ mpSwallow(e, 'mirror reconcile'); return 0; }
+  let gone = null; try{ gone = await mpData.mirrors.gone(uid, userListData); }catch(e){ mpSwallow(e, 'mirror reconcile'); return 0; } if (!mpSameUser(uid, __gen)) return 0; /* r120: مطابقة حساب لا تُطبَّق على ذاكرة غيره */
   const n = gone.lists.length + gone.trips.length + gone.follows.length; if (!n){ if (!currentUserSuspended && gone.checked > 0) try{ localStorage.removeItem('mp_mirror_dirty_' + uid); }catch(_){ } return 0; } /* العلامة تُمحى بعد مطابقة فعلية فقط — تحميل فشل (مرايا فارغة) لا يمحوها (المراجعة المستقلة)؛ وبمرايا فارغة حقًّا تبقى بلا كلفة */
   gone.lists.forEach(function(id){ delete userListData.listBookmarkIds[id]; if (listBookmarksMap) delete listBookmarksMap[id]; });
   gone.trips.forEach(function(id){ delete userListData.tripSaveIds[id]; if (tripSavesMap) delete tripSavesMap[id]; });
@@ -191,6 +239,7 @@ function pickerNearest(name, candidates){
   (candidates || []).forEach(c => { const ks = pickerKeys(c.name).concat((c.alt || []).map(pickerNormalize)); ks.forEach(k => { if (k === key) return; const d = lev(key, k); if (d < bd){ bd = d; best = c; } }); });
   return bd <= 2 ? best : null;
 }
+function mpByName(a, b){ /* r120 (ق١١-٢٤-٠٣): قوائم المدن بترتيب الأحرف — بلا فرق بين حرف كبير وصغير ولا بحركة */ return String((a && a.name) || '').localeCompare(String((b && b.name) || ''), 'en', { sensitivity: 'base', numeric: true }); }
 function pickerFilterItems(items, q){
   const n = pickerNormalize(q);
   if (!n) return (items || []).slice();
@@ -442,8 +491,8 @@ function exportOwnTripRow(id){ currentTripId = id; viewingSharedTrip = false; op
 // ر٦١ · التصدير على العام: نسبة المصدر باسم صاحبه ثم توقيع التطبيق — المركّب الموقَّع نفسه
 async function exportOtherList(ownerUid, cityId){
   try{
-    const d = await mpData.cityLists.get(ownerUid, cityId);
-    if (!d){ showToast('List is no longer available'); return; }
+    let d = null; try{ d = await mpData.cityLists.get(ownerUid, cityId); }catch(e){ if (!(e && e.code === 'permission-denied')) throw e; } /* المحور ١ (قياس قواعد القراءة): قائمة حُذفت أو لم تعد عامة ولا مشارَكة معي تُرفض قراءتها (القاعدة تقرأ بياناتها) — كان الرفض يخرج «Could not build the message» ورسالة «لم تعد متاحة» لا تُبلغ أبدًا */
+    if (!d){ const __id = ownerUid + '_' + cityId; try{ delete cmCache.lists[__id]; cmWrote('lists', __id, true, ownerUid); if (currentTab === 'Community') renderCommunityModal(); }catch(_){} showToast('List is no longer available'); return; }
     let out = '📍 ' + (d.cityName || cityId) + ' — a MyPickz list by ' + (d.nickname || 'a MyPickz user') + '\n';
     Object.keys(d.categories || {}).forEach(function(catId){
       const entry = d.categories[catId];
@@ -455,13 +504,13 @@ async function exportOtherList(ownerUid, cityId){
         if (q.url) out += '  ' + q.url + '\n';
       });
     });
-    mpSendText(out + '\nSent via MyPickz · ' + mpShareUrl({ src: 'community', to: 'l.' + ownerUid + '_' + cityId })); statsExportFor('olist', ownerUid + '_' + cityId); /* ب-٢-١ · r115-د (٥) */
+    Promise.resolve(mpSendText(out + '\nSent via MyPickz · ' + mpShareUrl({ src: 'community', to: 'l.' + ownerUid + '_' + cityId }))).then(function(ok){ if (ok) mpShareCount('olist', ownerUid + '_' + cityId, d.public === true ? ownerUid : null); }); /* r120 (ق١١-٢٤-٠١ ٣): رسالة النص تُعدّ لصاحب القائمة العامة */ /* ب-٢-١ · r115-د (٥) */
   }catch(e){ showToast('Could not build the message'); }
 }
 async function exportOtherTrip(tripId){
   try{
-    const doc = await mpData.trips.getDoc(tripId);
-    if (!doc.exists){ showToast('Trip is no longer available'); return; }
+    let doc = null; try{ doc = await mpData.trips.getDoc(tripId); }catch(e){ if (!(e && e.code === 'permission-denied')) throw e; } /* المحور ١: كالقائمة — رحلة حُذفت أو لم تعد تُقرأ لي تُرفض قراءتها */
+    if (!doc || !doc.exists){ try{ const __t0 = cmCache.trips[tripId] || {}; cmTripGone(tripId, __t0.ownerId); if (currentTab === 'Community') renderCommunityModal(); }catch(_){} showToast('Trip is no longer available'); return; }
     const t = mpData.sane.trip({ id: tripId, ...doc.data() }); /* r118-و */ tripNormalize(t);
     const res = await resolveTripPlaces(t);
     let out = '🧳 ' + tripTitle(t) + ' — a MyPickz trip\n';
@@ -469,7 +518,7 @@ async function exportOtherTrip(tripId){
       out += '\n' + tripDayLabel(day) + '\n';
       TRIP_PERIODS.forEach(function(p){ (day.periods[p] || []).forEach(function(e){ [e].concat(e.alts || []).forEach(function(x, k){ const pl = x._p; out += (k ? '  or ' : '• ') + (pl ? (pl.name || x.name || 'Place') : 'Place no longer available') + '\n'; if (pl && pl.url) out += '  ' + pl.url + '\n'; }); }); });
     });
-    mpSendText(out + '\nSent via MyPickz · ' + mpShareUrl({ src: 'trip', to: t.ownerId ? 't.' + t.ownerId + '.' + t.id : '' })); try{ if (t.ownerId && currentUser && t.ownerId !== currentUser.uid && mpIsVerified(t.ownerId)) mpTrack.statsCurator(t.ownerId, 'export'); }catch(_){} /* ب-٢-١ */
+    Promise.resolve(mpSendText(out + '\nSent via MyPickz · ' + mpShareUrl({ src: 'trip', to: t.ownerId ? 't.' + t.ownerId + '.' + t.id : '' }))).then(function(ok){ if (ok) mpShareCount('otrip', tripId, (t.public === true && t.ownerId) || null); }); /* r120 (ق١١-٢٤-٠١ ٣): رسالة النص تُعدّ لصاحب الرحلة العامة — من مستندها المقروء لتوّه */
   }catch(e){ showToast('Could not build the message'); }
 }
 async function toggleTripSave(tripId, want){
