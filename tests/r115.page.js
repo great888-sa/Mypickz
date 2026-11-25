@@ -80,13 +80,13 @@
     try{
       localStorage.removeItem('mp_gate_seen'); mpHadUser = false; document.body.classList.remove('auth-pending');
       res.push(gateSeen());                                             /* مسجَّل: لا تُعدّ */
-      currentUser = null; document.body.classList.add('auth-pending'); res.push(gateSeen()); document.body.classList.remove('auth-pending'); /* حال الدخول لم تُعرف بعد: لا تُعدّ */
+      currentUser = null; globalThis.__actorSync(currentUser); document.body.classList.add('auth-pending'); res.push(gateSeen()); document.body.classList.remove('auth-pending'); /* حال الدخول لم تُعرف بعد: لا تُعدّ */
       res.push(gateSeen()); res.push(gate() - g0);                       /* زائر: تُعدّ مرة */
       res.push(gateSeen()); res.push(gate() - g0);                       /* مرة ثانية في اليوم: لا */
       localStorage.removeItem('mp_gate_seen'); mpHadUser = true; res.push(gateSeen()); res.push(gate() - g0); mpHadUser = false; /* خرج في هذا التحميل: لا */
       var chip = document.getElementById('guestChipBtn'); var code = chip ? chip.getAttribute('onclick') : ''; press(chip); res.push(code); res.push(gate() - g0); res.push(document.getElementById('authBackdrop').classList.contains('show')); /* بزر الزائر المرسوم: openGate تعدّ */
       press(chip); res.push(gate() - g0);
-    } finally { currentUser = cu; mpHadUser = hu; document.body.classList.toggle('auth-pending', pend); try{ closeGate(); }catch(_){} try{ localStorage.removeItem('mp_gate_seen'); }catch(_){} }
+    } finally { currentUser = cu; globalThis.__actorSync(currentUser); mpHadUser = hu; document.body.classList.toggle('auth-pending', pend); try{ closeGate(); }catch(_){} try{ localStorage.removeItem('mp_gate_seen'); }catch(_){} }
     o.gate = res;
     var por = mpTrack._portions({ a: 1, b: 120, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, seconds: 9000 }); o.portions = [Object.keys(por).length, por.b, por.a, ('g' in por), mpTrack._portions({ seconds: 9000 }).seconds];
     var bp0 = mpData.analytics.byPrefix; mpData.analytics.byPrefix = async function(){ return { size: 1, forEach: function(fn){ fn({ data: function(){ return { reserved_3: 4, signup_start: 2, signup_done: 1, reserved_2: 3, visit_source: 9 }; } }); } }; };
@@ -111,7 +111,7 @@
     localStorage.removeItem('mp_arrival'); setQ('?src=zz&to=..%2F..&by=XYZ'); o.badArr = mpArrivalCapture();
     setQ('?src=curator&ref=ig&to=l.uOTH_r110p'); mpArrivalCapture();
     var c0f = cmOpenList, t0f = openSavedTripInCommunity; var calls = []; cmOpenList = function(a, b, c){ calls.push(['l', a, b, c]); }; openSavedTripInCommunity = function(a, b){ calls.push(['t', a, b]); };
-    try{ var cuu = currentUser; currentUser = null; var r0 = mpArrivalOpen(); currentUser = cuu; var r1 = mpArrivalOpen(), r2 = mpArrivalOpen(); setQ('?src=trip&to=t.uOTHER1.trip_abc123'); mpArrivalCapture(); var r3 = mpArrivalOpen(); } finally { cmOpenList = c0f; openSavedTripInCommunity = t0f; }
+    try{ var cuu = currentUser; currentUser = null; globalThis.__actorSync(currentUser); var r0 = mpArrivalOpen(); currentUser = cuu; globalThis.__actorSync(currentUser); var r1 = mpArrivalOpen(), r2 = mpArrivalOpen(); setQ('?src=trip&to=t.uOTHER1.trip_abc123'); mpArrivalCapture(); var r3 = mpArrivalOpen(); } finally { cmOpenList = c0f; openSavedTripInCommunity = t0f; }
     o.open = [r0, r1, r2, r3, calls];
   }catch(e){ o.errE = String(e && e.stack || e); }
   try{ location.search = q0; localStorage.removeItem('mp_arrival'); sessionStorage.removeItem('mp_arrival_opened'); }catch(_){}
@@ -156,7 +156,7 @@
       plPanel = 'cats'; o.actPlacesOpen = runAct('places');
       cityListCityId = null; plPanel = null; placesSource = 'community'; o.actPlacesNoCity = runAct('places');
       o.actTrips = runAct('trips'); o.actCur = runAct('curators'); o.actCom = runAct('community'); o.actAddr = runAct('addresses');
-      var cu7 = currentUser; currentUser = null; helpView = null; openHelpModal(); o.actGuest = [document.querySelectorAll('#helpSections button[onclick^="helpAct"]').length, document.querySelectorAll('#helpSections .help-card').length, document.getElementById('helpCloseBtn').textContent]; acts.length = 0; helpAct('trips'); o.actGuest.push(acts.length); currentUser = cu7; document.getElementById('helpBackdrop').classList.remove('show');
+      var cu7 = currentUser; currentUser = null; globalThis.__actorSync(currentUser); helpView = null; openHelpModal(); o.actGuest = [document.querySelectorAll('#helpSections button[onclick^="helpAct"]').length, document.querySelectorAll('#helpSections .help-card').length, document.getElementById('helpCloseBtn').textContent]; acts.length = 0; helpAct('trips'); o.actGuest.push(acts.length); currentUser = cu7; globalThis.__actorSync(currentUser); document.getElementById('helpBackdrop').classList.remove('show');
     } finally { switchTab = sw0; openTripBuilder = ob0; plTogglePanel = tp0; plAddCity = ac0; selectPlacesSource = sp0; cityListCityId = cid0; plPanel = pp0; placesSource = ps0; }
     /* اللغة: زر «عربي» المرسوم يحفظها · والعناوين والمواضيع بالعربية · وأسماء الأزرار تبقى كما في الشاشة */
     var hl7 = helpLang, ls7 = localStorage.getItem('mp_help_lang'); helpView = null; openHelpModal(); press(document.getElementById('helpLangArBtn')); var lsAr = localStorage.getItem('mp_help_lang');
@@ -194,14 +194,14 @@
       sessionStorage.removeItem('mp_arrival_opened'); localStorage.setItem('mp_arrival', JSON.stringify({ src: 'ulist', to: 'l.uOTH_r110p', at: Date.now() })); var ro1 = mpArrivalOpen(); var gone = localStorage.getItem('mp_arrival') === null; sessionStorage.removeItem('mp_arrival_opened'); var ro2 = mpArrivalOpen(); o.arrOnce = [ro1, gone, ro2, opened.length];
       localStorage.setItem('mp_arrival', JSON.stringify({ src: 'ulist', ref: 'qr', at: Date.now() })); var ro3 = mpArrivalOpen(); o.arrNoTo = [ro3, localStorage.getItem('mp_arrival') === null];
       var cuX = currentUser, bump0 = mpData.dailyStats.bump; mpData.dailyStats.bump = async function(){};
-      try{ currentUser = { uid: 'uNEWUSERNEWUSERNEWUSER01', email: 'new@x' }; localStorage.setItem('mp_arrival', JSON.stringify({ src: 'ulist', ref: 'qr', by: '0123456789', to: 'l.uOTH_r110p', at: Date.now() })); await registerUserRecord(); var ud = await mpData.users.get('uNEWUSERNEWUSERNEWUSER01'); var dd = (ud && ud.exists) ? ud.data() : {}; o.regRef = [dd.refBy, dd.refSrc, dd.refCh, dd.refTo, dd.email, mpSharerFor === 'uNEWUSERNEWUSERNEWUSER01']; try{ await db.collection('users').doc('uNEWUSERNEWUSERNEWUSER01').delete(); }catch(_){} }
-      finally { currentUser = cuX; mpData.dailyStats.bump = bump0; localStorage.removeItem('mp_arrival'); sessionStorage.removeItem('mp_arrival_opened'); await mpSharerInit(); }
+      try{ currentUser = { uid: 'uNEWUSERNEWUSERNEWUSER01', email: 'new@x' }; globalThis.__actorSync(currentUser); localStorage.setItem('mp_arrival', JSON.stringify({ src: 'ulist', ref: 'qr', by: '0123456789', to: 'l.uOTH_r110p', at: Date.now() })); await registerUserRecord(); var ud = await mpData.users.get('uNEWUSERNEWUSERNEWUSER01'); var dd = (ud && ud.exists) ? ud.data() : {}; o.regRef = [dd.refBy, dd.refSrc, dd.refCh, dd.refTo, dd.email, mpSharerFor === 'uNEWUSERNEWUSERNEWUSER01']; try{ await db.collection('users').doc('uNEWUSERNEWUSERNEWUSER01').delete(); }catch(_){} }
+      finally { currentUser = cuX; globalThis.__actorSync(currentUser); mpData.dailyStats.bump = bump0; localStorage.removeItem('mp_arrival'); sessionStorage.removeItem('mp_arrival_opened'); await mpSharerInit(); }
     } finally { cmOpenList = c0g; }
   }catch(e){ o.errH2 = String(e && e.stack || e); }
   try{ /* الطابور: مستند ترفضه القواعد (عدّاد لقائمة غير موجودة) لا يُسقط الدفعة — المقبول يُكتب والمرفوض يخرج · واسم قائمة مستورَدة لا يدخل معرّف مستند · والمحمول مفاتيحه معلومة */
     for (var dr = 0; dr < 20; dr++){ await mpTrack._flush(true); await wait(20); if (!Object.keys(mpTrack._buf).length) break; } /* r116: حتى يفرغ الطابور كله — مستند فيه أكثر من ستة مفاتيح يُكتب على دورات (≤ ٦ في الكتابة)، فكان «ثبات عدد المستندات» يتوقف وفيه مفاتيح تنتظر فتؤخّر share_link دورة */ /* يُصرَّف ما ينتظر (٣٠ مستندًا في الدورة) حتى يثبت الطابور — ليكون ما يُضاف بعده في دفعة واحدة */
     var dayP = Object.keys(mpTrack._buf)[0]; mpTrack.hit('share_link', { personal: true }); var evPath = Object.keys(mpTrack._buf).filter(function(k){ return /^analytics\/events_.*__all__all$/.test(k); })[0] || ''; var evId = evPath.split('/')[1];
-    var rd = async function(){ var sn = await db.collection('analytics').doc(evId).get(); return (sn && sn.exists && sn.data().share_link) || 0; }; var sl0 = await rd();
+    var rd = async function(){ var sn = globalThis.__storeGet('analytics/' + evId); return (sn && sn.share_link) || 0; }; /* المحور ١: مستند القياس لا يقرؤه غير مالك التطبيق (القاعدة) — الحكم من المخزن لا بقراءة الصفحة */ var sl0 = await rd();
     mpTrack.statsPlaceList('uGHOSTGHOSTGHOSTGHOST00_nolist', 'https://maps.app.goo.gl/ghost', 'open_total'); await wait(60);
     var q1 = Object.keys(mpTrack._buf); await mpTrack._flush(true); await wait(30); var q2 = Object.keys(mpTrack._buf); var sl1 = await rd();
     mpTrack.hit('share_link', { personal: true }); await mpTrack._flush(true); await wait(30); var sl2 = await rd();
