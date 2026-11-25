@@ -80,6 +80,10 @@ const no = (label, f) => expect(false, label, f);
   /* v3.17 (١١): حالة تُبذر أو تُزال بقواعد معطَّلة — حين تنقلب حالة قديمة إلى رفض وما بعدها يعتمد على أثرها */
   const seedDoc = (path, data) => env.withSecurityRulesDisabled(async (ctx) => { await ctx.firestore().doc(path).set(data); });
   const dropDoc = (path) => env.withSecurityRulesDisabled(async (ctx) => { await ctx.firestore().doc(path).delete(); });
+  /* v3.18 (٦ · ق١١-١٤-٢٢ · ق١١-١٥-٠١): الدبوس العامّ بلا by — ولا سجل «من ثبّته» في أي مخزن. pin18 يكتب الدبوس كما يكتبه التطبيق (mpData.identity.put): المستند كاملًا بلا by. المعامل uid باقٍ في التوقيع للحالات القديمة ولا يُكتب */
+  let FVP = null; try { const fb = require('firebase/compat/app'); require('firebase/compat/firestore'); FVP = (fb.default || fb).firestore.FieldValue; } catch (_) { }
+  const okPin = (label, f) => ok(label, f);
+  const pin18 = (who, uid, key, rec) => { const pub = Object.assign({}, rec); delete pub.by; return who.doc('placeIdentity/' + key).set(pub); };
 
   // ---------- بيانات البذر (بقواعد معطَّلة) ----------
   await env.clearFirestore();
@@ -143,7 +147,56 @@ const no = (label, f) => expect(false, label, f);
   await no('suspensions DELETE OWN by suspended (root exploit closed)', () => s.doc(`suspensions/${S}`).delete());
   await ok('suspensions write owner', () => owner.doc(`suspensions/${B}`).set({ at: 1, by: OWNER }));
   await ok('suspensions delete owner', () => owner.doc(`suspensions/${B}`).delete());
+  // --- v3.18 (١١) · ق١١-١٧-١٠: شاهد حذف الحساب — صاحبه ينشئه بحقلين ويسحبه؛ الموقوف لا يفكّ إيقافه؛ وبعده كتابات الحساب تُرفض ---
+  await ok('v3.18 tombstone: nickname created BEFORE the marker (control)', () => a.doc('nicknames/nick_tmb').set({ uid: A, nickname: 'tmb' }));
+  await no('v3.18 tombstone: created for ANOTHER uid deny', () => a.doc(`suspensions/${B}`).set({ deleted: true, at: 5 }));
+  await no('v3.18 tombstone: a third field deny', () => a.doc(`suspensions/${A}`).set({ deleted: true, at: 5, by: A }));
+  await no('v3.18 tombstone: deleted false deny', () => a.doc(`suspensions/${A}`).set({ deleted: false, at: 5 }));
+  await no('v3.18 tombstone: at not a number deny', () => a.doc(`suspensions/${A}`).set({ deleted: true, at: 'now' }));
+  await no('v3.18 tombstone: at missing deny', () => a.doc(`suspensions/${A}`).set({ deleted: true }));
+  await no('v3.18 tombstone: SUSPENDED user writes over the owner\'s suspension deny', () => s.doc(`suspensions/${S}`).set({ deleted: true, at: 5 }));
+  await no('v3.18 tombstone: SUSPENDED user merges deleted into the owner\'s suspension deny', () => s.doc(`suspensions/${S}`).set({ deleted: true }, { merge: true }));
+  await ok('v3.18 tombstone: own create with the two fields', () => a.doc(`suspensions/${A}`).set({ deleted: true, at: 5 }));
+  await no('v3.18 tombstone: own update deny', () => a.doc(`suspensions/${A}`).update({ at: 6 }));
+  await no('v3.18 after the marker: users doc write deny', () => a.doc(`users/${A}`).set({ lastSeen: 9 }, { merge: true }));
+  await no('v3.18 after the marker: nickname create deny', () => a.doc('nicknames/nick_tmb2').set({ uid: A, nickname: 'tmb2' }));
+  await no('v3.18 after the marker: nickname update deny', () => a.doc('nicknames/nick_tmb').update({ nickname: 'Tmb' }));
+  await no('v3.18 after the marker: userLists write deny', () => a.doc(`userLists/${A}`).set({ nickname: 'a' }, { merge: true }));
+  await no('v3.18 tombstone: ONE commit that withdraws the marker and writes a nickname deny (isSuspended reads the state before the request)', () => { const btch = a.batch(); btch.delete(a.doc(`suspensions/${A}`)); btch.set(a.doc('nicknames/nick_tmb3'), { uid: A, nickname: 'tmb3' }); return btch.commit(); });
+  await ok('v3.18 after the marker: deleting an own document still allowed (a retried deletion)', () => a.doc('nicknames/nick_tmb').delete());
+  await no('v3.18 tombstone: another user deletes it deny', () => b.doc(`suspensions/${A}`).delete());
+  await ok('v3.18 tombstone: own withdraw (the sign-in account was not deleted)', () => a.doc(`suspensions/${A}`).delete());
+  await ok('v3.18 tombstone withdrawn: the account writes again', () => a.doc('nicknames/nick_tmb').set({ uid: A, nickname: 'tmb' }));
+  await ok('v3.18 tombstone: cleanup of the control nickname', () => a.doc('nicknames/nick_tmb').delete());
+  await ok('v3.18 tombstone: owner removes a marker (the sweep closes it)', async () => { await a.doc(`suspensions/${A}`).set({ deleted: true, at: 5 }); await owner.doc(`suspensions/${A}`).delete(); });
+  await ok('v3.18 tombstone: owner lists the markers', () => owner.collection('suspensions').where('deleted', '==', true).get());
+  await no('v3.18 tombstone: a user lists the markers deny', () => a.collection('suspensions').where('deleted', '==', true).get());
 
+
+  // --- v3.18 (١٣) · ق١١-٢٤-١٥ هـ: إنذارات المحتوى — يكتبها المالك بحقول محدودة، ويقرؤها صاحبها وحده
+  const W = { count: 1, at: 5, place: 'Le Palace' };
+  await no('v3.18 warnings: USER writes his own deny', () => a.doc(`warnings/${A}`).set(W));
+  await no('v3.18 warnings: USER writes another deny', () => a.doc(`warnings/${B}`).set(W));
+  await no('v3.18 warnings: guest writes deny', () => guest.doc(`warnings/${A}`).set(W));
+  await ok('v3.18 warnings: OWNER creates (count · at · place)', () => owner.doc(`warnings/${A}`).set(W));
+  await ok('v3.18 warnings: OWNER updates with city and why', () => owner.doc(`warnings/${A}`).set({ count: 2, at: 6, place: 'Le Palace', city: 'Paris', why: 'nightclub' }));
+  await no('v3.18 warnings: a sixth field deny', () => owner.doc(`warnings/${A}`).set({ count: 2, at: 6, place: 'x', by: OWNER }));
+  await no('v3.18 warnings: place missing deny', () => owner.doc(`warnings/${A}`).set({ count: 2, at: 6 }));
+  await no('v3.18 warnings: count 0 deny', () => owner.doc(`warnings/${A}`).set({ count: 0, at: 6, place: 'x' }));
+  await no('v3.18 warnings: count 100 deny', () => owner.doc(`warnings/${A}`).set({ count: 100, at: 6, place: 'x' }));
+  await no('v3.18 warnings: count not an int deny', () => owner.doc(`warnings/${A}`).set({ count: 1.5, at: 6, place: 'x' }));
+  await no('v3.18 warnings: at not a number deny', () => owner.doc(`warnings/${A}`).set({ count: 1, at: 'now', place: 'x' }));
+  await no('v3.18 warnings: place 121 chars deny', () => owner.doc(`warnings/${A}`).set({ count: 1, at: 6, place: 'x'.repeat(121) }));
+  await no('v3.18 warnings: city 81 chars deny', () => owner.doc(`warnings/${A}`).set({ count: 1, at: 6, place: 'x', city: 'c'.repeat(81) }));
+  await no('v3.18 warnings: why 121 chars deny', () => owner.doc(`warnings/${A}`).set({ count: 1, at: 6, place: 'x', why: 'w'.repeat(121) }));
+  await ok('v3.18 warnings: the warned user reads his own', () => a.doc(`warnings/${A}`).get());
+  await ok('v3.18 warnings: a user reads his own when absent', () => b.doc(`warnings/${B}`).get());
+  await no('v3.18 warnings: ANOTHER user reads deny', () => b.doc(`warnings/${A}`).get());
+  await no('v3.18 warnings: guest reads deny', () => guest.doc(`warnings/${A}`).get());
+  await ok('v3.18 warnings: owner reads', () => owner.doc(`warnings/${A}`).get());
+  await no('v3.18 warnings: the warned user updates his own deny', () => a.doc(`warnings/${A}`).update({ count: 1 }));
+  await no('v3.18 warnings: the warned user deletes his own deny', () => a.doc(`warnings/${A}`).delete());
+  await ok('v3.18 warnings: owner deletes', () => owner.doc(`warnings/${A}`).delete());
   // ================= ٤) analytics/visits =================
   await ok('analytics read guest', () => guest.doc('analytics/visits').get());
   await ok('analytics update +1 guest', () => guest.doc('analytics/visits').update({ count: 11 }));
@@ -223,13 +276,13 @@ const no = (label, f) => expect(false, label, f);
   await ok('sessions read owner', () => owner.doc('analytics/sessions_2026-08-19__2988507').get());
 
   // ================= ٤-هـ) v3.3: stats_lists =================
-  await ok('stats_lists create guest (existing list cA)', () => guest.doc('stats_lists/cA').set({ open_community: 1, open_app: 1 })); // M4.25: مفاتيح §١٧-ج
-  await no('stats_lists create unknown list', () => guest.doc('stats_lists/zzz').set({ open_app: 1 }));
-  await ok('stats_lists create daily doc', () => guest.doc('stats_lists/cA__2026-08-19').set({ open_community: 1, open_app: 1 }));
-  await no('stats_lists create unknown key', () => guest.doc('stats_lists/cBpub').set({ hack: 1 }));
-  await ok('stats_lists update +1', () => guest.doc('stats_lists/cA').update({ open_app: 2, copy_from: 1 }));
-  await no('stats_lists update +51', () => guest.doc('stats_lists/cA').update({ open_app: 53 }));
-  await no('stats_lists update decrease', () => guest.doc('stats_lists/cA').update({ open_app: 1 }));
+  await ok('stats_lists create by a signed-in user (existing list cA)', () => a.doc('stats_lists/cA').set({ open_community: 1, open_app: 1 })); // M4.25: مفاتيح §١٧-ج
+  await no('stats_lists create unknown list', () => a.doc('stats_lists/zzz').set({ open_app: 1 }));
+  await ok('stats_lists create daily doc', () => a.doc('stats_lists/cA__2026-08-19').set({ open_community: 1, open_app: 1 }));
+  await no('stats_lists create unknown key', () => a.doc('stats_lists/cBpub').set({ hack: 1 }));
+  await ok('stats_lists update +1', () => a.doc('stats_lists/cA').update({ open_app: 2, copy_from: 1 }));
+  await no('stats_lists update +51', () => a.doc('stats_lists/cA').update({ open_app: 53 }));
+  await no('stats_lists update decrease', () => a.doc('stats_lists/cA').update({ open_app: 1 }));
   await ok('stats_lists read by list owner (A)', () => a.doc('stats_lists/cA').get());
   await ok('stats_lists read daily by list owner (A)', () => a.doc('stats_lists/cA__2026-08-19').get());
   await no('stats_lists read by other user (B)', () => b.doc('stats_lists/cA').get());
@@ -239,28 +292,28 @@ const no = (label, f) => expect(false, label, f);
   await ok('stats_lists delete app owner', () => owner.doc('stats_lists/cA__2026-08-19').delete());
 
   // ================= ٤-و) v3.3: stats_trips =================
-  await ok('stats_trips create guest (existing trip tA)', () => guest.doc('stats_trips/tA').set({ view_total: 1 }));
-  await no('stats_trips create unknown trip', () => guest.doc('stats_trips/nope').set({ view_total: 1 }));
-  await ok('stats_trips update view_total +1', () => guest.doc('stats_trips/tA').update({ view_total: 2 }));
+  await ok('stats_trips create by a signed-in user (existing trip tA)', () => a.doc('stats_trips/tA').set({ view_total: 1 }));
+  await no('stats_trips create unknown trip', () => a.doc('stats_trips/nope').set({ view_total: 1 }));
+  await ok('stats_trips update view_total +1', () => a.doc('stats_trips/tA').update({ view_total: 2 }));
   await ok('stats_trips read by trip owner (A)', () => a.doc('stats_trips/tA').get());
   await no('stats_trips read by other (B)', () => b.doc('stats_trips/tA').get());
   await ok('stats_trips read app owner', () => owner.doc('stats_trips/tA').get());
 
   // ================= ٤-ز) v3.3: stats_places =================
-  await ok('stats_places create guest (list cA + 16-hex hash)', () => guest.doc('stats_places/cA__0123456789abcdef').set({ open_total: 2 }));
-  await no('stats_places create short hash', () => guest.doc('stats_places/cA__abc').set({ open_total: 1 }));
-  await no('stats_places create unknown list', () => guest.doc('stats_places/zzz__0123456789abcdef').set({ open_total: 1 }));
-  await no('stats_places create unknown key', () => guest.doc('stats_places/cA__fedcba9876543210').set({ url: 'x' }));
-  await ok('stats_places update trip_add +1', () => guest.doc('stats_places/cA__0123456789abcdef').update({ trip_add: 1 }));
+  await ok('stats_places create by a signed-in user (list cA + 16-hex hash)', () => a.doc('stats_places/cA__0123456789abcdef').set({ open_total: 2 }));
+  await no('stats_places create short hash', () => a.doc('stats_places/cA__abc').set({ open_total: 1 }));
+  await no('stats_places create unknown list', () => a.doc('stats_places/zzz__0123456789abcdef').set({ open_total: 1 }));
+  await no('stats_places create unknown key', () => a.doc('stats_places/cA__fedcba9876543210').set({ url: 'x' }));
+  await ok('stats_places update trip_add +1', () => a.doc('stats_places/cA__0123456789abcdef').update({ trip_add: 1 }));
   await ok('stats_places read by list owner (A)', () => a.doc('stats_places/cA__0123456789abcdef').get());
   await no('stats_places read by other (B)', () => b.doc('stats_places/cA__0123456789abcdef').get());
   await no('stats_places read guest', () => guest.doc('stats_places/cA__0123456789abcdef').get());
 
   // ================= ٤-ز-٢) v3.3.1: stats_places — أماكن دليل المالك =================
-  await no('[v3.13 owner_ places gone] stats_places owner guide create (no such user list)', () => guest.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_total: 5 }));
-  await no('stats_places owner guide unknown city', () => guest.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_total: 1 }));
-  await no('stats_places owner guide uppercase city (bad id)', () => guest.doc('stats_places/owner_Paris__0123456789abcdef').set({ open_total: 1 }));
-  await no('[v3.13 owner_ places gone] stats_places owner guide update +1 (no such user list)', () => guest.doc('stats_places/owner_nowhere__0123456789abcdef').update({ open_total: 6 }));
+  await no('[v3.13 owner_ places gone] stats_places owner guide create (no such user list)', () => a.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_total: 5 }));
+  await no('stats_places owner guide unknown city', () => a.doc('stats_places/owner_nowhere__0123456789abcdef').set({ open_total: 1 }));
+  await no('stats_places owner guide uppercase city (bad id)', () => a.doc('stats_places/owner_Paris__0123456789abcdef').set({ open_total: 1 }));
+  await no('[v3.13 owner_ places gone] stats_places owner guide update +1 (no such user list)', () => a.doc('stats_places/owner_nowhere__0123456789abcdef').update({ open_total: 6 }));
   await ok('stats_places read by app owner (any id)', () => owner.doc('stats_places/owner_paris__0123456789abcdef').get());
   await no('stats_places owner guide read by user', () => a.doc('stats_places/owner_paris__0123456789abcdef').get());
   await no('stats_places owner guide read guest', () => guest.doc('stats_places/owner_paris__0123456789abcdef').get());
@@ -271,10 +324,10 @@ const no = (label, f) => expect(false, label, f);
   const CUR = 'abcdefghijklmnopqrstuvwxyz12';
   const cur = env.authenticatedContext(CUR).firestore();
   await seedDoc('communityProfiles/' + CUR, { hasAnyPublicContent: true }); await seedDoc('communityProfiles/userB00000000000000000', { hasAnyPublicContent: true }); /* v3.17 (٥): عدّاد المنتقي لملف قائم */
-  await ok('stats_curators create guest (uid-shaped id)', () => guest.doc('stats_curators/' + CUR).set({ page_view: 1, ref_social: 1 }));
-  await no('stats_curators create short id', () => guest.doc('stats_curators/userA').set({ page_view: 1 }));
-  await ok('stats_curators create daily', () => guest.doc('stats_curators/' + CUR + '__2026-08-19').set({ contact_click: 1 }));
-  await no('stats_curators create unknown key', () => guest.doc('stats_curators/' + CUR).set({ followers_list: 1 }));
+  await ok('stats_curators create by a signed-in user (uid-shaped id)', () => a.doc('stats_curators/' + CUR).set({ page_view: 1, ref_social: 1 }));
+  await no('stats_curators create short id', () => a.doc('stats_curators/userA').set({ page_view: 1 }));
+  await ok('stats_curators create daily', () => a.doc('stats_curators/' + CUR + '__2026-08-19').set({ contact_click: 1 }));
+  await no('stats_curators create unknown key', () => a.doc('stats_curators/' + CUR).set({ followers_list: 1 }));
   await ok('stats_curators read by curator', () => cur.doc('stats_curators/' + CUR).get());
   await no('stats_curators read by other user', () => a.doc('stats_curators/' + CUR).get());
   await ok('stats_curators read app owner', () => owner.doc('stats_curators/' + CUR).get());
@@ -975,21 +1028,21 @@ const no = (label, f) => expect(false, label, f);
   await no('M4.26 userLists hiddenCities by other deny', () => b.doc('userLists/' + A).set({ hiddenCities: [] }, { merge: true }));
 
   // ================= ٢٤) v3.11 — سجل هوية الأماكن placeIdentity (٢٤ سبتمبر ٢٠٢٦) =================
-  const PI = { lat: 48.86453, lng: 2.34943, source: 'overture', openId: 'ovt:155747', n: 'Dalmata', cityId: '2988507', by: A, at: 1 };
-  await ok('v3.11 identity create by signed-in allow', () => a.doc('placeIdentity/h_dalmata').set(PI));
+  const PI = { lat: 48.86453, lng: 2.34943, source: 'overture', openId: 'ovt:155747', n: 'Dalmata', cityId: '2988507', at: 1 }; /* v3.18 (٦): بلا by */
+  await okPin('v3.11 identity create by signed-in allow', () => pin18(a, A, 'h_dalmata', PI));
   await ok('v3.11 identity read by guest allow', () => guest.doc('placeIdentity/h_dalmata').get());
-  await ok('v3.11 identity update by another user allow (last confirmer wins)', () => b.doc('placeIdentity/h_dalmata').set(Object.assign({}, PI, { by: B, source: 'user_pin', at: 2 })));
-  await no('v3.11 identity create by guest deny', () => guest.doc('placeIdentity/h_g').set(PI));
-  await no('v3.11 identity by mismatched uid deny', () => a.doc('placeIdentity/h_x1').set(Object.assign({}, PI, { by: B })));
-  await no('v3.11 identity bad source deny', () => a.doc('placeIdentity/h_x2').set(Object.assign({}, PI, { source: 'google' })));
-  await no('v3.11 identity lat out of range deny', () => a.doc('placeIdentity/h_x3').set(Object.assign({}, PI, { lat: 95 })));
-  await no('v3.11 identity extra field deny', () => a.doc('placeIdentity/h_x4').set(Object.assign({}, PI, { extra: 1 })));
-  await no('v3.11 identity googleLat deny', () => a.doc('placeIdentity/h_x5').set(Object.assign({}, PI, { googleLat: 1 })));
-  await no('v3.11 identity missing lng deny', () => a.doc('placeIdentity/h_x6').set({ lat: 1, source: 'user_pin', by: A, at: 1 }));
-  await no('v3.11 identity name too long deny', () => a.doc('placeIdentity/h_x7').set(Object.assign({}, PI, { n: 'x'.repeat(121) })));
+  await okPin('v3.11 identity update by another user allow (last confirmer wins)', () => pin18(b, B, 'h_dalmata', Object.assign({}, PI, { source: 'user_pin', at: 2 })));
+  await no('v3.11 identity create by guest deny', () => pin18(guest, 'nobody', 'h_g', PI));
+  await no('v3.11 identity carrying by (any uid) deny — the field left the store in v3.18 (6)', () => a.doc('placeIdentity/h_x1').set(Object.assign({}, PI, { by: B })));
+  await no('v3.11 identity bad source deny', () => pin18(a, A, 'h_x2', Object.assign({}, PI, { source: 'google' })));
+  await no('v3.11 identity lat out of range deny', () => pin18(a, A, 'h_x3', Object.assign({}, PI, { lat: 95 })));
+  await no('v3.11 identity extra field deny', () => pin18(a, A, 'h_x4', Object.assign({}, PI, { extra: 1 })));
+  await no('v3.11 identity googleLat deny', () => pin18(a, A, 'h_x5', Object.assign({}, PI, { googleLat: 1 })));
+  await no('v3.11 identity missing lng deny', () => pin18(a, A, 'h_x6', { lat: 1, source: 'user_pin', at: 1 }));
+  await no('v3.11 identity name too long deny', () => pin18(a, A, 'h_x7', Object.assign({}, PI, { n: 'x'.repeat(121) })));
   await no('v3.11 identity delete by user deny', () => a.doc('placeIdentity/h_dalmata').delete());
   await ok('v3.11 identity delete by OWNER allow', () => owner.doc('placeIdentity/h_dalmata').delete());
-  await no('v3.11 identity by suspended user deny', () => s.doc('placeIdentity/h_x8').set(Object.assign({}, PI, { by: S })));
+  await no('v3.11 identity by suspended user deny', () => pin18(s, S, 'h_x8', PI));
 
   // ================= ٢٥) v3.12 — others تصنيف عام (٢٩ سبتمبر ٢٠٢٦) =================
   await ok('[v3.13 split shape] v3.12 others: public list parent with categories.others allow', () => a.doc('userCityLists/' + A + '_o12').set({ ownerId: A, cityId: 'o12', cityName: 'O', public: true, sharedWith: [], catsV: 3}));
@@ -1022,7 +1075,7 @@ const no = (label, f) => expect(false, label, f);
   const SV = 'stats_curators/' + CUR + '__2026-10-09';
   await ok('v3.14 stats_curators daily create {save:1} by a signed user (A)', () => a.doc(SV).set({ save: 1 }));
   await ok('v3.14 stats_curators daily update save +1 by another user (B)', () => b.doc(SV).update({ save: 2 }));
-  await ok('v3.14 stats_curators daily update save together with page_view', () => guest.doc(SV).update({ save: 3, page_view: 1 }));
+  await ok('v3.14 stats_curators daily update save together with page_view', () => a.doc(SV).update({ save: 3, page_view: 1 }));
   await no('v3.14 stats_curators update save +51 denied (cap)', () => a.doc(SV).update({ save: 54 }));
   await no('v3.14 stats_curators update save decrease denied', () => a.doc(SV).update({ save: 2 }));
   await no('v3.14 stats_curators unknown key still denied (saves)', () => a.doc(SV).set({ saves: 1 }));
@@ -1116,7 +1169,7 @@ const no = (label, f) => expect(false, label, f);
   const PS2_EXPECT = ('D D A D' /* 001–004 ★ */
     + ' A D D A A D D' /* 005–011 عدّادات المالك (علاجها في الكود) */
     + ' D A' /* 012–013 Undo الدمج */
-    + ' D D D A D D A' /* 014–020 الإلغاء */
+    + ' A D A A D D D A' /* 014–021 الإلغاء — v3.18 (ق١١-١٤-٠٢): السحب عن مصدر صار خاصًّا يُقبل بعدّاده (014 · 016) · السجل وحده للموقوف يُرفض (020) · وسحبه بعدّاده بلا المرآة يُقبل (021 جديد) */
     + ' A A' /* 021–022 */
     + ' A A A D A A A A A A A A A A D D A A D A A A' /* 023–044 الاستعلامات */
     + ' A A A' /* 045 البلاغ ٢٤٨ حرفًا صار مقبولًا (الحدّ ٣٠٠) · 046–047 */
@@ -1134,7 +1187,7 @@ const no = (label, f) => expect(false, label, f);
           const label = String(PSMAP[(k === 1 ? 0 : PS[1].length) + i] || '').split('\t').pop().replace(/^INFO  /, '').slice(0, 150);
           if (same){ pass++; __log('PASS  v3.17 PS' + k + ' ' + ('00' + (i + 1)).slice(-3) + ' [' + want + '] ' + label); }
           else { fail++; __log('FAIL  v3.17 PS' + k + ' ' + ('00' + (i + 1)).slice(-3) + '  →  expected ' + want + ' | got ' + got + ' | ' + label); } } }); };
-    const __end = function(note){ console.log = __log; [1, 2].forEach(function(k){ const L = PS[k]; console.log('\nPS' + k + ' n=' + L.length + ' (expected ' + (k === 1 ? 105 : 67) + ')' + (note || '')); for (let i = 0; i < L.length; i += 20) console.log('PS' + k + ' ' + ('00' + (i + 1)).slice(-3) + ': ' + L.slice(i, i + 20).join(' ')); }); if (process.env.PROBE_MAP) PSMAP.forEach(function(t){ console.log('PSMAP\t' + t); }); };
+    const __end = function(note){ console.log = __log; [1, 2].forEach(function(k){ const L = PS[k]; console.log('\nPS' + k + ' n=' + L.length + ' (expected ' + (k === 1 ? 105 : 68) + ')' + (note || '')); for (let i = 0; i < L.length; i += 20) console.log('PS' + k + ' ' + ('00' + (i + 1)).slice(-3) + ': ' + L.slice(i, i + 20).join(' ')); }); if (process.env.PROBE_MAP) PSMAP.forEach(function(t){ console.log('PSMAP\t' + t); }); };
     const __wd = setTimeout(function(){ __end(' — WATCHDOG 300 s, stopped after: ' + String(PSMAP[PSMAP.length - 1] || '(seed)').slice(0, 90)); __judge(); console.log('\n' + (fail === 0 ? '✅ RULES PASSED' : '❌ RULES FAILED') + ' — ' + pass + ' passed, ' + fail + ' failed'); process.exit(fail === 0 ? 0 : 1); }, 300000);
     console.log = function(line){ __log.apply(console, arguments); try{ const t = String(line); if (!/^INFO  R[12]/.test(t)) return; let r, m;
       if (/ABORTED/.test(t)) r = '!';
@@ -1234,9 +1287,9 @@ const no = (label, f) => expect(false, label, f);
     // --- P7 · finding 6: anonymous counters — document ids the app never produces ---
     await r1('P7a events doc for an impossible date and a made-up city number', () => guest.doc('analytics/events_9999-99-99__999__zz').set({ place_open: 50, trip_open: 50 }));
     await r1('P7b sessions doc with a junk suffix after the city', () => guest.doc('analytics/sessions_2026-11-11__all__junk1').set({ count: 50, seconds: 7200 }));
-    await r1('P7c stats_lists doc with a non-date suffix on an existing list', () => guest.doc('stats_lists/userB_r1__junk1').set({ open_app: 50, copy_from: 50 }));
-    await r1('P7d stats_places doc with an extra segment before the hash', () => guest.doc('stats_places/userB_r1__x__0123456789abcdef').set({ open_total: 50 }));
-    await r1('P7e stats_curators doc for an id that is no account', () => guest.doc('stats_curators/' + 'Z'.repeat(28)).set({ page_view: 50, follow: 50, save: 50 }));
+    await r1('P7c stats_lists doc with a non-date suffix on an existing list', () => a.doc('stats_lists/userB_r1__junk1').set({ open_app: 50, copy_from: 50 }));
+    await r1('P7d stats_places doc with an extra segment before the hash', () => a.doc('stats_places/userB_r1__x__0123456789abcdef').set({ open_total: 50 }));
+    await r1('P7e stats_curators doc for an id that is no account', () => a.doc('stats_curators/' + 'Z'.repeat(28)).set({ page_view: 50, follow: 50, save: 50 }));
 
     // --- P8/P9 · finding 16: record ids and untyped fields ---
     await r1('P8a a second follow record for the same pair under a suffixed id', () => a.doc(`follows/${A}_curR1_x`).set({ followerUid: A, curatorUid: 'curR1' }));
@@ -1265,7 +1318,7 @@ const no = (label, f) => expect(false, label, f);
     await r1('P13b …and enumerates every such doc', () => a.collection('userLists').where('public', '==', true).get());
 
     // --- P15/P16 · findings 14 and 12: legitimate writes the rules refuse ---
-    await r1('P15a [DENIED = finding] cumulative stats_lists doc that still holds a pre-M4.25 key: +1 on a current key', () => guest.doc('stats_lists/userB_r2').update({ open_app: 2 }));
+    await r1('P15a [DENIED = finding] cumulative stats_lists doc that still holds a pre-M4.25 key: +1 on a current key', () => a.doc('stats_lists/userB_r2').update({ open_app: 2 }));
     await r1('P15b [DENIED = finding] events doc that still holds a key removed in v3.16: +1 on a current key', () => guest.doc('analytics/events_2026-11-11__all__r1').update({ place_open: 2 }));
     await r1('P16 [DENIED = finding] unfollow as the app writes it while followerCount is already 0 (record + mirror + -1, one batch; the app has no fallback)', () => { const w = a.batch(); w.delete(a.doc(`follows/${A}_curR2`)); w.set(a.doc(`userLists/${A}`), { following: [] }, { merge: true }); w.set(a.doc('communityProfiles/curR2'), { followerCount: -1 }, { merge: true }); return w.commit(); });
 
@@ -1286,14 +1339,14 @@ const no = (label, f) => expect(false, label, f);
       if (!FP) for (const col of ['listBookmarks', 'tripSaves', 'userPrivatePlaces']) console.log('INFO  R1 P18 ' + col + ': not measured (FieldPath not available in this runner)');
       else for (const pair of [['listBookmarks', '__'], ['tripSaves', '__'], ['userPrivatePlaces', '_']]) await r1('P18 [DENIED = finding] ' + pair[0] + ': owner\'s id-range query over own prefix (without it the records are reachable only through the mirror in userLists)', () => a.collection(pair[0]).orderBy(FP.documentId()).startAt(A + pair[1]).endAt(A + pair[1] + '').get()); }
     await r1('P19a guest lists every nickname document (uid of every account)', () => guest.collection('nicknames').get());
-    await r1('P19b guest lists placeIdentity (by = uid of the last confirmer, n = place name)', () => guest.collection('placeIdentity').get());
+    await r1('P19b guest lists placeIdentity (n = place name; the confirmer uid left this store in v3.18 (6))', () => guest.collection('placeIdentity').get());
     await r1('P19c any signed-in user reads every community profile in one query (contact fields included)', () => a.collection('communityProfiles').get());
     await r1('P19d control (expected DENIED): non-owner collection read of analytics', () => a.collection('analytics').get());
 
     // --- P20 · note 24: document-access-call limits in the batches the app sends ---
     await r1('P20a [DENIED = hold flow breaks above ~19 docs] app owner batch of 25 trip updates (isOwner() reads settings/app for each write)', () => { const w = owner.batch(); for (let i = 0; i < 25; i++) w.update(owner.doc('trips/tR5_' + i), { suspended: true, public: false, sharedWith: [] }); return w.commit(); });
     await r1('P20b [DENIED = list save breaks above ~19 categories] user batch: parent + 25 category docs (isSuspended() for each write)', () => { const w = a.batch(); w.set(a.doc(`userCityLists/${A}_r5`), { ownerId: A, cityId: 'r5', public: false, sharedWith: [], splitV: 1, index: [] }, { merge: true }); for (let i = 0; i < 25; i++) w.set(a.doc(`userCityListCats/${A}_r5_c${i}`), { ownerId: A, cityId: 'r5', catId: 'c' + i, public: false, sharedWith: [], active: true, places: [], updatedAt: 1 }); return w.commit(); });
-    await r1('P20c [DENIED = tracker batch falls back to single writes] guest batch on the stats of 21 DIFFERENT lists (one exists() each)', () => { const w = guest.batch(); for (let i = 0; i < 21; i++) w.set(guest.doc('stats_lists/userB_q' + i), { open_app: 1 }, { merge: true }); return w.commit(); });
+    await r1('P20c [DENIED = tracker batch falls back to single writes] signed-in batch on the stats of 21 DIFFERENT lists (one exists() each)', () => { const w = a.batch(); for (let i = 0; i < 21; i++) w.set(a.doc('stats_lists/userB_q' + i), { open_app: 1 }, { merge: true }); return w.commit(); });
 
     // --- P21 · finding 8: placeFavoriteCounts — id unrelated to its url, chosen city, count-0 leftover ---
     await r1('P21 counter created under an id unrelated to its url, for a chosen city, then released — ALLOWED = a count-0 document with that city stays for good', async () => { await pfcUp(a, A, 'r1flood', { name: 'Looks like a real place', url: 'https://example.org/not-the-hashed-url', count: 1, city: '2988507' }, true); await pfcDown(a, A, 'r1flood', { count: 0 }); });
@@ -1370,13 +1423,14 @@ const no = (label, f) => expect(false, label, f);
     await ok('R2-3b control: same re-create without counters allow', r2Save(a, A, 'r2undo', { public: true, sharedWith: [], bookmarkCount: 0, index: [{ id: 'p1', name: 'P', catId: 'coffee' }] }, { coffee: [P] }));
 
     // --- F5 · un-bookmark / un-save when the source is private or gone, or the user is suspended ---
-    await no('R2-5a un-bookmark batch on a list that became private deny (the app swallows this as "floor")', r2Unmark(a, A, 'listBookmarks', 'userCityLists', `${B}_r2gone`, 'bookmarkCount', 'listBookmarkIds'));
+    await ok('R2-5a un-bookmark batch on a list that became private allow (v3.18 — was deny: the record left alone and the counter stayed)', r2Unmark(a, A, 'listBookmarks', 'userCityLists', `${B}_r2gone`, 'bookmarkCount', 'listBookmarkIds'));
     await no('R2-5b un-bookmark batch on a DELETED list deny (set-merge = create of another user\'s list)', r2Unmark(a, A, 'listBookmarks', 'userCityLists', `${B}_r2none`, 'bookmarkCount', 'listBookmarkIds'));
-    await no('R2-5c un-save batch on a trip that became private deny', r2Unmark(a, A, 'tripSaves', 'trips', 'r2tgone', 'saveCount', 'tripSaveIds'));
-    await ok('R2-5d record + mirror alone allow (removeRecord — the fallback the app never reaches)', r2RecordOnly(a, A, 'listBookmarks', `${B}_r2gone`, 'listBookmarkIds'));
+    await ok('R2-5c un-save batch on a trip that became private allow (v3.18 — was deny)', r2Unmark(a, A, 'tripSaves', 'trips', 'r2tgone', 'saveCount', 'tripSaveIds'));
+    await ok('R2-5d record + mirror alone on a record already withdrawn (counter now 0) allow', r2RecordOnly(a, A, 'listBookmarks', `${B}_r2gone`, 'listBookmarkIds'));
     await no('R2-5e un-bookmark batch by a SUSPENDED user on a public list deny', r2Unmark(s, S, 'listBookmarks', 'userCityLists', `${B}_r2pub`, 'bookmarkCount', 'listBookmarkIds'));
     await no('R2-5f removeRecord by a SUSPENDED user deny (the userLists mirror write)', r2RecordOnly(s, S, 'listBookmarks', `${B}_r2pub`, 'listBookmarkIds'));
-    await ok('R2-5g suspended user deletes the record alone allow (the only shape the rules accept)', () => s.doc(`listBookmarks/${S}__${B}_r2pub`).delete());
+    await no('R2-5g suspended user deletes the record alone while counted deny (v3.18 — was the only shape the rules accepted)', () => s.doc(`listBookmarks/${S}__${B}_r2pub`).delete());
+    await ok('R2-5h suspended user withdraws: record delete + bookmarkCount -1, no mirror allow (v3.18)', () => { const bt = s.batch(); bt.delete(s.doc(`listBookmarks/${S}__${B}_r2pub`)); bt.set(s.doc(`userCityLists/${B}_r2pub`), { bookmarkCount: r2inc(-1, 0) }, { merge: true }); return bt.commit(); });
 
     // --- F4 · account deletion: what the cascade could delete but does not ---
     await ok('R2-4a curatorCityNotes delete by the uid in the id (no verified needed) allow — never called by doAccountDelete', () => a.doc(`curatorCityNotes/${A}__r2city`).delete());
@@ -1439,7 +1493,7 @@ const no = (label, f) => expect(false, label, f);
     await ok('R2-6b public list parent with nickname:5 accepted (cmGroupByOwner → curInitials → .trim throws)', () => a.doc(`userCityLists/${A}_r2evil2`).set({ ownerId: A, cityId: 'r2evil2', public: true, sharedWith: [], splitV: 1, nickname: 5, index: [{ id: 'p1', name: 'P', catId: 'coffee' }] }));
     await ok('R2-6c public trip with ownerName:5 and plan.days:[{}] accepted (tripMetaLine → tripDayEntries throws)', () => a.doc('trips/r2evil').set({ ownerId: A, public: true, sharedWith: [], ownerName: 5, plan: { days: [{}] } }));
     await ok('R2-16a category doc whose place has picks:5 · flags:7 · geo.source:"evil" accepted', () => a.doc(`userCityListCats/${A}_r2evil2_coffee`).set({ ownerId: A, cityId: 'r2evil2', catId: 'coffee', public: true, sharedWith: [], active: true, places: [{ id: 'p1', name: 'P', url: 'https://maps.app.goo.gl/p', picks: 5, flags: 7, geo: { lat: 1, lng: 1, source: 'evil' } }], updatedAt: 1 }));
-    await ok('R2-16b placeIdentity record written by one user is overwritten by another, far away, accepted', async () => { await a.doc('placeIdentity/kpr2x').set({ lat: 48.85, lng: 2.35, source: 'user_pin', n: 'Cafe', cityId: '2988507', by: A, at: 1 }); await b.doc('placeIdentity/kpr2x').set({ lat: -33.9, lng: 151.2, source: 'overture', openId: 'ovt:x', n: 'Cafe', cityId: '2988507', by: B, at: 2 }); });
+    await ok('R2-16b placeIdentity record written by one user is overwritten by another, far away, accepted', async () => { await pin18(a, A, 'kpr2x', { lat: 48.85, lng: 2.35, source: 'user_pin', n: 'Cafe', cityId: '2988507', at: 1 }); await pin18(b, B, 'kpr2x', { lat: -33.9, lng: 151.2, source: 'overture', openId: 'ovt:x', n: 'Cafe', cityId: '2988507', at: 2 }); });
 
     // --- F19 · document-access calls in one batch (same documents read by every write) ---
     await info('R2-19a full save: parent + 25 category docs in one batch', r2Save(a, A, 'r2big', { public: false, sharedWith: [], bookmarkCount: 0 }, Object.fromEntries(Array.from({ length: 25 }, (_, i) => ['cat' + i, [P]]))));
@@ -1465,7 +1519,11 @@ const no = (label, f) => expect(false, label, f);
     await env.withSecurityRulesDisabled(async (ctx) => { const db = ctx.firestore();
       await db.doc(`userCityLists/${LP}`).set({ ownerId: Y, cityId: 'p17', public: true, sharedWith: [], bookmarkCount: 0, copyCount: 0, viewCount: 0, splitV: 1, index: [] });
       await db.doc(`userCityLists/${LQ}`).set({ ownerId: Y, cityId: 'q17', public: true, sharedWith: [], bookmarkCount: 2, copyCount: 2, viewCount: 0, splitV: 1, index: [] });
-      await db.doc(`userCityLists/${LG}`).set({ ownerId: Y, cityId: 'g17', public: false, sharedWith: [], bookmarkCount: 1, splitV: 1, index: [] }); // كانت عامة حين وُضعت المفكرة
+      await db.doc(`userCityLists/${LG}`).set({ ownerId: Y, cityId: 'g17', public: false, sharedWith: [], bookmarkCount: 1, copyCount: 1, splitV: 1, index: [] }); // كانت عامة حين وُضعت المفكرة والنسخة
+      await db.doc(`copies/${X}__${LG}`).set({ uid: X, kind: 'list', docKey: LG, at: 1 }); /* v3.18 */
+      await db.doc(`copies/${W}__${LG}`).set({ uid: W, kind: 'trip', docKey: LG, at: 1 }); /* v3.18 (المراجعة المستقلة ١٨): سجل نسخ من نوع آخر عند معرّف القائمة — لا يسحب عدّاد نسخ القائمة */
+      await db.doc('trips/t18z').set({ ownerId: Y, public: true, sharedWith: [], saveCount: 1, copyCount: 1, viewCount: 0, title: 'Z' }); await db.doc(`tripSaves/${Z}__t18z`).set({ at: 1 }); await db.doc(`copies/${Z}__t18z`).set({ uid: Z, kind: 'trip', docKey: 't18z', at: 1 }); /* v3.18: سجلّا الموقوف على رحلة عامة */
+      await db.doc('communityProfiles/curatorZ18').set({ hasAnyPublicContent: true, followerCount: 1 }); await db.doc(`follows/${Z}_curatorZ18`).set({ followerUid: Z, curatorUid: 'curatorZ18', at: 1 }); /* v3.18: متابعة الموقوف */
       await db.doc(`userCityLists/${LZ}`).set({ ownerId: Y, cityId: 'z17', public: true, sharedWith: [], bookmarkCount: 0, splitV: 1, index: [] });
       await db.doc(`listBookmarks/${X}__${LQ}`).set({ at: 1 }); await db.doc(`listBookmarks/${X}__${LG}`).set({ at: 1 }); await db.doc(`listBookmarks/${X}__${Y}_gone17`).set({ at: 1 }); await db.doc(`listBookmarks/${X}__${LZ}`).set({ at: 1 });
       await db.doc(`copies/${X}__${LQ}`).set({ uid: X, kind: 'list', docKey: LQ, at: 1 });
@@ -1473,7 +1531,10 @@ const no = (label, f) => expect(false, label, f);
       await db.doc(`tripSaves/${X}__t17`).set({ at: 1 }); await db.doc(`copies/${X}__t17`).set({ uid: X, kind: 'trip', docKey: 't17', at: 1 });
       await db.doc(`communityProfiles/${Y}`).set({ hasAnyPublicContent: true, followerCount: 2, viewCount: 0 });
       await db.doc(`communityProfiles/${X}`).set({ hasAnyPublicContent: false });
-      await db.doc(`communityProfiles/${NN}`).set({ hasAnyPublicContent: false }); // لا محتوى عامًّا ولا توثيق — لا عدّاد له يُحرَّك
+      await db.doc(`communityProfiles/${NN}`).set({ hasAnyPublicContent: false, followerCount: 1 }); // لا محتوى عامًّا ولا توثيق — لا عدّاد له يُزاد (v3.18: وله متابع واحد من أيام كان معدودًا)
+      await db.doc(`follows/${X}_${NN}`).set({ followerUid: X, curatorUid: NN, at: 1 }); /* v3.18 */
+      await db.doc('communityProfiles/measureCurator0000018').set({ hasAnyPublicContent: true, followerCount: 0, viewCount: 0 }); /* v3.18 (قياس): معرّف بطول ما تشترطه قاعدة stats_curators */
+      await db.doc('trips/t18g').set({ ownerId: Y, public: false, sharedWith: [], saveCount: 1, copyCount: 1, viewCount: 0, title: 'G' }); await db.doc(`tripSaves/${X}__t18g`).set({ at: 1 }); await db.doc(`copies/${X}__t18g`).set({ uid: X, kind: 'trip', docKey: 't18g', at: 1 }); /* v3.18: رحلة صارت خاصة */
       await db.doc(`follows/${X}_${Y}`).set({ followerUid: X, curatorUid: Y, at: 1 });
       await db.doc('nicknames/x17name').set({ uid: X, nickname: 'X17name' }); await db.doc('nicknames/y17name').set({ uid: Y, nickname: 'Y17name' });
       await db.doc(`curatorRequests/${X}`).set({ uid: X, text: 'x', at: NOW - 8 * DAYMS, status: 'declined' });
@@ -1495,10 +1556,211 @@ const no = (label, f) => expect(false, label, f);
     await ok('v3.17 un-bookmark as the app writes it (record delete + increment(-1) + mirror) allow', bm17(x, X, LP, false, 0));
     await no('v3.17 bookmark record created ALONE deny', () => x.doc(`listBookmarks/${X}__${LP}`).set({ at: 1 }));
     await no('v3.17 bookmark record deleted ALONE while counted (public, count 2) deny', () => x.doc(`listBookmarks/${X}__${LQ}`).delete());
-    await ok('v3.17 bookmark record deleted ALONE: the list went private allow', () => x.doc(`listBookmarks/${X}__${LG}`).delete());
+    /* ===== v3.18 (ق١١-١٤-٠٢): السجل يخرج بعدّاده دائمًا — «المصدر صار خاصًّا» و«صاحب السجل موقوف» لم تعودا حالتَي إطلاق ===== */
+    await no('v3.18 bookmark record deleted ALONE: the list went private deny (was allow in v3.17 — the counter stayed one too high)', () => x.doc(`listBookmarks/${X}__${LG}`).delete());
+    await no('v3.18 bookmarkCount -1 on a private list by a user with NO record deny', () => w.doc(`userCityLists/${LG}`).update({ bookmarkCount: 0 }));
+    await no('v3.18 bookmarkCount -1 on a private list WITHOUT deleting my record deny', () => x.doc(`userCityLists/${LG}`).update({ bookmarkCount: 0 }));
+    await no('v3.18 list owner lowers OWN bookmarkCount deny', () => y.doc(`userCityLists/${LG}`).update({ bookmarkCount: 0 }));
+    await no('v3.18 (1-b) EMPTY write by a stranger on a PRIVATE list deny (the withdrawal branch needs a real -1; its success used to reveal that the private list exists)', () => w.doc(`userCityLists/${LG}`).set({}, { merge: true }));
+    await no('v3.18 (1-b) UNCHANGED saveCount written by a stranger on a PRIVATE trip deny', () => w.doc('trips/t18g').set({ saveCount: 1 }, { merge: true }));
+    await no('v3.18 (1-b) EMPTY write by a SUSPENDED user on a PUBLIC list deny', () => z.doc(`userCityLists/${LP}`).set({}, { merge: true }));
+    await no('v3.18 (1-b) UNCHANGED bookmarkCount written by a stranger on a PRIVATE list deny', () => w.doc(`userCityLists/${LG}`).set({ bookmarkCount: 1 }, { merge: true }));
+    await no('v3.18 (1-b) EMPTY write by a SUSPENDED user on a PUBLIC trip deny', () => z.doc('trips/t18z').set({}, { merge: true }));
+    await ok('v3.18 (1-b) control: EMPTY write by a non-suspended stranger on a PUBLIC list allow (the one no-op that remains — he can read that list anyway)', () => w.doc(`userCityLists/${LP}`).set({}, { merge: true }));
+    await no('v3.18 bookmark (+1 with a new record) on a PRIVATE list still deny', () => { const bt = w.batch(); bt.set(w.doc(`listBookmarks/${W}__${LG}`), { at: 1 }); bt.set(w.doc(`userCityLists/${LG}`), { bookmarkCount: inc17(1, 2) }, { merge: true }); return bt.commit(); });
+    await no('v3.18 withdrawal branch does not carry another field (title) deny', () => { const bt = x.batch(); bt.delete(x.doc(`listBookmarks/${X}__${LG}`)); bt.set(x.doc(`userCityLists/${LG}`), { bookmarkCount: inc17(-1, 0), cityName: 'x' }, { merge: true }); return bt.commit(); });
+    await no('v3.18 BOTH counters -1 with only ONE record deleted (the copy record stays) deny', () => { const bt = x.batch(); bt.delete(x.doc(`listBookmarks/${X}__${LG}`)); bt.set(x.doc(`userCityLists/${LG}`), { bookmarkCount: inc17(-1, 0), copyCount: inc17(-1, 0) }, { merge: true }); return bt.commit(); });
+    await no('v3.18 copyCount -1 on a list with a copy record of ANOTHER kind (trip) at that id deny', () => { const bt = w.batch(); bt.delete(w.doc(`copies/${W}__${LG}`)); bt.set(w.doc(`userCityLists/${LG}`), { copyCount: inc17(-1, 0) }, { merge: true }); return bt.commit(); });
+    await ok('v3.18 un-bookmark on a list that went private (record delete + increment(-1) + mirror) allow', bm17(x, X, LG, false, 0));
+    await no('v3.18 list-copy record deleted ALONE on a private list deny', () => x.doc(`copies/${X}__${LG}`).delete());
+    await ok('v3.18 list-copy withdrawn on a private list (record delete + copyCount -1) allow', () => { const bt = x.batch(); bt.delete(x.doc(`copies/${X}__${LG}`)); bt.set(x.doc(`userCityLists/${LG}`), { copyCount: inc17(-1, 0) }, { merge: true }); return bt.commit(); });
+    await no('v3.18 trip-save record deleted ALONE on a private trip deny', () => x.doc(`tripSaves/${X}__t18g`).delete());
+    await ok('v3.18 trip un-save on a private trip (record delete + saveCount -1) allow', () => { const bt = x.batch(); bt.delete(x.doc(`tripSaves/${X}__t18g`)); bt.set(x.doc('trips/t18g'), { saveCount: inc17(-1, 0) }, { merge: true }); return bt.commit(); });
+    await ok('v3.18 trip-copy withdrawn on a private trip (record delete + copyCount -1) allow', () => { const bt = x.batch(); bt.delete(x.doc(`copies/${X}__t18g`)); bt.set(x.doc('trips/t18g'), { copyCount: inc17(-1, 0) }, { merge: true }); return bt.commit(); });
+    /* v3.18 — قياسات تقرير المحور الثاني (ق١١-١٤-٠٢ البند ٧): ما قرأتُه من النص يُثبَّت على المحرّك. (مشاهدة مكرَّرة +١ ونشاط اليوم مقيسان من قبل: PS1 057 و060) */
+    await no('v3.18 (2) stats_curators moved with NO sign-in deny (ق١١-١٤-٠٥ — was allow)', () => guest.doc('stats_curators/measureCurator0000018').set({ page_view: 50 }));
+    await ok('v3.18 (2) stats_curators moved by a signed-in visitor allow (still an open counter for accounts)', () => w.doc('stats_curators/measureCurator0000018').set({ page_view: 50 }));
+    await no('v3.18 (2) stats_lists create with NO sign-in deny', () => guest.doc(`stats_lists/${LP}`).set({ open_app: 1 }));
+    await no('v3.18 (2) stats_trips create with NO sign-in deny', () => guest.doc('stats_trips/t18z').set({ view_total: 1 }));
+    await no('v3.18 (2) stats_places create with NO sign-in deny', () => guest.doc(`stats_places/${LP}__0123456789abcdef`).set({ open_total: 1 }));
+    await ok('v3.18 (2) control: stats_trips create by a signed-in visitor allow', () => w.doc('stats_trips/t18z').set({ view_total: 1 }));
+    await ok('v3.18 measure: a list owner moves the stats of his OWN list allow (no self check on open counters)', () => y.doc(`stats_lists/${LQ}`).set({ open_app: 5 }));
+    await ok('v3.18 measure: userLists accepts new per-city count maps from its owner (ع-٦ needs no rule change) allow', () => x.doc(`userLists/${X}`).set({ cityPinCounts: { p17: 1 }, cityFromCounts: { p17: 0 } }, { merge: true }));
+    await ok('v3.18 SUSPENDED user un-saves a trip (record delete + saveCount -1, no mirror) allow', () => { const bt = z.batch(); bt.delete(z.doc(`tripSaves/${Z}__t18z`)); bt.set(z.doc('trips/t18z'), { saveCount: inc17(-1, 0) }, { merge: true }); return bt.commit(); });
+    await ok('v3.18 SUSPENDED user withdraws a trip copy (record delete + copyCount -1) allow', () => { const bt = z.batch(); bt.delete(z.doc(`copies/${Z}__t18z`)); bt.set(z.doc('trips/t18z'), { copyCount: inc17(-1, 0) }, { merge: true }); return bt.commit(); });
+    await no('v3.18 a profile owner lowers his OWN followerCount (1 → 0) deny', () => env.authenticatedContext('curatorZ18').firestore().doc('communityProfiles/curatorZ18').update({ followerCount: 0 }));
+    await no('v3.18 follow record deleted ALONE by a SUSPENDED user while counted deny', () => z.doc(`follows/${Z}_curatorZ18`).delete());
+    await ok('v3.18 SUSPENDED user unfollows (record delete + followerCount -1, no mirror) allow', () => { const bt = z.batch(); bt.delete(z.doc(`follows/${Z}_curatorZ18`)); bt.set(z.doc('communityProfiles/curatorZ18'), { followerCount: inc17(-1, 0) }, { merge: true }); return bt.commit(); });
+    /* ===== v3.18 (٣) (ق١١-١٤-٠٩ · ق١١-١٤-١١): المشاهدون أسبوعيًّا — سجل لكل حساب لكل مصدر لكل أسبوع؛ n لا يتحرّك إلا بسجله، و v مشاهدات مفتوحة للموقّعين ===== */
+    { const wkOf = (t) => { const d = new Date(t); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - d.getUTCDay() * 86400000).toISOString().slice(0, 10); }; const W18 = wkOf(Date.now()); /* كما تحسبه القاعدة (ق١١-١٤-١٤): أسبوع التقويم من الأحد، ومعرّفه تاريخ أحده */ const MON18 = new Date(Date.parse(W18 + 'T00:00:00Z') + 86400000).toISOString().slice(0, 10); /* اثنين هذا الأسبوع */
+      const LS18 = `${Y}_s18`; await seedDoc(`userCityLists/${LS18}`, { ownerId: Y, cityId: 's18', public: false, sharedWith: [W], bookmarkCount: 0, copyCount: 0, viewCount: 0, splitV: 1, index: [] }); /* قائمة خاصة مشارَكة مع W */
+      const vRec = (u, k, id, m) => `viewers/${u}__${k}__${id}__${m || W18}`, vCnt = (k, id, m) => `viewerCounts/${k}__${id}__${m || W18}`;
+      const view = (ctx, u, k, id, n, v, extra) => () => { const bt = ctx.batch(); bt.set(ctx.doc(vRec(u, k, id)), Object.assign({ uid: u, at: ts17() }, extra || {})); bt.set(ctx.doc(vCnt(k, id)), { n: inc17(1, n), v: inc17(1, v) }, { merge: true }); return bt.commit(); };
+      await ok('v3.18 (3) first view of a public list this week: my record + the week document (n = 1, v = 1) allow', view(w, W, 'l', LP, 1, 1));
+      await no('v3.18 (3) the same account is counted again this week deny (the record exists — once a week)', view(w, W, 'l', LP, 2, 2));
+      await ok('v3.18 (3) the same account\'s next session: v + 1 alone (n stays) allow', () => w.doc(vCnt('l', LP)).update({ v: inc17(1, 2) }));
+      await no('v3.18 (3) a viewer record ALONE (n does not move) deny', () => x.doc(vRec(X, 'l', LP)).set({ uid: X, at: ts17() }));
+      await no('v3.18 (3) n + 1 ALONE (no record) deny', () => x.doc(vCnt('l', LP)).set({ n: inc17(1, 2) }, { merge: true }));
+      await no('v3.18 (3) v + 2 deny', () => x.doc(vCnt('l', LP)).update({ v: inc17(2, 4) }));
+      await no('v3.18 (3) lowering v deny', () => x.doc(vCnt('l', LP)).update({ v: inc17(-1, 1) }));
+      await no('v3.18 (3) v + 1 by the OWNER on his own list deny (self views are not counted)', () => y.doc(vCnt('l', LP)).update({ v: inc17(1, 3) }));
+      await no('v3.18 (3) v + 1 by a SUSPENDED user deny', () => z.doc(vCnt('l', LP)).update({ v: inc17(1, 3) }));
+      await no('v3.18 (3) v + 1 with NO sign-in deny', () => guest.doc(vCnt('l', LP)).update({ v: inc17(1, 3) }));
+      await seedDoc(vCnt('l', LG), { n: 1, v: 1 }); await seedDoc(vCnt('l', LP, '2020-01-05'), { n: 1, v: 1 });
+      await no('v3.18 (3) v + 1 on the week document of a PRIVATE list deny', () => x.doc(vCnt('l', LG)).update({ v: inc17(1, 2) }));
+      await no('v3.18 (3) v + 1 on a week far away deny', () => x.doc(vCnt('l', LP, '2020-01-05')).update({ v: inc17(1, 2) }));
+      await no('v3.18 (3) a write WITHOUT merge that adds a view and drops n deny (the missing field reads as 0)', () => x.doc(vCnt('l', LP)).set({ v: inc17(1, 3) }));
+      await seedDoc(vCnt('l', LP) + '__x', { n: 1, v: 1 });
+      await no('v3.18 (3) v + 1 on a week document whose id has FOUR segments deny', () => x.doc(vCnt('l', LP) + '__x').update({ v: inc17(1, 2) }));
+      await no('v3.18 (3) v + 1 together with another field deny', () => x.doc(vCnt('l', LP)).update({ v: inc17(1, 3), note: 'x' }));
+      await no('v3.18 (3) viewing a PRIVATE list deny', view(w, W, 'l', LG, 2, 2));
+      await no('v3.18 (3) the owner views his OWN list deny', view(y, Y, 'l', LP, 2, 3));
+      await no('v3.18 (3) a SUSPENDED user is not counted deny', view(z, Z, 'l', LP, 2, 3));
+      await no('v3.18 (3) a record for a week far away deny', () => { const bt = x.batch(); bt.set(x.doc(vRec(X, 'l', LQ, '2020-01-05')), { uid: X, at: ts17() }); bt.set(x.doc(vCnt('l', LQ, '2020-01-05')), { n: inc17(1, 1), v: inc17(1, 1) }, { merge: true }); return bt.commit(); });
+      await no('v3.18 (3) a record dated a day that is NOT a Sunday (Monday of this week) deny', () => { const bt = x.batch(); bt.set(x.doc(vRec(X, 'l', LQ, MON18)), { uid: X, at: ts17() }); bt.set(x.doc(vCnt('l', LQ, MON18)), { n: inc17(1, 1), v: inc17(1, 1) }, { merge: true }); return bt.commit(); });
+      await no('v3.18 (3) a record carrying another field deny', view(x, X, 'l', LP, 2, 3, { note: 'x' }));
+      await ok('v3.18 (3) a second account views the list: n 1 -> 2 and v 2 -> 3 allow', view(x, X, 'l', LP, 2, 3));
+      await ok('v3.18 (3) a third account counted with n alone (v unchanged) allow', () => { const bt = c.batch(); bt.set(c.doc(vRec(C, 'l', LP)), { uid: C, at: ts17() }); bt.set(c.doc(vCnt('l', LP)), { n: inc17(1, 3) }, { merge: true }); return bt.commit(); });
+      await no('v3.18 (3) a new account counted while v jumps to 9 deny', () => { const bb = env.authenticatedContext(B).firestore(); const bt = bb.batch(); bt.set(bb.doc(vRec(B, 'l', LP)), { uid: B, at: ts17() }); bt.set(bb.doc(vCnt('l', LP)), { n: inc17(1, 4), v: 9 }, { merge: true }); return bt.commit(); });
+      await ok('v3.18 (3) the list owner reads the week document allow', () => y.doc(vCnt('l', LP)).get());
+      await no('v3.18 (3) a visitor reads the week document deny (numbers are for the content owner)', () => w.doc(vCnt('l', LP)).get());
+      await ok('v3.18 (3) I read my own viewer record allow', () => w.doc(vRec(W, 'l', LP)).get());
+      await no('v3.18 (3) the list owner reads WHO viewed deny', () => y.doc(vRec(W, 'l', LP)).get());
+      await ok('v3.18 (3) I list my own viewer records (account deletion) allow', () => w.collection('viewers').where('uid', '==', W).get());
+      await no('v3.18 (3) listing another account\'s viewer records deny', () => x.collection('viewers').where('uid', '==', W).get());
+      await no('v3.18 (3) my record deleted ALONE while n is above zero deny', () => w.doc(vRec(W, 'l', LP)).delete());
+      await no('v3.18 (3) withdrawal that also lowers v deny (views that happened stay)', () => { const bt = w.batch(); bt.delete(w.doc(vRec(W, 'l', LP))); bt.update(w.doc(vCnt('l', LP)), { n: inc17(-1, 2), v: inc17(-1, 2) }); return bt.commit(); });
+      await ok('v3.18 (3) withdrawal: my record deleted with n - 1, v untouched (account deletion) allow', () => { const bt = w.batch(); bt.delete(w.doc(vRec(W, 'l', LP))); bt.update(w.doc(vCnt('l', LP)), { n: inc17(-1, 2) }); return bt.commit(); });
+      await ok('v3.18 (3) a member of a SHARED private list is counted allow', view(w, W, 'l', LS18, 1, 1));
+      await no('v3.18 (3) a non-member of that shared private list deny', view(x, X, 'l', LS18, 2, 2));
+      await seedDoc(vRec(W, 'l', LQ), { uid: W, at: 1 });
+      await ok('v3.18 (3) my record deleted ALONE when its week document is absent allow (nothing to lower)', () => w.doc(vRec(W, 'l', LQ)).delete());
+      await seedDoc(vCnt('l', LQ), { n: 0, v: 3 }); await seedDoc(vRec(X, 'l', LQ), { uid: X, at: 1 }); await seedDoc(vRec(C, 'l', LQ), { uid: C, at: 1 });
+      await no('v3.18 (3) withdrawal that would take n below zero deny', () => { const bt = c.batch(); bt.delete(c.doc(vRec(C, 'l', LQ))); bt.update(c.doc(vCnt('l', LQ)), { n: inc17(-1, -1) }); return bt.commit(); });
+      await ok('v3.18 (3) my record deleted ALONE when n is at zero allow', () => x.doc(vRec(X, 'l', LQ)).delete());
+      await no('v3.18 (3) creating the week document with v = 2 deny', () => { const bt = x.batch(); bt.set(x.doc(vRec(X, 't', 't18z')), { uid: X, at: ts17() }); bt.set(x.doc(vCnt('t', 't18z')), { n: 1, v: 2 }); return bt.commit(); });
+      await ok('v3.18 (3) first view of a public TRIP this week allow', view(w, W, 't', 't18z', 1, 1));
+      await ok('v3.18 (3) first view of a countable PROFILE this week allow', view(w, W, 'p', 'curatorZ18', 1, 1));
+      await no('v3.18 (3) viewing my OWN profile deny', () => { const cz = env.authenticatedContext('curatorZ18').firestore(); return view(cz, 'curatorZ18', 'p', 'curatorZ18', 2, 2)(); });
+      /* ===== v3.18 (٥) (ق١١-١٤-١٢): نموّ أسبوعي لكل مكان في قائمة صاحبه — placeViewers · placeViewerCounts ===== */
+      const HX = 'aaaaaaaaaaaa0018'; const pRec = (u, l, h, m) => `placeViewers/${u}__${l}__${h || HX}__${m || W18}`, pCnt = (l, h, m) => `placeViewerCounts/${l}__${h || HX}__${m || W18}`;
+      const pview = (ctx, u, l, n, v, extra, h) => () => { const bt = ctx.batch(); bt.set(ctx.doc(pRec(u, l, h)), Object.assign({ uid: u, at: ts17() }, extra || {})); bt.set(ctx.doc(pCnt(l, h)), { n: inc17(1, n), v: inc17(1, v) }, { merge: true }); return bt.commit(); };
+      await ok('v3.18 (5) first interaction with a place in a public list this week: my record + the place week document (n = 1, v = 1) allow', pview(w, W, LP, 1, 1));
+      await no('v3.18 (5) the same account is counted again for that place this week deny', pview(w, W, LP, 2, 2));
+      await ok('v3.18 (5) the same account\'s next session: v + 1 alone allow', () => w.doc(pCnt(LP)).update({ v: inc17(1, 2) }));
+      await no('v3.18 (5) a place record ALONE (n does not move) deny', () => x.doc(pRec(X, LP)).set({ uid: X, at: ts17() }));
+      await no('v3.18 (5) n + 1 ALONE (no record) deny', () => x.doc(pCnt(LP)).set({ n: inc17(1, 2) }, { merge: true }));
+      await no('v3.18 (5) v + 2 deny', () => x.doc(pCnt(LP)).update({ v: inc17(2, 4) }));
+      await no('v3.18 (5) v + 1 by the list OWNER on his own list deny', () => y.doc(pCnt(LP)).update({ v: inc17(1, 3) }));
+      await no('v3.18 (5) v + 1 by a SUSPENDED user deny', () => z.doc(pCnt(LP)).update({ v: inc17(1, 3) }));
+      await no('v3.18 (5) v + 1 with NO sign-in deny', () => guest.doc(pCnt(LP)).update({ v: inc17(1, 3) }));
+      await no('v3.18 (5) a place in a PRIVATE list deny', pview(w, W, LG, 1, 1));
+      await seedDoc(pCnt(LG), { n: 1, v: 1 });
+      await no('v3.18 (5) v + 1 on a place of a PRIVATE list deny', () => x.doc(pCnt(LG)).update({ v: inc17(1, 2) }));
+      await no('v3.18 (5) a record for a week far away deny', () => { const bt = x.batch(); bt.set(x.doc(pRec(X, LP, HX, '2020-01-05')), { uid: X, at: ts17() }); bt.set(x.doc(pCnt(LP, HX, '2020-01-05')), { n: inc17(1, 1), v: inc17(1, 1) }, { merge: true }); return bt.commit(); });
+      await no('v3.18 (5) a place part that is not a 16-hex fingerprint deny', pview(x, X, LP, 1, 1, null, 'not-a-hash'));
+      await no('v3.18 (5) a record carrying another field (the place name) deny', pview(x, X, LP, 2, 3, { name: 'x' }));
+      await ok('v3.18 (5) a second account: n 1 -> 2 and v 2 -> 3 allow', pview(x, X, LP, 2, 3));
+      await ok('v3.18 (5) the list owner reads the place week document allow', () => y.doc(pCnt(LP)).get());
+      await no('v3.18 (5) a visitor reads the place week document deny', () => w.doc(pCnt(LP)).get());
+      await ok('v3.18 (5) I read my own place record allow', () => w.doc(pRec(W, LP)).get());
+      await no('v3.18 (5) the list owner reads WHO interacted deny', () => y.doc(pRec(W, LP)).get());
+      await ok('v3.18 (5) I list my own place records (account deletion) allow', () => w.collection('placeViewers').where('uid', '==', W).get());
+      await no('v3.18 (5) listing another account\'s place records deny', () => x.collection('placeViewers').where('uid', '==', W).get());
+      await no('v3.18 (5) my place record deleted ALONE while n is above zero deny', () => w.doc(pRec(W, LP)).delete());
+      await ok('v3.18 (5) withdrawal: my place record deleted with n - 1 (account deletion) allow', () => { const bt = w.batch(); bt.delete(w.doc(pRec(W, LP))); bt.update(w.doc(pCnt(LP)), { n: inc17(-1, 1) }); return bt.commit(); });
+      await no('v3.18 (5) a write WITHOUT merge that adds a view and drops n deny', () => x.doc(pCnt(LP)).set({ v: inc17(1, 4) }));
+      await seedDoc(pRec(C, LQ), { uid: C, at: 1 });
+      await ok('v3.18 (5) my place record deleted ALONE when its week document is absent allow', () => c.doc(pRec(C, LQ)).delete());
+      await ok('v3.18 (5) a member of a SHARED private list is counted for its place allow', pview(w, W, LS18, 1, 1));
+      await no('v3.18 (5) a non-member of that shared private list deny', pview(x, X, LS18, 2, 2));
+      /* ===== v3.18 (٤) (ق١١-١٤-٠٩): مشاهدات المكان — placeViews ===== */
+      const PV = 'placeViews/aaaaaaaaaaaa0018';
+      await ok('v3.18 (4) first view of a place creates its counter (n = 1, gazetteer city) allow', () => w.doc(PV).set({ n: 1, city: '2267057' }));
+      await ok('v3.18 (4) the next view: n + 1 allow', () => x.doc(PV).update({ n: inc17(1, 2) }));
+      await no('v3.18 (4) n + 2 deny', () => x.doc(PV).update({ n: 4 }));
+      await no('v3.18 (4) lowering n deny', () => x.doc(PV).update({ n: 1 }));
+      await no('v3.18 (4) changing the city after creation deny', () => x.doc(PV).update({ n: inc17(1, 3), city: '2513926' }));
+      await no('v3.18 (4) a view with NO sign-in deny', () => guest.doc(PV).update({ n: inc17(1, 3) }));
+      await no('v3.18 (4) a SUSPENDED user is not counted deny', () => z.doc(PV).update({ n: inc17(1, 3) }));
+      await no('v3.18 (4) creating with n = 5 deny', () => w.doc('placeViews/bbbbbbbbbbbb0018').set({ n: 5 }));
+      await no('v3.18 (4) creating with a free-text city deny', () => w.doc('placeViews/cccccccccccc0018').set({ n: 1, city: 'My Town' }));
+      await no('v3.18 (4) creating with another field (the place name) deny', () => w.doc('placeViews/dddddddddddd0018').set({ n: 1, name: 'x' }));
+      await no('v3.18 (4) an id that is not a 16-hex fingerprint deny', () => w.doc('placeViews/not-a-hash').set({ n: 1 }));
+      await ok('v3.18 (4) anyone reads a place\'s views (shown on its card) allow', () => guest.doc(PV).get());
+      await no('v3.18 (4) deleting a views counter by a user deny', () => w.doc(PV).delete());
+      /* ===== v3.18 (٦) (ق١١-١٤-٢٢ · ق١١-١٥-٠١): placeIdentity بلا by — ولا مخزن placeIdentityBy (أُلغي) ===== */
+      const P18 = { lat: 10, lng: 10, source: 'user_pin', n: 'P18', cityId: '2988507', at: 1 };
+      await ok('v3.18 (6) a pin without by allow (what the app writes — one write)', () => pin18(x, X, 'k18a', P18));
+      await no('v3.18 (6) a pin that carries by deny', () => x.doc('placeIdentity/k18b').set(Object.assign({ by: X }, P18)));
+      await no('v3.18 (6) a pin by a SUSPENDED user deny', () => pin18(z, Z, 'k18b', P18));
+      await no('v3.18 (6) a pin with NO sign-in deny', () => pin18(guest, null, 'k18b', P18));
+      await ok('v3.18 (6) another user re-confirms the pin nearby allow', () => pin18(w, W, 'k18a', Object.assign({}, P18, { lat: 10.005, at: 2 })));
+      await no('v3.18 (6) another user moves the pin far away deny', () => pin18(w, W, 'k18a', Object.assign({}, P18, { lat: 10.5, at: 3 })));
+      await ok('v3.18 (6) anyone signed in lists the old pins that carry his id (account deletion) allow', () => x.collection('placeIdentity').where('by', '==', X).get());
+      await no('v3.18 (6) the cancelled who-pinned store: a write deny (no rule)', () => x.doc('placeIdentityBy/k18a').set({ by: X, at: ts17() }));
+      await no('v3.18 (6) the cancelled who-pinned store: a read deny', () => x.doc('placeIdentityBy/k18a').get());
+      await no('v3.18 (6) the cancelled who-pinned store: a read by the app owner deny (no rule at all)', () => owner.doc('placeIdentityBy/k18a').get());
+      await seedDoc('placeIdentity/k18old', { lat: 20, lng: 20, source: 'user_pin', by: Y, at: 1 }); await seedDoc('placeIdentity/k18old2', { lat: 21, lng: 21, source: 'user_pin', by: Y, at: 1 }); await seedDoc('placeIdentity/k18old3', { lat: 22, lng: 22, source: 'user_pin', by: Y, at: 1 }); await seedDoc('placeIdentity/k18old4', { lat: 23, lng: 23, source: 'user_pin', by: Y, at: 1, legacy: 'x' });
+      if (!FVP) console.log('INFO  v3.18 (6) strip cases: not measured (FieldValue not available in this runner)');
+      else { await no('v3.18 (6) a user strips by from an OLD pin AND adds a field deny', () => x.doc('placeIdentity/k18old').update({ by: FVP.delete(), note: 'x' }));
+        await ok('v3.18 (6) a user strips by alone from an OLD pin allow (the result is a valid pin in its place — what account deletion writes for its own old pins)', () => x.doc('placeIdentity/k18old2').update({ by: FVP.delete() })); await seedDoc('placeIdentity/k18old2', { lat: 21, lng: 21, source: 'user_pin', by: Y, at: 1 });
+        await ok('v3.18 (6) the app owner strips by from an OLD pin allow (the sweep)', () => owner.doc('placeIdentity/k18old').update({ by: FVP.delete() }));
+        await ok('v3.18 (6) the app owner strips by from an OLD pin that carries a field outside the list allow (isOwner branch)', () => owner.doc('placeIdentity/k18old4').update({ by: FVP.delete() })); }
+      await no('v3.18 (6) re-confirming an OLD pin with a MERGE write (by stays in the document) deny', () => x.doc('placeIdentity/k18old2').set(Object.assign({}, P18, { lat: 21, lng: 21 }), { merge: true }));
+      await ok('v3.18 (6) re-confirming an OLD pin the way the app writes (whole document, by gone) allow', () => pin18(x, X, 'k18old3', Object.assign({}, P18, { lat: 22, lng: 22 })));
+      /* ===== v3.18 (٧) (ق١١-١٤-٢٤): سجل مشاهدة خرج أسبوعه من الأسابيع الخمسة الأخيرة يحذفه صاحبه وحده — العدّاد لا يتغيّر ===== */
+      const NOW18 = Date.now(); const WK = (i) => wkOf(NOW18 - i * 7 * 86400000); /* لحظة واحدة لكل الحالات */
+      for (const i of [4, 5, 6]) { await seedDoc(vRec(W, 'l', LP, WK(i)), { uid: W, at: 1 }); await seedDoc(vCnt('l', LP, WK(i)), { n: 1, v: 3 }); } await seedDoc(pRec(W, LP, HX, WK(6)), { uid: W, at: 1 }); await seedDoc(pCnt(LP, HX, WK(6)), { n: 1, v: 2 }); await seedDoc(vRec(Z, 'l', LP, WK(5)), { uid: Z, at: 1 });
+      await no('v3.18 (7) my record from FOUR weeks ago deleted ALONE while its counter stands deny (still inside the kept weeks)', () => w.doc(vRec(W, 'l', LP, WK(4))).delete());
+      await no('v3.18 (7) another account deletes my old record deny', () => x.doc(vRec(W, 'l', LP, WK(5))).delete());
+      await ok('v3.18 (7) my record from FIVE weeks ago deleted ALONE while its counter stands allow', () => w.doc(vRec(W, 'l', LP, WK(5))).delete());
+      await ok('v3.18 (7) my record from six weeks ago allow', () => w.doc(vRec(W, 'l', LP, WK(6))).delete());
+      await ok('v3.18 (7) my PLACE record from six weeks ago deleted ALONE allow', () => w.doc(pRec(W, LP, HX, WK(6))).delete());
+      await ok('v3.18 (7) a SUSPENDED user\'s old record deleted by him allow (the branch asks only whose record it is)', () => z.doc(vRec(Z, 'l', LP, WK(5))).delete());
+      await ok('v3.18 (7) the list owner still reads the old week\'s count after the record left allow', () => y.doc(vCnt('l', LP, WK(5))).get());
+      { let n5 = null; await env.withSecurityRulesDisabled(async (ctx) => { const d = await ctx.firestore().doc(vCnt('l', LP, WK(5))).get(); n5 = d.exists ? d.data() : null; }); if (n5 && n5.n === 1 && n5.v === 3) { pass++; console.log('PASS  v3.18 (7) the old week\'s counter is unchanged after its record was deleted (n 1 · v 3)'); } else { fail++; console.log('FAIL  v3.18 (7) the old week\'s counter is unchanged after its record was deleted  →  ' + JSON.stringify(n5)); } }
+      /* ===== v3.18 (٩) (ق١١-١٤-٢١): المشارَك يُخرج نفسه — قائمة · مستند تصنيف · رحلة ===== */
+      const L19 = `${Y}_s19`, C19 = `${Y}_s19_coffee`; const NM = {}; NM[W] = 'Wn'; NM[X] = 'Xn';
+      await seedDoc(`userCityLists/${L19}`, { ownerId: Y, cityId: 's19', public: false, sharedWith: [W, X], sharedWithNames: NM, bookmarkCount: 0, copyCount: 0, viewCount: 0, splitV: 1, index: [] });
+      await seedDoc(`userCityListCats/${C19}`, { ownerId: Y, cityId: 's19', catId: 'coffee', public: false, sharedWith: [W, X], active: true, places: [] });
+      await seedDoc('trips/t19', { ownerId: Y, public: false, sharedWith: [W, X], sharedWithNames: NM, title: 'T19' }); await seedDoc('trips/t19z', { ownerId: Y, public: false, sharedWith: [Z], title: 'T19z' });
+      await seedDoc(`userCityLists/${Y}_s19b`, { ownerId: Y, cityId: 's19b', public: false, sharedWith: [W], bookmarkCount: 0, copyCount: 0, viewCount: 0, splitV: 1, index: [] });
+      if (!FVP) console.log('INFO  v3.18 (9): not measured (FieldValue not available in this runner)');
+      else { const leave = (ctx, path, u, extra) => () => { const p = Object.assign({ sharedWith: FVP.arrayRemove(u) }, extra || {}); p['sharedWithNames.' + u] = FVP.delete(); return ctx.doc(path).update(p); };
+        await no('v3.18 (9) a member removes ANOTHER member deny', () => w.doc(`userCityLists/${L19}`).update({ sharedWith: FVP.arrayRemove(X) }));
+        await no('v3.18 (9) a member leaves AND edits another field deny', leave(w, 'trips/t19', W, { title: 'x' }));
+        await no('v3.18 (9) a member leaves AND removes another member\'s name deny', () => { const p = { sharedWith: FVP.arrayRemove(W) }; p['sharedWithNames.' + W] = FVP.delete(); p['sharedWithNames.' + X] = FVP.delete(); return w.doc(`userCityLists/${L19}`).update(p); });
+        await no('v3.18 (9) a member leaves but KEEPS his name in the names map deny', () => w.doc('trips/t19').update({ sharedWith: FVP.arrayRemove(W) }));
+        await no('v3.18 (9) a member adds someone to the share deny', () => w.doc(`userCityListCats/${C19}`).update({ sharedWith: FVP.arrayUnion('userNew19') }));
+        await no('v3.18 (9) a member empties the whole share deny', () => w.doc('trips/t19').update({ sharedWith: [] }));
+        await no('v3.18 (9) a NON-member touches the share deny', () => c.doc('trips/t19').update({ sharedWith: FVP.arrayRemove(W) }));
+        await no('v3.18 (9) a member leaves a category document AND empties its places deny', () => w.doc(`userCityListCats/${C19}`).update({ sharedWith: FVP.arrayRemove(W), places: [{ id: 'x' }] }));
+        await ok('v3.18 (9) a member leaves the list: his id and his name only allow (what account deletion writes)', leave(w, `userCityLists/${L19}`, W));
+        await ok('v3.18 (9) a member leaves its category document allow', () => w.doc(`userCityListCats/${C19}`).update({ sharedWith: FVP.arrayRemove(W) }));
+        await ok('v3.18 (9) a member leaves a trip allow', leave(w, 'trips/t19', W));
+        await no('v3.18 (9) leaving again (no longer a member) deny', leave(w, 'trips/t19', W));
+        await ok('v3.18 (9) a SUSPENDED member leaves allow (the branch asks only that he is a member)', leave(z, 'trips/t19z', Z));
+        await ok('v3.18 (9) leaving a list that has NO names map allow (the app sends the same write)', leave(w, `userCityLists/${Y}_s19b`, W));
+        { let d19 = null; await env.withSecurityRulesDisabled(async (ctx) => { d19 = (await ctx.firestore().doc(`userCityLists/${L19}`).get()).data(); }); const good = d19 && JSON.stringify(d19.sharedWith) === JSON.stringify([X]) && JSON.stringify(d19.sharedWithNames) === JSON.stringify({ [X]: 'Xn' }); if (good) { pass++; console.log('PASS  v3.18 (9) after leaving: the other member and his name remain, mine are gone'); } else { fail++; console.log('FAIL  v3.18 (9) after leaving: the other member and his name remain, mine are gone  →  ' + JSON.stringify(d19 && [d19.sharedWith, d19.sharedWithNames])); } } }
+      /* ===== v3.18 (١٠) (ق١١-١٤-٢١): لا عدّ على قائمة لا أراها — stats_lists · stats_places ===== */
+      await no('v3.18 (10) stats_lists on ANOTHER user\'s PRIVATE list deny (as a missing list — no existence oracle)', () => x.doc(`stats_lists/${LG}`).set({ open_app: 1 }));
+      await no('v3.18 (10) stats_lists on a list that does not exist deny (the same answer)', () => x.doc(`stats_lists/${Y}_nolist19`).set({ open_app: 1 }));
+      await no('v3.18 (10) stats_places on ANOTHER user\'s PRIVATE list deny', () => x.doc(`stats_places/${LG}__aaaaaaaaaaaa0019`).set({ open_total: 1 }));
+      await ok('v3.18 (10) stats_lists on a private list SHARED with me allow', () => w.doc(`stats_lists/${LS18}`).set({ open_app: 1 }));
+      await no('v3.18 (10) a NON-member on that shared private list deny', () => x.doc(`stats_lists/${LS18}`).update({ open_app: 2 }));
+      await ok('v3.18 (10) the list owner on his own PRIVATE list allow', () => y.doc(`stats_lists/${LG}`).set({ open_app: 1 }));
+      await ok('v3.18 (10) stats_places on a PUBLIC list allow', () => x.doc(`stats_places/${LP}__aaaaaaaaaaaa0019`).set({ open_total: 1 }));
+      await ok('v3.18 (10) stats_places on a private list SHARED with me allow', () => w.doc(`stats_places/${LS18}__aaaaaaaaaaaa0019`).set({ open_total: 1 }));
+      /* قياس خارج الحصيلة (المحور ٣ · ج-٢): حذف سجل مفكرة غير موجود — هل يختلف الجواب بين قائمة خاصة قائمة وقائمة غير موجودة؟ (يختلف = يُستدلّ به على الوجود) */
+      { const probe = async (f) => { try { await f(); return 'ALLOWED'; } catch (e) { return 'DENIED'; } }; const pA = await probe(() => c.doc(`listBookmarks/${C}__${LG}`).delete()), pB = await probe(() => c.doc(`listBookmarks/${C}__${Y}_nolist19`).delete());
+        console.log('INFO  v3.18 probe · delete of a bookmark record that does not exist: on a PRIVATE existing list ' + pA + ' · on a MISSING list ' + pB + (pA === pB ? ' · same answer (no oracle)' : ' · DIFFERENT (existence oracle)')); } }
+    /* حالتا المتابعة لـv3.18 بعد تعريف fl17 أدناه */
     await ok('v3.17 bookmark record deleted ALONE: the list was deleted allow', () => x.doc(`listBookmarks/${X}__${Y}_gone17`).delete());
     await ok('v3.17 bookmark record deleted ALONE: the counter is at 0 allow', () => x.doc(`listBookmarks/${X}__${LZ}`).delete());
-    await ok('v3.17 bookmark record deleted ALONE by a SUSPENDED user (withdrawal) allow', () => z.doc(`listBookmarks/${Z}__${LQ}`).delete());
+    await no('v3.18 bookmark record deleted ALONE by a SUSPENDED user while counted deny (was allow in v3.17)', () => z.doc(`listBookmarks/${Z}__${LQ}`).delete());
+    await no('v3.18 SUSPENDED user bookmarks (+1 with a new record) still deny', () => { const bt = z.batch(); bt.set(z.doc(`listBookmarks/${Z}__${LP}`), { at: 1 }); bt.set(z.doc(`userCityLists/${LP}`), { bookmarkCount: inc17(1, 1) }, { merge: true }); return bt.commit(); });
+    await ok('v3.18 SUSPENDED user withdraws a bookmark (record delete + bookmarkCount -1, no mirror — he cannot write his own document) allow', () => { const bt = z.batch(); bt.delete(z.doc(`listBookmarks/${Z}__${LQ}`)); bt.set(z.doc(`userCityLists/${LQ}`), { bookmarkCount: inc17(-1, 1) }, { merge: true }); return bt.commit(); });
     await no('v3.17 bookmark record with a string in `at` deny (typed field)', () => { const bt = x.batch(); bt.set(x.doc(`listBookmarks/${X}__${LZ}`), { at: 'now' }); bt.set(x.doc(`userCityLists/${LZ}`), { bookmarkCount: 1 }, { merge: true }); return bt.commit(); });
 
     // --- (١١) حفظ الرحلة ---
@@ -1530,6 +1792,8 @@ const no = (label, f) => expect(false, label, f);
     await no('v3.17 follow of a profile with no public content and not verified deny (ق٣-١ — no counter to move)', fl17(c, C, NN, true, 1, false));
     await no('v3.17 a seeded follow record deleted ALONE while counted deny', () => x.doc(`follows/${X}_${Y}`).delete());
     await ok('v3.17 a seeded follow released with its counter (record delete + mirror + increment(-1)) allow', fl17(x, X, Y, false, 1));
+    await no('v3.18 follow record deleted ALONE: the profile is no longer countable deny (was allow in v3.17)', () => x.doc(`follows/${X}_${NN}`).delete());
+    await ok('v3.18 unfollow a profile that is no longer countable (record delete + mirror + followerCount -1) allow', fl17(x, X, NN, false, 0));
 
     // --- (٣) مشاهدات الملف ---
     await no('v3.17 profile owner bumps OWN viewCount by +1 deny', () => y.doc(`communityProfiles/${Y}`).update({ viewCount: 1 }));
@@ -1578,17 +1842,17 @@ const no = (label, f) => expect(false, label, f);
     await no('v3.17 dailyStats +2 in one update deny', () => a.doc('dailyStats/2026-08-20').update({ activeToday: 3 }));
     await ok('v3.17 dailyStats +1 allow', () => a.doc('dailyStats/2026-08-20').update({ activeToday: 2 }));
     await no('v3.17 stats_cities doc dated months ago deny', () => a.doc('stats_cities/paris__2026-01-05').set({ open: 1 }));
-    await no('v3.17 stats_lists daily doc dated months ago deny', () => guest.doc(`stats_lists/${LP}__2026-01-05`).set({ open_app: 1 }));
-    await ok('v3.17 stats_lists daily doc dated today allow', () => guest.doc(`stats_lists/${LP}__2026-08-18`).set({ open_app: 1 }));
-    await no('v3.17 stats_curators daily doc dated months ago deny', () => guest.doc('stats_curators/' + CUR + '__2026-01-05').set({ page_view: 1 }));
+    await no('v3.17 stats_lists daily doc dated months ago deny', () => a.doc(`stats_lists/${LP}__2026-01-05`).set({ open_app: 1 }));
+    await ok('v3.17 stats_lists daily doc dated today allow', () => a.doc(`stats_lists/${LP}__2026-08-18`).set({ open_app: 1 }));
+    await no('v3.17 stats_curators daily doc dated months ago deny', () => a.doc('stats_curators/' + CUR + '__2026-01-05').set({ page_view: 1 }));
 
     // --- (٦) سجل هوية الأماكن: شرط القرب (math.abs) ---
-    const PI17 = (lat, lng) => ({ lat: lat, lng: lng, source: 'user_pin', by: X, at: 2 });
-    await ok('v3.17 identity update NEAR the recorded point (0.005° lat, 0.02° lng) allow', () => x.doc('placeIdentity/k17').set(PI17(48.855, 2.37)));
-    await no('v3.17 identity update FAR in latitude (0.02°) deny', () => x.doc('placeIdentity/k17').set(PI17(48.875, 2.37)));
-    await no('v3.17 identity update FAR in longitude (0.08°) deny', () => x.doc('placeIdentity/k17').set(PI17(48.855, 2.45)));
-    await ok('v3.17 identity update on a record stored with INTEGER coordinates (48 → 48.005) allow (int/float arithmetic)', async () => { await seedDoc('placeIdentity/k17int', { lat: 48, lng: 2, source: 'user_pin', by: Y, at: 1 }); await x.doc('placeIdentity/k17int').set(PI17(48.005, 2.01)); });
-    await ok('v3.17 identity create anywhere allow', () => x.doc('placeIdentity/k17b').set(PI17(-33.9, 151.2)));
+    const PI17 = (lat, lng) => ({ lat: lat, lng: lng, source: 'user_pin', at: 2 });
+    await okPin('v3.17 identity update NEAR the recorded point (0.005° lat, 0.02° lng) allow', () => pin18(x, X, 'k17', PI17(48.855, 2.37)));
+    await no('v3.17 identity update FAR in latitude (0.02°) deny', () => pin18(x, X, 'k17', PI17(48.875, 2.37)));
+    await no('v3.17 identity update FAR in longitude (0.08°) deny', () => pin18(x, X, 'k17', PI17(48.855, 2.45)));
+    await okPin('v3.17 identity update on a record stored with INTEGER coordinates (48 → 48.005) allow (int/float arithmetic)', async () => { await seedDoc('placeIdentity/k17int', { lat: 48, lng: 2, source: 'user_pin', by: Y, at: 1 }); await pin18(x, X, 'k17int', PI17(48.005, 2.01)); });
+    await okPin('v3.17 identity create anywhere allow', () => pin18(x, X, 'k17b', PI17(-33.9, 151.2)));
 
     // --- (١٠)(١٢) البلاغات ---
     await ok('v3.17 reports: my own reports by query (account deletion) allow', () => x.collection('reports').where('by', '==', X).get());
@@ -1609,6 +1873,8 @@ const no = (label, f) => expect(false, label, f);
     await no('v3.17 SUSPENDED user creates own users doc deny', () => z.doc(`users/${Z}`).set({ email: 'z@x' }));
     await no('v3.17 nicknames listed by a GUEST deny', () => guest.collection('nicknames').get());
     await no('v3.17 nicknames listed by a signed-in user deny', () => a.collection('nicknames').get());
+    await ok('v3.18 (١٢) nicknames listed by the APP OWNER by uid (frees a deleted account\'s reservations)', () => owner.collection('nicknames').where('uid', '==', A).get());
+    await no('v3.18 (١٢) nicknames listed by a signed-in user BY HIS OWN uid deny (list is the owner\'s only)', () => a.collection('nicknames').where('uid', '==', A).get());
     await no('v3.17 nickname doc with an extra field deny', () => x.doc('nicknames/k17extra').set({ uid: X, nickname: 'K17extra', blob: 'x' }));
     await no('v3.17 nickname of 2 characters deny', () => x.doc('nicknames/k1').set({ uid: X, nickname: 'k1' }));
     await no('v3.17 nickname key of 25 characters deny', () => x.doc('nicknames/' + 'k'.repeat(25)).set({ uid: X, nickname: 'k'.repeat(24) }));
