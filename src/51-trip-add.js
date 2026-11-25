@@ -32,17 +32,17 @@ async function withAuthRetry(fn){
 
 async function loadUserTrips(){
   if (!currentUser){ userTrips = []; sharedTrips = []; tripsLoaded = true; return; }
-  tripsLoadFailed = false;
+  const __who = currentUser.uid, __gen = mpSessionGen; /* r120: قراءة وصلت والداخل غير صاحبها تُهمل (كانت رحلات الأول الخاصة تُعرض للثاني — مقيس) */ tripsLoadFailed = false;
   try{
-    const snap = await withAuthRetry(() => mpData.trips.byOwner(currentUser.uid));
+    const snap = await withAuthRetry(() => mpData.trips.byOwner(__who)); if (!mpSameUser(__who, __gen)) return;
     userTrips = [];
     snap.forEach(doc => userTrips.push({ id: doc.id, ...doc.data() }));
-  }catch(e){ userTrips = []; tripsLoadFailed = true; /* r108 (المراجعة): قراءة فشلت ≠ لا رحلات — نسخة التحرير على الجهاز لا تُسقط بسببها */ }
+  }catch(e){ if (!mpSameUser(__who, __gen)) return; userTrips = []; tripsLoadFailed = true; /* r108 (المراجعة): قراءة فشلت ≠ لا رحلات — نسخة التحرير على الجهاز لا تُسقط بسببها */ }
   try{
-    const snap2 = await withAuthRetry(() => mpData.trips.sharedWith(currentUser.uid));
+    const snap2 = await withAuthRetry(() => mpData.trips.sharedWith(__who)); if (!mpSameUser(__who, __gen)) return;
     sharedTrips = [];
     snap2.forEach(doc => sharedTrips.push(mpData.sane.trip({ id: doc.id, ...doc.data() }))); /* r118-و: رحلة مشارَكة معي ليست لي — تُطبَّع، واسم صاحبها من ملفه */
-  }catch(e){ sharedTrips = []; }
+  }catch(e){ if (!mpSameUser(__who, __gen)) return; sharedTrips = []; }
   userTrips.forEach(tripNormalize); sharedTrips.forEach(tripNormalize);
   userTrips.forEach(tripSnap); mpSaveOk('trips'); /* r100-أ */
   tripsLoaded = true;
@@ -58,13 +58,26 @@ function tripHasCity(t, cityId){ return tripCityIds(t).indexOf(cityId) >= 0; }
 function tripDayCount(t){ return tripHasPlan(t) ? t.plan.days.length : ((t && t.days && t.days.length) || 0); }
 function tripPlaceCount(t){ return tripHasPlan(t) ? tripPlanCount(t.plan) : 0; }
 function tripMetaLine(t){ const d = tripDayCount(t), p = tripPlaceCount(t); return d + (d === 1 ? ' day' : ' days') + ' · ' + p + (p === 1 ? ' place' : ' places'); } // بدل سطر النوع (القرار ١٣)
-function tripTitle(t){ if (!t) return ''; if (t.title) return t.title; const names = (t.cities || []).map(function(c){ return c.cityName; }).filter(Boolean); const base = names.length ? names.join(' & ') : (t.cityName || 'Trip'); return t.customLabel ? (base + ' — ' + t.customLabel) : base; }
+function tripCardSub(t){ const c = (t && t.title) ? ((Array.isArray(t.cities) ? t.cities : []).map(function(x){ return x && x.cityName; }).filter(Boolean).join(' & ') || t.cityName || '') : ''; return (c ? escapeHtml(c) + ' · ' : '') + tripMetaLine(t); } /* r120 (ع٤-٣): سطر تفاصيل بطاقة رحلة غيري — رحلة لها اسم تحمل مدينتها هنا (الاسم صار في العنوان) */
+function tripTitle(t){ if (!t) return ''; if (t.title) return t.title; const names = (Array.isArray(t.cities) ? t.cities : []).map(function(c){ return c && c.cityName; }).filter(Boolean); /* r120 (المراجعة ٣١ — قيس): مدخل فارغ في cities لا يُسقط الشاشة (My stats يقرأ المستند الخام) */ const base = names.length ? names.join(' & ') : (t.cityName || 'Trip'); return t.customLabel ? (base + ' — ' + t.customLabel) : base; }
 function tripSpec(t){ return { cities: t.cities || [], version: t.version || 'balanced', dayPlan: !!t.dayPlan }; }
 function tripRestRowHtml(stayName, minutes, removeOn){ return '<div class="trip-rest"><span><b>Rest at ' + escapeHtml(stayName || 'your stay') + '</b> <span class="dim">· about ' + (minutes >= 90 ? (Math.round(minutes / 30) / 2) + ' h' : minutes + ' min') + '</span></span>' + (removeOn ? '<button type="button" class="actn" onclick="' + removeOn + '">Remove</button>' : '') + '</div>'; } // ب-٧: سطر الراحة بين فترتين (المسودة والعرض)
 function tripRestAddHtml(hasStay, addOn){ return hasStay ? '<button type="button" class="trip-rest-add" onclick="' + addOn + '">＋ Add rest</button>' : '<div class="trip-rest-add off">＋ Add rest <span class="dim">· set where you stay in Setup</span></div>'; } // ب-٧: الزر بين الفترتين؛ بلا إقامة تلميح
 function tripLegWarnHtml(w){ return '<div class="trip-legwarn">↓ ' + tripKmLabel(w.km) + ' · ' + (w.mode === 'walk' ? 'walk' : w.mode === 'car' ? 'car' : 'metro') + ' — a long leg</div>'; } // ب-٥: الرِّجل الطويلة سطرًا رفيعًا قبل محطتها (المسودة والعرض)
 const tripSavedJson = {}; /* r100-أ: لقطة آخر حفظ لكل رحلة — Discard يعيدها في مكانها (الرحلة الجديدة تُزال) */
 function tripSnap(t){ if (t && t.id) tripSavedJson[t.id] = JSON.stringify(t); }
+const tripVisSent = {}; /* r120 (المراجعة المستقلة ٨ — قيس: 🌐 ثم 🌐 والحفظ الأول في الطريق كان يترك الرحلة عامة والشاشة تقول خاصة): ما قصده حفظٌ ما زال في الطريق — الحفظ الذي يليه يقيس عليه لا على اللقطة القديمة */
+async function tripVisForSave(trip){ /* r120 (ق١١-١٥-٠٦ — قيس): الرؤية والمشاركة في حفظ الرحلة. رحلة بلا لقطة (جديدة) ⇒ null: تُكتب كما هي. لم يغيّرهما صاحب الشاشة منذ اللقطة ⇒ { omit }: لا يُرسلان أصلًا (ما في الخادم يبقى — بلا قراءة). غيّرهما ⇒ قراءة واحدة، وما غيّره يُكتب فوق ما في الخادم. خطة اليوم تتبع قائمتها حالًا لا فرقًا: تُكتب أعلامها كما هي ويُمحى كل اسم لا يبقى */
+  let old = null; try{ old = tripSavedJson[trip.id] ? JSON.parse(tripSavedJson[trip.id]) : null; }catch(_){ old = null; } if (!old) return null; const base = tripVisSent[trip.id] || old;
+  const key = function(a){ return (Array.isArray(a) ? a : []).slice().sort().join(','); }; const nk = function(o){ o = (o && typeof o === 'object') ? o : {}; return JSON.stringify(Object.keys(o).sort().map(function(k){ return [k, o[k]]; })); };
+  if ((trip.public === true) === (base.public === true) && key(trip.sharedWith) === key(base.sharedWith) && nk(trip.sharedWithNames) === nk(base.sharedWithNames)) return { omit: ['public', 'sharedWith', 'sharedWithNames'] };
+  const want = { public: trip.public === true, sharedWith: (trip.sharedWith || []).slice(), sharedWithNames: Object.assign({}, trip.sharedWithNames || {}) }; const sent = tripVisSent[trip.id] = want; /* قبل القراءة: ضغطة تالية تقيس على هذا القصد */
+  let srv; try{ srv = await mpData.trips.visNow(trip.id); }catch(e){ if (tripVisSent[trip.id] === sent) delete tripVisSent[trip.id]; throw e; }
+  if (!srv) return { sent: sent }; /* لا مستند في الخادم: تُكتب كما على الشاشة (كما كان) */
+  if (trip.dayPlan && !trip.source){ const w = Object.assign({}, want.sharedWithNames); Object.keys(srv.sharedWithNames).forEach(function(u){ if (!(u in w)) w[u] = mpData.fieldDelete(); }); return { sent: sent, extra: { public: want.public, sharedWith: want.sharedWith, sharedWithNames: w } }; }
+  const r = mpVisResolve(want, base, srv); const same = (trip.public === true) === want.public && key(trip.sharedWith) === key(want.sharedWith); /* لم يغيّرها أحد أثناء القراءة */
+  if (same){ trip.public = r.public; trip.sharedWith = r.sharedWith.slice(); trip.sharedWithNames = Object.assign({}, r.names); /* الشاشة تعرض ما سيُكتب */ }
+  sent.public = r.public; sent.sharedWith = r.sharedWith.slice(); sent.sharedWithNames = Object.assign({}, r.names); return { sent: sent, extra: { public: r.public, sharedWith: r.sharedWith, sharedWithNames: r.write } }; }
 /* ═══ r107 (ق١١-١٠-٠٢): حارس الخطة — آخر خط قبل الكتابة. القاعدة: مكان لا يغادر الخطة ويوم بترتيب صاحبه لا يُعاد رسمه إلا بفعل أعلنه مساره (tripGuardAllow).
    مسار نسي أن يعرف شكل اليوم أو أسقط شيئًا في الطريق لا يُكتب: تعود الخطة كما حُفظت آخر مرة، ويُقال ذلك للمستخدم، ويُسجَّل PLAN-GUARD. الأساس = tripSavedJson (لقطة التحميل ثم كل حفظ ناجح). ═══ */
 const tripGuardOk = {}; let tripGuardGen = 0; /* كل إعلان يحمل رقم جيله: كتابة ناجحة تستهلك ما أُعلن قبل بدئها فقط — ما أُعلن والكتابة في الطريق يبقى للتالية (المراجعة المستقلة: حذف محطتين متتاليتين كان يُرفض ثانيهما) */
@@ -80,21 +93,29 @@ function tripGuardRestore(trip, g){ Object.keys(trip).forEach(function(k){ delet
   try{ if (currentTab === 'Trips' && currentTripId === trip.id) renderMyTripsModal(); }catch(_){}
   try{ mpSheet({ title: 'Kept as it was', noCancel: true, text: 'That step would have ' + (g.lost.length ? 'dropped ' + (g.lost.length === 1 ? g.lost[0] : g.lost.length + ' places (' + g.lost.slice(0, 3).join(', ') + (g.lost.length > 3 ? '…' : '') + ')') + ' from the plan' : 'redrawn a day you ordered yourself') + ' without asking you — so it was not saved, and the plan is back as you last saved it. Diagnostics has a PLAN-GUARD line if you want to report it.', ok: 'OK' }); }catch(_){} }
 async function tripDiscard(trip){ delete tripCopyPending[trip.id]; tripGuardReset(trip.id); const j = tripSavedJson[trip.id]; const i = userTrips.findIndex(function(t){ return t.id === trip.id; }); if (j){ const old = JSON.parse(j); Object.keys(trip).forEach(function(k){ delete trip[k]; }); Object.assign(trip, old); if (i < 0) userTrips.push(trip); } else { if (i >= 0) userTrips.splice(i, 1); if (typeof TB !== 'undefined' && TB){ TB = null; const bd = document.getElementById('tripBuildBackdrop'); if (bd) bd.classList.remove('show'); try{ if (typeof tbSessionClear === 'function') tbSessionClear(); }catch(_){} /* r108: تخلّى عنها — لا تُعرض للاستعادة */ } } delete resolvedTripCache[trip.id]; try{ renderTripsBody(); }catch(_){} }
+const tripDeleting = {}; /* r120 (المراجعة المستقلة ٣٠): رحلات أُكّد حذفها — حفظٌ لها لم يبلغ كتابته يتوقف */
+const tripSaveFlying = new Set(); /* r120 (ق١١-١٧-٠٦): كتابات حفظ الرحلات التي في الطريق */
+function tripSaveWaitAll(){ if (!tripSaveFlying.size) return Promise.resolve(); const nop = function(){}; return Promise.race([Promise.all(Array.from(tripSaveFlying).map(function(p){ return p.then(nop, nop); })), new Promise(function(z){ setTimeout(z, MP_SAVE_WAIT_MS); })]); } /* بالسقف نفسه: كتابة معلّقة لا تحبس الحذف */
 async function saveTrip(trip, o){
   mpTrack.hit('trip_save');
   if (currentUserSuspended){ showToast('Your account is suspended — you can\'t save changes'); return; }
+  let __tvS = null;
   try{
     trip.ownerId = trip.ownerId || currentUser.uid; // صيد المحاكاة (ر٦٠+): الحل يقرأ المالك من الكائن المحلي
     const __isNew = !trip.__saved; trip.__saved = true; // r72p (٧): trip_built مرة عند أول حفظ
     if (tripHasPlan(trip)){ tripPlanNormalize(trip.plan); tripIdsHeal(trip); } /* r107: العلاج الذاتي قبل الكتابة أيضًا */ const __g = tripGuardCheck(trip); if (__g){ if (o && o.builder && typeof tbGuardRefused === 'function' && typeof TB !== 'undefined' && TB && TB.tripId === trip.id) tbGuardRefused(trip, __g); /* r108: داخل جلسة التحرير — يُرفض الحفظ ويبقى التحرير (كان يعيد الرحلة فيضيع عمل الجلسة كلها لا خطوة واحدة) */ else tripGuardRestore(trip, __g); return 'guard'; } /* r107: الحارس — المستدعي يعرف أن الحفظ رُفض */ const __gen = tripGuardGen;
     if (trip.dayRoutes) tripRoutesPrune(trip); // r78 (البيان ٣-١): الأرجل التي فقدت طرفًا تُحذف عند الحفظ
     const __hasLegs = !!(trip.dayRoutes && Object.keys(trip.dayRoutes).some(function(k){ return trip.dayRoutes[k] && trip.dayRoutes[k].legs && Object.keys(trip.dayRoutes[k].legs).length; }));
+    const __tv = await tripVisForSave(trip); __tvS = (__tv && __tv.sent) || null; /* قبل اللقطة: ما يُحلّ هنا يدخل ما يُحفظ أساسًا للحفظ التالي */
     const __w = JSON.stringify(trip); const __seq = tripWriteSeq[trip.id] = (tripWriteSeq[trip.id] || 0) + 1; let __was = { json: '', lin: 0 }; try{ const __o = tripSavedJson[trip.id] ? JSON.parse(tripSavedJson[trip.id]) : null; if (__o && tripHasPlan(__o)) __was = { json: JSON.stringify(__o.plan), lin: tripPlanIndex(__o.plan).lin }; }catch(_){} const __now = Object.assign(tripPlanIndex(trip.plan), { json: JSON.stringify(trip.plan || null) }); /* r107: أساس الحارس = ما كُتب فعلًا (الرحلة كلها قبل الانتظار — الحفظ لا يعدّل الكائن) */
-    await mpData.trips.save(trip, Object.assign({ ownerId: currentUser.uid }, __hasLegs ? { legSources: ['user'] } : {})); // الدفعة ب: الأرجل من المستخدم وحده (legSourcesOk)
+    if (typeof mpDeleting !== 'undefined' && mpDeleting){ if (__tvS && tripVisSent[trip.id] === __tvS) delete tripVisSent[trip.id]; showToast('Your account is being deleted — nothing is saved now'); return 'keep'; }
+    if (tripDeleting[trip.id]){ if (__tvS && tripVisSent[trip.id] === __tvS) delete tripVisSent[trip.id]; return 'keep'; } /* r120 (و-٤ · المراجعة المستقلة ٣٠ — قيس): الرحلة أُكّد حذفها والحفظ ما زال يقرأ (تبديل 🌐 أو مشاركة يقرأ قبل أن يكتب) — لا كتابة: كانت تعيد الرحلة عامة بعد «Trip deleted» */ /* r120 (ق١١-١٧-٠٦): أثناء حذف الحساب لا كتابة رحلة — بوابة واحدة قبل الكتابة نفسها، فتصدّ ما بدأ قبل الحذف وما بدأ أثناءه. 'keep': لم يُحفظ والتعديل باقٍ على الشاشة، كجواب ورقة الفشل */
+    { const __fp = mpData.trips.save(trip, Object.assign({ ownerId: currentUser.uid }, __hasLegs ? { legSources: ['user'] } : {}, (__tv && __tv.extra) || {}), (__tv && __tv.omit) || null); tripSaveFlying.add(__fp); try{ await __fp; } finally { tripSaveFlying.delete(__fp); } } /* r120 (ق١١-١٧-٠٦ — قيس: كتابة رحلة في الطريق وصلت بعد أن حذف حذفُ الحساب الرحلة فأعادتها): الكتابة الجارية مسجَّلة ليُنتظر وصولها */ /* r120 (ق١١-١٥-٠٤ · ٠٦): الرؤية والمشاركة — ما غيّره صاحب الشاشة فوق ما في الخادم (ومعه محو صريح لكل اسم خرج: الدمج لا يُسقط مفتاحًا)، أو لا شيء */ // الدفعة ب: الأرجل من المستخدم وحده (legSourcesOk)
     if (__isNew && !trip.source) try{ mpTrack.statsCity(trip.cityId, 'trip_built'); }catch(_){}
     if (tripCopyPending[trip.id]) await tripCopyCount(trip); /* الدفعة ٢: النسخة ثبت حفظها الآن — سجلها وعدّاد مصدرها */
-    if (__seq >= (tripBaseSeq[trip.id] || 0)){ tripBaseSeq[trip.id] = __seq; tripSavedJson[trip.id] = __w; } tripGuardSettle(trip.id, __gen, __was, __now, !!(o && o.builder)); mpSaveOk('trips'); /* r100-أ */
-  }catch(e){ const __f = await mpSaveFailed('trips', e, function(){ return saveTrip(trip, o); }, function(){ return tripDiscard(trip); }); try{ renderTripsBody(); }catch(_){} return __f === 'discard' ? 'discarded' : (__f === 'retry' && !mpUnsaved.trips) ? undefined : 'failed'; /* r108 (المراجعة): المستدعي يعرف — كُتبت بعد إعادة المحاولة · أو تخلّى عنها صاحبها · أو ما زالت غير محفوظة */ }
+    if (__tv && __tv.sent && tripVisSent[trip.id] === __tv.sent) delete tripVisSent[trip.id]; /* وصل: اللقطة صارت هي الأساس */
+    if (__seq >= (tripBaseSeq[trip.id] || 0)){ tripBaseSeq[trip.id] = __seq; tripSavedJson[trip.id] = __w; } tripGuardSettle(trip.id, __gen, __was, __now, !!(o && o.builder)); mpSaveOk('trips'); /* r100-أ */ try{ if (typeof tkTripStopsAlert === 'function') tkTripStopsAlert(trip); }catch(_){} /* r120 (ق١١-٢٤-١٦ ٤): محطة مكتوبة باليد — تنبيه بكلمات الاسم بعد أن حُفظت */
+  }catch(e){ if (__tvS && tripVisSent[trip.id] === __tvS) delete tripVisSent[trip.id]; /* لم يصل: القصد يسقط */ const __f = await mpSaveFailed('trips', e, function(){ return saveTrip(trip, o); }, function(){ return tripDiscard(trip); }); try{ renderTripsBody(); }catch(_){} return __f === 'discard' ? 'discarded' : (__f === 'retry' && !mpUnsaved.trips) ? undefined : 'failed'; /* r108 (المراجعة): المستدعي يعرف — كُتبت بعد إعادة المحاولة · أو تخلّى عنها صاحبها · أو ما زالت غير محفوظة */ }
 }
 function generateTripId(){
   return "trip_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
@@ -121,8 +142,9 @@ async function resolveTripPlaces(trip){
   for (const e of flat){ if (e.ref && e.ref.sourceType === 'community' && e.ref.sourceUid){ const k = e.ref.sourceUid + '|' + (e.ref.cityId || trip.cityId); if (communityLinks[k]) continue; try{ const d = await mpData.cityLists.get(e.ref.sourceUid, e.ref.cityId || trip.cityId); communityLinks[k] = (d && d.categories) || {}; }catch(err){ communityLinks[k] = {}; } } }
   if (__rErr) mpReadFailed(__rErr, 'trip-resolve', 'the places of this trip'); /* r100-د: مرة واحدة — الأماكن تظهر بأسمائها من الخطة بلا تفاصيل؛ رفض الإذن على قوائم الغير صامت بالتصميم (قد تكون خاصة) */
   function resolveRef(e){
-    const ref = e.ref || {}; if (ref.sourceType === 'stop') return Object.assign({}, e, { alts: (e.alts || []).map(resolveRef), _p: null, _available: true }); /* r92: المحطة غير المحفوظة تحمل اسمها وموضعها في الخطة نفسها · المراجعة ج (٢): وبدائلها تُحلّ معها (كانت تُسقَط: بديل محطة مكتوبة يختفي من العرض المحفوظ والبرنامج) */ const linksObj = ref.sourceType === 'community' ? (communityLinks[ref.sourceUid + '|' + (ref.cityId || trip.cityId)] || {}) : (myLinksByCity[ref.cityId || trip.cityId] || {});
+    const ref = e.ref || {}; const hid = typeof tkTripHidden === 'function' && tkTripHidden(trip, e); const blk = function(){ return Object.assign({}, e, { name: TK_GONE_TXT, url: '', about: '', alert: '', alts: (e.alts || []).map(resolveRef), _p: null, _available: false, _blocked: true }); }; /* r120 (ق١١-٢٤-١٦ ٢): سطر مكان حجبه المالك — لغير صاحبه الجملة بدل الاسم، والسطر في موضعه */ if (ref.sourceType === 'stop' && hid) return blk(); if (ref.sourceType === 'stop') return Object.assign({}, e, { alts: (e.alts || []).map(resolveRef), _p: null, _available: true }); /* r92: المحطة غير المحفوظة تحمل اسمها وموضعها في الخطة نفسها · المراجعة ج (٢): وبدائلها تُحلّ معها (كانت تُسقَط: بديل محطة مكتوبة يختفي من العرض المحفوظ والبرنامج) */ const linksObj = ref.sourceType === 'community' ? (communityLinks[ref.sourceUid + '|' + (ref.cityId || trip.cityId)] || {}) : (myLinksByCity[ref.cityId || trip.cityId] || {});
     const place = findPlaceInLinksById(linksObj, ref.subcatId, ref.placeId);
+    if (!place && hid) return blk(); /* المكان قائم في قائمته = ليس هو المحجوب (المراجعة ٣٧ ٧: مكان الناسخ نفسه باسم محجوب عند صاحب الأصل يبقى باسمه) */
     if (!place) console.warn('[MyPickz][trip-resolve] unavailable', JSON.stringify(ref)); // ر٦٠ · عدسة التشخيص
     const liveGeo = (place && place.geo && typeof place.geo.lat === 'number' && typeof place.geo.lng === 'number') ? { lat: place.geo.lat, lng: place.geo.lng } : null; /* r102-ج (ق١١-٠٥-٠١): دبوس المكان الحالي في قائمته يسبق الدبوس المنسوخ لحظة الاختيار — تصحيح الدبوس يصل المسافات بلا إعادة اختيار */ return Object.assign({}, e, { geo: liveGeo || e.geo || null, alts: (e.alts || []).map(resolveRef), _p: place || null, _available: !!place });
   }
@@ -180,7 +202,7 @@ async function undoTripAdd(i){
 }
 let pendingPlaceRef = null;
 function plAddToTripFor(cityId, catId, placeId, placeName){ const keep = cityListCityId; if (cityId) cityListCityId = cityId; try{ plAddToTrip(catId, placeId, placeName); } finally { if (!document.getElementById('tripPickerBackdrop').classList.contains('show')) cityListCityId = keep; } }
-function cmSendCachedPlace(id){ const p = cmCache.places[id] || {}; if (p.myCat != null) return plSendPlaceText(p.myCat, p.myIndex); mpSendText('📍 ' + (p.name || 'Place') + '\n' + (p.url || '') + '\nfrom ' + (p.owner || 'a user') + "'s list · MyPickz"); statsExportFor('oplace', id); /* ب-٢-١ */ } // ر٧٠و: مكاني يُرسل بنصه المعتاد
+function cmSendCachedPlace(id){ const p = cmCache.places[id] || {}; if (p.myCat != null) return plSendPlaceText(p.myCat, p.myIndex); Promise.resolve(mpSendText('📍 ' + (p.name || 'Place') + '\n' + (p.url || '') + '\nfrom ' + (p.owner || 'a user') + "'s list · MyPickz")).then(function(ok){ if (ok) mpShareCount('oplace', id); }); /* ب-٢-١ */ } // ر٧٠و: مكاني يُرسل بنصه المعتاد
 function cmExportOthersPlace(id, name, url, owner, area, city, category){ cmCache.places[id] = { name: name, url: url, owner: owner, area: area, city: city, category: category }; openExportPreview('oplace', id); } // ر٦٩ض (N-057): بطاقة مكان واحد بوسم صاحبه
 function cmAddOthersPlaceToTrip(cityId, subcatId, placeId, sourceUid, placeName){ // ر٧٠و: النواة الموحَّدة
   if (!currentUser){ openAuthModal(); return; }
@@ -226,7 +248,7 @@ async function tripAddContinue(tripId){
 }
 async function tripPlaceDataFor(ref){ // بيانات المكان للمدخل (الاسم والدبوس): من الذاكرة إن كانت المدينة الحالية، وإلا قراءة واحدة
   try{
-    if (ref.sourceType === 'mylist'){ if (ref.cityId === cityListCityId && myCityListData){ const p = findPlaceInLinksById(myCityListData.categories || {}, ref.subcatId, ref.placeId); if (p) return p; } const d = await mpData.cityLists.get(currentUser.uid, ref.cityId); let links = Object.assign({}, (d && d.categories) || {}); try{ Object.assign(links, await mpData.privatePlaces.get(currentUser.uid, ref.cityId)); }catch(e){} return findPlaceInLinksById(links, ref.subcatId, ref.placeId); }
+    if (ref.sourceType === 'mylist'){ if (ref.cityId === cityListCityId && myCityListData){ const p = findPlaceInLinksById(myCityListData.categories || {}, ref.subcatId, ref.placeId); if (p) return p; } if (typeof plSaveWait === 'function') await plSaveWait(ref.cityId); /* r120 (أ-١٠ — قيس): مكان أُضيف وحفظه في الطريق لا يُعثر عليه قبل وصوله */ const d = await mpData.cityLists.get(currentUser.uid, ref.cityId); let links = Object.assign({}, (d && d.categories) || {}); try{ Object.assign(links, await mpData.privatePlaces.get(currentUser.uid, ref.cityId)); }catch(e){} return findPlaceInLinksById(links, ref.subcatId, ref.placeId); }
     const d = await mpData.cityLists.get(ref.sourceUid, ref.cityId); return findPlaceInLinksById((d && d.categories) || {}, ref.subcatId, ref.placeId);
   }catch(e){ return null; }
 }
@@ -239,7 +261,7 @@ async function tripAutoPlace(trip, ref){
   else if (slot){ const d = trip.plan.days[put.dayIdx]; where = tripDayLabel(d) + ' · ' + TRIP_PERIOD_LABEL[put.period] + (put.where === 'alt' ? ' · alternative' : ''); }
   else { where = e.geo ? 'Program full · in the tray · ' + trip.plan.tray.length : 'No pin · in the tray'; }
   try{ mpTripCount('placesAdded', 1); if (!slot) mpTripCount('placesTrayed', 1); }catch(_){} /* r79 (ج · القرار ١٠) */
-  try{ if (ref.sourceType === 'community' && ref.sourceUid && ref.sourceUid !== currentUser.uid && place && place.url) mpTrack.statsPlaceList(ref.sourceUid + '_' + ref.cityId, place.url, 'trip_add'); }catch(_){} /* r115-د (٣): مكان من قائمة غيرك دخل رحلتي */
+  try{ if (ref.sourceType === 'community' && ref.sourceUid && ref.sourceUid !== currentUser.uid && place && place.url){ mpTrack.statsPlaceList(ref.sourceUid + '_' + ref.cityId, place.url, 'trip_add'); if (typeof mpPlaceView === 'function') mpPlaceView(place.url, ref.cityId, ref.sourceUid + '_' + ref.cityId); /* r120 (ق١١-١٤-٠٨): إضافة مكان غيري إلى رحلة = أول تفاعل */ } }catch(_){} /* r115-د (٣): مكان من قائمة غيرك دخل رحلتي */
   // r78: لا علم مخزَّن للاكتمال — الرِّجل الجديدة بلا دقائق تجعل مسار اليوم «غير مكتمل» اشتقاقًا (التثبيت ٢)
   activeTripAdded.push(e.name); activeTripAddedRefs.push(e.id);
   await saveTrip(trip); delete resolvedTripCache[trip.id];
